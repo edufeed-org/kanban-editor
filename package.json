@@ -52,6 +52,7 @@
     "@sveltejs/kit": "^2.43.2",
     "@sveltejs/package": "^2.5.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.0",
+    "@sveltejs/vite-plugin-svelte-inspector": "^5.0.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.18",
     "@tailwindcss/vite": "^4.1.13",
@@ -88,10 +89,15 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "nostr-tools": "~2.14.2",
+      "@nostr-dev-kit/ndk": "^2.14.2"
+    }
   },
   "dependencies": {
-    "@nostr-dev-kit/ndk": "^2.17.4",
-    "@nostr-dev-kit/svelte": "^2.0.8"
+    "@nostr-dev-kit/ndk": "2.14.2",
+    "@nostr-dev-kit/svelte": "^2.0.8",
+    "zod": "^4.1.12"
   }
 }
