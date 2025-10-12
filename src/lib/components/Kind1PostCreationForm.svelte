@@ -5,9 +5,12 @@
     import CardHeader from "$lib/components/ui/card/card-header.svelte";
     import CardTitle from "$lib/components/ui/card/card-title.svelte";
     import Input from "$lib/components/ui/input/input.svelte";
-    import Label from "$lib/components/ui/label/label.svelte";
     import Textarea from "$lib/components/ui/textarea/textarea.svelte";
     import Button from "$lib/components/ui/button/button.svelte";
+    import Field from "$lib/components/ui/field/field.svelte";
+    import FieldContent from "$lib/components/ui/field/field-content.svelte";
+    import FieldLabel from "$lib/components/ui/field/field-label.svelte";
+    import FieldError from "$lib/components/ui/field/field-error.svelte";
     import { z } from "zod";
 
     // Props interface for Svelte 5
@@ -90,34 +93,32 @@
     </CardHeader>
     <CardContent>
         <form onsubmit={handleSubmit} class="space-y-4">
-            <div class="space-y-2">
-                <Label for="title">Title</Label>
-                <Input
-                    id="title"
-                    bind:value={formData.title}
-                    placeholder="Enter post title..."
-                    class={errors.title ? "border-red-500" : ""}
-                    {disabled}
-                />
-                {#if errors.title}
-                    <p class="text-sm text-red-500">{errors.title}</p>
-                {/if}
-            </div>
+            <Field>
+                <FieldLabel for="title">Title</FieldLabel>
+                <FieldContent>
+                    <Input
+                        id="title"
+                        bind:value={formData.title}
+                        placeholder="Enter post title..."
+                        {disabled}
+                    />
+                </FieldContent>
+                <FieldError errors={errors.title ? [{ message: errors.title }] : undefined} />
+            </Field>
 
-            <div class="space-y-2">
-                <Label for="content">Content</Label>
-                <Textarea
-                    id="content"
-                    bind:value={formData.content}
-                    placeholder="What's on your mind?"
-                    rows={4}
-                    class={errors.content ? "border-red-500" : ""}
-                    {disabled}
-                />
-                {#if errors.content}
-                    <p class="text-sm text-red-500">{errors.content}</p>
-                {/if}
-            </div>
+            <Field>
+                <FieldLabel for="content">Content</FieldLabel>
+                <FieldContent>
+                    <Textarea
+                        id="content"
+                        bind:value={formData.content}
+                        placeholder="What's on your mind?"
+                        rows={4}
+                        {disabled}
+                    />
+                </FieldContent>
+                <FieldError errors={errors.content ? [{ message: errors.content }] : undefined} />
+            </Field>
 
             <Button type="submit" class="w-full" {disabled}>
                 {#if isSubmitting}
