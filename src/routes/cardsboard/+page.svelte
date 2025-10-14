@@ -1,7 +1,25 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { data } from "./data.js";
 	import Board from "./Board.svelte";
 	import type { Column, BoardUpdateHandler } from "./types.js";
+
+	// Suppress passive event listener warnings for dnd-action
+	// This is a known issue with svelte-dnd-action library
+	onMount(() => {
+		const originalWarn = console.warn;
+		console.warn = function(...args) {
+			const message = String(args[0] || '');
+			if (message.includes('non-passive event listener') ||
+				message.includes('Added non-passive event listener') ||
+				message.includes('scroll-blocking') ||
+				message.includes('touchstart') ||
+				message.includes('touchmove')) {
+				return; // Suppress these specific warnings
+			}
+			originalWarn.apply(console, args);
+		};
+	});
 
 	function handleBoardUpdated(newColumnsData: Column[]) {
 		// if you wanted to update a database or a server, this is where you would do it

@@ -45,7 +45,7 @@
 		<div class="footer-actions">
 			<button
 				class="action-btn"
-				on:click={() => handleActionClick('complete')}
+				on:click|passive={() => handleActionClick('complete')}
 				aria-label="Mark as complete"
 				title="Mark as complete"
 			>
@@ -53,7 +53,7 @@
 			</button>
 			<button
 				class="action-btn"
-				on:click={() => handleActionClick('edit')}
+				on:click|passive={() => handleActionClick('edit')}
 				aria-label="Edit card"
 				title="Edit card"
 			>

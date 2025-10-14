@@ -6,6 +6,24 @@
 
  	const flipDurationMs = 300;
 
+ 	// Suppress passive event listener warnings for dnd-action
+ 	// This is a known issue with svelte-dnd-action library
+ 	if (typeof window !== 'undefined') {
+ 			// Override console.warn to suppress the specific passive listener warning
+ 			const originalWarn = console.warn;
+ 			console.warn = function(...args) {
+ 				const message = String(args[0] || '');
+ 				if (message.includes('non-passive event listener') ||
+ 					message.includes('Added non-passive event listener') ||
+ 					message.includes('scroll-blocking') ||
+ 					message.includes('touchstart') ||
+ 					message.includes('touchmove')) {
+ 					return; // Suppress these specific warnings
+ 				}
+ 				originalWarn.apply(console, args);
+ 			};
+ 		}
+
    export let columns: ColumnType[];
  	// will be called any time a card or a column gets dropped to update the parent data
  	export let onFinalUpdate: BoardUpdateHandler;
@@ -63,7 +81,7 @@
     }
 </style>
 
-<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} on:consider={handleDndConsiderColumns} on:finalize={handleDndFinalizeColumns}>
+<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} on:consider|passive={handleDndConsiderColumns} on:finalize|passive={handleDndFinalizeColumns}>
     {#each columns as {id, name, description, items}, idx (id)}
    		<div class="column"animate:flip="{{duration: flipDurationMs}}" >
  				<Column

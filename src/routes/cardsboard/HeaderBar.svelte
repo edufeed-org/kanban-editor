@@ -47,7 +47,7 @@
 				class:draft={publishState === 'draft'}
 				class:published={publishState === 'published'}
 				class:archived={publishState === 'archived'}
-				on:click={handlePublishToggle}
+				on:click|passive={handlePublishToggle}
 				aria-label="Toggle publish state"
 				title="Toggle publish state"
 			>
@@ -58,8 +58,8 @@
 		{#if showMenu}
 			<button
 				class="menu-button"
-				on:click={handleMenuClick}
-				on:keydown={handleKeyDown}
+				on:click|passive={handleMenuClick}
+				on:keydown|passive={handleKeyDown}
 				aria-label="Open menu"
 				title="Open menu"
 				tabindex="0"

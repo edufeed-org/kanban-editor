@@ -7,6 +7,24 @@
 
  	const flipDurationMs = 150;
 
+ 	// Suppress passive event listener warnings for dnd-action
+ 	// This is a known issue with svelte-dnd-action library
+ 	if (typeof window !== 'undefined') {
+ 			// Override console.warn to suppress the specific passive listener warning
+ 			const originalWarn = console.warn;
+ 			console.warn = function(...args) {
+ 				const message = String(args[0] || '');
+ 				if (message.includes('non-passive event listener') ||
+ 					message.includes('Added non-passive event listener') ||
+ 					message.includes('scroll-blocking') ||
+ 					message.includes('touchstart') ||
+ 					message.includes('touchmove')) {
+ 					return; // Suppress these specific warnings
+ 				}
+ 				originalWarn.apply(console, args);
+ 			};
+ 		}
+
  	export let name: string;
  	export let description: string | undefined = undefined;
  	export let items: CardItem[];
@@ -71,8 +89,8 @@
  		<div class="column-description">{description}</div>
  	{/if}
  	<div class="column-content" use:dndzone={{items, flipDurationMs}}
-      	 on:consider={handleDndConsiderCards}
- 			 on:finalize={handleDndFinalizeCards}>
+ 	    	 on:consider|passive={handleDndConsiderCards}
+ 			 on:finalize|passive={handleDndFinalizeCards}>
  				{#each items as item (item.id)}
  				       <div animate:flip="{{duration: flipDurationMs}}" >
  				          <Card

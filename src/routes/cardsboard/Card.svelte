@@ -64,7 +64,7 @@
 	class:published={card.publishState === 'published'}
 	class:archived={card.publishState === 'archived'}
 	on:dblclick={handleDoubleClick}
-	on:keydown={handleKeyDown}
+	on:keydown|passive={handleKeyDown}
 	role="button"
 	tabindex="0"
 	aria-label="Card: {card.name}"
@@ -90,11 +90,11 @@
 	
 	<!-- Card Modal for editing/viewing details -->
 	{#if showModal}
-		<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
-			<div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title-2" tabindex="0">
+		<div class="modal-overlay" on:click={closeModal} on:keydown|passive={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
+			<div class="modal" on:click|stopPropagation on:keydown|passive={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title-2" tabindex="0">
 				<div class="modal-header">
 					<h3 id="modal-title-2">{card.name}</h3>
-					<button class="close-button" on:click={closeModal} aria-label="Modal schließen">×</button>
+					<button class="close-button" on:click|passive={closeModal} aria-label="Modal schließen">×</button>
 				</div>
 				<div class="modal-content">
 					{#if card.description}
@@ -140,23 +140,23 @@
 	
 	<!-- Sidebar for quick actions -->
 	{#if showSidebar}
-		<div class="sidebar-overlay" on:click={closeSidebar} on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
-			<div class="sidebar" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
+		<div class="sidebar-overlay" on:click={closeSidebar} on:keydown|passive={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
+			<div class="sidebar" on:click|stopPropagation on:keydown|passive={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
 				<div class="sidebar-header">
 					<h4>Karte bearbeiten</h4>
-					<button class="close-button" on:click={closeSidebar} aria-label="Sidebar schließen">×</button>
+					<button class="close-button" on:click|passive={closeSidebar} aria-label="Sidebar schließen">×</button>
 				</div>
 				<div class="sidebar-content">
-					<button class="sidebar-action" on:click={() => handleSidebarAction('delete')}>
+					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('delete')}>
 						Karte löschen
 					</button>
-					<button class="sidebar-action" on:click={() => handleSidebarAction('duplicate')}>
+					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('duplicate')}>
 						Duplizieren
 					</button>
-					<button class="sidebar-action" on:click={() => handleSidebarAction('move')}>
+					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('move')}>
 						Verschieben
 					</button>
-					<button class="sidebar-action" on:click={() => handleSidebarAction('color')}>
+					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('color')}>
 						Farbe ändern
 					</button>
 				</div>
@@ -164,72 +164,7 @@
 		</div>
 	{/if}
 
-<!-- Card Modal for editing/viewing details -->
-{#if showModal}
-	<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
-		<div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="0">
-			<div class="modal-header">
-				<h3 id="modal-title">{card.name}</h3>
-				<button class="close-button" on:click={closeModal} aria-label="Modal schließen">×</button>
-			</div>
-			<div class="modal-content">
-				{#if card.description}
-					<p>{card.description}</p>
-				{/if}
 
-				{#if card.labels && card.labels.length > 0}
-					<div class="modal-labels">
-						<strong>Labels:</strong>
-						{#each card.labels as label}
-							<span class="modal-label">{label}</span>
-						{/each}
-					</div>
-				{/if}
-
-				{#if card.comments && card.comments.length > 0}
-					<div class="modal-comments">
-						<strong>Kommentare ({card.comments.length}):</strong>
-						{#each card.comments as comment}
-							<div class="comment">
-								<div class="comment-author">{comment.author}</div>
-								<div class="comment-text">{comment.text}</div>
-								<div class="comment-date">{new Date(comment.createdAt).toLocaleDateString()}</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				{#if card.attendees && card.attendees.length > 0}
-					<div class="modal-attendees">
-						<strong>Teilnehmer ({card.attendees.length}):</strong>
-						<div class="attendees-list">
-							{#each card.attendees as attendee}
-								<span class="attendee">{attendee}</span>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-{/if}
-
-<!-- Sidebar for quick actions -->
-{#if showSidebar}
-	<div class="sidebar-overlay" on:click={closeSidebar} on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
-		<div class="sidebar" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
-			<div class="sidebar-header">
-				<h4>Karte bearbeiten</h4>
-				<button class="close-button" on:click={closeSidebar} aria-label="Sidebar schließen">×</button>
-			</div>
-			<div class="sidebar-content">
-				<button class="sidebar-action">Karte löschen</button>
-				<button class="sidebar-action">Duplizieren</button>
-				<button class="sidebar-action">Verschieben</button>
-				<button class="sidebar-action">Farbe ändern</button>
-			</div>
-		</div>
-	</div>
 	
 	<style>
 		.card {
@@ -452,4 +387,3 @@
 			outline-offset: 2px;
 		}
 	</style>
-{/if}

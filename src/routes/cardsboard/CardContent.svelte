@@ -33,9 +33,9 @@
 				src={card.image}
 				alt={card.name}
 				class="card-image"
-				on:click={handleImageClick}
+				on:click|passive={handleImageClick}
 				role={card.link ? "button" : ""}
-				on:keydown={(e) => e.key === 'Enter' && handleImageClick()}
+				on:keydown|passive={(e) => e.key === 'Enter' && handleImageClick()}
 			/>
 		</div>
 	{/if}
@@ -50,7 +50,7 @@
 	<!-- Link Section -->
 	{#if card.link}
 		<div class="card-link">
-			<button class="link-button" on:click={handleLinkClick}>
+			<button class="link-button" on:click|passive={handleLinkClick}>
 				<span class="link-icon">🔗</span>
 				<span class="link-text">Link öffnen</span>
 			</button>
