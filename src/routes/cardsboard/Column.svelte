@@ -1,34 +1,22 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-  import { dndzone, TRIGGERS } from 'svelte-dnd-action';
+  import { dndzone } from 'svelte-dnd-action';
 	import Card from "./Card.svelte";
-	import Folder from "./Folder.svelte";
-	import type { KanbanItem, ColumnDropHandler, FolderDragStartHandler } from "./types.js";
+	import type { CardItem, ColumnDropHandler } from "./types.js";
 
 	const flipDurationMs = 150;
 
 	export let name: string;
-	export let items: KanbanItem[];
-	export let onFolderDragStart: FolderDragStartHandler;
+	export let description: string | undefined = undefined;
+	export let items: CardItem[];
 	export let onDrop: ColumnDropHandler;
 
-	export let isDraggingFolder: boolean;
-
 	function handleDndConsiderCards(e: any) {
-		const { items: newItems, info: { id, trigger } } = e.detail;
+		const { items: newItems } = e.detail;
 	   console.warn("got consider", name);
-		if (trigger == TRIGGERS.DRAG_STARTED) {
-			const itemIdx = items.findIndex((item: KanbanItem) => item.id === id);
-			console.log("index", itemIdx);
-			const item = items[itemIdx];
-			if(item && 'items' in item && item.items !== undefined) {
-				onFolderDragStart();
-			}
-		}
 		items = newItems;
-	 }
+  }
   function handleDndFinalizeCards(e: any) {
-		isDraggingFolder = false
     onDrop(e.detail.items);
   }
 </script>
@@ -46,11 +34,19 @@
         overflow-y: scroll;
     }
     .column-title {
-				height: 2.5em;
-			  font-weight: bold;
+    min-height: 2.5em;
+     font-weight: bold;
         display: flex;
         justify-content: center;
         align-items: center;
+        text-align: center;
+    }
+    .column-description {
+    	font-size: 0.9em;
+    	color: #666;
+    	text-align: center;
+    	margin-bottom: 0.5em;
+    	padding: 0 0.2em;
     }
 </style>
 
@@ -58,16 +54,15 @@
  	<div class="column-title">
 		{name}
 	</div>
+	{#if description}
+		<div class="column-description">{description}</div>
+	{/if}
 	<div class="column-content" use:dndzone={{items, flipDurationMs}}
      	 on:consider={handleDndConsiderCards}
 			 on:finalize={handleDndFinalizeCards}>
 				{#each items as item (item.id)}
 				       <div animate:flip="{{duration: flipDurationMs}}" >
-						 {#if 'items' in item && item.items !== undefined}
-						 	<Folder folder={item} dropFromOthersDisabled={isDraggingFolder} />
-						 {:else}
-				          <Card name={item.name} />
-						 {/if}
+				          <Card name={item.name} description={item.description} />
 				        </div>
 				    {/each}
     </div>
