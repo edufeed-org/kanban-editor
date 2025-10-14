@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { Comment } from "./types.js";
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	export let comments: Comment[] = [];
 	export let attendees: string[] = [];
@@ -13,10 +16,7 @@
 	$: displayAttendees = attendees.length > 0 ? attendees : (author ? [author] : []);
 
 	function handleActionClick(action: string) {
-		const event = new CustomEvent('actionClick', {
-			detail: { action }
-		});
-		dispatchEvent(event);
+		dispatch('actionClick', { action });
 	}
 </script>
 

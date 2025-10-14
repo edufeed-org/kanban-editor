@@ -1,0 +1,153 @@
+// src/lib/utils/testSuite.ts
+
+import { Board, Chat } from '../classes/BoardModel.js';
+import type { Card, Column } from '../classes/BoardModel.js';
+
+export function runTestSuite() {
+    console.clear();
+    console.group("===== KANBAN BOARD TEST SUITE START =====");
+
+    // 1. Board-Erstellung
+    console.group("1. Board & Column Management");
+    const board = new Board({
+        name: "Projekt Phoenix",
+        description: "Vollständige Neuentwicklung des Kanban-Boards."
+    });
+    console.log("✅ Board erstellt:", board.name);
+
+    const todoCol = board.addColumn({ name: "To Do" });
+    const progressCol = board.addColumn({ name: "In Arbeit" });
+    const doneCol = board.addColumn({ name: "Fertig" });
+    console.log("✅ Spalten hinzugefügt:", board.columns.map(c => c.name));
+
+    progressCol.update({ name: "In Progress" });
+    console.log("✅ Spalte aktualisiert:", progressCol.name);
+    console.groupEnd();
+
+    // 2. Card Management
+    console.group("2. Card Management");
+    const card1 = todoCol.addCard({
+        heading: "Klassenstruktur definieren",
+        content: "Alle Klassen in TypeScript erstellen."
+    });
+    const card2 = todoCol.addCard({
+        heading: "Svelte Stores einrichten",
+        labels: ["state-management"]
+    });
+    console.log(`✅ ${todoCol.cards.length} Karten zur 'To Do'-Spalte hinzugefügt.`);
+
+    card1.update({ content: "Alle Klassen in TypeScript mit strikter Typisierung erstellen." });
+    console.log("✅ Karte aktualisiert:", card1.content);
+
+    card1.addComment("Das ist die wichtigste Aufgabe!", "npub1test123456789");
+    console.log("✅ Kommentar hinzugefügt:", card1.comments[0].text);
+    console.groupEnd();
+
+    // 3. Board-Level Operationen
+    console.group("3a. Board-Level Operations (Move Card)");
+    board.moveCard(card1.id, todoCol.id, progressCol.id);
+    console.log(`✅ Karte '${card1.heading}' von '${todoCol.name}' nach '${progressCol.name}' verschoben.`);
+
+    const found = board.findCardAndColumn(card1.id);
+    if (found?.column.id === progressCol.id) {
+        console.log("✅ Verifizierung: Karte erfolgreich in der Zielspalte gefunden.");
+    } else {
+        console.error("❌ Fehler bei der Kartenverschiebung!");
+    }
+    console.groupEnd();
+
+    console.group("3b. Publish State Management");
+     // Test für eine Karte
+    const draftCard = todoCol.cards[0];
+    if (draftCard.publishState === 'draft') {
+        console.log("✅ Karte ist standardmäßig im 'draft'-Modus.");
+    } else {
+        console.error(`❌ FEHLER: Karte sollte 'draft' sein, ist aber '${draftCard.publishState}'`);
+    }
+
+    draftCard.setPublishState('published');
+    if (draftCard.publishState === 'published') {
+        console.log("✅ Karte wurde erfolgreich in den 'published'-Modus versetzt.");
+    } else {
+        console.error("❌ FEHLER: Karte konnte nicht auf 'published' gesetzt werden.");
+    }
+
+    // Test für das Board
+    if (board.publishState === 'draft') {
+        console.log("✅ Board ist standardmäßig im 'draft'-Modus.");
+    } else {
+        console.error(`❌ FEHLER: Board sollte 'draft' sein, ist aber '${board.publishState}'`);
+    }
+
+    board.setPublishState('published');
+    if (board.publishState === 'published') {
+        console.log("✅ Board wurde erfolgreich in den 'published'-Modus versetzt.");
+    } else {
+        console.error("❌ FEHLER: Board konnte nicht auf 'published' gesetzt werden.");
+    }
+    console.groupEnd();
+
+    // 4. KI-Interaktionssimulation
+    console.group("4. AI Interaction Simulation");
+    const chat = new Chat(board);
+    const complexCard = progressCol.addCard({
+        heading: "Gesamtes UI/UX implementieren",
+        content: "Basiert auf den Figma-Designs. Beinhaltet Drag-and-Drop, Modal-Dialoge und responsive Anpassungen."
+    });
+
+    console.group("4a. KI-Anfrage senden (sendPromptToAI)");
+    console.log("▶️ Simuliere Nutzeranfrage, um eine komplexe Karte aufzuteilen...");
+    // Diese Methode sollte das Payload-Objekt in der Konsole ausgeben, um es zu verifizieren
+    chat.sendPromptToAI(
+        "Teile diese Aufgabe in logische Frontend-Komponenten auf.",
+        complexCard
+    );
+    console.log("✅ Kontext-Payload für die KI wurde erfolgreich generiert und geloggt.");
+    console.groupEnd();
+
+    console.group("4b. KI-Antwort verarbeiten (processAIAction)");
+    const aiResponseAction = {
+        type: 'split_card' as const,
+        columnId: progressCol.id,
+        sourceCardId: complexCard.id,
+        newCards: [
+            { heading: "UI: Board-Layout erstellen", labels: ["ui", "layout"] },
+            { heading: "Logik: Drag-and-Drop implementieren", labels: ["logik", "dnd"] },
+            { heading: "UI: Karten-Modal entwickeln", labels: ["ui", "modal"] }
+        ]
+    };
+    console.log("◀️ Simuliere KI-Antwort mit 'split_card'-Aktion...");
+    chat.processAIAction(aiResponseAction);
+
+    const sourceCardExists = !!progressCol.findCard(complexCard.id);
+    const newCardsExist = progressCol.cards.some(c => c.heading.includes("UI: Board-Layout"));
+    if (!sourceCardExists && newCardsExist) {
+        console.log("✅ 'split_card'-Aktion erfolgreich: Alte Karte gelöscht, neue Karten hinzugefügt.");
+    } else {
+        console.error("❌ Fehler bei der 'split_card'-Aktion!");
+    }
+    console.log(`Karten in 'In Progress': ${progressCol.cards.length}`);
+    console.groupEnd();
+    console.groupEnd();
+
+    // 5. Löschoperationen
+    console.group("5. Deletion Operations");
+    const commentId = card1.comments[0].id;
+    card1.deleteComment(commentId);
+    console.log(`✅ Kommentar gelöscht. Übrige Kommentare: ${card1.comments.length}`);
+
+    progressCol.deleteCard(card1.id);
+    console.log(`✅ Karte '${card1.heading}' gelöscht. Übrige Karten in Spalte: ${progressCol.cards.length}`);
+
+    board.deleteColumn(doneCol.id);
+    console.log(`✅ Spalte '${doneCol.name}' gelöscht. Übrige Spalten: ${board.columns.length}`);
+    console.groupEnd();
+
+    // Abschluss
+    console.group("Final State");
+    console.log("Der finale Zustand des Boards:");
+    console.dir(board.getContextData(true));
+    console.groupEnd();
+
+    console.groupEnd(); // Ende der Test-Suite
+}

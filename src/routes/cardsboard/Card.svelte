@@ -3,6 +3,7 @@
 	import HeaderBar from "./HeaderBar.svelte";
 	import CardContent from "./CardContent.svelte";
 	import CardFooter from "./CardFooter.svelte";
+	import CardEditModal from "../../lib/components/CardEditModal.svelte";
 
 	export let card: CardItem;
 	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
@@ -11,6 +12,7 @@
 
 	let showModal = false;
 	let showSidebar = false;
+	let showEditModal = false;
 
 	// Ensure minimum 1 attendee (author should always be included)
 	$: attendees = card.attendees && card.attendees.length > 0
@@ -32,9 +34,14 @@
 		onPublishStateChange?.(String(card.id), newState);
 	}
 
-	function handleFooterAction(event: CustomEvent) {
+	function handleButtonAction(event: CustomEvent) {
 		const { action } = event.detail;
-		onCardAction?.(String(card.id), action);
+
+		if (action === 'edit') {
+			openEditModal();
+		} else {
+			onCardAction?.(String(card.id), action);
+		}
 	}
 
 	function closeModal() {
@@ -55,6 +62,27 @@
 	function handleSidebarAction(action: string) {
 		onSidebarAction?.(String(card.id), action);
 		closeSidebar();
+	}
+
+	function openEditModal() {
+		showEditModal = true;
+	}
+
+	function closeEditModal() {
+		showEditModal = false;
+	}
+
+	function handleEditSave(cardId: string, updates: any) {
+		// Aktualisiere die lokale Karte
+		if (updates.heading) card.name = updates.heading;
+		if (updates.content) card.description = updates.content;
+		if (updates.color) card.color = updates.color;
+		if (updates.labels) card.labels = updates.labels;
+		if (updates.publishState) card.publishState = updates.publishState;
+
+		// Informiere die Elternkomponente über die Änderung
+		onCardAction?.(cardId, 'updated');
+		closeEditModal();
 	}
 </script>
 
@@ -84,7 +112,24 @@
 		comments={card.comments || []}
 		{attendees}
 		author={card.author || ''}
-		on:actionClick={handleFooterAction}
+		on:actionClick={handleButtonAction}
+	/>
+
+	<!-- Edit Modal -->
+	<CardEditModal
+		card={{
+			id: String(card.id),
+			heading: card.name,
+			content: card.description,
+			color: card.color,
+			comments: card.comments,
+			labels: card.labels,
+			attendees: card.attendees,
+			publishState: card.publishState
+		}}
+		isOpen={showEditModal}
+		onClose={closeEditModal}
+		onSave={handleEditSave}
 	/>
 	</div>
 	
