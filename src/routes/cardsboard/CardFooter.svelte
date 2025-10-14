@@ -3,10 +3,8 @@
 
 	export let comments: Comment[] = [];
 	export let attendees: string[] = [];
-	export let labels: string[] = [];
 	export let showComments: boolean = true;
 	export let showAttendees: boolean = true;
-	export let showLabels: boolean = true;
 	export let showActions: boolean = true;
 
 	// Ensure minimum 1 attendee (author should always be included)
@@ -40,13 +38,7 @@
 	</div>
 
 	<div class="footer-center">
-		{#if showLabels && labels.length > 0}
-			<div class="labels">
-				{#each labels as label}
-					<span class="label">{label}</span>
-				{/each}
-			</div>
-		{/if}
+		<!-- Labels wurden in CardContent verschoben -->
 	</div>
 
 	{#if showActions}

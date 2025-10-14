@@ -19,6 +19,8 @@ export interface CardItem {
 	color?: string;
 	publishState?: PublishState;
 	author?: string;
+	image?: string;
+	link?: string;
 }
 
 export interface Column {

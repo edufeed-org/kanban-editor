@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { CardItem, PublishState } from "./types.js";
 	import HeaderBar from "./HeaderBar.svelte";
+	import CardContent from "./CardContent.svelte";
 	import CardFooter from "./CardFooter.svelte";
 
 	const dispatch = createEventDispatcher();
@@ -77,14 +78,11 @@
 		on:publishToggle={handlePublishToggle}
 	/>
 
-	{#if card.description}
-		<div class="card-description">{card.description}</div>
-	{/if}
+	<CardContent {card} />
 
 	<CardFooter
 		comments={card.comments || []}
 		{attendees}
-		labels={card.labels || []}
 		author={card.author || ''}
 		on:actionClick={handleFooterAction}
 	/>
@@ -272,12 +270,6 @@
 			opacity: 0.7;
 		}
 	
-		.card-description {
-			font-size: 0.9em;
-			color: #495057;
-			line-height: 1.4;
-			margin-bottom: 0.75em;
-		}
 	
 		/* Modal Styles */
 		.modal-overlay {
