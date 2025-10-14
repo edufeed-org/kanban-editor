@@ -1,24 +1,43 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import { flip } from 'svelte/animate';
-  import { dndzone } from 'svelte-dnd-action';
-	import Card from "./Card.svelte";
-	import type { CardItem, ColumnDropHandler } from "./types.js";
+   import { dndzone } from 'svelte-dnd-action';
+ 	import Card from "./Card.svelte";
+ 	import HeaderBar from "./HeaderBar.svelte";
+ 	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 
-	const flipDurationMs = 150;
+ 	const dispatch = createEventDispatcher();
 
-	export let name: string;
-	export let description: string | undefined = undefined;
-	export let items: CardItem[];
-	export let onDrop: ColumnDropHandler;
+ 	const flipDurationMs = 150;
 
-	function handleDndConsiderCards(e: any) {
-		const { items: newItems } = e.detail;
-	   console.warn("got consider", name);
-		items = newItems;
-  }
-  function handleDndFinalizeCards(e: any) {
-    onDrop(e.detail.items);
-  }
+ 	export let name: string;
+ 	export let description: string | undefined = undefined;
+ 	export let items: CardItem[];
+ 	export let onDrop: ColumnDropHandler;
+
+ 	function handleDndConsiderCards(e: any) {
+ 		const { items: newItems } = e.detail;
+ 	   console.warn("got consider", name);
+ 		items = newItems;
+   }
+   function handleDndFinalizeCards(e: any) {
+     onDrop(e.detail.items);
+   }
+
+   function handleCardAction(event: CustomEvent) {
+   		const { cardId, action } = event.detail;
+   		dispatch('cardAction', { cardId, action, columnId: undefined });
+   }
+
+   function handlePublishStateChange(event: CustomEvent) {
+   		const { cardId, newState } = event.detail;
+   		dispatch('publishStateChange', { cardId, newState });
+   }
+
+   function handleSidebarAction(event: CustomEvent) {
+   		const { cardId, action } = event.detail;
+   		dispatch('sidebarAction', { cardId, action });
+   }
 </script>
 
 <style>
@@ -51,19 +70,26 @@
 </style>
 
 <div class='wrapper'>
- 	<div class="column-title">
-		{name}
-	</div>
-	{#if description}
-		<div class="column-description">{description}</div>
-	{/if}
-	<div class="column-content" use:dndzone={{items, flipDurationMs}}
-     	 on:consider={handleDndConsiderCards}
-			 on:finalize={handleDndFinalizeCards}>
-				{#each items as item (item.id)}
-				       <div animate:flip="{{duration: flipDurationMs}}" >
-				          <Card name={item.name} description={item.description} />
-				        </div>
-				    {/each}
-    </div>
-</div>
+  	<HeaderBar
+  		title={name}
+  		showMenu={false}
+  		showPublishToggle={false}
+  	/>
+  	{#if description}
+ 		<div class="column-description">{description}</div>
+ 	{/if}
+ 	<div class="column-content" use:dndzone={{items, flipDurationMs}}
+      	 on:consider={handleDndConsiderCards}
+ 			 on:finalize={handleDndFinalizeCards}>
+ 				{#each items as item (item.id)}
+ 				       <div animate:flip="{{duration: flipDurationMs}}" >
+ 				          <Card
+ 				          	card={item}
+ 				          	on:cardAction={handleCardAction}
+ 				          	on:publishStateChange={handlePublishStateChange}
+ 				          	on:sidebarAction={handleSidebarAction}
+ 				          />
+ 				        </div>
+ 				    {/each}
+     </div>
+ </div>

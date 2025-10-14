@@ -1,9 +1,24 @@
 // TypeScript-Typdefinitionen für das Kanban-Board
 
+export type PublishState = 'draft' | 'published' | 'archived';
+
+export interface Comment {
+	id: string;
+	text: string;
+	author: string;
+	createdAt: string;
+}
+
 export interface CardItem {
 	id: number | string;
 	name: string;
 	description?: string;
+	comments?: Comment[];
+	attendees?: string[];
+	labels?: string[];
+	color?: string;
+	publishState?: PublishState;
+	author?: string;
 }
 
 export interface Column {
