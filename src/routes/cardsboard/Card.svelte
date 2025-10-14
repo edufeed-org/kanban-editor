@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { CardItem, PublishState } from "./types.js";
 	import HeaderBar from "./HeaderBar.svelte";
 	import CardContent from "./CardContent.svelte";
 	import CardFooter from "./CardFooter.svelte";
 
-	const dispatch = createEventDispatcher();
-
 	export let card: CardItem;
+	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
+	export let onCardAction: ((cardId: string, action: string) => void) | undefined = undefined;
+	export let onSidebarAction: ((cardId: string, action: string) => void) | undefined = undefined;
 
 	let showModal = false;
 	let showSidebar = false;
@@ -28,13 +28,13 @@
 	function handlePublishToggle(event: CustomEvent) {
 		const { newState } = event.detail;
 		card.publishState = newState;
-		// Dispatch event to parent component
-		dispatch('publishStateChange', { cardId: card.id, newState });
+		// Call callback prop instead of dispatching event
+		onPublishStateChange?.(String(card.id), newState);
 	}
 
 	function handleFooterAction(event: CustomEvent) {
 		const { action } = event.detail;
-		dispatch('cardAction', { cardId: card.id, action });
+		onCardAction?.(String(card.id), action);
 	}
 
 	function closeModal() {
@@ -53,7 +53,7 @@
 	}
 
 	function handleSidebarAction(action: string) {
-		dispatch('sidebarAction', { cardId: card.id, action });
+		onSidebarAction?.(String(card.id), action);
 		closeSidebar();
 	}
 </script>
@@ -90,11 +90,11 @@
 	
 	<!-- Card Modal for editing/viewing details -->
 	{#if showModal}
-		<div class="modal-overlay" on:click={closeModal}>
-			<div class="modal" on:click|stopPropagation>
+		<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
+			<div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title-2" tabindex="0">
 				<div class="modal-header">
-					<h3>{card.name}</h3>
-					<button class="close-button" on:click={closeModal}>×</button>
+					<h3 id="modal-title-2">{card.name}</h3>
+					<button class="close-button" on:click={closeModal} aria-label="Modal schließen">×</button>
 				</div>
 				<div class="modal-content">
 					{#if card.description}
@@ -140,11 +140,11 @@
 	
 	<!-- Sidebar for quick actions -->
 	{#if showSidebar}
-		<div class="sidebar-overlay" on:click={closeSidebar}>
-			<div class="sidebar" on:click|stopPropagation>
+		<div class="sidebar-overlay" on:click={closeSidebar} on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
+			<div class="sidebar" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
 				<div class="sidebar-header">
 					<h4>Karte bearbeiten</h4>
-					<button class="close-button" on:click={closeSidebar}>×</button>
+					<button class="close-button" on:click={closeSidebar} aria-label="Sidebar schließen">×</button>
 				</div>
 				<div class="sidebar-content">
 					<button class="sidebar-action" on:click={() => handleSidebarAction('delete')}>
@@ -166,11 +166,11 @@
 
 <!-- Card Modal for editing/viewing details -->
 {#if showModal}
-	<div class="modal-overlay" on:click={closeModal}>
-		<div class="modal" on:click|stopPropagation>
+	<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
+		<div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="0">
 			<div class="modal-header">
-				<h3>{card.name}</h3>
-				<button class="close-button" on:click={closeModal}>×</button>
+				<h3 id="modal-title">{card.name}</h3>
+				<button class="close-button" on:click={closeModal} aria-label="Modal schließen">×</button>
 			</div>
 			<div class="modal-content">
 				{#if card.description}
@@ -216,11 +216,11 @@
 
 <!-- Sidebar for quick actions -->
 {#if showSidebar}
-	<div class="sidebar-overlay" on:click={closeSidebar}>
-		<div class="sidebar" on:click|stopPropagation>
+	<div class="sidebar-overlay" on:click={closeSidebar} on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
+		<div class="sidebar" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
 			<div class="sidebar-header">
 				<h4>Karte bearbeiten</h4>
-				<button class="close-button" on:click={closeSidebar}>×</button>
+				<button class="close-button" on:click={closeSidebar} aria-label="Sidebar schließen">×</button>
 			</div>
 			<div class="sidebar-content">
 				<button class="sidebar-action">Karte löschen</button>
@@ -453,292 +453,3 @@
 		}
 	</style>
 {/if}
-
-<style>
-	.card {
-		height: auto;
-		min-height: 4em;
-		width: 100%;
-		margin: 0.4em 0;
-		padding: 0.75em;
-		display: flex;
-		flex-direction: column;
-		background-color: #f8f9fa;
-		border: 1px solid #dee2e6;
-		border-radius: 8px;
-		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-		transition: box-shadow 0.2s ease;
-		cursor: pointer;
-	}
-
-	.card:hover {
-		box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-	}
-
-	.card-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 0.5em;
-	}
-
-	.card-title {
-		font-weight: 600;
-		font-size: 1em;
-		color: #212529;
-		flex: 1;
-		margin-right: 0.5em;
-	}
-
-	.menu-button {
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 0.25em;
-		border-radius: 4px;
-		transition: background-color 0.2s ease;
-	}
-
-	.menu-button:hover {
-		background-color: #e9ecef;
-	}
-
-	.menu-dots {
-		font-size: 1.2em;
-		color: #6c757d;
-	}
-
-	.card-description {
-		font-size: 0.9em;
-		color: #495057;
-		line-height: 1.4;
-		margin-bottom: 0.75em;
-	}
-
-	.card-labels {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25em;
-		margin-bottom: 0.75em;
-	}
-
-	.label {
-		background-color: #e9ecef;
-		color: #495057;
-		padding: 0.25em 0.5em;
-		border-radius: 12px;
-		font-size: 0.75em;
-		font-weight: 500;
-	}
-
-	.card-footer {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-top: auto;
-		padding-top: 0.5em;
-		border-top: 1px solid #e9ecef;
-	}
-
-	.comment-count, .attendees {
-		display: flex;
-		align-items: center;
-		gap: 0.25em;
-		font-size: 0.8em;
-		color: #6c757d;
-	}
-
-	.icon {
-		font-size: 0.9em;
-	}
-
-	.card-actions {
-		display: flex;
-		gap: 0.25em;
-	}
-
-	.action-button {
-		background: none;
-		border: 1px solid #ced4da;
-		border-radius: 4px;
-		padding: 0.25em 0.5em;
-		cursor: pointer;
-		font-size: 0.8em;
-		transition: all 0.2s ease;
-	}
-
-	.action-button:hover {
-		background-color: #e9ecef;
-		border-color: #adb5bd;
-	}
-
-	/* Modal Styles */
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		z-index: 1000;
-	}
-
-	.modal {
-		background: white;
-		border-radius: 8px;
-		width: 90%;
-		max-width: 600px;
-		max-height: 80vh;
-		overflow-y: auto;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1em 1.5em;
-		border-bottom: 1px solid #e9ecef;
-	}
-
-	.modal-header h3 {
-		margin: 0;
-		color: #212529;
-	}
-
-	.close-button {
-		background: none;
-		border: none;
-		font-size: 1.5em;
-		cursor: pointer;
-		color: #6c757d;
-		padding: 0;
-		width: 30px;
-		height: 30px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 4px;
-		transition: background-color 0.2s ease;
-	}
-
-	.close-button:hover {
-		background-color: #e9ecef;
-	}
-
-	.modal-content {
-		padding: 1.5em;
-	}
-
-	.modal-labels, .modal-comments, .modal-attendees {
-		margin-bottom: 1.5em;
-	}
-
-	.modal-label {
-		display: inline-block;
-		background-color: #e9ecef;
-		color: #495057;
-		padding: 0.25em 0.75em;
-		border-radius: 12px;
-		font-size: 0.85em;
-		margin: 0.25em;
-	}
-
-	.comment {
-		background-color: #f8f9fa;
-		padding: 0.75em;
-		border-radius: 6px;
-		margin-bottom: 0.75em;
-	}
-
-	.comment-author {
-		font-weight: 600;
-		color: #495057;
-		font-size: 0.85em;
-		margin-bottom: 0.25em;
-	}
-
-	.comment-text {
-		color: #212529;
-		margin-bottom: 0.25em;
-	}
-
-	.comment-date {
-		font-size: 0.75em;
-		color: #6c757d;
-	}
-
-	.attendees-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5em;
-		margin-top: 0.5em;
-	}
-
-	.attendee {
-		background-color: #e9ecef;
-		color: #495057;
-		padding: 0.25em 0.5em;
-		border-radius: 12px;
-		font-size: 0.85em;
-	}
-
-	/* Sidebar Styles */
-	.sidebar-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.3);
-		display: flex;
-		justify-content: flex-end;
-		z-index: 999;
-	}
-
-	.sidebar {
-		width: 300px;
-		height: 100%;
-		background: white;
-		box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-		overflow-y: auto;
-	}
-
-	.sidebar-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1em 1.5em;
-		border-bottom: 1px solid #e9ecef;
-	}
-
-	.sidebar-header h4 {
-		margin: 0;
-		color: #212529;
-	}
-
-	.sidebar-content {
-		padding: 1em;
-	}
-
-	.sidebar-action {
-		display: block;
-		width: 100%;
-		padding: 0.75em;
-		margin-bottom: 0.5em;
-		background: none;
-		border: 1px solid #ced4da;
-		border-radius: 4px;
-		cursor: pointer;
-		text-align: left;
-		transition: all 0.2s ease;
-	}
-
-	.sidebar-action:hover {
-		background-color: #f8f9fa;
-		border-color: #adb5bd;
-	}
-</style>

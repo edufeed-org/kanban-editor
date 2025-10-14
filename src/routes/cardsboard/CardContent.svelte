@@ -35,7 +35,6 @@
 				class="card-image"
 				on:click={handleImageClick}
 				role={card.link ? "button" : ""}
-				tabindex={card.link ? 0 : -1}
 				on:keydown={(e) => e.key === 'Enter' && handleImageClick()}
 			/>
 		</div>

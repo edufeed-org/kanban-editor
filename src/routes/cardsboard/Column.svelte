@@ -1,12 +1,9 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { flip } from 'svelte/animate';
    import { dndzone } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
  	import HeaderBar from "./HeaderBar.svelte";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
-
- 	const dispatch = createEventDispatcher();
 
  	const flipDurationMs = 150;
 
@@ -14,10 +11,13 @@
  	export let description: string | undefined = undefined;
  	export let items: CardItem[];
  	export let onDrop: ColumnDropHandler;
+ 	export let onCardAction: ((cardId: string, action: string) => void) | undefined = undefined;
+ 	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
+ 	export let onSidebarAction: ((cardId: string, action: string) => void) | undefined = undefined;
 
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
- 	   console.warn("got consider", name);
+  	   console.warn("got consider", name);
  		items = newItems;
    }
    function handleDndFinalizeCards(e: any) {
@@ -26,17 +26,17 @@
 
    function handleCardAction(event: CustomEvent) {
    		const { cardId, action } = event.detail;
-   		dispatch('cardAction', { cardId, action, columnId: undefined });
+   		onCardAction?.(cardId, action);
    }
 
    function handlePublishStateChange(event: CustomEvent) {
    		const { cardId, newState } = event.detail;
-   		dispatch('publishStateChange', { cardId, newState });
+   		onPublishStateChange?.(cardId, newState);
    }
 
    function handleSidebarAction(event: CustomEvent) {
    		const { cardId, action } = event.detail;
-   		dispatch('sidebarAction', { cardId, action });
+   		onSidebarAction?.(cardId, action);
    }
 </script>
 
@@ -51,14 +51,6 @@
         height: calc(100% - 2.5em);
         /* Notice that the scroll container needs to be the dndzone if you want dragging near the edge to trigger scrolling */
         overflow-y: scroll;
-    }
-    .column-title {
-    min-height: 2.5em;
-     font-weight: bold;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
     }
     .column-description {
     	font-size: 0.9em;
@@ -85,9 +77,9 @@
  				       <div animate:flip="{{duration: flipDurationMs}}" >
  				          <Card
  				          	card={item}
- 				          	on:cardAction={handleCardAction}
- 				          	on:publishStateChange={handlePublishStateChange}
- 				          	on:sidebarAction={handleSidebarAction}
+ 				          	{onCardAction}
+ 				          	{onPublishStateChange}
+ 				          	{onSidebarAction}
  				          />
  				        </div>
  				    {/each}

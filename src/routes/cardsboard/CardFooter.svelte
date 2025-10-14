@@ -111,25 +111,6 @@
 		text-align: center;
 	}
 
-	.labels {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25em;
-		justify-content: center;
-	}
-
-	.label {
-		background-color: #e9ecef;
-		color: #495057;
-		padding: 0.2em 0.5em;
-		border-radius: 12px;
-		font-size: 0.7em;
-		font-weight: 500;
-		max-width: 120px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
 
 	.action-btn {
 		background: none;
