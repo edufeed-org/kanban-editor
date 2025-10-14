@@ -71,7 +71,7 @@
 
             alert("Post would be published to Nostr!");
         } catch (error) {
-            console.error("Error publishing post:", error);
+            console.error("Error publishing post:", $state.snapshot(error));
             alert("Error publishing post. Check console for details.");
         } finally {
             isSubmitting = false;

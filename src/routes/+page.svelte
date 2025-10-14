@@ -21,7 +21,7 @@
 
     // Handle form submission from child component
     async function handlePostSubmit(data: { title: string; content: string }) {
-        console.log("Creating Nostr post:", data);
+        console.log("Creating Nostr post:", $state.snapshot(data));
 
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
