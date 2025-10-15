@@ -82,11 +82,11 @@
 </style>
 
 <section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} on:consider|passive={handleDndConsiderColumns} on:finalize|passive={handleDndFinalizeColumns}>
-    {#each columns as {id, name, description, items}, idx (id)}
-   		<div class="column"animate:flip="{{duration: flipDurationMs}}" >
+    {#each columns as {id, name, color, items}, idx (id)}
+   		<div class="column" animate:flip="{{duration: flipDurationMs}}" >
  				<Column
  						name={name}
- 						description={description}
+ 						color={color}
  						items={items}
  						onDrop={(newItems) => handleItemFinalize(idx, newItems)}
  						onCardAction={handleCardAction}

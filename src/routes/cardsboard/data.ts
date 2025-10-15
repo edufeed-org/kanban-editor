@@ -6,6 +6,7 @@ const dataStore = writable<Column[]>([
 		id: "c1",
 		name: "TODO",
 		description: "Aufgaben, die noch erledigt werden müssen",
+		color: "chart-1",
 		items: [
 			{
 				id: 1,
@@ -89,6 +90,7 @@ const dataStore = writable<Column[]>([
 		id: "c2",
 		name: "DOING",
 		description: "Aufgaben, die gerade bearbeitet werden",
+		color: "chart-2",
 		items: [
 			{
 				id: 10,
@@ -130,6 +132,7 @@ const dataStore = writable<Column[]>([
 		id: "c3",
 		name: "DONE",
 		description: "Abgeschlossene Aufgaben",
+		color: "chart-3",
 		items: [
 			{
 				id: 13,

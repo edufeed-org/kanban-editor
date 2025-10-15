@@ -2,7 +2,7 @@
 	import { flip } from 'svelte/animate';
    import { dndzone } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
- 	import HeaderBar from "./HeaderBar.svelte";
+ 	import * as CardUI from "../../lib/components/ui/card/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 
  	const flipDurationMs = 150;
@@ -28,6 +28,7 @@
  	export let name: string;
  	export let description: string | undefined = undefined;
  	export let items: CardItem[];
+ 	export let color: string | undefined = undefined;
  	export let onDrop: ColumnDropHandler;
  	export let onCardAction: ((cardId: string, action: string) => void) | undefined = undefined;
  	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
@@ -56,56 +57,91 @@
    		const { cardId, action } = event.detail;
    		onSidebarAction?.(cardId, action);
    }
+
+   function getCardColor(colorName: string | undefined): string {
+   		return colorName ? `var(--${colorName})` : 'var(--muted)';
+   }
 </script>
 
 <style>
-	.wrapper {
+	.column-wrapper {
 		height: 100%;
 		width: 100%;
-		     /*Notice we make sure this container doesn't scroll so that the title stays on top and the dndzone inside is scrollable*/
-        overflow-y: hidden;
+		display: flex;
+		flex-direction: column;
 	}
+
+	.column-header {
+		display: flex;
+		flex-direction: column;
+		padding-bottom: 0.75rem;
+	}
+
+	.column-title {
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: hsl(var(--foreground));
+		margin-bottom: 0.5rem;
+	}
+
+	.color-bar {
+		height: 4px;
+		width: 100%;
+		border-radius: 2px;
+	}
+
 	.column-content {
-        height: calc(100% - 2.5em);
-        /* Notice that the scroll container needs to be the dndzone if you want dragging near the edge to trigger scrolling */
-        overflow-y: scroll;
-    }
-    .column-description {
-    	font-size: 0.9em;
-    	color: #666;
-    	text-align: center;
-    	margin-bottom: 0.5em;
-    	padding: 0 0.2em;
-    }
-    .card-wrapper {
-    	margin-bottom: 0.75rem;
-    }
-    .card-wrapper:last-child {
-    	margin-bottom: 0;
-    }
+		flex: 1;
+		overflow-y: auto;
+		padding-right: 0.5rem;
+	}
+
+	.card-wrapper {
+		margin-bottom: 0.75rem;
+	}
+
+	.card-wrapper:last-child {
+		margin-bottom: 0;
+	}
+
+	/* Scrollbar styling */
+	.column-content::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.column-content::-webkit-scrollbar-track {
+		background: hsl(var(--muted));
+		border-radius: 3px;
+	}
+
+	.column-content::-webkit-scrollbar-thumb {
+		background: hsl(var(--muted-foreground) / 0.3);
+		border-radius: 3px;
+	}
+
+	.column-content::-webkit-scrollbar-thumb:hover {
+		background: hsl(var(--muted-foreground) / 0.5);
+	}
 </style>
 
-<div class='wrapper'>
-  	<HeaderBar
-  		title={name}
-  		showMenu={false}
-  		showPublishToggle={false}
-  	/>
-  	{#if description}
- 		<div class="column-description">{description}</div>
- 	{/if}
- 	<div class="column-content" use:dndzone={{items, flipDurationMs}}
- 	    	 on:consider|passive={handleDndConsiderCards}
- 			 on:finalize|passive={handleDndFinalizeCards}>
- 				{#each items as item (item.id)}
- 				       <div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
- 				          <Card
- 				          	card={item}
- 				          	{onCardAction}
- 				          	{onPublishStateChange}
- 				          	{onSidebarAction}
- 				          />
- 				        </div>
- 				    {/each}
- 	   </div>
- </div>
+<div class="column-wrapper">
+	<div class="column-header">
+		<div class="column-title">{name}</div>
+		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
+	</div>
+
+	<div class="column-content" use:dndzone={{items, flipDurationMs}}
+	     on:consider|passive={handleDndConsiderCards}
+		 on:finalize|passive={handleDndFinalizeCards}>
+		{#each items as item (item.id)}
+			<div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
+				<Card
+					card={item}
+					{onCardAction}
+					{onPublishStateChange}
+					{onSidebarAction}
+				/>
+			</div>
+		{/each}
+   </div>
+</div>

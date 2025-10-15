@@ -27,6 +27,7 @@ export interface Column {
 	id: string;
 	name: string;
 	description?: string;
+	color?: string;
 	items: CardItem[];
 }
 
