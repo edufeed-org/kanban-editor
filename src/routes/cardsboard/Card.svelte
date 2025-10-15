@@ -1,28 +1,56 @@
 <script lang="ts">
 	import type { CardItem, PublishState } from "./types.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
+	import * as Popover from "$lib/components/ui/popover/index.js";
+	import { Button } from "$lib/components/ui/button/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import { Label } from "$lib/components/ui/label/index.js";
+	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
+	import { Separator } from "$lib/components/ui/separator/index.js";
 	import CardEditModal from "../../lib/components/CardEditModal.svelte";
 	import CardViewModal from "./CardViewModal.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 
-	export let card: CardItem;
-	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
-	export let onCardAction: ((cardId: string, action: string) => void) | undefined = undefined;
-	export let onSidebarAction: ((cardId: string, action: string) => void) | undefined = undefined;
+	let {
+		card,
+		onPublishStateChange,
+		onCardAction,
+		onSidebarAction
+	}: {
+		card: CardItem;
+		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
+		onCardAction?: (cardId: string, action: string) => void;
+		onSidebarAction?: (cardId: string, action: string) => void;
+	} = $props();
 
-	let showModal = false;
-	let showSidebar = false;
-	let showEditModal = false;
-	let showPublishToggle = true;
-	let showMenu = true;
+	let showModal = $state(false);
+	let showSidebar = $state(false);
+	let showEditModal = $state(false);
+	let showPublishToggle = $state(true);
+	let showMenu = $state(true);
+	let popoverOpen = $state(false);
+	
+	// Card editing state
+	let editName = $state(card.name);
+	let selectedColor = $state(card.color || 'slate');
+
+	const colorOptions = [
+		{ value: 'slate', label: 'Slate' },
+		{ value: 'red', label: 'Rot' },
+		{ value: 'orange', label: 'Orange' },
+		{ value: 'yellow', label: 'Gelb' },
+		{ value: 'green', label: 'Grün' },
+		{ value: 'blue', label: 'Blau' },
+		{ value: 'purple', label: 'Lila' }
+	];
 
 	// Ensure minimum 1 attendee (author should always be included)
-	$: attendees = card.attendees && card.attendees.length > 0
+	const attendees = $derived(card.attendees && card.attendees.length > 0
 		? card.attendees
-		: (card.author ? [card.author] : []);
+		: (card.author ? [card.author] : []));
 
 	function handleMenuClick() {
-		showSidebar = true;
+		popoverOpen = !popoverOpen;
 	}
 
 	function handleDoubleClick() {
@@ -98,6 +126,30 @@
 		onCardAction?.(cardId, 'updated');
 		closeEditModal();
 	}
+
+	function handleRename() {
+		card.name = editName;
+		popoverOpen = false;
+		onCardAction?.(String(card.id), 'renamed');
+	}
+
+	function handleColorChange() {
+		card.color = selectedColor;
+		popoverOpen = false;
+		onCardAction?.(String(card.id), 'color-changed');
+	}
+
+	function handleEditClick() {
+		showEditModal = true;
+		popoverOpen = false;
+	}
+
+	function handleDeleteClick() {
+		if (confirm(`Karte "${card.name}" wirklich löschen?`)) {
+			onCardAction?.(String(card.id), 'delete');
+		}
+		popoverOpen = false;
+	}
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--${colorName})` : 'var(--muted)';
 	}
@@ -124,14 +176,55 @@
 				{/if}
 
 				{#if showMenu}
-					<button
-						class="menu-button"
-						onclick={handleMenuClick}
-						aria-label="Open menu"
-						title="Open menu"
-					>
-						<span class="menu-dots">⋮</span>
-					</button>
+					<Popover.Root bind:open={popoverOpen}>
+						<Popover.Trigger>
+							<button
+								class="menu-button"
+								aria-label="Open menu"
+								title="Open menu"
+							>
+								<span class="menu-dots">⋮</span>
+							</button>
+						</Popover.Trigger>
+						<Popover.Content align="end" class="w-64">
+							<div class="space-y-4">
+								<div class="space-y-2">
+									<h4 class="font-medium text-sm">Karte umbenennen</h4>
+									<Input bind:value={editName} placeholder="Kartenname" />
+									<Button size="sm" onclick={handleRename} class="w-full">
+										Umbenennen
+									</Button>
+								</div>
+								
+								<Separator />
+								
+								<div class="space-y-2">
+									<h4 class="font-medium text-sm">Farbe wählen</h4>
+									<RadioGroup.Root bind:value={selectedColor}>
+										{#each colorOptions as option}
+											<div class="flex items-center space-x-2">
+												<RadioGroup.Item value={option.value} id={`card-color-${option.value}-${card.id}`} />
+												<Label for={`card-color-${option.value}-${card.id}`}>{option.label}</Label>
+											</div>
+										{/each}
+									</RadioGroup.Root>
+									<Button size="sm" onclick={handleColorChange} class="w-full">
+										Farbe ändern
+									</Button>
+								</div>
+								
+								<Separator />
+								
+								<Button variant="outline" size="sm" onclick={handleEditClick} class="w-full">
+									Karte bearbeiten
+								</Button>
+								
+								<Button variant="destructive" size="sm" onclick={handleDeleteClick} class="w-full">
+									Karte löschen
+								</Button>
+							</div>
+						</Popover.Content>
+					</Popover.Root>
 				{/if}
 			</div>
 		</div>
