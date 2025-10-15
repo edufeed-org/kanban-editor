@@ -115,8 +115,23 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 {#if isOpen && card}
-    <div class="modal-overlay" onclick={handleClose} role="button" tabindex="0" aria-label="Modal schließen" onkeydown={(e) => (e.key === 'Escape' || e.key === 'Enter') && handleClose()}>
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" tabindex="0" onclick={() => {}}>
+    <div 
+        class="modal-overlay" 
+        onclick={handleClose} 
+        onkeydown={(e) => (e.key === 'Escape' || e.key === 'Enter') && handleClose()} 
+        role="button" 
+        tabindex="0" 
+        aria-label="Modal schließen"
+    >
+        <div 
+            class="modal" 
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="edit-modal-title"
+            tabindex="-1"
+            onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+        >
             <div class="modal-header">
                 <h3 id="edit-modal-title">Karte bearbeiten</h3>
                 <button class="close-button" onclick={handleClose} aria-label="Modal schließen">×</button>

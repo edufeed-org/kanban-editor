@@ -179,14 +179,13 @@
 		<div class="footer-content">
 			
 				<div class="comments-count">
-					💬 {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
+					<span class="icon-[material-symbols--mode-comment-outline]"></span> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
 				</div>
 				<div class="attendees-count">
-					👥 {#if attendees.length > 0}{attendees.length}{/if}
+					<span class="icon-[material-symbols--group-outline]"></span> {#if attendees.length > 0}{attendees.length}{/if}
 				</div>
-			<button class="edit-button" onclick={() => openEditModal()}>
-				<span class="iconify ic--baseline-edit"></span>
-				<span class="edit-text">Bearbeiten</span>
+			<button class="edit-button" onclick={() => openEditModal()} aria-label="Edit Card" title="Edit Card">
+				<span class="icon-[material-symbols--edit-square-outline]"></span>
 			</button>
 		</div>
 	</Card.Footer>
@@ -431,9 +430,9 @@
 		}
 
 		.edit-button {
-			background-color: #007bff;
-			color: white;
-			border: none;
+			background-color: var(--secondary);
+			color: var(--secondary-foreground);
+			border: 1px solid var(--secondary-foreground);;
 			padding: 0.5em 1em;
 			border-radius: 4px;
 			cursor: pointer;
@@ -444,15 +443,10 @@
 			gap: 0.5em;
 		}
 
-		.iconify {
-			font-size: 1em;
-			line-height: 1;
-			margin-right: 0.25em;
-			flex-shrink: 0;
-		}
-
+		
 		.edit-button:hover {
-			background-color: #0056b3;
+			background-color: var(--secondary-foreground);
+			color: var(--secondary);
 		}
 
 		.edit-button:focus {
@@ -461,7 +455,7 @@
 		}
 
 
-		.edit-text {
+		/* .edit-text {
 			font-weight: 500;
-		}
+		} */
 	</style>
