@@ -87,18 +87,4 @@
   }
 }
 
-.card-wrapper div {
-  padding: 3px;
-}
-.card-wrapper .card {
-  border-left: 6px solid #dab44c;
-}
-/* edit button muss im flex ganz rechts sitzen*/
-.footer-content {
-  display: flex;
-  width: 100%;
-  align-items: center;
-}
-.edit-button {
-  flex:  justify-end;
-}
+/* Card styling now handled in Card.svelte with dynamic colors */

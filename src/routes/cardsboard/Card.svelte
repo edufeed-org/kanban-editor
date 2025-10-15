@@ -98,9 +98,13 @@
 		onCardAction?.(cardId, 'updated');
 		closeEditModal();
 	}
+	function getCardColor(colorName: string | undefined): string {
+		return colorName ? `var(--${colorName})` : 'var(--muted)';
+	}
+
 </script>
 
-<Card.Root class="card" ondblclick={handleDoubleClick}>
+<Card.Root class="card" ondblclick={handleDoubleClick} style="border-left: 6px solid {getCardColor(card.color)};">
 	<Card.Header>
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
@@ -184,7 +188,7 @@
 				<div class="attendees-count">
 					<span class="icon-[material-symbols--group-outline]"></span> {#if attendees.length > 0}{attendees.length}{/if}
 				</div>
-			<button class="edit-button" onclick={() => openEditModal()} aria-label="Edit Card" title="Edit Card">
+			<button class="edit-button" onclick={() => openEditModal()} aria-label="Bearbeiten" title="Bearbeiten">
 				<span class="icon-[material-symbols--edit-square-outline]"></span>
 			</button>
 		</div>
@@ -419,6 +423,7 @@
 			align-items: center;
 			justify-content: space-between;
 			gap: 1em;
+			flex-grow: 1;
 		}
 
 		.comments-count, .attendees-count {
@@ -432,7 +437,7 @@
 		.edit-button {
 			background-color: var(--secondary);
 			color: var(--secondary-foreground);
-			border: 1px solid var(--secondary-foreground);;
+			border: none;
 			padding: 0.5em 1em;
 			border-radius: 4px;
 			cursor: pointer;
@@ -445,7 +450,7 @@
 
 		
 		.edit-button:hover {
-			background-color: var(--secondary-foreground);
+			background-color: var(--primary);
 			color: var(--secondary);
 		}
 
@@ -454,8 +459,4 @@
 			outline-offset: 2px;
 		}
 
-
-		/* .edit-text {
-			font-weight: 500;
-		} */
 	</style>

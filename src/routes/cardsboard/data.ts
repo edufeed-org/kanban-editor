@@ -21,7 +21,7 @@ const dataStore = writable<Column[]>([
 				],
 				attendees: ["max@example.com", "anna@example.com"],
 				labels: ["Bug", "Milestone 2"],
-				color: "blue",
+				color: "chart-4",
 				publishState: "draft",
 				author: "max@example.com",
 				image: "https://picsum.photos/400/200?random=1",
@@ -38,43 +38,50 @@ const dataStore = writable<Column[]>([
 				id: 3,
 				name: "item43",
 				description: "Dritte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=5"
+				image: "https://picsum.photos/400/200?random=5",
+				color: "chart-1"
 			},
 			{
 				id: 4,
 				name: "item44",
 				description: "Vierte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=6"
+				image: "https://picsum.photos/400/200?random=6",
+				color: "chart-2"
 			},
 			{
 				id: 5,
 				name: "item45",
 				description: "Fünfte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=7"
+				image: "https://picsum.photos/400/200?random=7",
+				color: "chart-3"
 			},
 			{
 				id: 6,
 				name: "item46",
 				description: "Sechste Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=8"
+				image: "https://picsum.photos/400/200?random=8",
+				color: "chart-1"
 			},
 			{
 				id: 7,
 				name: "item47",
 				description: "Siebte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=9"
+				image: "https://picsum.photos/400/200?random=9",
+				color: "chart-4"
 			},
 			{
 				id: 8,
 				name: "item48",
 				description: "Achte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=10"
+				image: "https://picsum.photos/400/200?random=10",
+				color: "chart-5"
 			},
 			{
 				id: 9,
 				name: "item49",
 				description: "Neunte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=11"
+				image: "https://picsum.photos/400/200?random=11",
+				color: "chart-3"
 			}
 		]
 	},
@@ -103,6 +110,7 @@ const dataStore = writable<Column[]>([
 				],
 				attendees: ["anna@example.com"],
 				labels: ["Feature", "Urgent"],
+				color: "chart-1",
 				publishState: "published",
 				author: "anna@example.com",
 				image: "https://picsum.photos/400/200?random=2",
@@ -113,7 +121,8 @@ const dataStore = writable<Column[]>([
 				name: "item51",
 				description: "Zweite Aufgabe in Arbeit mit Arbeitsbild",
 				image: "https://picsum.photos/400/200?random=12",
-				link: "https://example.com/task51"
+				link: "https://example.com/task51",
+				color: "chart-2"
 			}
 		]
 	},
@@ -136,7 +145,7 @@ const dataStore = writable<Column[]>([
 				],
 				attendees: ["team@example.com"],
 				labels: ["Documentation", "Completed"],
-				color: "green",
+				color: "chart-4",
 				publishState: "published",
 				author: "team@example.com",
 				image: "https://picsum.photos/400/200?random=3",
