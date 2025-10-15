@@ -27,6 +27,11 @@
    export let columns: ColumnType[];
  	// will be called any time a card or a column gets dropped to update the parent data
  	export let onFinalUpdate: BoardUpdateHandler;
+	// Selection states
+	export let selectedColumn: string | null = null;
+	export let selectedCard: string | null = null;
+	export let onSelectColumn: ((columnId: string) => void) | undefined = undefined;
+	export let onSelectCard: ((cardId: string) => void) | undefined = undefined;
 
    function handleDndConsiderColumns(e: any) {
      columns = e.detail.items;
@@ -81,16 +86,21 @@
     }
 </style>
 
-<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} on:consider|passive={handleDndConsiderColumns} on:finalize|passive={handleDndFinalizeColumns}>
+<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} onconsider={handleDndConsiderColumns} onfinalize={handleDndFinalizeColumns}>
     {#each columns as {id, name, color, items}, idx (id)}
    		<div class="column" animate:flip="{{duration: flipDurationMs}}" >
  				<Column
  						name={name}
  						color={color}
  						items={items}
+						columnId={id}
+						isSelected={selectedColumn === id}
+						onSelect={() => onSelectColumn?.(id)}
  						onDrop={(newItems) => handleItemFinalize(idx, newItems)}
  						onCardAction={handleCardAction}
  						onPublishStateChange={handlePublishStateChange}
+						selectedCardId={selectedCard}
+						onSelectCard={onSelectCard}
  						onSidebarAction={handleSidebarAction}
  					/>
  			</div>

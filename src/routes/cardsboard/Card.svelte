@@ -13,11 +13,15 @@
 
 	let {
 		card,
+		isSelected = false,
+		onSelect,
 		onPublishStateChange,
 		onCardAction,
 		onSidebarAction
 	}: {
 		card: CardItem;
+		isSelected?: boolean;
+		onSelect?: () => void;
 		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
@@ -156,7 +160,11 @@
 
 </script>
 
-<Card.Root class="card" ondblclick={handleDoubleClick} style="border-left: 6px solid {getCardColor(card.color)};">
+<Card.Root 
+	class="card {isSelected ? 'border-2 border-primary' : ''}" 
+	ondblclick={handleDoubleClick} 
+	onclick={onSelect}
+	style="border-left: 6px solid {getCardColor(card.color)};">
 	<Card.Header>
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>

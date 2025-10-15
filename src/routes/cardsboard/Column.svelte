@@ -35,18 +35,28 @@
 		name,
 		items,
 		color,
+		columnId,
+		isSelected = false,
+		onSelect,
 		onDrop,
 		onCardAction,
 		onPublishStateChange,
-		onSidebarAction
+		onSidebarAction,
+		selectedCardId,
+		onSelectCard
 	}: {
 		name: string;
 		items: CardItem[];
 		color?: string;
+		columnId?: string;
+		isSelected?: boolean;
+		onSelect?: () => void;
 		onDrop: ColumnDropHandler;
 		onCardAction?: (cardId: string, action: string) => void;
 		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
+		selectedCardId?: string | null;
+		onSelectCard?: (cardId: string) => void;
 	} = $props();
 
 	// Local state for column editing
@@ -173,7 +183,13 @@
 	}
 </style>
 
-<div class="column-wrapper">
+<div 
+	class="column-wrapper {isSelected ? 'border-2 border-primary rounded-lg' : ''}" 
+	onclick={onSelect}
+	onkeydown={(e) => e.key === 'Enter' && onSelect?.()}
+	role="button"
+	tabindex="0"
+>
 	<div class="column-header">
 		<div class="flex items-center justify-between w-full">
 			<div class="column-title">{name}</div>
@@ -234,6 +250,8 @@
 			<div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
 				<Card
 					card={item}
+					isSelected={selectedCardId === String(item.id)}
+					onSelect={() => onSelectCard?.(String(item.id))}
 					{onCardAction}
 					{onPublishStateChange}
 					{onSidebarAction}

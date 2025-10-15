@@ -7,6 +7,17 @@
     import { Input } from '$lib/components/ui/input/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
+    import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
+    import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+
+    // Props für Sidebar-Toggle
+    let {
+        onToggleLeftSidebar,
+        onToggleRightSidebar
+    }: {
+        onToggleLeftSidebar?: () => void;
+        onToggleRightSidebar?: () => void;
+    } = $props();
 
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
@@ -42,9 +53,23 @@
     }
 </script>
 
-<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur shrink-0">
     <div class="container flex h-14 items-center justify-between px-4">
+        <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-2">
+            <!-- Left Sidebar Trigger -->
+            <Button
+                variant="ghost"
+                size="icon"
+                onclick={onToggleLeftSidebar}
+                class="size-9"
+            >
+                <PanelLeftIcon class="size-4" />
+                <span class="sr-only">Toggle Left Sidebar</span>
+            </Button>
+            
+            <Separator orientation="vertical" class="h-6" />
+            
             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
                 <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
@@ -54,6 +79,7 @@
             <span class="font-semibold text-lg hidden sm:inline-block">Kanban Board</span>
         </div>
 
+        <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-2">
             <!-- Settings -->
             <Sheet.Root>
@@ -100,6 +126,19 @@
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="4"/>
                 </svg>
+            </Button>
+            
+            <Separator orientation="vertical" class="h-6" />
+            
+            <!-- Right Sidebar Trigger -->
+            <Button
+                variant="ghost"
+                size="icon"
+                onclick={onToggleRightSidebar}
+                class="size-9"
+            >
+                <PanelRightIcon class="size-4" />
+                <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>
     </div>
