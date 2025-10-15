@@ -27,6 +27,9 @@
     let newLinkUrl = $state('');
     let newLinkTitle = $state('');
 
+    // Tab state
+    let activeTab = $state('content');
+
     // Synchronisiere formData mit der Karte, wenn sich die Karte ändert
     $effect(() => {
         if (card) {
@@ -112,158 +115,183 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 {#if isOpen && card}
-    <div class="modal-overlay" on:click={handleClose} role="button" tabindex="0" aria-label="Modal schließen" on:keydown={(e) => e.key === 'Escape' && handleClose()}>
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" tabindex="0" on:click|stopPropagation>
+    <div class="modal-overlay" onclick={handleClose} role="button" tabindex="0" aria-label="Modal schließen" onkeydown={(e) => (e.key === 'Escape' || e.key === 'Enter') && handleClose()}>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" tabindex="0" onclick={() => {}}>
             <div class="modal-header">
                 <h3 id="edit-modal-title">Karte bearbeiten</h3>
-                <button class="close-button" on:click={handleClose} aria-label="Modal schließen">×</button>
+                <button class="close-button" onclick={handleClose} aria-label="Modal schließen">×</button>
             </div>
 
             <div class="modal-content">
-                <form on:submit={handleSave}>
-                    <!-- Titel -->
-                    <div class="form-group">
-                        <label for="card-heading" class="form-label">
-                            Titel <span class="required">*</span>
-                        </label>
-                        <input
-                            id="card-heading"
-                            type="text"
-                            class="form-input"
-                            bind:value={formData.heading}
-                            placeholder="Kartentitel eingeben..."
-                            required
-                            maxlength="100"
-                        />
+                <div class="tabs-container">
+                    <div class="tabs-header">
+                        <button
+                            class="tab-button"
+                            class:active={activeTab === 'content'}
+                            onclick={() => activeTab = 'content'}
+                        >
+                            Inhalt
+                        </button>
+                        <button
+                            class="tab-button"
+                            class:active={activeTab === 'settings'}
+                            onclick={() => activeTab = 'settings'}
+                        >
+                            Einstellungen
+                        </button>
                     </div>
 
-                    <!-- Inhalt -->
-                    <div class="form-group">
-                        <label for="card-content" class="form-label">
-                            Beschreibung
-                        </label>
-                        <textarea
-                            id="card-content"
-                            class="form-textarea"
-                            bind:value={formData.content}
-                            placeholder="Detaillierte Beschreibung der Aufgabe..."
-                            rows="4"
-                            maxlength="1000"
-                        ></textarea>
-                    </div>
-
-                    <!-- Farbe -->
-                    <div class="form-group">
-                        <label for="card-color" class="form-label">
-                            Farbe
-                        </label>
-                        <select id="card-color" class="form-select" bind:value={formData.color}>
-                            {#each colorOptions as option}
-                                <option value={option.value}>{option.label}</option>
-                            {/each}
-                        </select>
-                    </div>
-
-                    <!-- Labels -->
-                    <div class="form-group">
-                        <label for="card-labels" class="form-label">
-                            Labels
-                        </label>
-                        <div class="labels-container">
-                            <div class="labels-input-group">
-                                <input
-                                    id="card-labels"
-                                    type="text"
-                                    class="form-input"
-                                    bind:value={newLabel}
-                                    placeholder="Neues Label hinzufügen..."
-                                    on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
-                                />
-                                <button type="button" class="btn-secondary" on:click={addLabel}>Hinzufügen</button>
-                            </div>
-
-                            {#if (formData.labels || []).length > 0}
-                                <div class="labels-list">
-                                    {#each formData.labels as label}
-                                        <span class="label-badge">
-                                            {label}
-                                            <button
-                                                type="button"
-                                                class="label-remove"
-                                                on:click={() => removeLabel(label)}
-                                                aria-label="Label entfernen"
-                                            >×</button>
-                                        </span>
-                                    {/each}
+                    <div class="tabs-content">
+                        {#if activeTab === 'content'}
+                            <div class="tab-pane">
+                                <!-- Titel -->
+                                <div class="form-group">
+                                    <label for="card-heading" class="form-label">
+                                        Titel <span class="required">*</span>
+                                    </label>
+                                    <input
+                                        id="card-heading"
+                                        type="text"
+                                        class="form-input"
+                                        bind:value={formData.heading}
+                                        placeholder="Kartentitel eingeben..."
+                                        required
+                                        maxlength="100"
+                                    />
                                 </div>
-                            {/if}
-                        </div>
-                    </div>
 
-                    <!-- Links -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            Links
-                        </label>
-                        <div class="links-container">
-                            <div class="links-input-group">
-                                <input
-                                    type="url"
-                                    class="form-input"
-                                    bind:value={newLinkUrl}
-                                    placeholder="URL eingeben..."
-                                />
-                                <input
-                                    type="text"
-                                    class="form-input"
-                                    bind:value={newLinkTitle}
-                                    placeholder="Titel eingeben..."
-                                    on:keydown={(e) => e.key === 'Enter' && (e.preventDefault(), addLink())}
-                                />
-                                <button type="button" class="btn-secondary" on:click={addLink}>Hinzufügen</button>
-                            </div>
+                                <!-- Inhalt -->
+                                <div class="form-group">
+                                    <label for="card-content" class="form-label">
+                                        Beschreibung
+                                    </label>
+                                    <textarea
+                                        id="card-content"
+                                        class="form-textarea"
+                                        bind:value={formData.content}
+                                        placeholder="Detaillierte Beschreibung der Aufgabe..."
+                                        rows="4"
+                                        maxlength="1000"
+                                    ></textarea>
+                                </div>
 
-                            {#if (formData.links || []).length > 0}
-                                <div class="links-list">
-                                    {#each formData.links as link}
-                                        <div class="link-item">
-                                            <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-title">{link.title}</a>
-                                            <span class="link-url">({link.url})</span>
-                                            <button
-                                                type="button"
-                                                class="link-remove"
-                                                on:click={() => removeLink(link.id)}
-                                                aria-label="Link entfernen"
-                                            >×</button>
+                                <!-- Links -->
+                                <div class="form-group">
+                                    <label class="form-label" for="links-section">
+                                        Links
+                                    </label>
+                                    <div class="links-container" id="links-section">
+                                        <div class="links-input-group">
+                                            <input
+                                                type="url"
+                                                class="form-input"
+                                                bind:value={newLinkUrl}
+                                                placeholder="URL eingeben..."
+                                            />
+                                            <input
+                                                type="text"
+                                                class="form-input"
+                                                bind:value={newLinkTitle}
+                                                placeholder="Titel eingeben..."
+                                                onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addLink())}
+                                            />
+                                            <button type="button" class="btn-secondary" onclick={addLink}>Hinzufügen</button>
                                         </div>
-                                    {/each}
+
+                                        {#if (formData.links || []).length > 0}
+                                            <div class="links-list">
+                                                {#each formData.links as link}
+                                                    <div class="link-item">
+                                                        <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-title">{link.title}</a>
+                                                        <span class="link-url">({link.url})</span>
+                                                        <button
+                                                            type="button"
+                                                            class="link-remove"
+                                                            onclick={() => removeLink(link.id)}
+                                                            aria-label="Link entfernen"
+                                                        >×</button>
+                                                    </div>
+                                                {/each}
+                                            </div>
+                                        {/if}
+                                    </div>
                                 </div>
-                            {/if}
-                        </div>
-                    </div>
+                            </div>
+                        {:else if activeTab === 'settings'}
+                            <div class="tab-pane">
+                                <!-- Farbe -->
+                                <div class="form-group">
+                                    <label for="card-color" class="form-label">
+                                        Farbe
+                                    </label>
+                                    <select id="card-color" class="form-select" bind:value={formData.color}>
+                                        {#each colorOptions as option}
+                                            <option value={option.value}>{option.label}</option>
+                                        {/each}
+                                    </select>
+                                </div>
 
-                    <!-- Publish State -->
-                    <div class="form-group">
-                        <label for="card-publish-state" class="form-label">
-                            Status
-                        </label>
-                        <select id="card-publish-state" class="form-select" bind:value={formData.publishState}>
-                            {#each publishOptions as option}
-                                <option value={option.value}>{option.label}</option>
-                            {/each}
-                        </select>
-                    </div>
+                                <!-- Labels -->
+                                <div class="form-group">
+                                    <label for="card-labels" class="form-label">
+                                        Labels
+                                    </label>
+                                    <div class="labels-container">
+                                        <div class="labels-input-group">
+                                            <input
+                                                id="card-labels"
+                                                type="text"
+                                                class="form-input"
+                                                bind:value={newLabel}
+                                                placeholder="Neues Label hinzufügen..."
+                                                onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
+                                            />
+                                            <button type="button" class="btn-secondary" onclick={addLabel}>Hinzufügen</button>
+                                        </div>
 
-                    <!-- Action Buttons -->
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" on:click={handleClose}>
-                            Abbrechen
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            Speichern
-                        </button>
+                                        {#if (formData.labels || []).length > 0}
+                                            <div class="labels-list">
+                                                {#each formData.labels as label}
+                                                    <span class="label-badge">
+                                                        {label}
+                                                        <button
+                                                            type="button"
+                                                            class="label-remove"
+                                                            onclick={() => removeLabel(label)}
+                                                            aria-label="Label entfernen"
+                                                        >×</button>
+                                                    </span>
+                                                {/each}
+                                            </div>
+                                        {/if}
+                                    </div>
+                                </div>
+
+                                <!-- Publish State -->
+                                <div class="form-group">
+                                    <label for="card-publish-state" class="form-label">
+                                        Status
+                                    </label>
+                                    <select id="card-publish-state" class="form-select" bind:value={formData.publishState}>
+                                        {#each publishOptions as option}
+                                            <option value={option.value}>{option.label}</option>
+                                        {/each}
+                                    </select>
+                                </div>
+                            </div>
+                        {/if}
                     </div>
-                </form>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick={handleClose}>
+                        Abbrechen
+                    </button>
+                    <button type="button" class="btn-primary" onclick={handleSave}>
+                        Speichern
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -330,6 +358,50 @@
 
     .modal-content {
         padding: 1.5rem;
+    }
+
+    .tabs-container {
+        margin-bottom: 2rem;
+    }
+
+    .tabs-header {
+        display: flex;
+        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+
+    .tab-button {
+        background: none;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6c757d;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .tab-button:hover {
+        color: #007bff;
+    }
+
+    .tab-button.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+    }
+
+    .tabs-content {
+        min-height: 300px;
+    }
+
+    .tab-pane {
+        animation: fadeIn 0.2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .form-group {
@@ -558,6 +630,20 @@
 
         .links-input-group {
             flex-direction: column;
+        }
+
+        .tabs-header {
+            flex-direction: column;
+        }
+
+        .tab-button {
+            border-bottom: none;
+            border-right: 2px solid transparent;
+        }
+
+        .tab-button.active {
+            border-bottom: none;
+            border-right-color: #007bff;
         }
     }
 </style>

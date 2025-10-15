@@ -2,6 +2,10 @@
 
 @import "tw-animate-css";
 
+@plugin "@iconify/tailwind4" {
+  prefixes: ic, mdi, lucide, heroicons;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -118,4 +122,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.card-wrapper div {
+  padding: 3px;
+}
+.card-wrapper .card {
+  border-left: 6px solid #dab44c;
+}
+/* edit button muss im flex ganz rechts sitzen*/
+.footer-content {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+.edit-button {
+  flex:  justify-end;
 }

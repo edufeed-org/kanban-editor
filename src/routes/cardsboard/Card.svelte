@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { CardItem, PublishState } from "./types.js";
-	import HeaderBar from "./HeaderBar.svelte";
-	import CardContent from "./CardContent.svelte";
-	import CardFooter from "./CardFooter.svelte";
+	import * as Card from "../../lib/components/ui/card/index.js";
 	import CardEditModal from "../../lib/components/CardEditModal.svelte";
+	import CardViewModal from "./CardViewModal.svelte";
+	import CardSidebar from "./CardSidebar.svelte";
 
 	export let card: CardItem;
 	export let onPublishStateChange: ((cardId: string, newState: PublishState) => void) | undefined = undefined;
@@ -13,6 +13,8 @@
 	let showModal = false;
 	let showSidebar = false;
 	let showEditModal = false;
+	let showPublishToggle = true;
+	let showMenu = true;
 
 	// Ensure minimum 1 attendee (author should always be included)
 	$: attendees = card.attendees && card.attendees.length > 0
@@ -27,11 +29,23 @@
 		showModal = true;
 	}
 
-	function handlePublishToggle(event: CustomEvent) {
-		const { newState } = event.detail;
+	function handlePublishToggle() {
+		const newState = card.publishState === 'draft' ? 'published' : 'draft';
 		card.publishState = newState;
 		// Call callback prop instead of dispatching event
 		onPublishStateChange?.(String(card.id), newState);
+	}
+
+	function handleImageClick() {
+		if (card.link) {
+			window.open(card.link, '_blank', 'noopener,noreferrer');
+		}
+	}
+
+	function handleLinkClick() {
+		if (card.link) {
+			window.open(card.link, '_blank', 'noopener,noreferrer');
+		}
 	}
 
 	function handleButtonAction(event: CustomEvent) {
@@ -86,34 +100,96 @@
 	}
 </script>
 
-<div
-	class="card"
-	class:draft={card.publishState === 'draft'}
-	class:published={card.publishState === 'published'}
-	class:archived={card.publishState === 'archived'}
-	on:dblclick={handleDoubleClick}
-	on:keydown|passive={handleKeyDown}
-	role="button"
-	tabindex="0"
-	aria-label="Card: {card.name}"
->
-	<HeaderBar
-		title={card.name}
-		publishState={card.publishState || 'draft'}
-		showMenu={true}
-		showPublishToggle={true}
-		on:menuClick={handleMenuClick}
-		on:publishToggle={handlePublishToggle}
-	/>
+<Card.Root class="card" ondblclick={handleDoubleClick}>
+	<Card.Header>
+		<div class="card-header-content">
+			<Card.Title>{card.name}</Card.Title>
+			<div class="header-actions">
+				{#if showPublishToggle}
+					<button
+						class="publish-toggle"
+						class:draft={card.publishState === 'draft'}
+						class:published={card.publishState === 'published'}
+						class:archived={card.publishState === 'archived'}
+						onclick={handlePublishToggle}
+						aria-label="Toggle publish state"
+						title="Toggle publish state"
+					>
+						<span class="publish-indicator"></span>
+					</button>
+				{/if}
 
-	<CardContent {card} />
+				{#if showMenu}
+					<button
+						class="menu-button"
+						onclick={handleMenuClick}
+						aria-label="Open menu"
+						title="Open menu"
+					>
+						<span class="menu-dots">⋮</span>
+					</button>
+				{/if}
+			</div>
+		</div>
+	</Card.Header>
 
-	<CardFooter
-		comments={card.comments || []}
-		{attendees}
-		author={card.author || ''}
-		on:actionClick={handleButtonAction}
-	/>
+	<Card.Content>
+		<!-- Labels Section -->
+		{#if card.labels && card.labels.length > 0}
+			<div class="card-labels">
+				{#each card.labels as label}
+					<span class="label">{label}</span>
+				{/each}
+			</div>
+		{/if}
+
+		<!-- Image Section -->
+		{#if card.image}
+			<div class="card-image-container">
+				<img
+					src={card.image}
+					alt={card.name}
+					class="card-image"
+					onclick={handleImageClick}
+					role={card.link ? "button" : ""}
+					onkeydown={(e) => e.key === 'Enter' && handleImageClick()}
+				/>
+			</div>
+		{/if}
+
+		<!-- Description Section (Markdown Content) -->
+		{#if card.description}
+			<div class="card-description">
+				{card.description}
+			</div>
+		{/if}
+
+		<!-- Link Section -->
+		{#if card.link}
+			<div class="card-link">
+				<button class="link-button" onclick={handleLinkClick}>
+					<span class="link-icon">🔗</span>
+					<span class="link-text">Link öffnen</span>
+				</button>
+			</div>
+		{/if}
+	</Card.Content>
+
+	<Card.Footer>
+		<div class="footer-content">
+			
+				<div class="comments-count">
+					💬 {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
+				</div>
+				<div class="attendees-count">
+					👥 {#if attendees.length > 0}{attendees.length}{/if}
+				</div>
+			<button class="edit-button" onclick={() => openEditModal()}>
+				<span class="iconify ic--baseline-edit"></span>
+				<span class="edit-text">Bearbeiten</span>
+			</button>
+		</div>
+	</Card.Footer>
 
 	<!-- Edit Modal -->
 	<CardEditModal
@@ -131,304 +207,261 @@
 		onClose={closeEditModal}
 		onSave={handleEditSave}
 	/>
-	</div>
+</Card.Root>
 	
 	<!-- Card Modal for editing/viewing details -->
-	{#if showModal}
-		<div class="modal-overlay" on:click={closeModal} on:keydown|passive={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Modal schließen">
-			<div class="modal" on:click|stopPropagation on:keydown|passive={(e) => e.key === 'Escape' && closeModal()} role="dialog" aria-modal="true" aria-labelledby="modal-title-2" tabindex="0">
-				<div class="modal-header">
-					<h3 id="modal-title-2">{card.name}</h3>
-					<button class="close-button" on:click|passive={closeModal} aria-label="Modal schließen">×</button>
-				</div>
-				<div class="modal-content">
-					{#if card.description}
-						<p>{card.description}</p>
-					{/if}
-	
-					{#if card.labels && card.labels.length > 0}
-						<div class="modal-labels">
-							<strong>Labels:</strong>
-							{#each card.labels as label}
-								<span class="modal-label">{label}</span>
-							{/each}
-						</div>
-					{/if}
-	
-					<div class="modal-comments">
-						<strong>Kommentare ({(card.comments || []).length}):</strong>
-						{#if (card.comments || []).length > 0}
-							{#each card.comments as comment}
-								<div class="comment">
-									<div class="comment-author">{comment.author}</div>
-									<div class="comment-text">{comment.text}</div>
-									<div class="comment-date">{new Date(comment.createdAt).toLocaleDateString()}</div>
-								</div>
-							{/each}
-						{:else}
-							<p class="no-comments">Keine Kommentare vorhanden</p>
-						{/if}
-					</div>
-	
-					<div class="modal-attendees">
-						<strong>Teilnehmer ({attendees.length}):</strong>
-						<div class="attendees-list">
-							{#each attendees as attendee}
-								<span class="attendee">{attendee}</span>
-							{/each}
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<CardViewModal
+		{card}
+		isOpen={showModal}
+		onClose={closeModal}
+	/>
 	
 	<!-- Sidebar for quick actions -->
-	{#if showSidebar}
-		<div class="sidebar-overlay" on:click={closeSidebar} on:keydown|passive={(e) => e.key === 'Escape' && closeSidebar()} role="button" tabindex="0" aria-label="Sidebar schließen">
-			<div class="sidebar" on:click|stopPropagation on:keydown|passive={(e) => e.key === 'Escape' && closeSidebar()} role="dialog" aria-label="Karten-Aktionen" tabindex="0">
-				<div class="sidebar-header">
-					<h4>Karte bearbeiten</h4>
-					<button class="close-button" on:click|passive={closeSidebar} aria-label="Sidebar schließen">×</button>
-				</div>
-				<div class="sidebar-content">
-					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('delete')}>
-						Karte löschen
-					</button>
-					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('duplicate')}>
-						Duplizieren
-					</button>
-					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('move')}>
-						Verschieben
-					</button>
-					<button class="sidebar-action" on:click|passive={() => handleSidebarAction('color')}>
-						Farbe ändern
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<CardSidebar
+		isOpen={showSidebar}
+		onClose={closeSidebar}
+		onAction={handleSidebarAction}
+	/>
 
 
 	
 	<style>
-		.card {
-			height: auto;
-			min-height: 4em;
-			width: 100%;
-			margin: 0.4em 0;
-			padding: 0.75em;
-			display: flex;
-			flex-direction: column;
-			background-color: #f8f9fa;
-			border: 1px solid #dee2e6;
-			border-radius: 8px;
-			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-			transition: box-shadow 0.2s ease;
-			cursor: pointer;
-		}
-	
-		.card:hover {
-			box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-		}
-	
-		.card:focus {
-			outline: 2px solid #007bff;
-			outline-offset: 2px;
-		}
-	
-		.card.draft {
-			border-left: 4px solid #ffc107;
-		}
-	
-		.card.published {
-			border-left: 4px solid #28a745;
-		}
-	
-		.card.archived {
-			border-left: 4px solid #6c757d;
-			opacity: 0.7;
-		}
-	
-	
-		/* Modal Styles */
-		.modal-overlay {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(0, 0, 0, 0.5);
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			z-index: 1000;
-		}
-	
-		.modal {
-			background: white;
-			border-radius: 8px;
-			width: 90%;
-			max-width: 600px;
-			max-height: 80vh;
-			overflow-y: auto;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		}
-	
-		.modal-header {
+		/* Layout styling for card header */
+		.card-header-content {
 			display: flex;
 			justify-content: space-between;
+			align-items: flex-start;
+			width: 100%;
+		}
+
+		.header-actions {
+			display: flex;
 			align-items: center;
-			padding: 1em 1.5em;
-			border-bottom: 1px solid #e9ecef;
+			gap: 0.5em;
+			flex-shrink: 0;
 		}
-	
-		.modal-header h3 {
-			margin: 0;
-			color: #212529;
-		}
-	
-		.close-button {
-			background: none;
-			border: none;
-			font-size: 1.5em;
+
+		/* Status indicator styling */
+		.publish-toggle {
+			width: 16px;
+			height: 16px;
+			border-radius: 50%;
+			border: 2px solid #dee2e6;
+			background: white;
 			cursor: pointer;
-			color: #6c757d;
-			padding: 0;
-			width: 30px;
-			height: 30px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			border-radius: 4px;
+			transition: all 0.2s ease;
+			position: relative;
+		}
+
+		.publish-toggle:hover {
+			border-color: #ced4da;
+			transform: scale(1.1);
+		}
+
+		.publish-toggle.draft {
+			border-color: #ffc107;
+			background-color: #fff3cd;
+		}
+
+		.publish-toggle.published {
+			border-color: #28a745;
+			background-color: #d4edda;
+		}
+
+		.publish-toggle.archived {
+			border-color: #6c757d;
+			background-color: #f8f9fa;
+		}
+
+		.publish-indicator {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
 			transition: background-color 0.2s ease;
 		}
-	
-		.close-button:hover {
-			background-color: #e9ecef;
+
+		.publish-toggle.draft .publish-indicator {
+			background-color: #ffc107;
 		}
-	
-		.modal-content {
-			padding: 1.5em;
+
+		.publish-toggle.published .publish-indicator {
+			background-color: #28a745;
 		}
-	
-		.modal-labels, .modal-comments, .modal-attendees {
-			margin-bottom: 1.5em;
+
+		.publish-toggle.archived .publish-indicator {
+			background-color: #6c757d;
 		}
-	
-		.modal-label {
-			display: inline-block;
-			background-color: #e9ecef;
-			color: #495057;
-			padding: 0.25em 0.75em;
-			border-radius: 12px;
-			font-size: 0.85em;
-			margin: 0.25em;
-		}
-	
-		.comment {
-			background-color: #f8f9fa;
-			padding: 0.75em;
-			border-radius: 6px;
-			margin-bottom: 0.75em;
-		}
-	
-		.comment-author {
-			font-weight: 600;
-			color: #495057;
-			font-size: 0.85em;
-			margin-bottom: 0.25em;
-		}
-	
-		.comment-text {
-			color: #212529;
-			margin-bottom: 0.25em;
-		}
-	
-		.comment-date {
-			font-size: 0.75em;
-			color: #6c757d;
-		}
-	
-		.no-comments {
-			color: #6c757d;
-			font-style: italic;
-			margin: 0.5em 0;
-		}
-	
-		.attendees-list {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.5em;
-			margin-top: 0.5em;
-		}
-	
-		.attendee {
-			background-color: #e9ecef;
-			color: #495057;
-			padding: 0.25em 0.5em;
-			border-radius: 12px;
-			font-size: 0.85em;
-		}
-	
-		/* Sidebar Styles */
-		.sidebar-overlay {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(0, 0, 0, 0.3);
-			display: flex;
-			justify-content: flex-end;
-			z-index: 999;
-		}
-	
-		.sidebar {
-			width: 300px;
-			height: 100%;
-			background: white;
-			box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-			overflow-y: auto;
-		}
-	
-		.sidebar-header {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 1em 1.5em;
-			border-bottom: 1px solid #e9ecef;
-		}
-	
-		.sidebar-header h4 {
-			margin: 0;
-			color: #212529;
-		}
-	
-		.sidebar-content {
-			padding: 1em;
-		}
-	
-		.sidebar-action {
-			display: block;
-			width: 100%;
-			padding: 0.75em;
-			margin-bottom: 0.5em;
+
+		/* Menu button styling */
+		.menu-button {
 			background: none;
-			border: 1px solid #ced4da;
-			border-radius: 4px;
+			border: none;
 			cursor: pointer;
-			text-align: left;
-			transition: all 0.2s ease;
+			padding: 0.25em;
+			border-radius: 4px;
+			transition: background-color 0.2s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
-	
-		.sidebar-action:hover {
-			background-color: #f8f9fa;
-			border-color: #adb5bd;
+
+		.menu-button:hover {
+			background-color: #e9ecef;
 		}
-	
-		.sidebar-action:focus {
+
+		.menu-button:focus {
 			outline: 2px solid #007bff;
 			outline-offset: 2px;
+		}
+
+		.menu-dots {
+			font-size: 1.2em;
+			color: #6c757d;
+			line-height: 1;
+		}
+
+		/* Card content styling */
+		.card-labels {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.25em;
+			margin-bottom: 0.5em;
+		}
+
+		.label {
+			background-color: #e9ecef;
+			color: #495057;
+			padding: 0.2em 0.5em;
+			border-radius: 12px;
+			font-size: 0.75em;
+			font-weight: 500;
+			max-width: 120px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.card-image-container {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+		}
+
+		.card-image {
+			max-width: 100%;
+			max-height: 200px;
+			border-radius: 6px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			cursor: pointer;
+		}
+
+		.card-image:hover {
+			transform: scale(1.02);
+			box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+		}
+
+		.card-image:focus {
+			outline: 2px solid #007bff;
+			outline-offset: 2px;
+		}
+
+		.card-description {
+			font-size: 0.9em;
+			color: #495057;
+			line-height: 1.4;
+			flex: 1;
+		}
+
+		.card-link {
+			margin-top: auto;
+		}
+
+		.link-button {
+			display: flex;
+			align-items: center;
+			gap: 0.5em;
+			background: none;
+			border: 1px solid #007bff;
+			color: #007bff;
+			padding: 0.5em 1em;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 0.85em;
+			transition: all 0.2s ease;
+			width: 100%;
+			justify-content: center;
+		}
+
+		.link-button:hover {
+			background-color: #007bff;
+			color: white;
+		}
+
+		.link-button:focus {
+			outline: 2px solid #007bff;
+			outline-offset: 2px;
+		}
+
+		.link-icon {
+			font-size: 0.9em;
+		}
+
+		.link-text {
+			font-weight: 500;
+		}
+
+		/* Footer styling */
+		.footer-content {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1em;
+		}
+
+		.comments-count, .attendees-count {
+			font-size: 0.8em;
+			color: #6c757d;
+			display: flex;
+			align-items: center;
+			gap: 0.25em;
+		}
+
+		.edit-button {
+			background-color: #007bff;
+			color: white;
+			border: none;
+			padding: 0.5em 1em;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 0.85em;
+			transition: background-color 0.2s ease;
+			display: flex;
+			align-items: center;
+			gap: 0.5em;
+		}
+
+		.iconify {
+			font-size: 1em;
+			line-height: 1;
+			margin-right: 0.25em;
+			flex-shrink: 0;
+		}
+
+		.edit-button:hover {
+			background-color: #0056b3;
+		}
+
+		.edit-button:focus {
+			outline: 2px solid #007bff;
+			outline-offset: 2px;
+		}
+
+
+		.edit-text {
+			font-weight: 500;
 		}
 	</style>

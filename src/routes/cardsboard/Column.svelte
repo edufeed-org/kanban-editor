@@ -77,6 +77,12 @@
     	margin-bottom: 0.5em;
     	padding: 0 0.2em;
     }
+    .card-wrapper {
+    	margin-bottom: 0.75rem;
+    }
+    .card-wrapper:last-child {
+    	margin-bottom: 0;
+    }
 </style>
 
 <div class='wrapper'>
@@ -92,7 +98,7 @@
  	    	 on:consider|passive={handleDndConsiderCards}
  			 on:finalize|passive={handleDndFinalizeCards}>
  				{#each items as item (item.id)}
- 				       <div animate:flip="{{duration: flipDurationMs}}" >
+ 				       <div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
  				          <Card
  				          	card={item}
  				          	{onCardAction}
@@ -101,5 +107,5 @@
  				          />
  				        </div>
  				    {/each}
-     </div>
+ 	   </div>
  </div>
