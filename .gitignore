@@ -31,3 +31,4 @@ storybook-static
 # Gemini
 .gemini
 AGENTS.md
+.kilocode/rules/SHADCN.md
