@@ -17,6 +17,7 @@
     import SunIcon from "@lucide/svelte/icons/sun";
     import BotIcon from "@lucide/svelte/icons/bot";
     import MoreVerticalIcon from "@lucide/svelte/icons/more-vertical";
+    import SettingsPanel from './SettingsPanel.svelte';
 
     // Props für Sidebar-Toggle, Title und Board-Meta
     let {
@@ -148,6 +149,9 @@
 
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-2">
+            <!-- Settings Panel -->
+            <SettingsPanel />
+
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
                 <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="KI-Zusammenfassung">

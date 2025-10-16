@@ -2,9 +2,28 @@
 	import { flip } from 'svelte/animate';
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
+	import { settingsStore } from '$lib/stores/settingsStore.js';
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
+
+	// Track column heights for alignment
+	let columnHeights = $state<{ [key: string]: number }>({});
+	let maxColumnHeight = $derived(Math.max(...Object.values(columnHeights), 0));
+	let resizeObservers = new Map<string, ResizeObserver>();
+
+	// Subscribe to settings store
+	let settings = $state<any>(null);
+	let unsubscribe: (() => void) | undefined;
+	
+	$effect(() => {
+		if (!unsubscribe) {
+			unsubscribe = settingsStore.subscribe((s) => {
+				settings = s;
+			});
+		}
+		return () => unsubscribe?.();
+	});
 
 	// Suppress passive event listener warnings for dnd-action
  	// This is a known issue with svelte-dnd-action library
@@ -24,14 +43,24 @@
  			};
  		}
 
-   export let columns: ColumnType[];
- 	// will be called any time a card or a column gets dropped to update the parent data
- 	export let onFinalUpdate: BoardUpdateHandler;
-	// Selection states
-	export let selectedColumn: string | null = null;
-	export let selectedCard: string | null = null;
-	export let onSelectColumn: ((columnId: string) => void) | undefined = undefined;
-	export let onSelectCard: ((cardId: string) => void) | undefined = undefined;
+   let {
+	columns: columns_inner,
+	onFinalUpdate,
+	selectedColumn = null,
+	selectedCard = null,
+	onSelectColumn = undefined,
+	onSelectCard = undefined
+   }: {
+	columns: ColumnType[];
+	onFinalUpdate: BoardUpdateHandler;
+	selectedColumn?: string | null;
+	selectedCard?: string | null;
+	onSelectColumn?: ((columnId: string) => void) | undefined;
+	onSelectCard?: ((cardId: string) => void) | undefined;
+   } = $props();
+
+   // mutable reference for runes compatibility
+   let columns = $state(columns_inner);
 
 	function handleDndConsiderColumns(e: any) {
      columns = e.detail.items;
@@ -67,18 +96,48 @@
   		// Handle sidebar actions like delete, duplicate, etc.
   	}
 
+	/**
+	 * Svelte Action: Überwache Column-Höhen mit ResizeObserver
+	 */
+	function observeColumnHeight(element: HTMLElement, columnId: string) {
+		// Falls schon Observer für diese Column existiert, löschen
+		if (resizeObservers.has(columnId)) {
+			resizeObservers.get(columnId)?.disconnect();
+		}
+
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				columnHeights[columnId] = entry.contentRect.height;
+			}
+		});
+
+		observer.observe(element);
+		resizeObservers.set(columnId, observer);
+
+		// Return destroy function für Svelte Action Cleanup
+		return {
+			destroy() {
+				observer.disconnect();
+				resizeObservers.delete(columnId);
+			}
+		};
+	}
+
 </script>
 
 <style>
-    .board {
-        display: flex;
-        overflow-x: auto;
-        flex: 1;
-        gap: 0.5em;
-        padding: 0.5em;
-        scroll-behavior: smooth;
-        scrollbar-width: thick;  /* Firefox */
-    }
+	.board {
+		display: flex;
+		flex-direction: row;
+		overflow-x: auto;
+		overflow-y: auto; /* allow page to scroll vertically when columns grow */
+		flex: 1 1 auto;
+		gap: 0.5em;
+		padding: 0.5em;
+		scroll-behavior: smooth;
+		scrollbar-width: thick;  /* Firefox */
+		align-items: flex-start; /* columns grow with their content */
+	}
 
     /* Dickes Scrollbar in Chrome/Edge/Safari */
     .board::-webkit-scrollbar {
@@ -99,31 +158,39 @@
         background: linear-gradient(to bottom, #333, #000);
     }
 
-    .column {
-        flex: 0 0 280px;  /* Feste Breite, kein Schrumpfen */
-        height: 100%;
-        padding: 0.5em;
-        border-right: 1px solid var(--column-border);
-        /* background-color: var(--background); */
-    }
+	.column {
+		flex: 0 0 320px;  /* fixed width */
+		display: flex;
+		flex-direction: column;
+		padding: 0.5em;
+		border-right: 1px solid var(--column-border);
+		/* background-color: var(--background); */
+		align-items: stretch;
+	}
 </style>
 
 <section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column', dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} onconsider={handleDndConsiderColumns} onfinalize={handleDndFinalizeColumns}>
     {#each columns as {id, name, color, items}, idx (id)}
-   		<div class="column" animate:flip="{{duration: flipDurationMs}}" >
+   		<div 
+			class="column" 
+			animate:flip="{{duration: flipDurationMs}}"
+			use:observeColumnHeight={id}
+			style={settings?.alignColumnsToMaxHeight && maxColumnHeight > 0 ? `min-height: ${maxColumnHeight}px;` : ''}
+		>
  				<Column
  						name={name}
  						color={color}
  						items={items}
-						columnId={id}
-						isSelected={selectedColumn === id}
-						onSelect={() => onSelectColumn?.(id)}
+					columnId={id}
+					isSelected={selectedColumn === id}
+					onSelect={() => onSelectColumn?.(id)}
  						onDrop={(newItems) => handleItemFinalize(idx, newItems)}
  						onCardAction={handleCardAction}
  						onPublishStateChange={handlePublishStateChange}
-						selectedCardId={selectedCard}
-						onSelectCard={onSelectCard}
+					selectedCardId={selectedCard}
+					onSelectCard={onSelectCard}
  						onSidebarAction={handleSidebarAction}
+					maxCardsBeforeScroll={settings?.maxCardsBeforeScroll ?? 20}
  					/>
  			</div>
      {/each}

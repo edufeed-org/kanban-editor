@@ -6,24 +6,24 @@ const boardId = "board-1"; // Die ID des aktuellen Boards
 const rawData: Column[] = [
 	{
 		id: "c1",
-		name: "TODO",
-		description: "Aufgaben, die noch erledigt werden müssen",
+		name: "TODO — Aufgaben, geplant für die nächste Iteration",
+		description: "Aufgaben, die noch erledigt werden müssen und priorisiert werden sollten",
 		color: "chart-1",
 		items: [
 			{
 				id: 1,
-				name: "item41",
-				description: "Erste Aufgabe im TODO mit erweiterten Features und einem tollen Bild!",
+				name: "Definiere Klassenstruktur und Interfaces für das neue Kanban-System mit KI-Integration",
+				description: "Erstelle die TypeScript-Klassen für Card, Column, Board sowie eine saubere Serialisierung für KI-Kontexte.",
 				comments: [
 					{
-						id: "c1",
+						id: "c1-1",
 						text: "Das ist ein Kommentar zu dieser Aufgabe",
 						author: "Max Mustermann",
 						createdAt: "2024-01-15T10:30:00Z"
 					}
 				],
 				attendees: ["max@example.com", "anna@example.com"],
-				labels: ["Bug", "Milestone 2"],
+				labels: ["Architecture", "Milestone 2"],
 				color: "chart-4",
 				publishState: "draft",
 				author: "max@example.com",
@@ -32,90 +32,53 @@ const rawData: Column[] = [
 			},
 			{
 				id: 2,
-				name: "item42",
-				description: "Zweite Aufgabe im TODO mit Beispielbild",
+				name: "Svelte Stores und Runes: Zustand und Persistenz sauber aufsetzen",
+				description: "Implementiere $state-basierte Stores für das Board und Chat; optionales Local-Storage-Persistenz.",
 				image: "https://picsum.photos/400/200?random=4",
 				link: "https://example.com/task42"
 			},
 			{
 				id: 3,
-				name: "item43",
-				description: "Dritte Aufgabe im TODO",
+				name: "Erarbeite Drag-and-Drop-Strategie und API für Verschiebungen zwischen Spalten",
+				description: "Konzeption für Drag-and-Drop sowie Routen der Aktionen, Event-Publish für Nostr/Events",
 				image: "https://picsum.photos/400/200?random=5",
 				color: "chart-1"
 			},
 			{
 				id: 4,
-				name: "item44",
-				description: "Vierte Aufgabe im TODO",
+				name: "Schreibe umfassende Dokumentation zur Board-Architektur und Persistenz",
+				description: "Dokumentation, Beispiele und README für Entwickler und Endanwender.",
 				image: "https://picsum.photos/400/200?random=6",
 				color: "chart-2"
 			},
 			{
 				id: 5,
-				name: "item45",
-				description: "Fünfte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=7",
+				name: "Longform: Detaillierte Spezifikation für KI-Aktionen (split, move, add, update)",
+				description: "Schreibe die Spezifikation inklusive Datenschema für AIAction-Payloads.",
 				color: "chart-3"
-			},
-			{
-				id: 6,
-				name: "item46",
-				description: "Sechste Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=8",
-				color: "chart-1"
-			},
-			{
-				id: 7,
-				name: "item47",
-				description: "Siebte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=9",
-				color: "chart-4"
-			},
-			{
-				id: 8,
-				name: "item48",
-				description: "Achte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=10",
-				color: "chart-5"
-			},
-			{
-				id: 9,
-				name: "item49",
-				description: "Neunte Aufgabe im TODO",
-				image: "https://picsum.photos/400/200?random=11",
-				color: "chart-3",
-				publishState: "archived",
-				author: "max@example.com"
 			}
 		]
 	},
 	{
 		id: "c2",
-		name: "DOING",
-		description: "Aufgaben, die gerade bearbeitet werden",
+		name: "IN PROGRESS — Aktive Implementierungsschritte",
+		description: "Aufgaben, die gerade bearbeitet werden oder sich im Review befinden",
 		color: "chart-2",
 		items: [
 			{
-				id: 10,
-				name: "item50",
-				description: "Erste Aufgabe in Arbeit mit Kommentaren und einem Arbeitsbild",
+				id: 6,
+				name: "Implementiere Card-Komponenten mit Kontextmenü, KI-Button und Modal-Dialogen",
+				description: "UI-Komponenten bauen, Events anbinden, Accessibility beachten",
 				comments: [
 					{
-						id: "c2",
-						text: "Diese Aufgabe ist bereits in Bearbeitung",
+						id: "c2-1",
+						text: "Brauche Feedback zur Modal-Interaktion",
 						author: "Anna Schmidt",
 						createdAt: "2024-01-16T14:20:00Z"
-					},
-					{
-						id: "c3",
-						text: "Brauche Hilfe bei der Implementierung",
-						author: "Max Mustermann",
-						createdAt: "2024-01-17T09:15:00Z"
 					}
 				],
 				attendees: ["anna@example.com"],
-				labels: ["Feature", "Urgent"],
+				labels: ["Feature", "UI"],
 				color: "chart-1",
 				publishState: "published",
 				author: "anna@example.com",
@@ -123,41 +86,79 @@ const rawData: Column[] = [
 				link: "https://example.com/task50"
 			},
 			{
-				id: 11,
-				name: "item51",
-				description: "Zweite Aufgabe in Arbeit mit Arbeitsbild",
-				image: "https://picsum.photos/400/200?random=12",
-				link: "https://example.com/task51",
+				id: 7,
+				name: "Optimierung: Performance beim Rendern vieler Karten (virtualization, memoization)",
+				description: "Analyse und Implementierung möglicher Performance-Verbesserungen ohne Breaking Changes",
 				color: "chart-2"
 			}
 		]
 	},
 	{
 		id: "c3",
-		name: "DONE",
-		description: "Abgeschlossene Aufgaben",
+		name: "REVIEW — Zur Überprüfung und Code-Review vorgesehen",
+		description: "Aufgaben, die Review benötigen bevor sie in Done landen",
 		color: "chart-3",
 		items: [
 			{
-				id: 13,
-				name: "item52",
-				description: "Erledigte Aufgabe mit vollständiger Dokumentation und Abschlussbild",
+				id: 8,
+				name: "Abschluss: Unit- und Integrationstests für Board-Logik schreiben",
+				description: "Erstelle eine einfache Test-Suite ohne externes Framework, die Kernfunktionen validiert.",
 				comments: [
 					{
-						id: "c4",
-						text: "Aufgabe erfolgreich abgeschlossen",
+						id: "c3-1",
+						text: "Testfälle für split_card sind kritisch",
 						author: "Projektmanager",
 						createdAt: "2024-01-18T16:45:00Z"
 					}
 				],
-				attendees: ["team@example.com"],
-				labels: ["Documentation", "Completed"],
+				labels: ["Testing", "Important"],
 				color: "chart-4",
 				publishState: "published",
-				author: "team@example.com",
-				image: "https://picsum.photos/400/200?random=3",
-				link: "https://example.com/task52"
+				author: "team@example.com"
 			}
+		]
+	},
+	// Neue zusätzliche Spalten (4)
+	{
+		id: "c4",
+		name: "BACKLOG — Ideen, Wünsche und mögliche Zukunftsaufgaben",
+		description: "Hier sammeln wir Vorschläge und Ideen, die später priorisiert werden können",
+		color: "chart-5",
+		items: [
+			{ id: 9, name: "Langfristige Idee: Offline-Unterstützung und Sync-Strategie für dezentrale Relays", description: "Konzept für Offline-first UX und Konfliktauflösung beim späteren Sync." },
+			{ id: 10, name: "Research: Optionen für dezentralen Storage (IPFS, Nostr-Events, etc.)", description: "Bewertung verschiedener Ansätze hinsichtlich Datenschutz und Kosten." },
+			{ id: 11, name: "Feature-Vorschlag: Benachrichtigungen via Nostr-Push für Board-Updates", description: "Entwurf für opt-in Benachrichtigungen für Teammitglieder." }
+		]
+	},
+	{
+		id: "c5",
+		name: "BLOCKED — Aufgaben mit externen Abhängigkeiten oder Hindernissen",
+		description: "Tasks, die nicht weitergehen können, bis externe Probleme gelöst sind",
+		color: "chart-1",
+		items: [
+			{ id: 12, name: "Integration: Externer Auth-Service ermöglicht keine Test-Accounts", description: "Warten auf Freischaltung von Test-Accounts durch den externen Provider." },
+			{ id: 13, name: "Klärung: Rechtliche Fragen zur Speicherung von Nutzerdaten in Events", description: "Juristische Prüfung nötig bevor wir persistente Daten in Events speichern." }
+		]
+	},
+	{
+		id: "c6",
+		name: "QA — Qualitätssicherung und manuelle Tests",
+		description: "Exploratives Testen, Bug-Reports und reproduzierbare Testfälle",
+		color: "chart-2",
+		items: [
+			{ id: 14, name: "Manuelles Testskript: Kern-Workflows durchspielen (Add/Move/Split/Delete)", description: "Schritt-für-Schritt-Anleitung für QA-Engineers." },
+			{ id: 15, name: "Erstelle reproduzierbare Testdaten mit verschiedenen PublishState-Kombinationen", description: "Dataset zum Testen von Archiving- und Publish-Workflows." }
+		]
+	},
+	{
+		id: "c7",
+		name: "ARCHIVE — Archivierte oder langfristig abgeschlossene Aufgaben",
+		description: "Alte Tickets, abgeschlossene Epics und archivierte Ideen",
+		color: "chart-3",
+		items: [
+			{ id: 16, name: "Alt: Prototyp-Implementierung aus 2023 (nur Referenz, nicht produktiv)", description: "Archivierte Implementierung, dient als Referenz." },
+			{ id: 17, name: "Alt: Experimentelle UI-Iteration - zurückgezogen", description: "Ergebnis eines UI-Experiments, weitere Nutzung fraglich." },
+			{ id: 18, name: "Dokumentation: Historie der Designentscheidungen und Gründe für Refactorings", description: "Zusammenfassung der wichtigsten Entscheidungen." }
 		]
 	}
 ];

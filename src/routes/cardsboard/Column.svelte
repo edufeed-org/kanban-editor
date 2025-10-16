@@ -44,7 +44,8 @@
 		onSidebarAction,
 		selectedCardId,
 		onSelectCard
-	}: {
+ 	, maxCardsBeforeScroll = 20
+ 	}: {
 		name: string;
 		items: CardItem[];
 		color?: string;
@@ -57,7 +58,10 @@
 		onSidebarAction?: (cardId: string, action: string) => void;
 		selectedCardId?: string | null;
 		onSelectCard?: (cardId: string) => void;
+		maxCardsBeforeScroll?: number;
 	} = $props();
+
+import ArrowDownToLineIcon from '@lucide/svelte/icons/arrow-down-to-line';
 
 	// Local state for column editing
 	let isEditing = $state(false);
@@ -171,10 +175,30 @@
 	}
 
 	.column-content {
-		flex: 1;
-		overflow-y: auto;
+		flex: 0 0 auto; /* do not scroll individually - let column grow */
 		padding-right: 0.5rem;
 	}
+
+	/* When many cards are present we allow the column to use an inner scroll */
+	.column-content.scrollable {
+		flex: 1 1 auto;
+		overflow-y: auto;
+		max-height: 70vh; /* reasonable cap so footer remains reachable */
+	}
+
+	.column-footer {
+		flex: 0 0 auto;
+		padding: 0.5rem;
+		border-top: 1px dashed var(--muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 48px;
+		cursor: pointer;
+		background: linear-gradient(180deg, transparent, rgba(0,0,0,0.01));
+	}
+
+	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
 
 	.card-wrapper {
 		margin-bottom: 0.75rem;
@@ -264,7 +288,7 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div class="column-content" use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}}
+	<div class={`column-content ${items.length > (maxCardsBeforeScroll || 20) ? 'scrollable' : ''}`} use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}}
 	     onconsider={handleDndConsiderCards}
 		 onfinalize={handleDndFinalizeCards}>
 		{#each items as item (item.id)}
@@ -279,5 +303,19 @@
 				/>
 			</div>
 		{/each}
-   </div>
+	</div>
+
+	<!-- Footer: show drop icon and allow click to append a placeholder card -->
+	<button type="button" class="column-footer" onclick={() => {
+			const newCard: CardItem = {
+				id: Date.now(),
+				name: 'Neue Karte (Platzhalter) - bitte bearbeiten',
+				description: 'Platzhalterkarte erstellt durch Footer-Button',
+			};
+			items = [...items, newCard];
+			onDrop(items);
+		}}>
+		<ArrowDownToLineIcon class="h-5 w-5" />
+		<span class="sr-only">Karte ans Ende anfügen</span>
+	</button>
 </div>
