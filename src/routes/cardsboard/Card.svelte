@@ -185,14 +185,8 @@
 
 				{#if showMenu}
 					<Popover.Root bind:open={popoverOpen}>
-						<Popover.Trigger>
-							<button
-								class="menu-button"
-								aria-label="Open menu"
-								title="Open menu"
-							>
-								<span class="menu-dots">⋮</span>
-							</button>
+						<Popover.Trigger class="menu-trigger">
+							<span class="menu-dots">⋮</span>
 						</Popover.Trigger>
 						<Popover.Content align="end" class="w-64">
 							<div class="space-y-4">
@@ -400,7 +394,7 @@
 		}
 
 		/* Menu button styling */
-		.menu-button {
+		.menu-trigger {
 			background: none;
 			border: none;
 			cursor: pointer;
@@ -412,11 +406,11 @@
 			justify-content: center;
 		}
 
-		.menu-button:hover {
+		.menu-trigger:hover {
 			background-color: #e9ecef;
 		}
 
-		.menu-button:focus {
+		.menu-trigger:focus {
 			outline: 2px solid #007bff;
 			outline-offset: 2px;
 		}

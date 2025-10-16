@@ -17,6 +17,6 @@
   ndk.connect();
 </script>
 
-<div class="container mx-auto p-4">
+<div class="container viewport w-full h-full max-w-full">
     <slot />
 </div>

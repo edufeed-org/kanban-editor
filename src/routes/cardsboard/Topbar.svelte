@@ -83,13 +83,11 @@
         <div class="flex items-center gap-2">
             <!-- Settings -->
             <Sheet.Root>
-                <Sheet.Trigger>
-                    <Button variant="ghost" size="icon">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"/>
-                            <path d="M12 1v6m0 6v6"/>
-                        </svg>
-                    </Button>
+                <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                    </svg>
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
@@ -106,12 +104,10 @@
 
             <!-- Profile -->
             <DropdownMenu.Root>
-                <DropdownMenu.Trigger>
-                    <Button variant="ghost" size="icon">
-                        <Avatar class="h-8 w-8">
-                            <AvatarFallback>MM</AvatarFallback>
-                        </Avatar>
-                    </Button>
+                <DropdownMenu.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
+                    <Avatar class="h-8 w-8">
+                        <AvatarFallback>MM</AvatarFallback>
+                    </Avatar>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
                     <DropdownMenu.Label>{currentUser.name}</DropdownMenu.Label>
