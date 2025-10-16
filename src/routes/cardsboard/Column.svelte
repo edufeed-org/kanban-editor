@@ -165,7 +165,7 @@
 	}
 
 	.color-bar {
-		height: 4px;
+		height: 1px;
 		width: 100%;
 		border-radius: 2px;
 	}
@@ -264,7 +264,7 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div class="column-content" use:dndzone={{items, flipDurationMs}}
+	<div class="column-content" use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}}
 	     onconsider={handleDndConsiderCards}
 		 onfinalize={handleDndFinalizeCards}>
 		{#each items as item (item.id)}

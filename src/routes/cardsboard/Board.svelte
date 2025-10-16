@@ -87,7 +87,7 @@
     }
 </style>
 
-<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column'}} onconsider={handleDndConsiderColumns} onfinalize={handleDndFinalizeColumns}>
+<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column', dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} onconsider={handleDndConsiderColumns} onfinalize={handleDndFinalizeColumns}>
     {#each columns as {id, name, color, items}, idx (id)}
    		<div class="column" animate:flip="{{duration: flipDurationMs}}" >
  				<Column
