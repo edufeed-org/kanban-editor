@@ -11,6 +11,13 @@
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
+	import PencilLineIcon from "@lucide/svelte/icons/pencil";
+	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
+	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
+	import TrashIcon from "@lucide/svelte/icons/trash";
+	import UsersIcon from "@lucide/svelte/icons/users";
+	import LinkIcon from "@lucide/svelte/icons/link";
+
 
 	let {
 		card,
@@ -260,29 +267,23 @@
 
 		<!-- Link Section -->
 		{#if card.link}
-			<div class="card-link">
-				<button class="link-button" onclick={handleLinkClick}>
-					<span class="link-icon">🔗</span>
-					<span class="link-text">Link öffnen</span>
-				</button>
-			</div>
+			<Button variant="link" href="/dashboard" onclick={handleLinkClick}><LinkIcon /> Link öffnen</Button>
 		{/if}
 	</Card.Content>
 
 	<Card.Footer>
 		<div class="footer-content">
-			
-				<div class="comments-count">
-					<span class="icon-[material-symbols--mode-comment-outline]"></span> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
-				</div>
-				<div class="attendees-count">
-					<span class="icon-[material-symbols--group-outline]"></span> {#if attendees.length > 0}{attendees.length}{/if}
-				</div>
+			<div class="comments-count">
+				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
+			</div>
+			<div class="attendees-count">
+				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
+			</div>
 			<button class="view-button" onclick={() => (showViewModal = true)} aria-label="Anzeigen" title="Anzeigen">
-				<span class="icon-[material-symbols--preview-outline]"></span>
+				<FullscreenIcon />
 			</button>
 			<button class="edit-button" onclick={() => (showModal = true)} aria-label="Bearbeiten" title="Bearbeiten">
-				<span class="icon-[material-symbols--edit-square-outline]"></span>
+				<PencilLineIcon />
 			</button>
 		</div>
 	</Card.Footer>
@@ -495,7 +496,7 @@
 			gap: 1em;
 			flex-grow: 1;
 		}
-
+		
 		.comments-count, .attendees-count {
 			font-size: 0.8em;
 			color: #6c757d;

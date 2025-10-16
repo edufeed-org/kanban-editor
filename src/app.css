@@ -98,11 +98,15 @@
   .text-card-foreground {
     color: var(--card-foreground);
   }
+  .card svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 @layer base {
   * {
-    border-color: rgb(163, 106, 255);
+    border-color: rgba(163, 106, 255, 0.397);
   }
   
   body {

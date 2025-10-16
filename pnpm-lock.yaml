@@ -18,6 +18,9 @@ importers:
       '@nostr-dev-kit/svelte':
         specifier: ^2.0.8
         version: 2.0.8(@cashu/cashu-ts@2.7.2)(@cashu/crypto@0.3.4)(@nostr-dev-kit/ndk@2.17.4(nostr-tools@2.14.3(typescript@5.9.3)))(@types/react@19.2.2)(nostr-tools@2.14.3(typescript@5.9.3))(react@19.2.0)(svelte@5.39.11)(typescript@5.9.3)
+      lucide-svelte:
+        specifier: ^0.546.0
+        version: 0.546.0(svelte@5.39.11)
       svelte-dnd-action:
         specifier: ^0.9.65
         version: 0.9.65(svelte@5.39.11)
@@ -2045,6 +2048,11 @@ packages:
 
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
+
+  lucide-svelte@0.546.0:
+    resolution: {integrity: sha512-vCvBUlFapD59ivX1b/i7wdUadSgC/3gQGvrGEZjSecOlThT+UR+X5UxdVEakHuhniTrSX0nJ2WrY5r25SVDtyQ==}
+    peerDependencies:
+      svelte: ^3 || ^4 || ^5.0.0-next.42
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -4983,6 +4991,10 @@ snapshots:
   lodash.merge@4.6.2: {}
 
   loupe@3.2.1: {}
+
+  lucide-svelte@0.546.0(svelte@5.39.11):
+    dependencies:
+      svelte: 5.39.11
 
   lz-string@1.5.0: {}
 

@@ -7,6 +7,7 @@
 	import type { Column, BoardUpdateHandler } from "./types.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
+	import * as Resizable from "$lib/components/ui/resizable/index.js";
 	import { cn } from "$lib/utils.js";
 
 	// Suppress passive event listener warnings for dnd-action
@@ -79,23 +80,47 @@
 		selectedCard
 	});
 
-	// Sidebar states
+	// Sidebar states - jetzt mit Größen
 	let leftSidebarOpen = $state(true);
 	let rightSidebarOpen = $state(true);
+	let leftSidebarSize = $state(15);
+	let rightSidebarSize = $state(15);
+	
+	// Funktionen zum Toggle mit Größenänderung
+	function toggleLeftSidebar() {
+		if (leftSidebarOpen) {
+			leftSidebarSize = 0;
+		} else {
+			leftSidebarSize = 15;
+		}
+		leftSidebarOpen = !leftSidebarOpen;
+	}
+	
+	function toggleRightSidebar() {
+		if (rightSidebarOpen) {
+			rightSidebarSize = 0;
+		} else {
+			rightSidebarSize = 15;
+		}
+		rightSidebarOpen = !rightSidebarOpen;
+	}
 
 </script>
 
 
 <div class="flex h-screen w-full flex-col overflow-hidden">
 	
-	<!-- Main Layout with simple collapsible sidebars -->
-	<div class="flex flex-1 overflow-hidden min-h-0">
-		<!-- Linke Sidebar -->
-		<aside class={cn(
-			"border-r bg-muted/10 overflow-y-auto transition-all duration-300 shrink-0",
-			leftSidebarOpen ? "w-64" : "w-0"
-		)}>
-			{#if leftSidebarOpen}
+	<!-- Main Layout with resizable sidebars -->
+	<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
+		<!-- Linke Sidebar - nur rendern wenn offen -->
+		{#if leftSidebarOpen}
+			<Resizable.Pane 
+				defaultSize={15} 
+				minSize={10} 
+				maxSize={40} 
+				class="border-r bg-muted/10 overflow-y-auto"
+				onResize={(size: number) => { leftSidebarSize = size; }}
+			>
 				<div class="p-4 space-y-4">
 					<h2 class="text-sm font-semibold">Meine Boards</h2>
 					<div class="space-y-2">
@@ -108,40 +133,50 @@
 						+ Neues Board
 					</button>
 				</div>
-			{/if}
-		</aside>
+			</Resizable.Pane>
+			
+			<Resizable.Handle withHandle />
+		{/if}
 		
 		<!-- Hauptbereich -->
-		<main class="flex flex-1 flex-col overflow-hidden min-w-0">
+		<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
+			<main class="flex flex-1 flex-col overflow-hidden min-w-0">
 			<!-- Topbar mit integrierten Sidebar-Triggern -->
 			<Topbar
 				title={boardMeta.title}
-				onToggleLeftSidebar={() => leftSidebarOpen = !leftSidebarOpen}
-				onToggleRightSidebar={() => rightSidebarOpen = !rightSidebarOpen}
-			/>
-	
-			<!-- Board Header (jetzt UNTER der Topbar) -->
-			<HeaderBar {boardMeta} />
-			
-			<!-- Board Content - hier ist der einzige Scroll -->
-			<div class="flex-1 overflow-auto p-4 min-h-0">
-				<Board 
-					columns={$data} 
-					onFinalUpdate={handleBoardUpdated}
-					{selectedColumn}
-					{selectedCard}
-					onSelectColumn={handleSelectColumn}
-					onSelectCard={handleSelectCard}
-				/>
-			</div>
-		</main>
+				onToggleLeftSidebar={toggleLeftSidebar}
+				onToggleRightSidebar={toggleRightSidebar}
+			/>				<!-- Board Header (jetzt UNTER der Topbar) -->
+				<HeaderBar {boardMeta} />
+				
+				<!-- Board Content - hier ist der einzige Scroll -->
+				<div class="flex-1 overflow-auto p-4 min-h-0">
+					<Board 
+						columns={$data} 
+						onFinalUpdate={handleBoardUpdated}
+						{selectedColumn}
+						{selectedCard}
+						onSelectColumn={handleSelectColumn}
+						onSelectCard={handleSelectCard}
+					/>
+				</div>
+			</main>
+		</Resizable.Pane>
 		
-		<!-- Rechte Sidebar (KI & Debug) -->
-		<aside class={cn(
-			"border-l bg-muted/10 overflow-y-auto transition-all duration-300 shrink-0",
-			rightSidebarOpen ? "w-80" : "w-0"
-		)}>
-			{#if rightSidebarOpen}
+		<!-- Handle zwischen Main und rechter Sidebar -->
+		{#if rightSidebarOpen}
+			<Resizable.Handle withHandle />
+		{/if}
+		
+		<!-- Rechte Sidebar (KI & Debug) - nur rendern wenn offen -->
+		{#if rightSidebarOpen}
+			<Resizable.Pane 
+				defaultSize={15} 
+				minSize={10} 
+				maxSize={40} 
+				class="border-l bg-muted/10 overflow-y-auto"
+				onResize={(size: number) => { rightSidebarSize = size; }}
+			>
 				<div class="p-4 space-y-6">
 					<div>
 						<h2 class="text-sm font-semibold mb-2">Board Status</h2>
@@ -179,7 +214,7 @@
 						</Button>
 					</div>
 				</div>
-			{/if}
-		</aside>
-	</div>
+			</Resizable.Pane>
+		{/if}
+	</Resizable.PaneGroup>
 </div>
