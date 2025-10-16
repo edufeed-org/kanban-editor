@@ -70,20 +70,20 @@
 
 <style>
     .board {
+        display: flex;
+        overflow-x: auto;
         height: 90vh;
         width: 100%;
-        /* padding: 0.5em; */
+        gap: 0.5em;
+        padding: 0.5em;
         /* margin-bottom: 40px; */
     }
     .column {
+        flex: 0 0 280px;  /* Feste Breite, kein Schrumpfen */
         height: 100%;
-        width: 250px;
         padding: 0.5em;
-        margin: .1em;
-        float: left;
         border-right: 1px solid var(--column-border);
-		
-		/* background-color: white; */
+        /* background-color: var(--background); */
     }
 </style>
 
