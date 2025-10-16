@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CardItem, PublishState } from "./types.js";
+	import type { CardProps } from "../../lib/classes/BoardModel.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -7,8 +8,7 @@
 	import { Label } from "$lib/components/ui/label/index.js";
 	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
-	import CardEditModal from "../../lib/components/CardEditModal.svelte";
-	import CardViewModal from "./CardViewModal.svelte";
+	import CardDialog from "./CardDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 
 	let {
@@ -29,7 +29,6 @@
 
 	let showModal = $state(false);
 	let showSidebar = $state(false);
-	let showEditModal = $state(false);
 	let showPublishToggle = $state(true);
 	let showMenu = $state(true);
 	let popoverOpen = $state(false);
@@ -84,7 +83,7 @@
 		const { action } = event.detail;
 
 		if (action === 'edit') {
-			openEditModal();
+			showModal = true;
 		} else {
 			onCardAction?.(String(card.id), action);
 		}
@@ -110,14 +109,6 @@
 		closeSidebar();
 	}
 
-	function openEditModal() {
-		showEditModal = true;
-	}
-
-	function closeEditModal() {
-		showEditModal = false;
-	}
-
 	function handleEditSave(cardId: string, updates: any) {
 		// Aktualisiere die lokale Karte
 		if (updates.heading) card.name = updates.heading;
@@ -128,7 +119,7 @@
 
 		// Informiere die Elternkomponente über die Änderung
 		onCardAction?.(cardId, 'updated');
-		closeEditModal();
+		closeModal();
 	}
 
 	function handleRename() {
@@ -144,7 +135,7 @@
 	}
 
 	function handleEditClick() {
-		showEditModal = true;
+		showModal = true;
 		popoverOpen = false;
 	}
 
@@ -283,15 +274,14 @@
 				<div class="attendees-count">
 					<span class="icon-[material-symbols--group-outline]"></span> {#if attendees.length > 0}{attendees.length}{/if}
 				</div>
-			<button class="edit-button" onclick={() => openEditModal()} aria-label="Bearbeiten" title="Bearbeiten">
+			<button class="edit-button" onclick={() => (showModal = true)} aria-label="Bearbeiten" title="Bearbeiten">
 				<span class="icon-[material-symbols--edit-square-outline]"></span>
 			</button>
 		</div>
 	</Card.Footer>
-
-	<!-- Edit Modal -->
-	<CardEditModal
-		card={{
+	<!-- Card Dialog (View & Edit with Tabs) -->
+	<CardDialog
+		card={showModal ? {
 			id: String(card.id),
 			heading: card.name,
 			content: card.description,
@@ -300,19 +290,12 @@
 			labels: card.labels,
 			attendees: card.attendees,
 			publishState: card.publishState
-		}}
-		isOpen={showEditModal}
-		onClose={closeEditModal}
+		} : null}
+		isOpen={showModal}
+		onClose={closeModal}
 		onSave={handleEditSave}
 	/>
 </Card.Root>
-	
-	<!-- Card Modal for editing/viewing details -->
-	<CardViewModal
-		{card}
-		isOpen={showModal}
-		onClose={closeModal}
-	/>
 	
 	<!-- Sidebar for quick actions -->
 	<CardSidebar
@@ -391,28 +374,6 @@
 
 		.publish-toggle.archived .publish-indicator {
 			background-color: #6c757d;
-		}
-
-		/* Menu button styling */
-		.menu-trigger {
-			background: none;
-			border: none;
-			cursor: pointer;
-			padding: 0.25em;
-			border-radius: 4px;
-			transition: background-color 0.2s ease;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		.menu-trigger:hover {
-			background-color: #e9ecef;
-		}
-
-		.menu-trigger:focus {
-			outline: 2px solid #007bff;
-			outline-offset: 2px;
 		}
 
 		.menu-dots {
