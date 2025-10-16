@@ -85,12 +85,8 @@
 
 </script>
 
-<!-- Topbar mit integrierten Sidebar-Triggern -->
+
 <div class="flex h-screen w-full flex-col overflow-hidden">
-	<Topbar 
-		onToggleLeftSidebar={() => leftSidebarOpen = !leftSidebarOpen}
-		onToggleRightSidebar={() => rightSidebarOpen = !rightSidebarOpen}
-	/>
 	
 	<!-- Main Layout with simple collapsible sidebars -->
 	<div class="flex flex-1 overflow-hidden min-h-0">
@@ -117,6 +113,12 @@
 		
 		<!-- Hauptbereich -->
 		<main class="flex flex-1 flex-col overflow-hidden min-w-0">
+			<!-- Topbar mit integrierten Sidebar-Triggern -->
+			<Topbar 
+				onToggleLeftSidebar={() => leftSidebarOpen = !leftSidebarOpen}
+				onToggleRightSidebar={() => rightSidebarOpen = !rightSidebarOpen}
+			/>
+	
 			<!-- Board Header (jetzt UNTER der Topbar) -->
 			<HeaderBar {boardMeta} />
 			

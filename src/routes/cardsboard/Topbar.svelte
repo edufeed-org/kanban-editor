@@ -53,8 +53,8 @@
     }
 </script>
 
-<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur shrink-0">
-    <div class="container flex h-14 items-center justify-between px-4">
+<header class="sticky top-0 z-50 w-full max-w-full border-b bg-background/95 backdrop-blur shrink-0">
+    <div class="container flex h-14 items-center justify-between px-4 w-full mx-auto">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-2">
             <!-- Left Sidebar Trigger -->
