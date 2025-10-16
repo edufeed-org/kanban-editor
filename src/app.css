@@ -43,6 +43,7 @@
   --sidebar-ring: oklch(0.606 0.25 292.717);
 }
 
+:root.dark,
 .dark {
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
@@ -77,14 +78,37 @@
   --sidebar-ring: oklch(0.541 0.281 293.009);
 }
 
+/* Define color utilities using CSS variables */
+@layer utilities {
+  .bg-popover {
+    background-color: var(--popover);
+  }
+  .text-popover-foreground {
+    color: var(--popover-foreground);
+  }
+  .bg-background {
+    background-color: var(--background);
+  }
+  .text-foreground {
+    color: var(--foreground);
+  }
+  .bg-card {
+    background-color: var(--card);
+  }
+  .text-card-foreground {
+    color: var(--card-foreground);
+  }
+}
 
 @layer base {
   * {
-    @apply border-gray-200;
+    border-color: rgb(229, 231, 235);
   }
   body {
-    @apply bg-white text-gray-900;
+    background-color: white;
+    color: rgb(17, 24, 39);
   }
 }
+
 
 /* Card styling now handled in Card.svelte with dynamic colors */

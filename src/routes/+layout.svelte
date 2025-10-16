@@ -3,6 +3,12 @@
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
 
+  interface Props {
+    children?: any;
+  }
+
+  const { children } = $props();
+
   const ndk = new NDKSvelte({
     explicitRelayUrls: [
       "wss://relay.damus.io",
@@ -18,5 +24,5 @@
 </script>
 
 <div class="container viewport w-full h-full max-w-full">
-    <slot />
+    {@render children?.()}
 </div>
