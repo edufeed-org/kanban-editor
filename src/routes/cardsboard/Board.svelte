@@ -6,7 +6,7 @@
 
  	const flipDurationMs = 300;
 
- 	// Suppress passive event listener warnings for dnd-action
+	// Suppress passive event listener warnings for dnd-action
  	// This is a known issue with svelte-dnd-action library
  	if (typeof window !== 'undefined') {
  			// Override console.warn to suppress the specific passive listener warning
@@ -33,7 +33,7 @@
 	export let onSelectColumn: ((columnId: string) => void) | undefined = undefined;
 	export let onSelectCard: ((cardId: string) => void) | undefined = undefined;
 
-   function handleDndConsiderColumns(e: any) {
+	function handleDndConsiderColumns(e: any) {
      columns = e.detail.items;
    }
    function handleDndFinalizeColumns(e: any) {
@@ -66,18 +66,39 @@
   		console.log('Sidebar action:', cardId, action);
   		// Handle sidebar actions like delete, duplicate, etc.
   	}
+
 </script>
 
 <style>
     .board {
         display: flex;
         overflow-x: auto;
-        height: 90vh;
-        width: 100%;
+        flex: 1;
         gap: 0.5em;
         padding: 0.5em;
-        /* margin-bottom: 40px; */
+        scroll-behavior: smooth;
+        scrollbar-width: thick;  /* Firefox */
     }
+
+    /* Dickes Scrollbar in Chrome/Edge/Safari */
+    .board::-webkit-scrollbar {
+        height: 16px;
+    }
+
+    .board::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .board::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, #666, #444);
+        border-radius: 4px;
+    }
+
+    .board::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(to bottom, #333, #000);
+    }
+
     .column {
         flex: 0 0 280px;  /* Feste Breite, kein Schrumpfen */
         height: 100%;
