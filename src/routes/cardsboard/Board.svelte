@@ -25,6 +25,12 @@
 		return () => unsubscribe?.();
 	});
 
+	// Auto-scroll beim Dragging
+	let boardElement: HTMLElement | undefined;
+	let autoScrollInterval: ReturnType<typeof setInterval> | undefined;
+	const SCROLL_SPEED = 15; // Pixel pro Scroll-Intervall
+	const EDGE_THRESHOLD = 100; // Pixel vom Rand, wo Auto-Scroll startet
+
 	// Suppress passive event listener warnings for dnd-action
  	// This is a known issue with svelte-dnd-action library
  	if (typeof window !== 'undefined') {
@@ -95,6 +101,54 @@
   		console.log('Sidebar action:', cardId, action);
   		// Handle sidebar actions like delete, duplicate, etc.
   	}
+
+	/**
+	 * Auto-Scroll beim Drag: Prüfe Maus-Position und scrolle Board horizontal
+	 */
+	function handleBoardDragOver(e: DragEvent) {
+		if (!boardElement) return;
+
+		const rect = boardElement.getBoundingClientRect();
+		const x = e.clientX;
+
+		// Check ob nahe am linken Rand
+		if (x < rect.left + EDGE_THRESHOLD) {
+			if (!autoScrollInterval) {
+				autoScrollInterval = setInterval(() => {
+					if (boardElement) {
+						boardElement.scrollLeft -= SCROLL_SPEED;
+					}
+				}, 50);
+			}
+		}
+		// Check ob nahe am rechten Rand
+		else if (x > rect.right - EDGE_THRESHOLD) {
+			if (!autoScrollInterval) {
+				autoScrollInterval = setInterval(() => {
+					if (boardElement) {
+						boardElement.scrollLeft += SCROLL_SPEED;
+					}
+				}, 50);
+			}
+		}
+		// Sonst: Stop Auto-Scroll
+		else {
+			if (autoScrollInterval) {
+				clearInterval(autoScrollInterval);
+				autoScrollInterval = undefined;
+			}
+		}
+	}
+
+	/**
+	 * Cleanup: Auto-Scroll stoppen wenn Drag endet
+	 */
+	function handleBoardDragEnd() {
+		if (autoScrollInterval) {
+			clearInterval(autoScrollInterval);
+			autoScrollInterval = undefined;
+		}
+	}
 
 	/**
 	 * Svelte Action: Überwache Column-Höhen mit ResizeObserver
@@ -169,7 +223,17 @@
 	}
 </style>
 
-<section class="board" use:dndzone={{items:columns, flipDurationMs, type:'column', dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} onconsider={handleDndConsiderColumns} onfinalize={handleDndFinalizeColumns}>
+<section 
+	class="board" 
+	aria-label="Kanban Board mit Spalten"
+	bind:this={boardElement}
+	use:dndzone={{items:columns, flipDurationMs, type:'column', dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} 
+	onconsider={handleDndConsiderColumns} 
+	onfinalize={handleDndFinalizeColumns}
+	ondragover={handleBoardDragOver}
+	ondragleave={handleBoardDragEnd}
+	ondrop={handleBoardDragEnd}
+>
     {#each columns as {id, name, color, items}, idx (id)}
    		<div 
 			class="column" 

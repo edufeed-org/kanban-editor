@@ -106,6 +106,13 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 
 </script>
 
+<style>
+	/* Verhindere jegliches Scrolling auf der Seite */
+	:global(html, body) {
+		overflow: hidden !important;
+		height: 100vh;
+	}
+</style>
 
 <div class="flex h-screen w-full flex-col overflow-hidden">
 	
