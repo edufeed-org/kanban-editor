@@ -137,7 +137,11 @@
 	}
 </script>
 
-<Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+<Dialog.Root open={isOpen} onOpenChange={(open) => {
+	if (!open) {
+		onClose();
+	}
+}}>
 	<Dialog.Content class="sm:max-w-[600px]">
 		<Dialog.Header>
 			<Dialog.Title>{card?.heading || 'Neue Karte'}</Dialog.Title>

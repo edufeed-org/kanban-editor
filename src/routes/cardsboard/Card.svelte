@@ -9,6 +9,7 @@
 	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import CardDialog from "./CardDialog.svelte";
+	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 
 	let {
@@ -28,6 +29,7 @@
 	} = $props();
 
 	let showModal = $state(false);
+	let showViewModal = $state(false);
 	let showSidebar = $state(false);
 	let showPublishToggle = $state(true);
 	let showMenu = $state(true);
@@ -274,14 +276,24 @@
 				<div class="attendees-count">
 					<span class="icon-[material-symbols--group-outline]"></span> {#if attendees.length > 0}{attendees.length}{/if}
 				</div>
+			<button class="view-button" onclick={() => (showViewModal = true)} aria-label="Anzeigen" title="Anzeigen">
+				<span class="icon-[material-symbols--preview-outline]"></span>
+			</button>
 			<button class="edit-button" onclick={() => (showModal = true)} aria-label="Bearbeiten" title="Bearbeiten">
 				<span class="icon-[material-symbols--edit-square-outline]"></span>
 			</button>
 		</div>
 	</Card.Footer>
+	<!-- Card View Dialog (Read-Only View with Tabs) -->
+	<CardViewDialog
+		{card}
+		isOpen={showViewModal}
+		onClose={() => (showViewModal = false)}
+	/>
+	
 	<!-- Card Dialog (View & Edit with Tabs) -->
 	<CardDialog
-		card={showModal ? {
+		card={{
 			id: String(card.id),
 			heading: card.name,
 			content: card.description,
@@ -290,7 +302,7 @@
 			labels: card.labels,
 			attendees: card.attendees,
 			publishState: card.publishState
-		} : null}
+		}}
 		isOpen={showModal}
 		onClose={closeModal}
 		onSave={handleEditSave}
