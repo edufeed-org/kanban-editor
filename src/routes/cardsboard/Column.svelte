@@ -139,7 +139,7 @@
 	.column-title {
 		font-size: 1.1rem;
 		font-weight: 600;
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		margin-bottom: 0.5rem;
 	}
 
@@ -169,17 +169,18 @@
 	}
 
 	.column-content::-webkit-scrollbar-track {
-		background: hsl(var(--muted));
+		background: var(--muted);
 		border-radius: 3px;
 	}
 
 	.column-content::-webkit-scrollbar-thumb {
-		background: hsl(var(--muted-foreground) / 0.3);
+		background: var(--muted-foreground);
+		opacity: 0.3;
 		border-radius: 3px;
 	}
 
 	.column-content::-webkit-scrollbar-thumb:hover {
-		background: hsl(var(--muted-foreground) / 0.5);
+		opacity: 0.5;
 	}
 </style>
 
