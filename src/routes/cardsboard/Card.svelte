@@ -449,45 +449,7 @@
 			line-height: 1.4;
 			flex: 1;
 		}
-
-		.card-link {
-			margin-top: auto;
-		}
-
-		.link-button {
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-			background: none;
-			border: 1px solid #007bff;
-			color: #007bff;
-			padding: 0.5em 1em;
-			border-radius: 6px;
-			cursor: pointer;
-			font-size: 0.85em;
-			transition: all 0.2s ease;
-			width: 100%;
-			justify-content: center;
-		}
-
-		.link-button:hover {
-			background-color: #007bff;
-			color: white;
-		}
-
-		.link-button:focus {
-			outline: 2px solid #007bff;
-			outline-offset: 2px;
-		}
-
-		.link-icon {
-			font-size: 0.9em;
-		}
-
-		.link-text {
-			font-weight: 500;
-		}
-
+		
 		/* Footer styling */
 		.footer-content {
 			display: flex;

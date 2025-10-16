@@ -9,6 +9,14 @@
     import { Separator } from '$lib/components/ui/separator/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+    import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
+    import UserRoundIcon from "@lucide/svelte/icons/user-round";
+    import MoonIcon from "@lucide/svelte/icons/moon";
+    import SunIcon from "@lucide/svelte/icons/sun";
+    import BotIcon from "@lucide/svelte/icons/bot";
+
+    
+
 
     // Props für Sidebar-Toggle und Title
     let {
@@ -37,18 +45,48 @@
     };
 
     function toggleTheme() {
-        const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark', 'auto'];
+        const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark'];
         const currentIndex = themes.indexOf(currentTheme);
         currentTheme = themes[(currentIndex + 1) % themes.length];
         
         if (typeof document !== 'undefined') {
-            if (currentTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else if (currentTheme === 'light') {
-                document.documentElement.classList.remove('dark');
-            }
+            applyTheme(currentTheme);
         }
     }
+
+    function applyTheme(theme: 'light' | 'dark' | 'auto') {
+        let effectiveTheme = theme;
+
+        // Bei 'auto': Systemeinstellungen abfragen
+        if (theme === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            effectiveTheme = prefersDark ? 'dark' : 'light';
+        }
+
+        // CSS-Klassen anpassen
+        if (effectiveTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+        }
+    }
+
+    // Beim Mount: Theme initialisieren und Systemänderungen überwachen
+    import { onMount } from 'svelte';
+    
+    onMount(() => {
+        applyTheme(currentTheme);
+
+        // Systemeinstellungen überwachen (falls 'auto' aktiv ist)
+        if (currentTheme === 'auto') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = () => applyTheme('auto');
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
+    });
 
     function handleRelayToggle(index: number) {
         relays[index].enabled = !relays[index].enabled;
@@ -81,10 +119,7 @@
             <!-- Settings -->
             <Sheet.Root>
                 <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6"/>
-                    </svg>
+                    <SlidersHorizontalIcon class="size-4" />
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
@@ -103,7 +138,7 @@
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
                     <Avatar class="h-8 w-8">
-                        <AvatarFallback>MM</AvatarFallback>
+                        <AvatarFallback><UserRoundIcon class="size-4" /></AvatarFallback>
                     </Avatar>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
@@ -116,9 +151,11 @@
 
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme}>
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="4"/>
-                </svg>
+                {#if currentTheme === 'dark'}
+                    <SunIcon class="size-4" />
+                {:else}
+                    <MoonIcon class="size-4" />
+                {/if}
             </Button>
             
             <Separator orientation="vertical" class="border-1 min-h-4" />

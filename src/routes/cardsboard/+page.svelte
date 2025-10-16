@@ -150,7 +150,7 @@
 				<HeaderBar {boardMeta} />
 				
 				<!-- Board Content - hier ist der einzige Scroll -->
-				<div class="flex-1 overflow-auto p-4 min-h-0">
+				<div class="flex-1 overflow-auto p-0 min-h-0">
 					<Board 
 						columns={$data} 
 						onFinalUpdate={handleBoardUpdated}

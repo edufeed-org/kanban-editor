@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-   import { dndzone } from 'svelte-dnd-action';
+    import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
@@ -72,17 +72,18 @@
     .board {
         height: 90vh;
         width: 100%;
-        padding: 0.5em;
-        margin-bottom: 40px;
+        /* padding: 0.5em; */
+        /* margin-bottom: 40px; */
     }
     .column {
         height: 100%;
         width: 250px;
         padding: 0.5em;
-        margin: 1em;
+        margin: .1em;
         float: left;
-        border: 1px solid #333333;
-				background-color: white;
+        border-right: 1px solid var(--column-border);
+		
+		/* background-color: white; */
     }
 </style>
 
