@@ -114,7 +114,8 @@
 		<!-- Hauptbereich -->
 		<main class="flex flex-1 flex-col overflow-hidden min-w-0">
 			<!-- Topbar mit integrierten Sidebar-Triggern -->
-			<Topbar 
+			<Topbar
+				title={boardMeta.title}
 				onToggleLeftSidebar={() => leftSidebarOpen = !leftSidebarOpen}
 				onToggleRightSidebar={() => rightSidebarOpen = !rightSidebarOpen}
 			/>

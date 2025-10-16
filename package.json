@@ -69,6 +69,7 @@
     "globals": "^16.4.0",
     "mdsvex": "^0.12.6",
     "mode-watcher": "^1.1.0",
+    "paneforge": "^1.0.2",
     "playwright": "^1.55.1",
     "publint": "^0.3.13",
     "storybook": "^9.1.10",

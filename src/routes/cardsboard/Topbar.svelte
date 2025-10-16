@@ -10,11 +10,13 @@
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
 
-    // Props für Sidebar-Toggle
+    // Props für Sidebar-Toggle und Title
     let {
+        title = 'Kanbanboard',
         onToggleLeftSidebar,
         onToggleRightSidebar
     }: {
+        title?: string;
         onToggleLeftSidebar?: () => void;
         onToggleRightSidebar?: () => void;
     } = $props();
@@ -51,6 +53,7 @@
     function handleRelayToggle(index: number) {
         relays[index].enabled = !relays[index].enabled;
     }
+    
 </script>
 
 <header class="sticky top-0 z-50 w-full max-w-full border-b bg-background/95 backdrop-blur shrink-0">
@@ -68,15 +71,9 @@
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
-            <Separator orientation="vertical" class="h-6" />
+            <Separator orientation="vertical" class="border-1 min-h-4" />
             
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-                <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            <span class="font-semibold text-lg hidden sm:inline-block">Kanban Board</span>
+            <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
         </div>
 
         <!-- Right Section: Actions + Right Sidebar Trigger -->
@@ -124,7 +121,7 @@
                 </svg>
             </Button>
             
-            <Separator orientation="vertical" class="h-6" />
+            <Separator orientation="vertical" class="border-1 min-h-4" />
             
             <!-- Right Sidebar Trigger -->
             <Button

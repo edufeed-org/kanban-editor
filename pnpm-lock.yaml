@@ -121,6 +121,9 @@ importers:
       mode-watcher:
         specifier: ^1.1.0
         version: 1.1.0(svelte@5.39.11)
+      paneforge:
+        specifier: ^1.0.2
+        version: 1.0.2(svelte@5.39.11)
       playwright:
         specifier: ^1.55.1
         version: 1.56.0
@@ -2210,6 +2213,11 @@ packages:
   package-manager-detector@1.4.0:
     resolution: {integrity: sha512-rRZ+pR1Usc+ND9M2NkmCvE/LYJS+8ORVV9X0KuNSY/gFsp7RBHJM/ADh9LYq4Vvfq6QkKrW6/weuh8SMEtN5gw==}
 
+  paneforge@1.0.2:
+    resolution: {integrity: sha512-KzmIXQH1wCfwZ4RsMohD/IUtEjVhteR+c+ulb/CHYJHX8SuDXoJmChtsc/Xs5Wl8NHS4L5Q7cxL8MG40gSU1bA==}
+    peerDependencies:
+      svelte: ^5.29.0
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -2630,6 +2638,12 @@ packages:
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.0.0
+
+  svelte-toolbelt@0.9.3:
+    resolution: {integrity: sha512-HCSWxCtVmv+c6g1ACb8LTwHVbDqLKJvHpo6J8TaqwUme2hj9ATJCpjCPNISR1OCq2Q4U1KT41if9ON0isINQZw==}
+    engines: {node: '>=18', pnpm: '>=8.7.0'}
+    peerDependencies:
+      svelte: ^5.30.2
 
   svelte2tsx@0.7.45:
     resolution: {integrity: sha512-cSci+mYGygYBHIZLHlm/jYlEc1acjAHqaQaDFHdEBpUueM9kSTnPpvPtSl5VkJOU1qSJ7h1K+6F/LIUYiqC8VA==}
@@ -5150,6 +5164,12 @@ snapshots:
 
   package-manager-detector@1.4.0: {}
 
+  paneforge@1.0.2(svelte@5.39.11):
+    dependencies:
+      runed: 0.23.4(svelte@5.39.11)
+      svelte: 5.39.11
+      svelte-toolbelt: 0.9.3(svelte@5.39.11)
+
   parent-module@1.0.1:
     dependencies:
       callsites: 3.1.0
@@ -5632,6 +5652,13 @@ snapshots:
     dependencies:
       clsx: 2.1.1
       runed: 0.23.4(svelte@5.39.11)
+      style-to-object: 1.0.11
+      svelte: 5.39.11
+
+  svelte-toolbelt@0.9.3(svelte@5.39.11):
+    dependencies:
+      clsx: 2.1.1
+      runed: 0.29.2(svelte@5.39.11)
       style-to-object: 1.0.11
       svelte: 5.39.11
 
