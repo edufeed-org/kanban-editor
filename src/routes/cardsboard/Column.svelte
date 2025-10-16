@@ -120,6 +120,15 @@
 		}
 		popoverOpen = false;
 	}
+
+	function handleHeaderClick(e: MouseEvent) {
+		// Only select column when clicking on the header itself, not on the popover trigger
+		if ((e.target as HTMLElement).closest('.popover-trigger-ignore')) {
+			return;
+		}
+		e.stopPropagation();
+		onSelect?.();
+	}
 </script>
 
 <style>
@@ -134,6 +143,18 @@
 		display: flex;
 		flex-direction: column;
 		padding-bottom: 0.75rem;
+		cursor: pointer;
+		transition: opacity 0.2s ease;
+	}
+
+	.column-header:hover {
+		opacity: 0.8;
+	}
+
+	.column-header:focus {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+		border-radius: 4px;
 	}
 
 	.column-title {
@@ -186,17 +207,18 @@
 
 <div 
 	class="column-wrapper {isSelected ? 'border-2 border-primary rounded-lg' : ''}" 
-	onclick={onSelect}
-	onkeydown={(e) => e.key === 'Enter' && onSelect?.()}
-	role="button"
-	tabindex="0"
 >
-		<div class="column-header">
+		<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				handleHeaderClick(e as unknown as MouseEvent);
+			}
+		}} role="button" tabindex="0">
 			<div class="flex items-center justify-between w-full">
 				<div class="column-title">{name}</div>
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
-					<Popover.Trigger class="inline-flex items-center justify-center h-6 w-6 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
+					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-6 w-6 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
 						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<circle cx="12" cy="5" r="1"/>
 							<circle cx="12" cy="12" r="1"/>

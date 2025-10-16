@@ -40,8 +40,30 @@
 	
 	function handleSelectCard(cardId: string) {
 		selectedCard = selectedCard === cardId ? null : cardId;
+		selectedColumn = null; // Clear column selection when selecting card
 	}
-	
+
+	// Helper-Funktion: Findet die vollständige Hierarchie einer Karte
+	function getCardHierarchy(cardId: string | null) {
+		if (!cardId) return null;
+
+		for (const column of $data) {
+			const card = column.items.find(item => String(item.id) === String(cardId));
+			if (card) {
+				return {
+					boardId: card.boardId || "board-1",
+					columnId: card.columnId || column.id,
+					columnName: column.name,
+					cardId: card.id,
+					cardName: card.name
+				};
+			}
+		}
+		return null;
+	}
+
+	// Abgeleitete Hierarchie-Info
+	let selectedCardHierarchy = $derived(getCardHierarchy(selectedCard));
 	// Board-Metadaten
 	let boardMeta = $state({
 		title: 'Mein Projekt Board',
@@ -128,6 +150,16 @@
 							{/if}
 							{#if stats.selectedCard}
 								<p class="text-primary">Karte: {stats.selectedCard}</p>
+							{/if}
+							{#if selectedCardHierarchy}
+								<div class="mt-3 pt-3 border-t border-muted">
+									<p class="text-xs font-semibold text-foreground mb-2">📍 Kartenhierarchie:</p>
+									<div class="space-y-1">
+										<p><span class="font-semibold">Board:</span> {selectedCardHierarchy.boardId}</p>
+										<p><span class="font-semibold">Spalte:</span> {selectedCardHierarchy.columnName}</p>
+										<p><span class="font-semibold">Karte:</span> {selectedCardHierarchy.cardName}</p>
+									</div>
+								</div>
 							{/if}
 						</div>
 					</div>

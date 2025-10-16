@@ -58,9 +58,9 @@
 		popoverOpen = !popoverOpen;
 	}
 
-	function handleDoubleClick() {
-		showModal = true;
-	}
+	// function handleDoubleClick() {
+	// 	showModal = true;
+	// }
 
 	function handlePublishToggle() {
 		const newState = card.publishState === 'draft' ? 'published' : 'draft';
@@ -99,12 +99,12 @@
 		showSidebar = false;
 	}
 
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			handleDoubleClick();
-		}
-	}
+	// function handleKeyDown(event: KeyboardEvent) {
+	// 	if (event.key === 'Enter' || event.key === ' ') {
+	// 		event.preventDefault();
+	// 		handleDoubleClick();
+	// 	}
+	// }
 
 	function handleSidebarAction(action: string) {
 		onSidebarAction?.(String(card.id), action);
@@ -155,8 +155,10 @@
 
 <Card.Root 
 	class="card {isSelected ? 'border-2 border-primary' : ''}" 
-	ondblclick={handleDoubleClick} 
-	onclick={onSelect}
+	onclick={(e) => {
+		e.stopPropagation();
+		onSelect?.();
+	}}
 	style="border-left: 6px solid {getCardColor(card.color)};">
 	<Card.Header>
 		<div class="card-header-content">

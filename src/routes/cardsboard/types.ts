@@ -21,6 +21,9 @@ export interface CardItem {
 	author?: string;
 	image?: string;
 	link?: string;
+	// Metadaten für Nachverfolgung der Kartenhierarchie
+	columnId?: string; // ID der Spalte, zu der diese Karte gehört
+	boardId?: string; // ID des Boards, zu dem diese Karte gehört
 }
 
 export interface Column {

@@ -1,7 +1,9 @@
 import { writable } from "svelte/store";
 import type { Column } from "./types.js";
 
-const dataStore = writable<Column[]>([
+const boardId = "board-1"; // Die ID des aktuellen Boards
+
+const rawData: Column[] = [
 	{
 		id: "c1",
 		name: "TODO",
@@ -156,6 +158,23 @@ const dataStore = writable<Column[]>([
 			}
 		]
 	}
-]);
+];
+
+// Helper-Funktion: Reichert alle Karten mit columnId und boardId an
+function enrichCardsWithMetadata(columns: Column[], bId: string): Column[] {
+	return columns.map(column => ({
+		...column,
+		items: column.items.map(card => ({
+			...card,
+			columnId: column.id,
+			boardId: bId
+		}))
+	}));
+}
+
+// Daten mit Metadaten anreichern
+const enrichedData = enrichCardsWithMetadata(rawData, boardId);
+
+const dataStore = writable(enrichedData);
 
 export { dataStore as data };
