@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { data } from "./data.js";
-	import Board from "./Board.svelte";
-	import Topbar from "./Topbar.svelte";
-	import HeaderBar from "./HeaderBar.svelte";
-	import type { Column, BoardUpdateHandler } from "./types.js";
+import { onMount } from 'svelte';
+import { data } from "./data.js";
+import Board from "./Board.svelte";
+import Topbar from "./Topbar.svelte";
+import type { Column, BoardUpdateHandler } from "./types.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import * as Resizable from "$lib/components/ui/resizable/index.js";
@@ -141,16 +140,14 @@
 		<!-- Hauptbereich -->
 		<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
 			<main class="flex flex-1 flex-col overflow-hidden min-w-0">
-			<!-- Topbar mit integrierten Sidebar-Triggern -->
-			<Topbar
-				title={boardMeta.title}
-				onToggleLeftSidebar={toggleLeftSidebar}
-				onToggleRightSidebar={toggleRightSidebar}
-			/>				<!-- Board Header (jetzt UNTER der Topbar) -->
-				<HeaderBar {boardMeta} />
-				
-				<!-- Board Content - hier ist der einzige Scroll -->
-				<div class="flex-1 overflow-auto p-0 min-h-0">
+		<!-- Topbar mit integrierten Sidebar-Triggern -->
+		<Topbar
+			title={boardMeta.title}
+			{boardMeta}
+			onToggleLeftSidebar={toggleLeftSidebar}
+			onToggleRightSidebar={toggleRightSidebar}
+		/>			<!-- Board Content - hier ist der einzige Scroll -->
+			<div class="flex-1 overflow-auto p-0 min-h-0">
 					<Board 
 						columns={$data} 
 						onFinalUpdate={handleBoardUpdated}

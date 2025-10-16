@@ -84,7 +84,9 @@ const rawData: Column[] = [
 				name: "item49",
 				description: "Neunte Aufgabe im TODO",
 				image: "https://picsum.photos/400/200?random=11",
-				color: "chart-3"
+				color: "chart-3",
+				publishState: "archived",
+				author: "max@example.com"
 			}
 		]
 	},

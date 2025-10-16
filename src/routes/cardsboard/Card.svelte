@@ -160,14 +160,14 @@
 
 </script>
 
-<Card.Root 
-	class="card {isSelected ? 'border-2 border-primary' : ''}" 
+<Card.Root
+	class="card  p-1 {isSelected ? 'border-2 border-primary' : ''}" 
 	onclick={(e) => {
 		e.stopPropagation();
 		onSelect?.();
 	}}
-	style="border-left: 6px solid {getCardColor(card.color)};">
-	<Card.Header>
+	style="border-bottom: 6px solid {getCardColor(card.color)};">
+	<Card.Header class="px-1">
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
 			<div class="header-actions">
@@ -234,7 +234,7 @@
 		</div>
 	</Card.Header>
 
-	<Card.Content>
+	<Card.Content class="px-1">
 		<!-- Labels Section -->
 		{#if card.labels && card.labels.length > 0}
 			<div class="card-labels">
@@ -271,7 +271,7 @@
 		{/if}
 	</Card.Content>
 
-	<Card.Footer>
+	<Card.Footer class="px-1">
 		<div class="footer-content">
 			<div class="comments-count">
 				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
@@ -342,34 +342,37 @@
 			width: 16px;
 			height: 16px;
 			border-radius: 50%;
-			border: 2px solid #dee2e6;
-			background: white;
+			border: 2px solid var(--muted-foreground);
+			background: unset;
 			cursor: pointer;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			transition: all 0.2s ease;
 			position: relative;
+			opacity: 0.4;
 		}
 
 		.publish-toggle:hover {
-			border-color: #ced4da;
+			border-color: var(--chart-1);
+			background-color: var(--chart-2);
 			transform: scale(1.1);
+			opacity: 1;
 		}
 
 		.publish-toggle.draft {
-			border-color: #ffc107;
-			background-color: #fff3cd;
+			opacity: 0.1;
 		}
 
 		.publish-toggle.published {
-			border-color: #28a745;
-			background-color: #d4edda;
+			border-color: var(--chart-1);
+			background-color: var(--chart-2);
 		}
 
 		.publish-toggle.archived {
-			border-color: #6c757d;
-			background-color: #f8f9fa;
+			border-color: var(--border);
+			background-color: black;
+			opacity: 1;
 		}
 
 		.publish-indicator {
@@ -380,20 +383,20 @@
 		}
 
 		.publish-toggle.draft .publish-indicator {
-			background-color: #ffc107;
+			background-color: var(--muted-foreground);
 		}
 
 		.publish-toggle.published .publish-indicator {
-			background-color: #28a745;
+			background-color: var(--chart-2);
 		}
 
 		.publish-toggle.archived .publish-indicator {
-			background-color: #6c757d;
+			background-color: var(--color-fuchsia-950);
 		}
 
 		.menu-dots {
 			font-size: 1.2em;
-			color: #6c757d;
+			color: var(--muted-foreground);
 			line-height: 1;
 		}
 
@@ -406,8 +409,8 @@
 		}
 
 		.label {
-			background-color: #e9ecef;
-			color: #495057;
+			background-color: var(--input);
+			color: var(--foreground);
 			padding: 0.2em 0.5em;
 			border-radius: 12px;
 			font-size: 0.75em;
@@ -439,13 +442,13 @@
 		}
 
 		.card-image:focus {
-			outline: 2px solid #007bff;
+			outline: 2px solid var(--ring);
 			outline-offset: 2px;
 		}
 
 		.card-description {
 			font-size: 0.9em;
-			color: #495057;
+			color: var(--foreground);
 			line-height: 1.4;
 			flex: 1;
 		}
@@ -461,7 +464,7 @@
 		
 		.comments-count, .attendees-count {
 			font-size: 0.8em;
-			color: #6c757d;
+			color: var(--muted-foreground);
 			display: flex;
 			align-items: center;
 			gap: 0.25em;
