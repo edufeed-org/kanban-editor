@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+    import { z } from "zod/v4";
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Sheet from '$lib/components/ui/sheet/index.js';
     import * as Drawer from '$lib/components/ui/drawer/index.js';
@@ -6,18 +7,21 @@
     import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
+    import { Checkbox } from "$lib/components/ui/checkbox/index.js";
     import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import { Badge } from '$lib/components/ui/badge/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
+    import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
     import UserRoundIcon from "@lucide/svelte/icons/user-round";
     import MoonIcon from "@lucide/svelte/icons/moon";
     import SunIcon from "@lucide/svelte/icons/sun";
     import BotIcon from "@lucide/svelte/icons/bot";
-    import MoreVerticalIcon from "@lucide/svelte/icons/more-vertical";
+    import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
     import SettingsPanel from './SettingsPanel.svelte';
+    
 
     // Props für Sidebar-Toggle, Title und Board-Meta
     let {
@@ -96,6 +100,8 @@
 
     // Beim Mount: Theme initialisieren und Systemänderungen überwachen
     import { onMount } from 'svelte';
+    import * as Field from "$lib/components/ui/field/index.js";
+    import SheetDescription from '$lib/components/ui/sheet/sheet-description.svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -132,47 +138,23 @@
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-2">
             <!-- Left Sidebar Trigger -->
-            <Button
+            <Button title="Linke Sidebar ein-/ausblenden"
                 variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
                 class="size-9"
             >
-                <PanelLeftIcon class="size-4" />
+                <PanelLeftIcon class="size-6" />
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
-            <Separator orientation="vertical" class="border-1 min-h-4" />
+            <Separator orientation="vertical" class="min-w-4" />
             
             <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
-        </div>
-
-        <!-- Right Section: Actions + Right Sidebar Trigger -->
-        <div class="flex items-center gap-2">
-            <!-- Settings Panel -->
-            <SettingsPanel />
-
-            <!-- AI Summary Button (BotIcon) -->
-            <Drawer.Root>
-                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="KI-Zusammenfassung">
-                    <BotIcon class="size-4" />
-                </Drawer.Trigger>
-                <Drawer.Content>
-                    <Drawer.Header>
-                        <Drawer.Title>Board-Zusammenfassung</Drawer.Title>
-                    </Drawer.Header>
-                    <div class="p-4">
-                        <p class="text-sm text-muted-foreground">
-                            Hier erscheint die KI-gestützte Zusammenfassung des Boards...
-                        </p>
-                    </div>
-                </Drawer.Content>
-            </Drawer.Root>
-
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root>
                 <Dialog.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="Board-Einstellungen">
-                    <MoreVerticalIcon class="size-4" />
+                    <EllipsisVerticalIcon class="size-6 border-2 rounded-sm p-0" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
@@ -226,21 +208,63 @@
                     </Dialog.Footer>
                 </Dialog.Content>
             </Dialog.Root>
+        
 
-            <!-- Settings -->
+            <!-- AI Summary Button (BotIcon) -->
+            <Drawer.Root>
+                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="KI-Zusammenfassung">
+                    <SquareSigmaIcon  />
+                </Drawer.Trigger>
+                <Drawer.Content>
+                    <Drawer.Header>
+                        <Drawer.Title>Board-Zusammenfassung</Drawer.Title>
+                    </Drawer.Header>
+                    <div class="p-4">
+                        <p class="text-sm text-muted-foreground">
+                            Hier erscheint die KI-gestützte Zusammenfassung des Boards...
+                        </p>
+                    </div>
+                </Drawer.Content>
+            </Drawer.Root>
+        </div>
+            
+        <!-- Right Section: Actions + Right Sidebar Trigger -->
+        <div class="flex items-center gap-2">
+            <!-- Settings Panel -->
+            <SettingsPanel />
+
+            
+
+            <!-- AI Settings Sheet -->
             <Sheet.Root>
                 <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-                    <SlidersHorizontalIcon class="size-4" />
+                    <BotIcon  />
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
-                        <Sheet.Title>Einstellungen</Sheet.Title>
+                        <Sheet.Title>AI- Einstellungen</Sheet.Title>
                     </Sheet.Header>
-                    <div class="space-y-4 py-4">
-                        <div class="space-y-2">
-                            <Label for="webhook">Webhook URL</Label>
-                            <Input id="webhook" bind:value={webhookUrl} placeholder="https://..." />
-                        </div>
+                    <hr class="border-2">
+                    <div class="p-4 space-y-4">
+                        <Field.Group class="space-y-4 border-b pb-4">
+                            <Field.Set>
+                                <Field.Label class="text-sm font-semibold mb-2">Nostr Relays</Field.Label>
+                                    {#each relays as relay}
+                                        <div class="flex items-start gap-3">
+                                            <Checkbox bind:checked={relay.enabled} id={relay.url} />
+                                            <Label for={relay.url} class="ml-2">{relay.url}</Label>
+                                        </div>
+                                    {/each}
+                            </Field.Set>
+                        </Field.Group>
+                        <Field.Group  class="space-y-4 border-b pb-4">
+                            <Field.Set>
+                                <Field.Label for="n8n-url" class="text-sm font-semibold">n8n Webhook Url</Field.Label>
+                                <Field.Content>
+                                    <Input id="n8n-url" bind:value={webhookUrl} placeholder="https://..." />
+                                </Field.Content>
+                            </Field.Set>
+                        </Field.Group>
                     </div>
                 </Sheet.Content>
             </Sheet.Root>
@@ -249,7 +273,7 @@
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
                     <Avatar class="h-8 w-8">
-                        <AvatarFallback><UserRoundIcon class="size-4" /></AvatarFallback>
+                        <AvatarFallback><UserRoundIcon /></AvatarFallback>
                     </Avatar>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
@@ -263,13 +287,13 @@
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme}>
                 {#if currentTheme === 'dark'}
-                    <SunIcon class="size-4" />
+                    <SunIcon  class="size-6"/>
                 {:else}
-                    <MoonIcon class="size-4" />
+                    <MoonIcon  class="size-6"/>
                 {/if}
             </Button>
             
-            <Separator orientation="vertical" class="border-1 min-h-4" />
+            <Separator orientation="vertical" class="min-w-3" />
             
             <!-- Right Sidebar Trigger -->
             <Button
@@ -278,7 +302,7 @@
                 onclick={onToggleRightSidebar}
                 class="size-9"
             >
-                <PanelRightIcon class="size-4" />
+                <PanelRightIcon  class="size-6"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>

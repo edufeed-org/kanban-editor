@@ -104,6 +104,10 @@
     width: 14px;
     height: 14px;
   }
+  svg.popover-trigger {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 @layer base {

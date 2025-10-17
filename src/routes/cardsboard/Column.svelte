@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-   import { dndzone } from 'svelte-dnd-action';
+    import { dndzone } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
  	import * as CardUI from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
@@ -61,7 +61,7 @@
 		maxCardsBeforeScroll?: number;
 	} = $props();
 
-import ArrowDownToLineIcon from '@lucide/svelte/icons/arrow-down-to-line';
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
 
 	// Local state for column editing
 	let isEditing = $state(false);
@@ -315,7 +315,7 @@ import ArrowDownToLineIcon from '@lucide/svelte/icons/arrow-down-to-line';
 			items = [...items, newCard];
 			onDrop(items);
 		}}>
-		<ArrowDownToLineIcon class="h-5 w-5" />
+		<SquarePlusIcon class="h-5 w-5" />
 		<span class="sr-only">Karte ans Ende anfügen</span>
 	</button>
 </div>

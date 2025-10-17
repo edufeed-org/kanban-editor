@@ -153,8 +153,8 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 			{boardMeta}
 			onToggleLeftSidebar={toggleLeftSidebar}
 			onToggleRightSidebar={toggleRightSidebar}
-		/>			<!-- Board Content - hier ist der einzige Scroll -->
-			<div class="flex-1 overflow-auto p-0 min-h-0">
+		/>			<!-- Board Content - KEIN Scroll hier, nur im Board selbst -->
+			<div class="flex-1 overflow-hidden p-0 min-h-0">
 					<Board 
 						columns={$data} 
 						onFinalUpdate={handleBoardUpdated}

@@ -17,6 +17,7 @@
 	import TrashIcon from "@lucide/svelte/icons/trash";
 	import UsersIcon from "@lucide/svelte/icons/users";
 	import LinkIcon from "@lucide/svelte/icons/link";
+	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 
 
 	let {
@@ -187,8 +188,8 @@
 
 				{#if showMenu}
 					<Popover.Root bind:open={popoverOpen}>
-						<Popover.Trigger class="menu-trigger">
-							<span class="menu-dots">⋮</span>
+						<Popover.Trigger>
+							<EllipsisVerticalIcon class="popover-trigger border-1 rounded-sm p-0"/>
 						</Popover.Trigger>
 						<Popover.Content align="end" class="w-64">
 							<div class="space-y-4">
@@ -393,13 +394,7 @@
 		.publish-toggle.archived .publish-indicator {
 			background-color: var(--color-fuchsia-950);
 		}
-
-		.menu-dots {
-			font-size: 1.2em;
-			color: var(--muted-foreground);
-			line-height: 1;
-		}
-
+		
 		/* Card content styling */
 		.card-labels {
 			display: flex;
@@ -494,5 +489,6 @@
 			outline: 2px solid #007bff;
 			outline-offset: 2px;
 		}
+		
 
 	</style>

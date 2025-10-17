@@ -12,6 +12,9 @@
 	let maxColumnHeight = $derived(Math.max(...Object.values(columnHeights), 0));
 	let resizeObservers = new Map<string, ResizeObserver>();
 
+	// Board Element Referenz (für potentielle zukünftige Features)
+	let boardElement: HTMLElement | undefined;
+
 	// Subscribe to settings store
 	let settings = $state<any>(null);
 	let unsubscribe: (() => void) | undefined;
@@ -24,14 +27,6 @@
 		}
 		return () => unsubscribe?.();
 	});
-
-	// Auto-scroll beim Dragging
-	let boardElement: HTMLElement | undefined;
-	let autoScrollInterval: ReturnType<typeof setInterval> | undefined;
-	const SCROLL_SPEED = 15; // Pixel pro Scroll-Intervall
-	const EDGE_THRESHOLD = 100; // Pixel vom Rand, wo Auto-Scroll startet
-
-	// Suppress passive event listener warnings for dnd-action
  	// This is a known issue with svelte-dnd-action library
  	if (typeof window !== 'undefined') {
  			// Override console.warn to suppress the specific passive listener warning
@@ -103,54 +98,6 @@
   	}
 
 	/**
-	 * Auto-Scroll beim Drag: Prüfe Maus-Position und scrolle Board horizontal
-	 */
-	function handleBoardDragOver(e: DragEvent) {
-		if (!boardElement) return;
-
-		const rect = boardElement.getBoundingClientRect();
-		const x = e.clientX;
-
-		// Check ob nahe am linken Rand
-		if (x < rect.left + EDGE_THRESHOLD) {
-			if (!autoScrollInterval) {
-				autoScrollInterval = setInterval(() => {
-					if (boardElement) {
-						boardElement.scrollLeft -= SCROLL_SPEED;
-					}
-				}, 50);
-			}
-		}
-		// Check ob nahe am rechten Rand
-		else if (x > rect.right - EDGE_THRESHOLD) {
-			if (!autoScrollInterval) {
-				autoScrollInterval = setInterval(() => {
-					if (boardElement) {
-						boardElement.scrollLeft += SCROLL_SPEED;
-					}
-				}, 50);
-			}
-		}
-		// Sonst: Stop Auto-Scroll
-		else {
-			if (autoScrollInterval) {
-				clearInterval(autoScrollInterval);
-				autoScrollInterval = undefined;
-			}
-		}
-	}
-
-	/**
-	 * Cleanup: Auto-Scroll stoppen wenn Drag endet
-	 */
-	function handleBoardDragEnd() {
-		if (autoScrollInterval) {
-			clearInterval(autoScrollInterval);
-			autoScrollInterval = undefined;
-		}
-	}
-
-	/**
 	 * Svelte Action: Überwache Column-Höhen mit ResizeObserver
 	 */
 	function observeColumnHeight(element: HTMLElement, columnId: string) {
@@ -184,13 +131,16 @@
 		display: flex;
 		flex-direction: row;
 		overflow-x: auto;
-		overflow-y: auto; /* allow page to scroll vertically when columns grow */
+		overflow-y: auto;
 		flex: 1 1 auto;
 		gap: 0.5em;
 		padding: 0.5em;
-		scroll-behavior: smooth;
+		/* scroll-behavior: smooth; */ /* Deaktiviert für schnelleres Auto-Scroll während Drag */
 		scrollbar-width: thick;  /* Firefox */
-		align-items: flex-start; /* columns grow with their content */
+		align-items: flex-start;
+		height: 100%;
+		width: 100%;
+		position: relative;
 	}
 
     /* Dickes Scrollbar in Chrome/Edge/Safari */
@@ -230,9 +180,6 @@
 	use:dndzone={{items:columns, flipDurationMs, type:'column', dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} 
 	onconsider={handleDndConsiderColumns} 
 	onfinalize={handleDndFinalizeColumns}
-	ondragover={handleBoardDragOver}
-	ondragleave={handleBoardDragEnd}
-	ondrop={handleBoardDragEnd}
 >
     {#each columns as {id, name, color, items}, idx (id)}
    		<div 
