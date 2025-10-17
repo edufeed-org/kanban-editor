@@ -99,7 +99,10 @@
     "overrides": {
       "nostr-tools": "~2.14.2",
       "@nostr-dev-kit/ndk": "^2.14.2"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "svelte-preprocess"
+    ]
   },
   "dependencies": {
     "@nostr-dev-kit/ndk": "2.14.2",
