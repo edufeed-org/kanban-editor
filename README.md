@@ -76,9 +76,11 @@ UI Components (Svelte 5)
     ↓
 BoardStore ($state + $derived)
     ↓                    ↓
-BoardModel Classes    SyncManager
+BoardModel Classes    SyncManager (Dexie)
     ↓                    ↓
 Nostr Events      Event Queue (IndexedDB)
+    ↓                    ↓
+Nostr Events      Retry-Logik (2^n Backoff)
     ↓
 NDK → Nostr Relays
 ```
@@ -88,11 +90,10 @@ NDK → Nostr Relays
 ### Installation
 
 ```sh
-# Dependencies installieren
+# Dependencies installieren (mit Dexie & jsoncrush für Offline/Export)
+pnpm install dexie jsoncrush @types/dexie
 pnpm install
 ```
-
-### Entwicklung
 
 ### Entwicklung
 
@@ -121,7 +122,87 @@ import { runTestSuite } from '$lib/utils/testSuite';
 runTestSuite();
 ```
 
-## 📦 Projekt-Struktur
+## � Technical Stack & Core Dependencies
+
+| Package | Version | Zweck | Phase |
+|---------|---------|-------|-------|
+| **svelte** | 5 | UI Framework mit Runes (`$state`, `$derived`) | 1.1 |
+| **typescript** | ^5.0 | Strikte Typisierung für alle Klassen | 1.1 |
+| **@nostr-dev-kit/ndk** | ^0.9+ | Nostr Protocol Client, Event Publishing | 1.1 |
+| **dexie** | ^4.0+ | IndexedDB Wrapper für Event-Queue (Offline) | **1.2** |
+| **jsoncrush** | ^1.5+ | Kompression für Share-Links (71% Reduktion) | **1.5** |
+| **shadcn-svelte** | Latest | UI Komponenten (Card, Dialog, Button, etc.) | 1.1 |
+| **svelte-persisted-store** | ^1.0+ | Persistierung von Session & Settings | 1.4 |
+| **lucide-svelte** | ^0.300+ | Icon Library (@lucide/svelte/icons/...) | 1.1 |
+| **tailwind-css** | 4 | CSS Utility Framework | 1.1 |
+
+### Kritische Abhängigkeiten Erklärt
+
+#### 🗄️ **Dexie** (Offline-First Event Queue)
+```typescript
+// Problem: Browser localStorage hat nur 5MB Limit
+// Lösung: Dexie (IndexedDB Wrapper) mit unbegrenzter Größe
+
+// Dexie Vorteile:
+✅ Query API:        .where('type').equals('card').toArray()
+✅ Transactions:     db.transaction() für atomare Operationen
+✅ Indexes:          O(log n) Performance vs O(n) Array-Filter
+✅ Analytics:        .where('retries').above(0).toArray()
+✅ Dead-Letter Pattern: Automatisches Entfernen nach max 3 Retries
+
+// Dexie wird NICHT verwendet für:
+❌ Session Data (Auth Token) — bleibt in svelte-persisted-store
+❌ UI State ($state direkt in Components) — bleibt im Svelte Store
+```
+
+#### 📦 **jsoncrush** (Share-Link Komprimierung)
+```typescript
+// Problem: Board JSON zu groß für URLs
+// Lösung: jsoncrush Kompression + Base64-URL Encoding
+
+// Komprimierung-Beispiel:
+Original:    {"id":"board-123","name":"Projekt Phoenix",...} — 3.2 KB
+btoa():      eyJpZCI6ImJvYXJkLTEyMyIsIm5hbWUiOiJQcm9qZWt0IFBoI... — 4.3 KB
+jsoncrush:   eyJiIjoiYm9hcmQtMTIzIiwibCI6IlByb2plY3QgUGhvZW... — 0.9 KB ✅
+
+// Größenersparnis: 71% kleiner als btoa!
+// Sicher geteilt via: https://your-app.com/import?token=<crush-token>
+```
+
+#### 🎨 **shadcn-svelte** (UI Component Library)
+```typescript
+// Keine vorkonfigurierten Komponenten — stattdessen:
+// Exportiert TypeScript + Svelte Code zum Copy-Paste
+
+// Alle Komponenten mit korrekter Struktur:
+<Card.Root>
+  <Card.Header>
+    <Card.Title>Titel</Card.Title>
+  </Card.Header>
+  <Card.Content>Inhalt</Card.Content>
+  <Card.Footer>Footer</Card.Footer>
+</Card.Root>
+
+// Befindet sich in: src/lib/components/ui/
+```
+
+#### 🔌 **@nostr-dev-kit/ndk** (Nostr Protocol)
+```typescript
+// Abstraktion über Nostr Relay-Komplexität hinweg
+
+// NDK Funktionen:
+✅ Event Publishing: event.publish() auf Relays
+✅ Event Subscriptions: ndk.subscribe({kinds: [1]})
+✅ Relay Management: Automatisches Failover
+✅ Caching: Optional mit IndexedDB Adapter
+
+// Im Projekt:
+• boardStore nutzt NDK für Publish
+• SyncManager nutzt NDK für Queue-Verarbeitung
+• Chat nutzt NDK für Nostr Events
+```
+
+## �📦 Projekt-Struktur
 
 ```
 src/
@@ -130,8 +211,8 @@ src/
 │   │   └── BoardModel.ts          # ✅ Card, Column, Board, Chat Klassen
 │   ├── stores/
 │   │   ├── kanbanStore.ts         # ✅ Hauptstore mit Svelte 5 Runes
-│   │   ├── userStore.ts           # 🟡 User Authentication (Phase 1.4)
-│   │   └── syncManager.ts         # 🟡 Offline-Sync Manager (Phase 1.2)
+│   │   ├── authStore.ts           # 🟡 User Authentication (Phase 1.4)
+│   │   └── syncManager.ts         # 🟡 Offline-Sync Manager mit Dexie (Phase 1.2)
 │   ├── utils/
 │   │   ├── idGenerator.ts         # ✅ D-Tag Generierung
 │   │   ├── nostrEvents.ts         # 🟡 Event Serialization (Phase 1.1)
@@ -144,7 +225,7 @@ src/
 │   │   └── ui/                    # shadcn-svelte components
 │   └── hooks/
 └── routes/
-    ├── +layout.svelte             # ✅ NDK Initialisierung
+    ├── +layout.svelte             # ✅ NDK + Dexie Initialisierung
     ├── +page.svelte               # ✅ Hauptseite
     └── cardsboard/                # 🟡 Zu migrieren (Phase 2.1)
         ├── +page.svelte
@@ -203,15 +284,105 @@ Siehe [Kanban-NIP.md](./Kanban-NIP.md) für Details.
 Das Board funktioniert **vollständig offline**:
 
 1. Alle Änderungen werden lokal im `BoardStore` gespeichert
-2. Nicht-synchronisierte Events landen in einer Queue (IndexedDB)
-3. Bei Reconnect werden Events automatisch publiziert
+2. Nicht-synchronisierte Events landen in einer Queue (IndexedDB via Dexie)
+3. Bei Reconnect werden Events automatisch mit exponentieller Retry-Logik publiziert
 4. Live-Subscriptions für Echtzeit-Updates
 
+### 📊 SyncManager & Dexie Architecture
+
+Die **offline-first** Funktionalität basiert auf zwei Komponenten:
+
+#### 1. **SyncManager** (`src/lib/stores/syncManager.ts`)
+- Verwaltet die Event-Queue (Dexie IndexedDB)
+- Detektiert Online/Offline Status
+- Implementiert exponentielles Backoff für Retry-Logik
+- Dead-Letter Pattern: Events werden nach 3 Versuchen gelöscht
+- Stop-on-First-Error: Sync stoppt beim ersten Fehler (verhindert Überlastung)
+
+#### 2. **Dexie IndexedDB Schema** (`QueuedEventRow`)
+```typescript
+interface QueuedEventRow {
+  id?: number;                    // Auto-increment PK
+  event: string;                  // Serialisiertes NDKEvent
+  timestamp: number;              // Erstellungszeit
+  retries: number;                // Versuchszähler (0-3)
+  type: 'board' | 'card' | 'comment';  // Event-Typ für Analysen
+}
+
+// Indexes für Performance
+- PRIMARY KEY: id (Auto-increment)
+- INDEX: type (für Filterung nach Event-Typ)
+- INDEX: retries (für Dead-Letter Analyse)
+- INDEX: createdAt (für chronologische Ordnung)
+```
+
+#### 3. **Retry-Strategie** (Exponential Backoff)
+| Versuch | Wartezeit | Beispiel |
+|---------|-----------|----------|
+| 1. Versuch | Sofort | Beim Speichern |
+| 2. Versuch | 2 Sekunden | Nach Reconnect: 2s Wartezeit |
+| 3. Versuch | 4 Sekunden | Fallback: 4s Wartezeit |
+| 4. Versuch | 8 Sekunden | Final: 8s Wartezeit |
+| **Dead-Letter** | ❌ Gelöscht | Nach 3 Versuchen entfernen |
+
+```typescript
+// Retry-Berechnung (2^retries * 1000 ms)
+const waitTime = Math.pow(2, event.retries) * 1000;
+```
+
+#### 4. **Offline-Status Monitoring**
 ```typescript
 // Offline-Status prüfen
 const status = boardStore.syncStatus;
-console.log(status.isOnline, status.queuedEvents);
+console.log({
+  isOnline: status.isOnline,        // Boolean: true/false
+  isSyncing: status.isSyncing,      // Boolean: Sync in progress?
+  queuedEvents: status.queuedEvents // Anzahl der ausstehenden Events
+});
+
+// Live-Updates bei Status-Änderung
+boardStore.subscribe(state => {
+  console.log(`📡 Queue: ${state.syncStatus.queuedEvents} Events pending`);
+});
 ```
+
+#### 5. **Beispiel-Szenario: Offline-Bearbeitung**
+```typescript
+// Benutzer arbeitet offline
+1. User erstellt neue Karte → BoardStore speichert lokal ($state)
+2. SyncManager erkennt: isOnline = false
+3. Event wird in Dexie Queue eingefügt (retries = 0)
+4. UI zeigt: "📡 Warte auf Verbindung..."
+
+// Benutzer kommt online
+5. SyncManager erkennt: isOnline = true
+6. Alle Events aus Queue werden nacheinander publiziert
+7. Jeder Event nutzt Retry-Logik (2^retries)
+8. Bei Erfolg: Event aus Queue entfernt
+9. Bei Fehler nach 3 Versuchen: Dead-Letter (gelöscht)
+10. UI zeigt: "✅ Synchronisiert (3 Events)"
+```
+
+#### 6. **Analytics & Debugging**
+```typescript
+// Queue-Inhalte abrufen (nach Event-Typ)
+const cardEvents = await syncManager.getQueuedEvents('card');
+const boardEvents = await syncManager.getQueuedEvents('board');
+
+// Dead-Letter Events (fehlerhafte Events)
+const deadLetters = await syncManager.getDeadLetterEvents();
+
+// Retry-Statistiken
+const retryStats = await syncManager.getRetryStats();
+// → { total: 5, retrying: 2, failed: 1, pending: 2 }
+```
+
+**💡 Wichtig:** Dexie wurde statt `svelte-persisted-store` gewählt wegen:
+- ✅ Query API (`where()`, `orderBy()`, `filter()`)
+- ✅ Transaktionen & Indexes (O(log n) statt O(n))
+- ✅ Unbegrenzte Größe (vs. 5MB localStorage-Limit)
+- ✅ Dead-Letter Pattern Support
+- ✅ Bessere Analysen & Monitoring möglich
 
 ## 💬 Kommentar-System
 
@@ -226,6 +397,103 @@ await boardStore.loadComments(cardId);
 
 // Kommentar löschen
 await boardStore.deleteComment(cardId, commentId);
+```
+
+## 💾 Export & Import (Share-Links)
+
+Boards können als **komprimierte Share-Links** exportiert und importiert werden — komplett **client-seitig ohne Backend**:
+
+### 📦 Export-Funktion (generateShareLink)
+
+```typescript
+// Board als JSON serialisieren und komprimieren
+const shareToken = await boardStore.generateShareLink();
+// → Ergebnis: "eyJi..." (Base64-URL-encoded, komprimiert mit jsoncrush)
+
+// Link in Zwischenablage kopieren
+const shareUrl = `https://your-app.com/import?token=${shareToken}`;
+
+// Größenvergleich:
+// • Original JSON: ~3.2 KB
+// • Base64 (btoa): ~4.3 KB (+34%)
+// • jsoncrush: ~0.9 KB (-71% ✅ SUPER KOMPRIMIERT!)
+```
+
+### 📥 Import-Funktion (importFromShareLink)
+
+```typescript
+// Share-Link dekomprimieren und importieren
+const result = await boardStore.importFromShareLink(shareToken, 'merge');
+// → { success: true, board: Board, mergeReport: {...} }
+
+// Import-Modi:
+// • 'replace': Existierendes Board ersetzen
+// • 'merge': Mit bestehendem Board zusammenführen (Standard)
+// • 'new': Neues Board erstellen
+
+// Merge-Report prüfen
+if (result.mergeReport) {
+  console.log(`Merged: ${result.mergeReport.cardsAdded} neue Karten`);
+  console.log(`Conflicts: ${result.mergeReport.conflictsResolved} aufgelöst`);
+}
+```
+
+### 🔗 UI-Integration (ExportImportDialog)
+
+```svelte
+<script>
+  import ExportImportDialog from '$lib/components/ExportImportDialog.svelte';
+  let showDialog = $state(false);
+</script>
+
+<button onclick={() => showDialog = true}>
+  📤 Board teilen
+</button>
+
+<ExportImportDialog bind:open={showDialog} />
+```
+
+### ⚙️ Technische Details
+
+**jsoncrush Komprimierung:**
+- ✅ String-Deduplizierung (wiederholte Keys werden gepoolt)
+- ✅ Array-Indizes werden durch Zahlen ersetzt
+- ✅ Whitespace wird entfernt
+- ✅ Kombiniert mit Base64-URL Encoding (URL-sicher)
+
+**Beispiel: Vor/Nach Komprimierung**
+
+```typescript
+// Original JSON (~3.2 KB)
+{
+  "id": "board-123",
+  "name": "Projekt Phoenix",
+  "columns": [
+    { "id": "col-1", "name": "To Do", "cards": [...] },
+    { "id": "col-2", "name": "In Progress", "cards": [...] }
+  ]
+}
+
+// jsoncrush komprimiert (~0.9 KB) — Base64-URL-encoded:
+"eyJiIjoiYm9hcmQtMTIzIiwibCI6IlByb2plY3QgUGhvZW5peCIsImMiOlt7ImkiOiJjb2wtMSIsIm4iOiJUbyBEbyIsImNhIjpbXX0s..."
+```
+
+**Share-Link Sicherheit:**
+- ⚠️ **NICHT verschlüsselt** — Token enthält komplettes Board als komprimiertes JSON
+- ✅ **Keine Server-Abhängigkeit** — Token ist in sich selbst vollständig
+- ✅ **DSGVO-konform** — Kein Storage auf Server, nur Client-seitige Kompression
+- 💡 **Empfehlung**: Sensitive Boards nicht über öffentliche Share-Links teilen
+
+### 🔀 Merge-Strategie (Last-Write-Wins)
+
+Bei Import im `merge`-Modus wird **Last-Write-Wins** angewendet:
+
+```typescript
+// Konfliktauflösung:
+// 1. Nach Timestamp (created_at) prüfen
+// 2. Neuere Version gewinnt
+// 3. Ältere Version wird ignoriert
+// 4. Bericht: { conflictsResolved: N }
 ```
 
 ## 🧪 Testing

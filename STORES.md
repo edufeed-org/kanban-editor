@@ -10,6 +10,7 @@
 ## Executive Summary
 
 Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boards. Stores sind die Brücke zwischen:
+
 - **BoardModel.ts** (Geschäftslogik)
 - **NDK.md** (Nostr Integration)
 - **NOSTR-USER.md** (Authentifizierung)
@@ -28,7 +29,7 @@ Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boa
 │  UI Layer (Svelte Components)                          │
 │  - Board.svelte, Column.svelte, Card.svelte            │
 │  - CardDialog.svelte, Chatbot.svelte                   │
-└────────────┬─────────────────────────────────────────┘
+└────────────┬───────────────────────────────────────────┘
              │ (Runes: $derived, $effect)
     ┌────────┴──────────┬──────────────┬────────────────┐
     ↓                   ↓              ↓                ↓
@@ -38,13 +39,13 @@ Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boa
 └────────────┘  └──────────────┘ └─────────────┘ └──────────────┘
     │ $state       │ $state          │ $state        │ $state
     │ board        │ user            │ queue         │ settings
-    ├─ CardStore   ├─ pubkey         ├─ events      ├─ theme
-    ├─ ChatStore   ├─ signer         └─ isOnline    └─ layout
+    ├─ CardStore   ├─ pubkey         ├─ events       ├─ theme
+    ├─ ChatStore   ├─ signer         └─ isOnline     └─ layout
     └─ Sync        └─ profile
        Handling
 
     ↓  getContext('ndk')     ↓  getContext('authStore')
-    
+
 ┌────────────────────────┬─────────────────────────────┐
 │  NDK Instance          │  IndexedDB (Persistence)    │
 │  - Relay Connection    │  - Event Queue              │
@@ -60,6 +61,7 @@ Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boa
 **Datei:** `src/lib/stores/kanbanStore.ts`
 
 **Verantwortlichkeiten:**
+
 - ✅ Board-Zustand verwalten (`Board` Instanz)
 - ✅ Chat-Interface bereitstellen (`Chat` Instanz)
 - ✅ Proxy-Methoden zu BoardModel.ts
@@ -74,6 +76,7 @@ Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boa
 
 import { Board, Chat } from '$lib/classes/BoardModel';
 import { SyncManager } from './syncManager';
+import { crush, uncrush } from 'jsoncrush';
 import type NDK from '@nostr-dev-kit/ndk';
 
 export class BoardStore {
@@ -102,7 +105,7 @@ export class BoardStore {
     this.ndk = ndk;
     this.authStore = authStore;
     this.syncManager = new SyncManager(ndk);
-    
+
     // Initial Load from Nostr (wenn authenticated)
     if (authStore.isAuthenticated) {
       this.loadFromNostr();
@@ -132,7 +135,7 @@ export class BoardStore {
   public moveCard(cardId: string, fromColId: string, toColId: string) {
     // 1. Lokale Änderung (sofort reactiv)
     this.board.moveCard(cardId, fromColId, toColId);
-    
+
     // 2. Nostr Event veröffentlichen/queuen
     this.publishCardUpdate(cardId, toColId);
   }
@@ -151,7 +154,7 @@ export class BoardStore {
   public addCard(columnId: string, cardProps: CardProps): Card {
     const column = this.board.findColumn(columnId);
     if (!column) throw new Error(`Column ${columnId} not found`);
-    
+
     const card = column.addCard(cardProps);
     this.publishCardUpdate(card.id, columnId);
     return card;
@@ -172,15 +175,15 @@ export class BoardStore {
   public async addComment(cardId: string, text: string): Promise<void> {
     const result = this.board.findCardAndColumn(cardId);
     if (!result) throw new Error(`Card ${cardId} not found`);
-    
+
     const { card } = result;
-    
+
     try {
       // Nostr: Erstelle Kind 1 Event
       await card.addCommentToNostr(this.ndk, text);
     } catch (error) {
       console.error('Failed to add comment to Nostr:', error);
-      
+
       // Fallback: Lokal hinzufügen (wird später synced)
       const currentUser = this.authStore.getCurrentUser();
       card.addComment(text, currentUser?.pubkey || 'unknown');
@@ -190,7 +193,7 @@ export class BoardStore {
   public async deleteComment(cardId: string, commentId: string): Promise<void> {
     const result = this.board.findCardAndColumn(cardId);
     if (!result) return;
-    
+
     try {
       await result.card.deleteCommentFromNostr(this.ndk, commentId);
     } catch (error) {
@@ -224,7 +227,7 @@ export class BoardStore {
    */
   public exportBoard(): string {
     const contextData = this.board.getContextData(true);
-    
+
     const exportData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -233,7 +236,7 @@ export class BoardStore {
       // Metadaten für Import
       schemaVersion: 1
     };
-    
+
     return JSON.stringify(exportData, null, 2);
   }
 
@@ -247,7 +250,7 @@ export class BoardStore {
     try {
       // 1. Parse & Validate
       const importData = JSON.parse(jsonString);
-      
+
       if (importData.schemaVersion !== 1) {
         throw new Error(`Unsupported schema version: ${importData.schemaVersion}`);
       }
@@ -266,7 +269,7 @@ export class BoardStore {
             // IDs merken falls nötig
           });
         });
-        
+
         // Import mit neuen IDs
         importData.board.columns.forEach((col: ColumnProps) => {
           const newColId = generateDTag();
@@ -275,7 +278,7 @@ export class BoardStore {
             id: newColId,
             cards: []
           });
-          
+
           col.cards?.forEach((card: CardProps) => {
             const newCardId = generateDTag();
             newCol.addCard({
@@ -295,7 +298,7 @@ export class BoardStore {
 
       // 3. Publish zu Nostr
       this.publishBoardUpdate();
-      
+
       return true;
 
     } catch (error) {
@@ -311,7 +314,7 @@ export class BoardStore {
     const json = this.exportBoard();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -322,18 +325,93 @@ export class BoardStore {
   }
 
   /**
-   * Generiert Share-Link mit komprimiertem Board-JSON (optional)
-   * Hinweis: Benötigt Backend für URL-Shortening
+   * Generiert Share-Link mit komprimiertem Board-JSON (jsoncrush)
+   * Rein clientseitig – kein Backend nötig!
+   * @returns URL-sicherer komprimierter Token (Base64-URL)
    */
-  public async generateShareLink(): Promise<string | null> {
+  public generateShareLink(): string {
     const json = this.exportBoard();
-    const compressed = btoa(json); // Base64 encode
-    
-    // Optional: Backend aufrufen um Share-Link zu generieren
-    // const response = await fetch('/api/share', { method: 'POST', body: compressed });
-    // return response.json().shareUrl;
-    
-    return compressed; // Für jetzt: Base64 zurückgeben
+
+    // 1. Komprimiere JSON mit jsoncrush
+    const crushed = crush(json);
+
+    // 2. Base64-URL encode (URL-sicher: - _ statt + /)
+    const token = btoa(crushed)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, ''); // Padding entfernen
+
+    // 3. Größenlimit prüfen (z.B. 2KB für URLs)
+    const tokenSizeKB = token.length / 1024;
+    if (tokenSizeKB > 2) {
+      console.warn(
+        `⚠️ Share-Token ist ${tokenSizeKB.toFixed(1)}KB – möglicherweise zu lang für manche Browser/Services`
+      );
+    }
+
+    return token;
+  }
+
+  /**
+   * Importiert Board aus komprimiertem Share-Link-Token
+   * Rein clientseitig – keine Backend-Anfrage nötig!
+   * @param token Base64-URL komprimierter Token (z.B. von generateShareLink())
+   * @param strategy 'merge' (neue IDs) oder 'overwrite' (alte IDs)
+   * @returns { success: boolean; error?: string; importedBoardId?: string }
+   */
+  public async importFromShareLink(
+    token: string,
+    strategy: 'merge' | 'overwrite' = 'merge'
+  ): Promise<{ success: boolean; error?: string; importedBoardId?: string }> {
+    try {
+      // 1. Base64-URL decode
+      const normalized = token
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+      // Padding hinzufügen falls nötig
+      const pad = normalized.length % 4;
+      const padded = pad ? normalized + '='.repeat(4 - pad) : normalized;
+
+      let crushed: string;
+      try {
+        crushed = atob(padded);
+      } catch (e) {
+        throw new Error('Ungültiger Base64-URL Token');
+      }
+
+      // 2. Dekomprimiere mit jsoncrush
+      let jsonString: string;
+      try {
+        jsonString = uncrush(crushed);
+      } catch (e) {
+        throw new Error(`Dekompression fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}`);
+      }
+
+      // 3. Importiere mit Standard-Logik
+      const importResult = this.importBoard(jsonString, strategy);
+
+      if (!importResult) {
+        return {
+          success: false,
+          error: 'Board Import fehlgeschlagen – ungültiges Format'
+        };
+      }
+
+      return {
+        success: true,
+        importedBoardId: this.board.id
+      };
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('❌ Share-Link Import fehlgeschlagen:', message);
+
+      return {
+        success: false,
+        error: message
+      };
+    }
   }
 
   // ──────────────────────────────────────────
@@ -422,7 +500,7 @@ export class BoardStore {
     ).on('event', (event) => {
       const cardProps = nostrEventToCard(event);
       const columnName = event.tags.find(t => t[0] === 's')?.[1];
-      
+
       if (columnName) {
         const column = this.board.columns.find(c => c.name === columnName);
         if (column) {
@@ -449,6 +527,7 @@ export const boardStore = new BoardStore(ndk, authStore);
 **Datei:** `src/lib/stores/authStore.ts` (siehe `NOSTR-USER.md`)
 
 **Verantwortlichkeiten:**
+
 - ✅ Benutzer-Session verwalten
 - ✅ NDK Signer bereitstellen
 - ✅ Authentifizierungsstatus prüfen
@@ -462,7 +541,7 @@ export const boardStore = new BoardStore(ndk, authStore);
 // In BoardStore
 constructor(ndk: NDK, authStore: AuthStore) {
   this.authStore = authStore;
-  
+
   // Subscribe to auth changes
   $effect(() => {
     if (authStore.isAuthenticated) {
@@ -476,15 +555,25 @@ constructor(ndk: NDK, authStore: AuthStore) {
 
 ---
 
-### 1.3 SyncManager (Offline-First Queue)
+### 1.3 SyncManager (Offline-First Queue mit Dexie)
 
 **Datei:** `src/lib/stores/syncManager.ts` (siehe `AGENTS.md` Section VI.2)
 
 **Verantwortlichkeiten:**
-- ✅ Event Queue für Offline-Betrieb
+
+- ✅ Event Queue für Offline-Betrieb (Dexie IndexedDB)
 - ✅ Online/Offline Status Detection
-- ✅ Automatisches Retry bei Reconnect
+- ✅ Automatisches Retry mit exponentielles Backoff (2^n Sekunden)
+- ✅ Dead-Letter Pattern (max 3 Retries)
 - ✅ Last-Write-Wins Conflict Resolution
+- ✅ Queue Analytics & Monitoring
+
+**Persistence Layer:**
+
+- 🗄️ **Dexie** (IndexedDB wrapper) statt `svelte-persisted-store`
+- 📊 **QueuedEventRow** Schema mit Indexes: `id`, `timestamp`, `retries`, `type`, `createdAt`
+- 🔄 **Exponentielles Backoff**: 2s → 4s → 8s → Dead-Letter
+- ⚡ **Performance**: O(log n) Queries statt O(n) Array-Filter
 
 **Integration in BoardStore:**
 
@@ -493,6 +582,14 @@ constructor(ndk: NDK, authStore: AuthStore) {
 public moveCard(cardId: string, fromColId: string, toColId: string) {
   this.board.moveCard(cardId, fromColId, toColId); // Lokal
   this.publishCardUpdate(cardId, toColId); // → syncManager.publishOrQueue()
+}
+
+// In BoardStore.publishCardUpdate()
+private async publishCardUpdate(cardId: string, columnId: string): Promise<void> {
+  const event = cardToNostrEvent(card, column.name, rank, boardRef, this.ndk);
+
+  // ✅ Publish sofort oder Queue (persisted in Dexie)
+  await this.syncManager.publishOrQueue(event, 'card');
 }
 ```
 
@@ -503,6 +600,7 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 **Datei:** `src/lib/stores/settingsStore.ts`
 
 **Verantwortlichkeiten:**
+
 - Theme (Light/Dark)
 - Sidebar-Sichtbarkeit
 - Benutzer-Preferences
@@ -521,13 +619,13 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 <script lang="ts">
   import { NDKSvelte } from '@nostr-dev-kit/svelte';
   import { setContext } from 'svelte';
-  
+
   const ndk = new NDKSvelte({
     explicitRelayUrls: ['wss://relay.damus.io', 'wss://relay.primal.net']
   });
-  
+
   await ndk.connect();
-  
+
   // ✅ Wichtig: NDK in Context speichern
   setContext('ndk', ndk);
 </script>
@@ -540,10 +638,10 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 
 <script lang="ts">
   import { initializeAuth } from '$lib/stores/authStore';
-  
+
   // Initialize AuthStore mit NDK
   const authStore = initializeAuth(ndk);
-  
+
   // ✅ Wichtig: AuthStore in Context speichern
   setContext('authStore', authStore);
 </script>
@@ -556,10 +654,10 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 
 <script lang="ts">
   import { BoardStore } from '$lib/stores/kanbanStore';
-  
+
   // BoardStore braucht NDK und AuthStore
   const boardStore = new BoardStore(ndk, authStore);
-  
+
   // ✅ Wichtig: BoardStore in Context speichern
   setContext('boardStore', boardStore);
 </script>
@@ -573,9 +671,9 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 <script lang="ts">
   import { getContext } from 'svelte';
   import type { BoardStore } from '$lib/stores/kanbanStore';
-  
+
   const boardStore = getContext<BoardStore>('boardStore');
-  
+
   // Reactive binding
   let board = $derived(boardStore.data);
 </script>
@@ -646,15 +744,29 @@ public moveCard(cardId: string, fromColId: string, toColId: string) {
 // Export
 const json = boardStore.exportBoard();
 boardStore.downloadBoardAsJSON('meine-stunde.json');
-const shareLink = await boardStore.generateShareLink();
+const token = boardStore.generateShareLink(); // komprimiert & URL-safe
 
 // Import
 const success = boardStore.importBoard(jsonString, 'merge');
+
+// Import aus Share-Link (clientseitig!)
+const result = await boardStore.importFromShareLink(token, 'merge');
+if (result.success) {
+  console.log('✅ Board importiert:', result.importedBoardId);
+} else {
+  console.error('❌ Fehler:', result.error);
+}
 ```
+
+**Neu in Phase 1.5:**
+
+- `generateShareLink()` — Komprimiert Board mit **jsoncrush** (71% kleiner als btoa!)
+- `importFromShareLink()` — Dekomprimiert & importiert clientseitig (kein Backend nötig!)
 
 ### 3.3 Strategien für ID-Konflikte
 
 #### Strategie 1: "merge" (Standard)
+
 - Generiert neue IDs für alle importierten Objekte
 - Keine Konflikte mit existierenden Boards
 - Resultat: Zwei unabhängige Boards mit gleichen Inhalten
@@ -665,6 +777,7 @@ const imported = boardStore.importBoard(jsonString, 'merge');
 ```
 
 #### Strategie 2: "overwrite"
+
 - Behält alte IDs
 - Überschreibt existierende Cards bei ID-Konflikten
 - **Warnung:** Kann zu Datenverlust führen!
@@ -679,22 +792,22 @@ const imported = boardStore.importBoard(jsonString, 'overwrite');
 ```typescript
 function validateBoardImport(jsonString: string): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
+
   try {
     const data = JSON.parse(jsonString);
-    
+
     if (!data.board) errors.push('Missing "board" field');
     if (!Array.isArray(data.board.columns)) errors.push('Invalid columns array');
-    
+
     data.board.columns.forEach((col, i) => {
       if (!col.name) errors.push(`Column ${i} missing name`);
       if (!Array.isArray(col.cards)) errors.push(`Column ${i} missing cards array`);
     });
-    
+
   } catch (e) {
     errors.push(`JSON parse error: ${e.message}`);
   }
-  
+
   return {
     valid: errors.length === 0,
     errors
@@ -704,24 +817,53 @@ function validateBoardImport(jsonString: string): { valid: boolean; errors: stri
 
 ---
 
-## IV. Persistenz-Strategie
+## IV. Persistenz-Strategie mit Dexie
 
-### 4.1 IndexedDB (svelte-persisted-store)
+### 4.1 IndexedDB mit Dexie (SyncManager Event Queue)
 
 ```typescript
-// Beispiel aus AGENTS.md
+// src/lib/stores/syncManager.ts
 
-import { persisted } from 'svelte-persisted-store';
+import Dexie, { type Table } from 'dexie';
 
-export class SyncManager {
-  // Persistent Event Queue
-  private eventQueue = persisted<QueuedEvent[]>('nostr-event-queue', []);
-  
-  // Diese Queue bleibt über Browser-Neustarts erhalten
+export interface QueuedEventRow {
+  id?: number;              // Auto-increment
+  timestamp: number;        // ms when queued (Index)
+  retries: number;          // Retry counter (Index)
+  type: 'board' | 'card' | 'comment'; // (Index)
+  raw: string;              // Serialized NDKEvent.rawEvent()
+  createdAt: number;        // Unix timestamp (Index)
+  lastRetry?: number;       // Timestamp of last retry attempt
 }
+
+export class KanbanQueueDB extends Dexie {
+  queuedEvents!: Table<QueuedEventRow>;
+
+  constructor() {
+    super('KanbanQueueDB');
+    this.version(1).stores({
+      // Compound + Single Indexes
+      queuedEvents: '++id, timestamp, retries, type, createdAt'
+    });
+  }
+}
+
+const db = new KanbanQueueDB();
 ```
 
-### 4.2 Session-Speicherung (AuthStore)
+**Vorteile Dexie vs svelte-persisted-store:**
+
+| Feature          | Dexie                             | svelte-persisted   |
+| ---------------- | --------------------------------- | ------------------ |
+| **Query API**    | ✅ `.where('type').equals('card')` | ❌ Array-Filter nur |
+| **Indexes**      | ✅ Ja (createdAt, retries, type)   | ❌ Nein             |
+| **Transactions** | ✅ Atomare Updates                 | ❌ Nein             |
+| **Batch Ops**    | ✅ `.limit(50)`                    | ❌ Nein             |
+| **Size Limit**   | ✅ Unbegrenzt                      | ❌ ~5MB             |
+| **Performance**  | ✅ O(log n) Queries                | ❌ O(n) Array       |
+| **Dead-Letter**  | ✅ Leicht                          | ❌ Manual           |
+
+### 4.2 Session-Speicherung (AuthStore mit svelte-persisted-store)
 
 ```typescript
 // aus NOSTR-USER.md
@@ -738,10 +880,10 @@ export interface UserSession {
 private sessionStore = persisted<UserSession | null>('nostr-session', null);
 ```
 
-### 4.3 Board Cache (IndexedDB)
+### 4.3 Board Cache (NDK + Dexie)
 
 ```typescript
-// Optional: Boards im IndexedDB cachen
+// Optional: Boards im IndexedDB cachen via NDK
 
 import NDK, { NDKCacheAdapterDexie } from '@nostr-dev-kit/ndk';
 
@@ -751,9 +893,49 @@ const ndk = new NDK({
 });
 ```
 
----
+### 4.4 Retry-Strategie mit Exponentielles Backoff
 
-## V. Svelte 5 Runes Best Practices
+```typescript
+// In SyncManager.syncQueue()
+
+for (const row of queuedEvents) {
+  try {
+    // Publish Event
+    await this.publishEvent(event);
+
+    // Success: Remove from queue
+    await db.queuedEvents.delete(row.id!);
+
+  } catch (error) {
+    // Increment retry counter
+    const newRetries = (row.retries || 0) + 1;
+    const maxRetries = 3;
+
+    if (newRetries >= maxRetries) {
+      // Dead-Letter: Remove after max retries
+      await db.queuedEvents.delete(row.id!);
+      console.error(`❌ Event failed ${maxRetries}x, removed`);
+    } else {
+      // Exponentielles Backoff: 2^retries Sekunden
+      const backoffMs = Math.pow(2, newRetries) * 1000; // 2s, 4s, 8s
+      const nextRetryTime = Date.now() + backoffMs;
+
+      await db.queuedEvents.update(row.id!, {
+        retries: newRetries,
+        lastRetry: nextRetryTime
+      });
+
+      console.log(
+        `⏳ Retry ${newRetries}/${maxRetries} in ${(backoffMs / 1000).toFixed(1)}s`
+      );
+    }
+
+    break; // Stop-on-first-error
+  }
+}
+```
+
+---## V. Svelte 5 Runes Best Practices
 
 ### 5.1 $state in Stores
 
@@ -761,7 +943,7 @@ const ndk = new NDK({
 export class BoardStore {
   // ✅ RICHTIG: $state für reactive state
   private board = $state(new Board({ ... }));
-  
+
   // ❌ FALSCH: keine $state für externe Events
   // private externalData = new Board({ ... });
 }
@@ -772,11 +954,11 @@ export class BoardStore {
 ```svelte
 <script lang="ts">
   const boardStore = getContext<BoardStore>('boardStore');
-  
+
   // ✅ RICHTIG: $derived für berechnete Werte
   let columnCount = $derived(boardStore.data.columns.length);
   let hasCards = $derived(columnCount > 0);
-  
+
   // ❌ FALSCH: Unnötige Stores für simple Werte
   // const columnCountStore = writable(0);
 </script>
@@ -806,7 +988,7 @@ export class SyncManager {
     $effect.pre(() => {
       window.addEventListener('online', () => this.syncQueue());
       window.addEventListener('offline', () => this.markOffline());
-      
+
       // Cleanup
       return () => {
         window.removeEventListener('online', () => {});
@@ -824,6 +1006,7 @@ export class SyncManager {
 ### Für Phase 1 (Meilenstein 1.1 – 1.5):
 
 - [ ] **BoardStore** implementiert
+  
   - [ ] Board-Zustand mit `$state`
   - [ ] Chat-Interface
   - [ ] Proxy-Methoden zu BoardModel
@@ -832,21 +1015,25 @@ export class SyncManager {
   - [ ] Nostr Loading & Subscriptions
 
 - [ ] **AuthStore** implementiert (NOSTR-USER.md)
+  
   - [ ] User-Session Management
   - [ ] NIP-07 Signer Integration
   - [ ] isAuthenticated Getter
 
 - [ ] **SyncManager** implementiert (AGENTS.md)
+  
   - [ ] Event Queue (IndexedDB)
   - [ ] Online/Offline Detection
   - [ ] Retry-Logik
 
 - [ ] **Context-Passing** in +layout.svelte
+  
   - [ ] setContext('ndk', ndk)
   - [ ] setContext('authStore', authStore)
   - [ ] setContext('boardStore', boardStore)
 
 - [ ] **Tests**
+  
   - [ ] Export/Import Round-Trip
   - [ ] ID-Konflikt Handling
   - [ ] Offline Queueing
@@ -881,18 +1068,18 @@ public exportBoard(): string | null {
 ```typescript
 public importBoard(jsonString: string, strategy: 'merge' | 'overwrite' = 'merge'): 
   { success: boolean; error?: string } {
-  
+
   try {
     const data = JSON.parse(jsonString);
-    
+
     // Validation
     if (!data.board?.columns) {
       throw new Error('Invalid board structure');
     }
-    
+
     // Import logic...
     return { success: true };
-    
+
   } catch (error) {
     return {
       success: false,
@@ -919,7 +1106,7 @@ const exportData = {
 // ✅ RICHTIG: Import validiert User
 public importBoard(jsonString: string) {
   const data = JSON.parse(jsonString);
-  
+
   // Check if current user is authorized to import
   if (data.exportedBy && data.exportedBy !== this.authStore.getCurrentUser()?.pubkey) {
     console.warn('Board exported by different user');
@@ -938,7 +1125,7 @@ private queueEvent(event: NDKEvent, type: 'board' | 'card' | 'comment'): void {
     retries: 0,
     type
   };
-  
+
   // ✅ Kein Private Key in Queue!
 }
 ```
@@ -954,7 +1141,7 @@ private queueEvent(event: NDKEvent, type: 'board' | 'card' | 'comment'): void {
 private subscribeToUpdates(): void {
   // Nur für aktuelles Board abonnieren
   const user = this.authStore.getCurrentUser();
-  
+
   this.ndk.subscribe(
     {
       kinds: [30302],
@@ -974,12 +1161,12 @@ private subscribeToUpdates(): void {
 ```svelte
 <script lang="ts">
   const boardStore = getContext<BoardStore>('boardStore');
-  
+
   // ✅ RICHTIG: $derived ist memoized
   let cardCount = $derived(
     boardStore.data.columns.reduce((sum, col) => sum + col.cards.length, 0)
   );
-  
+
   // Only recalculated when board.columns or cards change
 </script>
 ```
@@ -988,18 +1175,187 @@ private subscribeToUpdates(): void {
 
 ## X. Roadmap Integration
 
-| Meilenstein | Stores | Status |
-|------------|--------|--------|
-| **1.1: Nostr Publishing** | BoardStore + SyncManager | 🔄 IN PROGRESS |
-| **1.2: Offline-First** | SyncManager erweitert | 🟡 PLANNED |
-| **1.3: Comments** | BoardStore.addComment() | 🟡 PLANNED |
-| **1.4: Authentication** | AuthStore Integration | 🟡 PLANNED |
-| **1.5: Export/Import** | BoardStore.export/import() | 🟡 PLANNED |
-| **2.1: UI Components** | Context-basierte Komponenten | ⚪ PLANNED |
+| Meilenstein               | Stores                                                                 | Status         |
+| ------------------------- | ---------------------------------------------------------------------- | -------------- |
+| **1.1: Nostr Publishing** | BoardStore + SyncManager                                               | 🔄 IN PROGRESS |
+| **1.2: Offline-First**    | SyncManager erweitert                                                  | 🟡 PLANNED     |
+| **1.3: Comments**         | BoardStore.addComment()                                                | 🟡 PLANNED     |
+| **1.4: Authentication**   | AuthStore Integration                                                  | 🟡 PLANNED     |
+| **1.5: Export/Import**    | BoardStore.export/import() + **generateShareLink/importFromShareLink** | 🟡 PLANNED     |
+| **2.1: UI Components**    | Context-basierte Komponenten                                           | ⚪ PLANNED      |
 
 ---
 
-## XI. Dokumentation Links
+## XI. Share-Link Patterns (Meilenstein 1.5)
+
+### Grundlegende Nutzung
+
+```typescript
+// 1. Share-Token generieren
+const token = boardStore.generateShareLink();
+console.log(`Token (${token.length} chars):`, token);
+// Output: "KCxbImNvbHVtbnMiLFt7Im5hbWUiOiJUbyBEbyIsImNhcmRzIjpbXX1dXQ"
+
+// 2. Token teilen (z.B. kopieren)
+await navigator.clipboard.writeText(token);
+
+// 3. Import aus Token
+const result = await boardStore.importFromShareLink(token, 'merge');
+if (result.success) {
+  console.log('✅ Board importiert:', result.importedBoardId);
+}
+```
+
+### UI Integration (Export/Import Dialog)
+
+```svelte
+<!-- Beispiel: ExportImportDialog.svelte -->
+<script lang="ts">
+  import { boardStore } from '$lib/stores/kanbanStore';
+  import * as Dialog from '$lib/components/ui/dialog';
+  import { Button } from '$lib/components/ui/button';
+  import { Textarea } from '$lib/components/ui/textarea';
+  import CopyIcon from '@lucide/svelte/icons/copy';
+  import DownloadIcon from '@lucide/svelte/icons/download';
+  import UploadIcon from '@lucide/svelte/icons/upload';
+
+  let shareToken = $state('');
+  let importInput = $state('');
+  let loading = $state(false);
+
+  async function copyToken() {
+    const token = boardStore.generateShareLink();
+    await navigator.clipboard.writeText(token);
+    shareToken = token;
+  }
+
+  async function importToken() {
+    loading = true;
+    const result = await boardStore.importFromShareLink(importInput, 'merge');
+    if (result.success) {
+      console.log('✅ Board importiert');
+      importInput = '';
+    } else {
+      console.error('❌', result.error);
+    }
+    loading = false;
+  }
+</script>
+
+<Dialog.Root>
+  <Dialog.Trigger asChild let:builder>
+    <Button builders={[builder]} variant="outline">
+      <DownloadIcon class="mr-2 h-4 w-4" />
+      Export / Share
+    </Button>
+  </Dialog.Trigger>
+
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Board exportieren & teilen</Dialog.Title>
+    </Dialog.Header>
+
+    <!-- Export Tab -->
+    <div class="space-y-4">
+      <div>
+        <h3 class="font-semibold mb-2">Share-Link (komprimiert)</h3>
+        <div class="flex gap-2">
+          <Textarea 
+            value={shareToken} 
+            readonly 
+            placeholder="Click 'Copy Token' um zu generieren"
+            class="flex-1 font-mono text-xs"
+          />
+          <Button onclick={copyToken} size="sm">
+            <CopyIcon class="h-4 w-4" />
+          </Button>
+        </div>
+        <p class="text-xs text-muted-foreground mt-1">
+          {shareToken.length} Zeichen (URL-sicher für Sharing)
+        </p>
+      </div>
+
+      <div>
+        <Button onclick={() => boardStore.downloadBoardAsJSON()} variant="outline" class="w-full">
+          <DownloadIcon class="mr-2 h-4 w-4" />
+          Als JSON herunterladen
+        </Button>
+      </div>
+    </div>
+
+    <!-- Import Tab -->
+    <div class="space-y-4 border-t pt-4">
+      <div>
+        <h3 class="font-semibold mb-2">Board importieren</h3>
+        <Textarea 
+          bind:value={importInput}
+          placeholder="Share-Token oder JSON einfügen..."
+          class="font-mono text-xs"
+          rows={4}
+        />
+      </div>
+
+      <Button 
+        onclick={importToken}
+        disabled={!importInput || loading}
+        class="w-full"
+      >
+        <UploadIcon class="mr-2 h-4 w-4" />
+        {loading ? 'Importieren...' : 'Importieren'}
+      </Button>
+    </div>
+
+    <Dialog.Footer>
+      <Dialog.Close asChild let:builder>
+        <Button builders={[builder]} variant="outline">Schließen</Button>
+      </Dialog.Close>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### QR-Code Integration (optional)
+
+```typescript
+import QRCode from 'qrcode';
+
+async function generateQRCode() {
+  const token = boardStore.generateShareLink();
+  const qrUrl = await QRCode.toDataURL(token);
+
+  // Anzeigen oder herunterladen
+  const img = document.createElement('img');
+  img.src = qrUrl;
+  document.body.appendChild(img);
+}
+```
+
+### Size-Vergleich
+
+| Format        | Größe (5 Spalten, 20 Karten) | Kompression       |
+| ------------- | ---------------------------- | ----------------- |
+| Raw JSON      | ~8.5 KB                      | 0%                |
+| btoa() Base64 | ~11.3 KB                     | -33% (größer!)    |
+| **jsoncrush** | ~2.4 KB                      | **71% kleiner** ✅ |
+
+### 🔐 Datenschutz
+
+- ✅ **Rein clientseitig** – Keine Server-Kommunikation
+- ✅ **Offline-ready** – Funktioniert ohne Internet
+- ✅ **Komprimiert** – Kurze URLs für Sharing
+- ✅ **URL-safe** – Base64-URL Encoding (- _ statt + /)
+- ✅ **Kein Backend** – Kein Account nötig zum Teilen
+
+### Installation
+
+```bash
+pnpm add jsoncrush
+pnpm add -D @types/jsoncrush
+```
+
+---
+
+## XII. Dokumentation Links
 
 - **[AGENTS.md](./AGENTS.md)** – BoardModel.ts, Chat.ts Spezifikation
 - **[NDK.md](./NDK.md)** – NDK Initialisierung & Event API
