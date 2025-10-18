@@ -341,6 +341,58 @@ Bei Offline-First können Konflikte entstehen. Strategie:
 - **Last-Write-Wins:** Nutze `created_at` Timestamps
 - **Merge Strategy:** Bei gleichzeitigen Änderungen werden beide Versionen als neue Cards angelegt
 
+## Benutzerauthentifizierung (Signer Integration)
+
+**WICHTIG:** Ohne authentifizierten Benutzer können keine Events signiert werden!
+
+### NIP-07 Browser Extension (Empfohlen)
+
+```typescript
+import { NDKNip07Signer } from '@nostr-dev-kit/ndk';
+
+// Browser Extension Signer
+const signer = new NDKNip07Signer();
+ndk.signer = signer;
+
+// Get authenticated user
+const user = await signer.user();
+await user.fetchProfile();
+```
+
+### nsec Private Key (Development/Testing)
+
+```typescript
+import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
+
+// ⚠️ ONLY for development! Never in production!
+const signer = new NDKPrivateKeySigner(nsecString);
+ndk.signer = signer;
+
+const user = await signer.user();
+```
+
+### NIP-46 Remote Signing (Wallets)
+
+```typescript
+import { NDKNip46Signer } from '@nostr-dev-kit/ndk';
+
+// Remote wallet connection
+const signer = new NDKNip46Signer(ndk, remotePubkey, relayUrl);
+ndk.signer = signer;
+```
+
+### Session Management & Security
+
+Für vollständige Authentifizierungs-Implementation siehe **[NOSTR-USER.md](./NOSTR-USER.md)**, welches folgende kritische Komponenten spezifiziert:
+
+- **AuthStore:** Session-Verwaltung mit Svelte 5 Runes
+- **LoginSheet:** Multi-Method Authentication UI
+- **UserHeader:** Benutzer-Anzeige und -Menü  
+- **ProfileEditor:** Kind 0 Event Management
+- **Security:** Private Key Schutz, Session Expiration
+
+**Ohne diese Komponenten ist das Kanban-Board nicht funktionsfähig!**
+
 ## Komponenten-Beispiele
 
 ### Board mit NDK

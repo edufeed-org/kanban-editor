@@ -1,7 +1,3 @@
-# SHADCN.md
-
----
-
 # 🎨 UX Design Regeln für AI-Agenten (Basis: shadcn-svelte)
 
 Der AI-Agent muss bei der Implementierung des UI/UX die folgenden Prinzipien und Regeln strikt befolgen. Die Wahl der Komponenten und deren Konfiguration hat immer die **Konsistenz** mit dem `shadcn-svelte` Designsystem und die **Zugänglichkeit** (Accessibility) zu gewährleisten.
@@ -33,19 +29,70 @@ Der AI-Agent muss bei der Implementierung des UI/UX die folgenden Prinzipien und
 | **7. Deaktivierter Zustand** | Deaktivierte Buttons müssen klar als nicht-interaktiv erkennbar sein. | Setze bei allen Buttons, deren Aktion aktuell nicht möglich ist (z.B. Formular ist ungültig), das **`disabled`**-Prop. |
 
 Die **Auswahl der Icons** findet über https://lucide.dev/ statt. Verwende nur Icons aus diesem Set.
-Die Angaben zu Svelte Icons sind allerdings nicht kompatibel mit shadcn-svelte. Verwende stattdessen die `lucide-svelte` Bibliothek aus shadcn-svelte.
 
-Unterschiede deutlich am SquarePlus Icon:
-```js
+## G. Icon-Verwendung (Lucide Icons)
+
+| Regel | Beschreibung | Konkrete Anweisung für AI-Agent |
+| :--- | :--- | :--- |
+| **CRITICAL: Import-Syntax** | Die korrekte Import-Syntax für lucide-svelte Icons ist essentiell. | **Verwende IMMER**: `import IconName from "@lucide/svelte/icons/icon-name"` **NIEMALS**: `import { IconName } from "lucide-svelte"` |
+| **Icon-Positionierung** | Icons müssen konsistent positioniert werden. | **Setze Icons LINKS vom Text** mit den Klassen `class="mr-2 h-4 w-4"` |
+| **Icon-Namenskonvention** | Icon-Namen folgen der kebab-case Konvention. | **Beispiele**: `user` → `@lucide/svelte/icons/user`, `key-round` → `@lucide/svelte/icons/key-round`, `message-square` → `@lucide/svelte/icons/message-square` |
+| **No Emojis** | Niemals Emojis statt Icons verwenden. | **Ersetze alle Emojis** durch entsprechende Lucide Icons (🔑 → `KeyRoundIcon`, 👤 → `UserIcon`, etc.) |
+
+**Beispiel: Korrekte Icon-Verwendung**
+
+```svelte
 <script lang="ts">
-  // import { SquarePlus } from "lucide-svelte"; // Falsch 
-  import SquarePlusIcon from "@lucide/svelte/icons/square-plus"; // Richtig
+  import { Button } from "$lib/components/ui/button";
+  // ✅ RICHTIG: @lucide/svelte/icons/icon-name
+  import PlusIcon from "@lucide/svelte/icons/plus";
+  import UserIcon from "@lucide/svelte/icons/user";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
+  import LogOutIcon from "@lucide/svelte/icons/log-out";
+  
+  // ❌ FALSCH: Diese Syntax funktioniert NICHT
+  // import { Plus, User, Settings, LogOut } from "lucide-svelte";
 </script>
+
+<!-- ✅ RICHTIG: Icon links vom Text mit korrekten Klassen -->
 <Button>
-  <SquarePlusIcon class="mr-2 h-4 w-4" /> <!-- Icon links vom Text -->
-  Karte hinzufügen  
+  <PlusIcon class="mr-2 h-4 w-4" />
+  Hinzufügen
+</Button>
+
+<Button variant="outline">
+  <UserIcon class="mr-2 h-4 w-4" />
+  Profil bearbeiten
+</Button>
+
+<Button variant="ghost">
+  <SettingsIcon class="mr-2 h-4 w-4" />
+  Einstellungen
+</Button>
+
+<!-- ❌ FALSCH: Emoji statt Icon -->
+<!-- <Button>🔑 Anmelden</Button> -->
+
+<!-- ✅ RICHTIG: Icon statt Emoji -->
+<Button>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Anmelden
 </Button>
 ```
+
+**Häufige Icon-Mappings:**
+
+| Emoji/Text | Lucide Icon | Import |
+|------------|-------------|---------|
+| 🔑 | KeyRoundIcon | `@lucide/svelte/icons/key-round` |
+| 👤 | UserIcon | `@lucide/svelte/icons/user` |
+| ⚙️ | SettingsIcon | `@lucide/svelte/icons/settings` |
+| 🚪 | LogOutIcon | `@lucide/svelte/icons/log-out` |
+| ➕ | PlusIcon | `@lucide/svelte/icons/plus` |
+| 💬 | MessageSquareIcon | `@lucide/svelte/icons/message-square` |
+| 🗑️ | TrashIcon | `@lucide/svelte/icons/trash` |
+| ✅ | CheckIcon | `@lucide/svelte/icons/check` |
+| ❌ | XIcon | `@lucide/svelte/icons/x` |
 
 
 ### C. Karten & Container (Basierend auf `<Card>` Component)
@@ -135,6 +182,7 @@ Unterschiede deutlich am SquarePlus Icon:
   </Button>
 </form>
 ```
+siehe auch: [Field Component Dokumentation](https://shadcn-svelte.com/docs/components/field)
 
 ### E. Modal Windows / Dialoge (Basierend auf `<Dialog>` Component)
 
@@ -399,33 +447,51 @@ Unterschiede deutlich am SquarePlus Icon:
 5.  **Zwei-Wege-Datenbindung:** Verwende `bind:value` für Formulareingaben und `bind:open` für Dialoge/Modals, um den State synchron zu halten.
 6.  **Event-Handler:** Verwende die Svelte 5 Syntax `onclick`, `onsubmit` etc. (lowercase) statt `on:click`, `on:submit`.
 
-# UI der Gesamtanwendung
+# UI der Gesamtanwendung (Actual Implementation)
 
-## Topbar
-- Logo (links oben)
-- Einstellungen (rechts oben) → öffnet **Sheet**
-    - Relays verwalten (local für draft / public für publish)
-    - default n8n webhook URL
-- Hilfe (rechts oben) → öffnet **Drawer**
-- Profile (rechts oben) → öffnet **Dropdown Menu**
-    - Nostr Profile
-    - Login/Logout
-    - User Settings verwalten (npub, nip05, url etc.)
-- Theme Switcher (rechts oben) → toggelt zwischen Light/Dark/Auto
+## Layout-Architektur
+Das Layout verwendet ein **Resizable Panel System** mit drei Hauptbereichen:
 
-## Linke Sidebar (Board Liste Bereich)
-- Liste meiner Boards (Ähnlich wie ChatGPT Chat Liste) hinter jedem Board ein Button zum Menü (Rename, Delete, Share in nostr, Export, Import)
-- Button "Neues Board" → öffnet **Dialog** zur Board-Erstellung
-- Button "Import Board" → öffnet **Dialog** zum JSON-Import
+1. **Vollbildschirm-Layout:** `h-screen overflow-hidden` für fixes Layout ohne Scrollen
+2. **Resizable.PaneGroup:** Horizontal angeordnete, größenveränderbare Panels
+3. **Sidebar-Toggle:** Integrierte Toggle-Buttons in der Topbar für bessere UX
 
-## Rechte Sidebar (KI-Agent Bereich)
-- Status des aktuellen Boards (Aktuelle Spalte, Aktuelle Karte, etc)
-- KI-Agent (recherchiert, organisiert Inhalte des Boards, schlägt Verbesserungen vor)
-- Button "KI-Agent aktivieren/deaktivieren"
+## Topbar (Implementiert in `Topbar.svelte`)
+- **Board-Titel** (links)
+- **Sidebar-Toggle-Buttons:** 
+  - Links: `<PanelLeftIcon>` für linke Sidebar
+  - Rechts: `<PanelRightIcon>` für rechte Sidebar
+- **Einstellungen** (rechts) → öffnet **Sheet** mit:
+  - Relays verwalten (local für draft / public für publish)
+  - Board-Metadaten (Titel, Beschreibung, Tags, Lizenz)
+  - n8n Webhook URL
+- **Profile** (rechts) → öffnet **DropdownMenu** mit:
+  - Nostr Profile
+  - User Settings verwalten
+- **Theme Switcher** → toggelt zwischen Light/Dark
 
-## Hauptbereich
-Board Kopfbereich (Titel, Beschreibung, Tags, Autoren) mit Spalten und Karten (Drag & Drop fähig)
-+ **Drawer** für inhaltliche Zusammenfassung des Boards (KI-gestützt)
+## Linke Sidebar (Resizable Panel, 15% default)
+- **Board-Liste:**
+  - Aktuell aktives Board (hervorgehoben)
+  - Button "Neues Board" → öffnet **Dialog** zur Board-Erstellung
+- **Togglebar:** Über Topbar-Button ein-/ausblendbar
+- **Größenänderung:** Min 10%, Max 40%, mit ResizeHandle
+
+## Rechte Sidebar (Resizable Panel, 15% default) 
+- **Board Status:**
+  - Spalten- und Kartenanzahl
+  - Aktuell selektierte Spalte/Karte
+  - Detaillierte Kartenhierarchie (Board → Spalte → Karte)
+- **KI-Agent Bereich:**
+  - Status-Text
+  - Button "KI-Agent aktivieren" (`variant="outline"`)
+- **Togglebar:** Über Topbar-Button ein-/ausblendbar
+- **Größenänderung:** Min 10%, Max 40%, mit ResizeHandle
+
+## Hauptbereich (Resizable Panel, 70% default, min 40%)
+- **Board-Container:** Enthält das Drag-and-Drop fähige Kanban-Board
+- **Keine separate Header:** Board-Metadaten werden über Topbar-Settings verwaltet
+- **Vollständiger Viewport:** Nutzt gesamte verfügbare Höhe minus Topbar
 
 ### Spalten im Board
 - Jede Spalte hat oben rechts Button mit drei Punkten untereinander → öffnet **Popover** mit Spalten-Aktionen:
@@ -482,3 +548,75 @@ export const stats = derived(
   })
 );
 ```
+
+## 46. Resizable Panel-Architektur (IMPLEMENTIERT)
+
+Das Layout verwendet ein **3-Panel Resizable System** für optimale UX:
+
+```svelte
+<script lang="ts">
+  import * as Resizable from "$lib/components/ui/resizable";
+</script>
+
+<!-- Vollbildschirm-Layout -->
+<div class="h-screen overflow-hidden bg-background">
+  
+  <!-- Fixed Topbar (4rem) -->
+  <header class="h-16 border-b bg-background">
+    <!-- Topbar-Inhalt mit Sidebar-Toggles -->
+  </header>
+  
+  <!-- Resizable Panel-System -->
+  <Resizable.PaneGroup direction="horizontal" class="h-[calc(100vh-4rem)]">
+    
+    <!-- Linke Sidebar (optional, toggle-bar) -->
+    {#if showLeftSidebar}
+      <Resizable.Pane defaultSize={15} minSize={10} maxSize={40}>
+        <!-- Board-Liste, Navigation -->
+      </Resizable.Pane>
+      <Resizable.Handle />
+    {/if}
+    
+    <!-- Hauptbereich (immer sichtbar) -->
+    <Resizable.Pane defaultSize={70} minSize={40}>
+      <!-- Board-Container -->
+    </Resizable.Pane>
+    
+    <!-- Rechte Sidebar (optional, toggle-bar) -->
+    {#if showRightSidebar}
+      <Resizable.Handle />
+      <Resizable.Pane defaultSize={15} minSize={10} maxSize={40}>
+        <!-- KI-Agent, Debug-Info -->
+      </Resizable.Pane>
+    {/if}
+    
+  </Resizable.PaneGroup>
+</div>
+```
+
+### Panel-Konfiguration:
+- **Linke Sidebar**: 15% default, 10-40% range, toggle-bar über Topbar
+- **Hauptbereich**: 70% default, 40% minimum (immer sichtbar)
+- **Rechte Sidebar**: 15% default, 10-40% range, toggle-bar über Topbar
+- **Topbar**: Fixed 4rem Höhe mit integrierten Panel-Toggles
+- **Layout**: Vollbildschirm ohne Scrollen (`h-screen overflow-hidden`)
+
+### Topbar Integration:
+```svelte
+<!-- Sidebar-Toggle-Buttons in Topbar -->
+<div class="flex items-center gap-2">
+  <Button variant="ghost" size="sm" onclick={toggleLeftSidebar}>
+    <PanelLeftIcon class="h-4 w-4" />
+  </Button>
+  
+  <Button variant="ghost" size="sm" onclick={toggleRightSidebar}>
+    <PanelRightIcon class="h-4 w-4" />
+  </Button>
+</div>
+```
+
+Diese Architektur gewährleistet:
+- ✅ **Responsive Anpassung**: Panels passen sich automatisch an
+- ✅ **Benutzerfreundlichkeit**: Einfache Sidebar-Toggles
+- ✅ **Performance**: Nur sichtbare Panels werden gerendert
+- ✅ **Zugänglichkeit**: Keyboard-Navigation funktioniert

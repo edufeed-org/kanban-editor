@@ -13,10 +13,14 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 
 ## 📚 Dokumentation
 
-- **[AGENTS.md](./AGENTS.md)** - Vollständige Projekt-Spezifikation
-- **[NDK.md](./NDK.md)** - NDK Integration & Nostr-Events
+- **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
+- **[ROADMAP.md](./ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
+- **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
+- **[CODE-ANALYSE.md](./CODE-ANALYSE.md)** - Aktueller Codebase-Status (17.10.2025)
+- **[NDK.md](./NDK.md)** - NDK Integration & Nostr-Event Publishing
 - **[Kanban-NIP.md](./Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
-- **[ANALYSE.md](./ANALYSE.md)** - Aktueller Status & Roadmap
+- **[NOSTR-USER.md](./NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
+- **[UX-RULES.md](./UX-RULES.md)** - shadcn-svelte UI Guidelines
 - **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie
 
 ## 🏗️ Architektur
@@ -40,9 +44,6 @@ NDK → Nostr Relays
 ```sh
 # Dependencies installieren
 pnpm install
-
-# NDK Svelte Components (optional)
-pnpm add @nostr-dev-kit/ndk-svelte-components
 ```
 
 ### Entwicklung
@@ -80,23 +81,36 @@ runTestSuite();
 src/
 ├── lib/
 │   ├── classes/
-│   │   └── BoardModel.ts          # Card, Column, Board, Chat Klassen
+│   │   └── BoardModel.ts          # ✅ Card, Column, Board, Chat Klassen
 │   ├── stores/
-│   │   ├── kanbanStore.ts         # Hauptstore mit Svelte 5 Runes
-│   │   └── syncManager.ts         # Offline-Sync Manager
+│   │   ├── kanbanStore.ts         # ✅ Hauptstore mit Svelte 5 Runes
+│   │   ├── userStore.ts           # 🟡 User Authentication (Phase 1.4)
+│   │   └── syncManager.ts         # 🟡 Offline-Sync Manager (Phase 1.2)
 │   ├── utils/
-│   │   ├── idGenerator.ts         # D-Tag Generierung
-│   │   ├── nostrEvents.ts         # Event Serialization
-│   │   └── testSuite.ts           # Test-Suite
-│   └── components/
-│       ├── Board.svelte           # Board Container
-│       ├── Column.svelte          # Spalten-Komponente
-│       ├── Card.svelte            # Karten-Komponente
-│       └── Chatbot.svelte         # KI-Interface
+│   │   ├── idGenerator.ts         # ✅ D-Tag Generierung
+│   │   ├── nostrEvents.ts         # 🟡 Event Serialization (Phase 1.1)
+│   │   └── testSuite.ts           # ✅ Test-Suite
+│   ├── components/
+│   │   ├── Board.svelte           # 🟡 Refactor zu BoardModel (Phase 2.1)
+│   │   ├── Column.svelte          # 🟡 Refactor zu BoardModel (Phase 2.1)
+│   │   ├── Card.svelte            # 🟡 Refactor zu BoardModel (Phase 2.1)
+│   │   ├── Chatbot.svelte         # ⚪ KI-Interface (Phase 3.1)
+│   │   └── ui/                    # shadcn-svelte components
+│   └── hooks/
 └── routes/
-    ├── +layout.svelte             # NDK Initialisierung
-    └── +page.svelte               # Hauptseite
+    ├── +layout.svelte             # ✅ NDK Initialisierung
+    ├── +page.svelte               # ✅ Hauptseite
+    └── cardsboard/                # 🟡 Zu migrieren (Phase 2.1)
+        ├── +page.svelte
+        ├── Board.svelte
+        ├── Column.svelte
+        ├── Card.svelte
+        ├── CardDialog.svelte
+        ├── types.ts               # Zu ersetzten durch BoardModel.ts
+        └── data.ts                # Zu entfernen (Mock-Daten)
 ```
+
+**Legende:** ✅ Fertig | 🟡 In Arbeit | ⚪ Geplant
 
 ## 🔧 Technologie-Stack
 
@@ -182,23 +196,65 @@ import { runTestSuite } from '$lib/utils/testSuite';
 runTestSuite();
 ```
 
-## 📈 Roadmap
+## 📈 Roadmap & Meilensteine
 
-Siehe [ANALYSE.md](./ANALYSE.md) für die vollständige Roadmap.
+### ✅ Phase 1: Foundation & Core Implementation (Priorität: Hoch)
 
-**Phase 1:** Nostr Event Publishing (in Arbeit)  
-**Phase 2:** UI-Komponenten Migration  
-**Phase 3:** Offline-Sync Manager  
-**Phase 4:** KI-Integration  
-**Phase 5:** Erweiterte Features
+**Status:** 🔴 **IN PROGRESS**
+
+- [x] Svelte 5 Runes + TypeScript Klassenstruktur
+- [ ] **1.1:** Nostr Event Publishing (boardToNostrEvent, cardToNostrEvent)
+- [ ] **1.2:** Offline-First Sync Manager mit Event Queue
+- [ ] **1.3:** Kommentar-System (Kind 1 Events)
+- [ ] **1.4:** Benutzerauthentifizierung (NIP-07)
+
+### 🟡 Phase 2: UI Components & UX Polish (Priorität: Mittel)
+
+**Status:** 🟡 PLANNED
+
+- [ ] **2.1:** UI-Komponenten Migration (Refactor cardsboard/)
+- [ ] **2.2:** UX Polish & Accessibility (WCAG 2.1 AA)
+- [ ] **2.3:** Performance & Optimization (Lighthouse > 90)
+
+### ⚪ Phase 3: KI-Integration (Priorität: Geplant)
+
+**Status:** ⚪ PLANNED
+
+- [ ] **3.1:** KI-Context Serialisierung & Chat-UI
+- [ ] **3.2:** OER-Content Discovery im Nostr-Netzwerk
+- [ ] **3.3:** KI-Aktionen (split-card, add-card, move-card)
+
+### ⚪ Phase 4: Kollaboration & Sync (Priorität: Geplant)
+
+**Status:** ⚪ PLANNED
+
+- [ ] **4.1:** Board-Sharing & Permissions
+- [ ] **4.2:** Echtzeit-Kollaboration (Multi-User)
+- [ ] **4.3:** Offline-First mit Conflict Resolution
+
+### ⚪ Phase 5: Erweiterte Features (Priorität: Geplant)
+
+**Status:** ⚪ PLANNED
+
+- [ ] Materialverwaltung & Depot
+- [ ] Gemeinschaften & Communities
+- [ ] Analyse & Insights
+- [ ] Mobile App (React Native/Flutter)
+- [ ] Tool-Integrationen (LMS, Calendar, etc.)
+
+**Siehe [ROADMAP.md](./ROADMAP.md) für die vollständige priorisierte Roadmap mit Akzeptanz-Kriterien.**
 
 ## 🤝 Contributing
 
+Siehe [CONTRIBUTING.md](./CONTRIBUTING.md) für Richtlinien.
+
 1. Fork das Repository
 2. Feature Branch erstellen (`git checkout -b feature/amazing-feature`)
-3. Änderungen committen (`git commit -m 'Add amazing feature'`)
+3. Changes committen (`git commit -m 'Add amazing feature'`)
 4. Branch pushen (`git push origin feature/amazing-feature`)
 5. Pull Request erstellen
+
+**Bitte beachten:** PRs sollten gegen Meilensteine in [ROADMAP.md](./ROADMAP.md) ausgerichtet sein.
 
 ## 📄 Lizenz
 
@@ -213,18 +269,14 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/johappel/nostr-cli/issues)
+- **Issues:** [GitHub Issues](https://github.com/edufeed-org/kanban-editor/issues)
 - **Dokumentation:** Siehe `docs/` Ordner
-- **Diskussionen:** [GitHub Discussions](https://github.com/johappel/nostr-cli/discussions)
+- **Diskussionen:** [GitHub Discussions](https://github.com/edufeed-org/kanban-editor/discussions)
 
 ---
 
-**Hinweis:** Dieses Projekt befindet sich in aktiver Entwicklung. Siehe [ANALYSE.md](./ANALYSE.md) für den aktuellen Status.
+**Projekt-Status:** 🔴 Phase 1 in Entwicklung  
+**Letzte Aktualisierung:** 18. Oktober 2025  
+**Repository:** [johappel/nostr-cli](https://github.com/edufeed-org/kanban-editor)
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
-```
+Für den aktuellen Entwicklungsstand siehe [CODE-ANALYSE.md](./CODE-ANALYSE.md) und [ROADMAP.md](./ROADMAP.md).
