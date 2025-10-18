@@ -1,4 +1,4 @@
-# Nostr-basiertes KI-Kanban-Board
+# Nostr-basiertes KI-Kanban-Board für kollaborative Unterrichtsentwicklung
 
 Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, gebaut mit **Svelte 5** und **TypeScript**.
 
