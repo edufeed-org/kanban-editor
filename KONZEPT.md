@@ -24,6 +24,9 @@ Das Ergebnis: Weniger Zeit mit Recherche, mehr Zeit für guten Unterricht. Und: 
 
 ---
 
+**Förderhinweis:** Die Projektförderung erwartet die Umsetzung der Kernfunktionen bis einschließlich Phase 4. Erweiterungen in Phase 5 sind optional (Nice-to-have).
+
+
 ## 2. So funktioniert's: Ein Einblick in die Anwendung
 
 ### Das Herzstück – Das Kanban-Board
@@ -94,6 +97,18 @@ Wenn Sie eine Karte anklicken, öffnet sich ein **detailliertes Fenster**, in de
 Diese Pop-up-Fenster ermöglichen es Ihnen, sich **vollständig auf eine Aufgabe zu konzentrieren**, ohne durch andere Elemente abgelenkt zu werden.
 
 ---
+
+## Board Export / Import (Kurzbeschreibung für Stakeholder)
+
+Damit Boards zuverlässig geteilt, gesichert und zwischen Instanzen übertragen werden können, bietet die Anwendung eine einfache Export-/Import-Funktion auf Store-Ebene. Lehrkräfte können ein Board komplett als JSON-Datei exportieren (inkl. Spalten, Karten, Metadaten und IDs) und später wieder importieren oder mit Kollegen teilen. Das macht Backups, Migrationen und das Teilen von Unterrichtsplanungen trivial und transparent.
+
+Wichtige Punkte für Stakeholder:
+
+- Export als JSON mit vollständigen Board-Daten (Metadaten, Spalten, Karten, Kommentare als Referenzen)
+- Import validiert das Format und bietet Optionen bei ID-Konflikten (Merge mit neuen IDs, Overwrite)
+- Export/Import funktioniert offline (lokale Datei) und online (Share-Link)
+- Akzeptanzkriterien sind im ROADMAP.md unter Meilenstein 1.5 dokumentiert
+
 
 ## 3. Ein praktisches Beispiel: Frau Müllers Geschichtsstunde
 

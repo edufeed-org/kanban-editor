@@ -16,12 +16,58 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
 - **[ROADMAP.md](./ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
+- **[STORES.md](./STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
 - **[CODE-ANALYSE.md](./CODE-ANALYSE.md)** - Aktueller Codebase-Status (17.10.2025)
 - **[NDK.md](./NDK.md)** - NDK Integration & Nostr-Event Publishing
 - **[Kanban-NIP.md](./Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
 - **[NOSTR-USER.md](./NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
 - **[UX-RULES.md](./UX-RULES.md)** - shadcn-svelte UI Guidelines
 - **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie
+
+### 🗺️ Documentation Map (für Entwickler)
+
+**Start hier:**
+- Neu im Projekt? → **[KONZEPT.md](./KONZEPT.md)** (15 min Überblick)
+- Development starten? → **[AGENTS.md](./AGENTS.md) → [STORES.md](./STORES.md)**
+
+**Nach Rolle:**
+
+| Rolle | Start | Nächste | Referenz |
+|-------|-------|--------|----------|
+| **Product Manager** | KONZEPT.md | ROADMAP.md | — |
+| **Frontend Dev** | AGENTS.md | UX-RULES.md, STORES.md | Komponenten- Referenz |
+| **Nostr Dev** | NDK.md | Kanban-NIP.md | nostrEvents.ts |
+| **Backend/Auth** | NOSTR-USER.md | NDK.md | Session-Management |
+| **KI-Integration** | AGENTS.md (Chat-Klasse) | ROADMAP.md (Phase 3) | — |
+
+**Dependency Graph:**
+
+```
+┌─ Start: KONZEPT.md (Stakeholder-freundlich)
+│
+├─ Core Technical: AGENTS.md
+│   ├→ BoardModel.ts (Klassen)
+│   ├→ STORES.md (State Management)
+│   │   ├→ NDK.md (Event Publishing)
+│   │   ├→ NOSTR-USER.md (Auth)
+│   │   └→ ROADMAP.md (Milestones)
+│   └→ UX-RULES.md (Komponenten)
+│
+├─ Nostr Specifics: NDK.md
+│   ├→ Kanban-NIP.md (Event Schema)
+│   └→ NOSTR-USER.md (Signing)
+│
+└─ Implementation: ROADMAP.md (Phase 1-5)
+    └→ CHANGELOG.md (Progress tracking)
+```
+
+**Meilenstein-Links:**
+
+- **Phase 1.1** (Nostr Publishing) — siehe AGENTS.md + STORES.md
+- **Phase 1.2** (Offline-First) — siehe STORES.md (SyncManager)
+- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./STORES.md) Section III** ⭐
+- **Phase 2.1** (UI Components) — siehe UX-RULES.md + AGENTS.md
+- **Phase 3.1** (KI-Integration) — siehe AGENTS.md (Chat-Klasse) + ROADMAP.md
 
 ## 🏗️ Architektur
 
@@ -197,6 +243,7 @@ runTestSuite();
 ```
 
 ## 📈 Roadmap & Meilensteine
+**Förderhinweis:** Die Projektförderung erwartet die Umsetzung bis einschließlich Phase 4; Phase 5 ist optional (Nice-to-have).
 
 ### ✅ Phase 1: Foundation & Core Implementation (Priorität: Hoch)
 

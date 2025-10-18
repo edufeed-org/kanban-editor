@@ -13,15 +13,41 @@ Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte
 5. **KI-Kontext**: Bereitstellung von Methoden (`getContextData()`) zur Serialisierung des relevanten Board-Kontexts für die KI.
 6. **Komplexe Aktionen**: Implementierung der Logik für die KI-gesteuerte`split-card`-Aktion.
 
-## ⚠️ Kritische Abhängigkeiten
+## ⚠️ Kritische Abhängigkeiten & Cross-References
 
-**WICHTIG:** Dieses Dokument spezifiziert nur die Core-Datenmodell und UI-Komponenten. Für die vollständige Implementierung sind folgende zusätzliche Dokumentationen **zwingend erforderlich**:
+**WICHTIG:** Dieses Dokument spezifiziert **nur** die Core-Datenmodelle (`BoardModel.ts`) und die Chat-Logik. Für die vollständige Implementierung sind folgende spezialisierte Dokumentationen **zwingend erforderlich**:
 
-- **[NOSTR-USER.md](./NOSTR-USER.md)** - Benutzerauthentifizierung & Profilverwaltung (KRITISCH!)
-- **[NDK.md](./NDK.md)** - Nostr Event Publishing & Subscriptions
-- **[Kanban-NIP.md](./Kanban-NIP.md)** - Nostr Event Schema Definition
+| Dokument | Fokus | Abhängigkeit für |
+|:---------|:-----|:-----------------|
+| **[STORES.md](./STORES.md)** (NEU) | Store-Architektur, Export/Import API (Meilenstein 1.5), Persistence | BoardStore, AuthStore, SyncManager, Offline-First |
+| **[NOSTR-USER.md](./NOSTR-USER.md)** | Benutzerauthentifizierung, NIP-07 Signer, Session-Management | AuthStore, Event-Signierung, User-Kontext |
+| **[NDK.md](./NDK.md)** | Nostr Development Kit, Event Publishing, Subscriptions, Relay-Handling | `nostrEvents.ts`, SyncManager, Live-Updates |
+| **[Kanban-NIP.md](./Kanban-NIP.md)** | Nostr Event Kinds (30301, 30302, 1), Tag-Schema | Event-Serialisierung in `nostrEvents.ts` |
+| **[UX-RULES.md](./UX-RULES.md)** | shadcn-svelte Design Pattern, Icon-Konventionen, Accessibility | Card.svelte, Dialog-Komponenten, Form-Struktur |
 
-**Ohne Benutzerauthentifizierung können KEINE Nostr Events signiert und publiziert werden!**
+**Kritische Abhängigkeitskette:**
+```
+BoardModel.ts (Core)
+    ↓
+kanbanStore.ts (via STORES.md)
+    ├→ Benötigt: AuthStore (NOSTR-USER.md)
+    ├→ Benötigt: NDK Context (NDK.md)
+    └→ Benötigt: SyncManager (AGENTS.md + STORES.md)
+         ├→ Publiziert: nostrEvents.ts (Kanban-NIP.md)
+         └→ Persistiert: IndexedDB (STORES.md)
+         
+UI-Komponenten (Card.svelte, etc.)
+    ├→ Verwenden: shadcn-svelte (UX-RULES.md)
+    ├→ Lesen: BoardStore (STORES.md)
+    └→ Rendern: Board-Daten (BoardModel.ts)
+```
+
+**⚠️ OHNE diese Dependencies:**
+- ❌ Benutzer können sich **nicht einloggen** (NOSTR-USER.md fehlt)
+- ❌ Events können **nicht signiert werden** (AuthStore, NOSTR-USER.md)
+- ❌ Boards können **nicht exportiert/importiert** werden (STORES.md fehlt)
+- ❌ UI-Komponenten **verletzen UX-RULES** (UX-RULES.md ignoriert)
+- ❌ Events können **nicht publiziert** werden (NDK.md fehlt)
 
 ## II. Technischer Stack & Konventionen
 
@@ -137,16 +163,23 @@ Der KI-Agent soll die Logik der ursprünglichen JavaScript-Klassen in TypeSript 
 
 #### `class Chat`
 
-Diese Klasse ist die zentrale Schnittstelle zur KI (simulierter WebSocket/Nostr Server).
+Diese Klasse ist die zentrale Schnittstelle zur KI (simulierter WebSocket/Nostr Server). Sie wird in **BoardStore** (STORES.md) instantiiert und stellt die Kommunikationsbrücke mit KI-Services dar.
+
+**Integration:**
+- **STORES.md** — Chat-Instanz in BoardStore
+- **Meilenstein 3.1 (ROADMAP.md)** — Vollständige KI-Context API
+- **Meilenstein 3.3 (ROADMAP.md)** — KI-Aktionen (split_card, add_card, move_card, update_card)
 
 | Methode | Beschreibung |
 | :--- | :--- |
 | `constructor(board: Board)` | Hält eine **Referenz** auf die aktive `Board`-Instanz. |
 | `addMessage(text: string, sender: 'user' \| 'ai', type: 'message' \| 'action' = 'message')` | Fügt eine Nachricht/Aktion zum Nachrichtenverlauf hinzu. |
-| `sendPromptToAI(prompt: string, context?: Card \| Column \| Board)` | **Wichtig**: Sammelt den Kontext. Ruft `context.getContextData()` auf, wenn `context` übergeben wird. Erstellt das `payload`-Objekt (`{ prompt, boardContext, selectionContext }`) für den simulierten KI-Server. |
-| `processAIAction(action: AIAction)` | **Wichtig**: Führt die Board-Manipulation aus, ausgelöst durch die KI. Muss alle `AIAction`-Typen (insbesondere `split_card`) mit den entsprechenden Methoden der `Board`- und `Column`-Klassen abhandeln. |
+| `sendPromptToAI(prompt: string, context?: Card \| Column \| Board)` | **Wichtig**: Sammelt den Kontext. Ruft `context.getContextData()` auf, wenn `context` übergeben wird. Erstellt das `payload`-Objekt (`{ prompt, boardContext, selectionContext }`) für den KI-Server. **Siehe STORES.md Section III für Payload-Format**. |
+| `processAIAction(action: AIAction)` | **Wichtig**: Führt die Board-Manipulation aus, ausgelöst durch die KI. Muss alle `AIAction`-Typen (insbesondere `split_card`) mit den entsprechenden Methoden der `Board`- und `Column`-Klassen abhandeln. Wird von BoardStore aufgerufen. |
 
 ## IV. State Management (Svelte 5 Stores)
+
+**Siehe auch:** [STORES.md](./STORES.md) für vollständige Store-Architektur, Export/Import API (Meilenstein 1.5), Context-Passing und Integration mit [NDK.md](./NDK.md) + [NOSTR-USER.md](./NOSTR-USER.md).
 
 Der KI-Agent soll die folgenden Svelte 5 Stores in der Datei `src/lib/stores/kanbanStore.ts` erstellen.
 
@@ -194,28 +227,26 @@ Der aktuelle Stand der Codebase zeigt folgende Struktur:
 | :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
 | `src/lib/utils/idGenerator.ts`      | Enthält die Funktion `generateDTag()` und ggf. Logik für Nostr Public Keys.                                                                                                | ✅ |
 | `src/lib/classes/BoardModel.ts`     | **Die vollständige Implementierung der Interfaces und der Klassen `Card`, `Column`, `Board`, `Chat` (siehe III.).**                                             | ✅ |
-| `src/lib/stores/kanbanStore.ts`     | **Die vollständige Implementierung der Svelte 5 Stores (`BoardStore`, `chatStore`) (siehe IV.).**                                                                   | 🟡 |
-| **`src/routes/cardsboard/+page.svelte`** | **Hauptlayout mit Resizable Panels.** Implementiert 3-Panel-Layout mit Topbar, linker/rechter Sidebar und Hauptbereich.                                                   | ✅ |
-| **`src/routes/cardsboard/Topbar.svelte`** | **Topbar-Komponente.** Enthält Sidebar-Toggles, Board-Titel, Settings-Sheet und Profile-Dropdown.                                                                     | ✅ |
-| **`src/routes/cardsboard/Board.svelte`** | **Board-Container.** Iteriert über Spalten, implementiert Drag-and-Drop mit `svelte-dnd-action`.                                                                       | ✅ |
-| **`src/routes/cardsboard/Column.svelte`** | **Spalten-Komponente.** Zeigt Spaltenheader, iteriert über Karten mit Drag-Drop-Zones.                                                                               | ✅ |
-| **`src/routes/cardsboard/Card.svelte`** | **Karten-Komponente.** Verwendet shadcn Card-Komponenten, zeigt Metadaten und öffnet CardDialog bei Click.                                                             | ✅ |
-| **`src/routes/cardsboard/CardDialog.svelte`** | **Card-Detail-Modal.** Implementiert Tabs für verschiedene Ansichten (Details, Comments, Links, etc.) mit shadcn Dialog-Struktur.                                   | ✅ |
+| `src/lib/stores/kanbanStore.ts`     | **Die vollständige Implementierung der Svelte 5 Stores (`BoardStore`, `chatStore`) (siehe IV. und STORES.md).**                                                                   | 🟡 |
+| **`src/routes/cardsboard/+page.svelte`** | **Hauptlayout mit Resizable Panels.** Implementiert 3-Panel-Layout mit Topbar, linker/rechter Sidebar und Hauptbereich. (siehe UX-RULES.md)                                                   | ✅ |
+| **`src/routes/cardsboard/Topbar.svelte`** | **Topbar-Komponente.** Enthält Sidebar-Toggles, Board-Titel, Settings-Sheet und Profile-Dropdown. (siehe UX-RULES.md)                                                                     | ✅ |
+| **`src/routes/cardsboard/Board.svelte`** | **Board-Container.** Iteriert über Spalten, implementiert Drag-and-Drop mit `svelte-dnd-action`. (siehe UX-RULES.md)                                                                       | ✅ |
+| **`src/routes/cardsboard/Column.svelte`** | **Spalten-Komponente.** Zeigt Spaltenheader, iteriert über Karten mit Drag-Drop-Zones. (siehe UX-RULES.md)                                                                               | ✅ |
+| **`src/routes/cardsboard/Card.svelte`** | **Karten-Komponente.** Verwendet shadcn Card-Komponenten, zeigt Metadaten und öffnet CardDialog bei Click. (siehe UX-RULES.md)                                                             | ✅ |
+| **`src/routes/cardsboard/CardDialog.svelte`** | **Card-Detail-Modal.** Implementiert Tabs für verschiedene Ansichten (Details, Comments, Links, etc.) mit shadcn Dialog-Struktur. (siehe UX-RULES.md)                                   | ✅ |
 | **`src/routes/cardsboard/types.ts`** | **TypeScript-Definitionen.** Enthält `BoardState`, `ColumnType`, `CardType` Interfaces für die echte Implementierung.                                                 | ✅ |
 | **`src/routes/cardsboard/data.ts`** | **Mock-Daten.** Beispiel-Boards und -Karten für Development und Testing.                                                                                                 | ✅ |
 | `src/lib/utils/testSuite.ts`        | Test-Suite ohne externes Framework. Validiert alle Kern-Funktionen.                                                                                                         | ✅ |
-| **`src/lib/utils/nostrEvents.ts`**  | **NEU: Event Serialization/Deserialization** für Board, Card, Comment                                                                                                       | ❌ |
-| **`src/lib/stores/syncManager.ts`** | **NEU: Offline-Sync Manager** mit Event Queue und Online/Offline Detection                                                                                                  | ❌ |
+| **`src/lib/utils/nostrEvents.ts`**  | **NEU: Event Serialization/Deserialization** für Board, Card, Comment. (siehe Kanban-NIP.md, NDK.md)                                                                                                       | ❌ |
+| **`src/lib/stores/syncManager.ts`** | **NEU: Offline-Sync Manager** mit Event Queue und Online/Offline Detection. (siehe STORES.md)                                                                                                  | ❌ |
 
 **Legende:** ✅ Vollständig | 🟡 Teilweise | ❌ Fehlt
 
-## V.1 Nostr-Integration
-
-Für die Nostr-Integration mit NDK siehe die dedizierte Dokumentation:
-
-- **[NDK.md](./NDK.md)** - Umfassende Dokumentation zur NDK-Integration, Event-Schema, Offline-Sync
-- **[Kanban-NIP.md](./Kanban-NIP.md)** - Nostr Event Templates für Boards und Cards (Kind 30301/30302)
-- **[ANALYSE.md](./ANALYSE.md)** - Aktueller Status der Codebasis und Roadmap
+**📌 Dokumentations-Referenzen:**
+- **[STORES.md](./STORES.md)** — Store-Architektur, Export/Import, Context-Passing
+- **[UX-RULES.md](./UX-RULES.md)** — shadcn-svelte Komponenten, Icons, Accessibility
+- **[NDK.md](./NDK.md)** — NDK-Integration, Relay-Handling
+- **[NOSTR-USER.md](./NOSTR-USER.md)** — Authentifizierung, Signer
 
 ### Event-Mapping
 
@@ -1311,7 +1342,10 @@ Der Agent sollte eine einfache Möglichkeit bereitstellen, die Suite auszuführe
 
 ## IX. UX-RULES Compliance ✅
 
-Diese Spezifikation wurde entsprechend der **[UX-RULES.md](./UX-RULES.md)** aktualisiert:
+Diese Spezifikation wurde entsprechend der **[UX-RULES.md](./UX-RULES.md)** aktualisiert. Alle Komponenten müssen die shadcn-svelte Design Patterns einhalten.
+
+**Siehe auch:**
+- **[UX-RULES.md](./UX-RULES.md)** — Vollständige shadcn-svelte Konventionen, Icon-Syntax, Accessibility Standards
 
 ### ✅ Korrigierte UI-Komponenten
 

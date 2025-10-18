@@ -90,6 +90,32 @@
 
 ---
 
+### Meilenstein 1.5: Board Export / Import (Priorität: Hoch)
+
+**Ziel:** Boards können exportiert, geteilt und wieder importiert werden (Store-Level Export/Import). Dies ist eine förderrelevante Anforderung und muss in Phasen 1-4 umgesetzt werden.
+
+**Status:** 🟡 PLANNED
+
+#### Zu implementieren:
+
+- [ ] **Store-Level Export API** — Serialisiere Board-Zustand (`Board.getContextData(true)`) in ein JSON-Format
+- [ ] **Store-Level Import API** — Validiere und importiere serialisierte Boards; prüfe Konflikte und ID-Duplikate
+- [ ] **UI: Export/Import Dialog** — Download/Upload JSON, Copy-to-Clipboard, Share-Link-Generator
+- [ ] **CLI/Dev Tooling (optional)** — `pnpm run board:export` / `pnpm run board:import`
+- [ ] **Tests** — Round-Trip Tests (Export → Import → Vergleich), Validation-Tests, Error Handling
+
+**Acceptance Criteria:**
+
+- ✅ Export erzeugt ein JSON-File mit allen Board-Metadaten, Spalten und Karten (inkl. IDs)
+- ✅ Import validiert Struktur und verweigert fehlerhafte Dateien mit klarer Fehlermeldung
+- ✅ Import behandelt ID-Konflikte: Option 'merge' (neue IDs für importierte Objekte) oder 'overwrite'
+- ✅ Export/Import funktioniert offline (Import aus lokalem File) und online (Share-Link)
+- ✅ Round-Trip: Export → Import → Board-Hash/Checksumme stimmt überein
+
+---
+
+---
+
 ### Meilenstein 1.3: Kommentar-System Grundlagen (Priorität: Hoch)
 
 **Ziel:** Kommentare werden als Nostr Kind 1 Events gespeichert  
