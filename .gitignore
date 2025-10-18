@@ -32,3 +32,5 @@ storybook-static
 .gemini
 CODE-ANALYSE.md
 .kilocode/rules/SHADCN.md
+/tasks
+STATUS-REPORT.md
