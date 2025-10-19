@@ -2,6 +2,19 @@
 
 import { Board, Chat } from '../classes/BoardModel.js';
 import type { Card, Column } from '../classes/BoardModel.js';
+import { MockNDK, MockNDKEvent } from './mockNdk.js';
+
+// Simple mock for AuthStore (minimal surface used by tests)
+class MockAuthStore {
+    private _pubkey?: string;
+    constructor(pubkey?: string) {
+        this._pubkey = pubkey;
+    }
+    getCurrentUser() {
+        if (!this._pubkey) return null;
+        return { pubkey: this._pubkey };
+    }
+}
 
 export function runTestSuite() {
     console.clear();
@@ -128,6 +141,44 @@ export function runTestSuite() {
     }
     console.log(`Karten in 'In Progress': ${progressCol.cards.length}`);
     console.groupEnd();
+    console.groupEnd();
+
+    // 6. Nostr Serialization (Mocked)
+    console.group("6. Nostr Event Serialization (Mocked)");
+    const mockNdk = new MockNDK();
+
+    // Board -> Event (simulate expected structure)
+    try {
+        const boardEvent = new MockNDKEvent({ kind: 30301 });
+        boardEvent.tags = [ ["d", board.id], ["title", board.name], ["state", board.publishState] ];
+        boardEvent.content = "";
+        console.log('✅ Mock Board event constructed:', { kind: boardEvent.kind, tags: boardEvent.tags.length });
+    } catch (e) {
+        console.error('❌ Fehler beim Erzeugen des Board-Events:', e);
+    }
+
+    // Card -> Event
+    try {
+        const sampleCard = progressCol.cards[0];
+        const cardEvent = new MockNDKEvent({ kind: 30302 });
+        cardEvent.tags = [["d", sampleCard.id], ["s", progressCol.name], ["state", sampleCard.publishState]];
+        cardEvent.content = sampleCard.content || "";
+        console.log('✅ Mock Card event constructed:', { kind: cardEvent.kind, tags: cardEvent.tags.length });
+    } catch (e) {
+        console.error('❌ Fehler beim Erzeugen des Card-Events:', e);
+    }
+
+    console.groupEnd();
+
+    // 7. Auth Tests (Mock)
+    console.group('7. AuthStore (Mock) Tests');
+    const auth = new MockAuthStore('npub_test_user');
+    const user = auth.getCurrentUser();
+    if (user && user.pubkey === 'npub_test_user') {
+        console.log('✅ MockAuthStore liefert pubkey:', user.pubkey);
+    } else {
+        console.error('❌ MockAuthStore liefert keinen User.');
+    }
     console.groupEnd();
 
     // 5. Löschoperationen
