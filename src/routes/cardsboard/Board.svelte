@@ -4,6 +4,7 @@
  	import Column from "./Column.svelte";
 	import { settingsStore } from '$lib/stores/settingsStore.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -227,14 +228,15 @@
 		width: 100%;
 		height: 100%;
 		min-height: 48px;
-		border: 2px dashed var(--muted-foreground);
-		border-radius: 0.5rem;
+		border: 1px dotted var(--muted-foreground);
+		padding: 1em;
+		border-radius: var(--radius-md);
 		background: transparent;
 		color: var(--muted-foreground);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: start;
 		transition: all 0.2s ease;
 		font-size: 1rem;
 	}
@@ -284,7 +286,7 @@
      {/each}
 
 	<!-- Add Column Button - ähnlich wie Column Footer -->
-	<div class="column" style="justify-content: center; padding: 1rem;">
+	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
 		<button 
 			type="button" 
 			class="add-column-button"
@@ -294,10 +296,7 @@
 				boardStore.createColumn('Neue Spalte');
 			}}
 		>
-			<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<line x1="12" y1="5" x2="12" y2="19"></line>
-				<line x1="5" y1="12" x2="19" y2="12"></line>
-			</svg>
+			<SquarePlusIcon class="h-5 w-5" />
 			<span class="sr-only">Spalte hinzufügen</span>
 		</button>
 	</div>

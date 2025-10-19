@@ -266,6 +266,9 @@
 	.column-content {
 		flex: 0 0 auto; /* do not scroll individually - let column grow */
 		padding-right: 0.5rem;
+		min-height: 100px; /* Minimum dropzone height when empty */
+		border-radius: var(--radius-md);
+		padding-bottom: 10px;
 	}
 
 	/* When many cards are present we allow the column to use an inner scroll */
@@ -286,6 +289,24 @@
 		cursor: pointer;
 		background: linear-gradient(180deg, transparent, rgba(0,0,0,0.01));
 	}
+	.add-card-button {
+		border: 1px dotted var(--muted-foreground);
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--muted-foreground);
+		transition: all 0.2s ease;
+		font-size: 1rem;
+	}
+	
+
+	.add-card-button:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+		background: var(--primary)/10;
+	}
+
+	
+		
 
 	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
 
@@ -395,7 +416,7 @@
 	</div>
 
 	<!-- Footer: show drop icon and allow click to append a placeholder card -->
-	<button type="button" class="column-footer" onclick={() => {
+	<button type="button" title="Neue Karte" class="column-footer add-card-button" onclick={() => {
 			// Erstelle neue Karte über BoardStore (persisted)
 			if (columnId) {
 				console.log('➕ Creating new card in column:', { columnId, columnName: name });
