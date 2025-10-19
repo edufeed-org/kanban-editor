@@ -2,6 +2,31 @@
 
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 
+// UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
+type CardItem = {
+    id: number | string;
+    name: string;
+    description?: string;
+    comments?: any[];
+    attendees?: string[];
+    labels?: string[];
+    color?: string;
+    publishState?: PublishState;
+    author?: string;
+    image?: string;
+    link?: string;
+    columnId?: string;
+    boardId?: string;
+};
+
+type UIColumn = {
+    id: string;
+    name: string;
+    description?: string;
+    color?: string;
+    items: CardItem[];
+};
+
 // ============================================================================
 // BOARD STORE (SVELTE 5 RUNES)
 // ============================================================================
@@ -22,6 +47,32 @@ export class BoardStore {
     public get data() {
         return this.board;
     }
+
+    // ============================================================================
+    // REAKTIVES UI-INTERFACE (für bestehende Komponenten)
+    // ============================================================================
+
+    // Konvertiert Board-Daten zu UI-kompatiblem Format (reaktiv via $derived)
+    public uiData = $derived(
+        this.board.columns.map(column => ({
+            id: column.id,
+            name: column.name,
+            color: column.color,
+            items: column.cards.map(card => ({
+                id: card.id,
+                name: card.heading,
+                description: card.content,
+                comments: card.comments,
+                attendees: card.attendees,
+                labels: card.labels,
+                color: card.color,
+                publishState: card.publishState,
+                author: card.attendees?.[0], // Erster Attendee als Author
+                columnId: column.id,
+                boardId: this.board.id
+            }))
+        }))
+    );
 
     // ============================================================================
     // PROXY-METHODEN FÜR BOARD-OPERATIONEN
@@ -112,6 +163,55 @@ export class BoardStore {
     }
 
     // ============================================================================
+    // UI-EVENT-HANDLER (direkt von Komponenten aufrufbar)
+    // ============================================================================
+
+    /**
+     * Wird von Column.svelte Footer aufgerufen: "Neue Karte" Button
+     */
+    public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
+        const cardProps: CardProps = {
+            heading: name,
+            content: description || 'Bitte bearbeiten...',
+            publishState: 'draft'
+        };
+        
+        const card = this.addCard(columnId, cardProps);
+        this.publishToNostr();
+        return card.id;
+    }
+
+    /**
+     * Wird von DnD-Handlern aufgerufen: Karte zwischen Spalten verschieben
+     */
+    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): void {
+        // Nur bewegen wenn sich die Spalte tatsächlich geändert hat
+        if (fromColumnId !== toColumnId) {
+            this.moveCard(cardId, fromColumnId, toColumnId);
+        }
+    }
+
+    /**
+     * Wird von UI aufgerufen: Karte löschen
+     */
+    public removeCard(cardId: string): void {
+        this.deleteCard(cardId);
+    }
+
+    /**
+     * Wird von UI aufgerufen: Kartendetails bearbeiten  
+     */
+    public editCard(cardId: string, updates: { name?: string; description?: string; color?: string; labels?: string[] }): void {
+        const cardProps: Partial<CardProps> = {};
+        if (updates.name !== undefined) cardProps.heading = updates.name;
+        if (updates.description !== undefined) cardProps.content = updates.description;
+        if (updates.color !== undefined) cardProps.color = updates.color;
+        if (updates.labels !== undefined) cardProps.labels = updates.labels;
+        
+        this.updateCard(cardId, cardProps);
+    }
+
+    // ============================================================================
     // KI-INTEGRATION
     // ============================================================================
 
@@ -183,12 +283,6 @@ export const boardStore = new BoardStore();
 // ============================================================================
 // CONVENIENCE-FUNKTIONEN FÜR KOMPONENTEN
 // ============================================================================
-
-// Reaktive Getter für häufig verwendete Daten
-export const boardData = $derived(boardStore.data);
-export const boardColumns = $derived(boardStore.data.columns);
-export const boardName = $derived(boardStore.data.name);
-export const boardDescription = $derived(boardStore.data.description);
 
 // Hilfsfunktion für Card-Operationen
 export function getCardById(cardId: string) {

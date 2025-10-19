@@ -3,6 +3,7 @@
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
 	import { settingsStore } from '$lib/stores/settingsStore.js';
+	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -70,6 +71,29 @@
      onFinalUpdate(e.detail.items);
    }
    	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
+		// Detect card moves between columns by comparing old vs new items
+		const currentColumn = columns[columnIdx];
+		const oldItems = currentColumn.items;
+		
+		// Find cards that moved TO this column (new cards not in old items)
+		const movedInCards = newItems.filter(newItem => 
+			!oldItems.some(oldItem => String(oldItem.id) === String(newItem.id))
+		);
+		
+		// Find cards that moved FROM this column (old cards not in new items)  
+		const movedOutCards = oldItems.filter(oldItem =>
+			!newItems.some(newItem => String(newItem.id) === String(oldItem.id))
+		);
+
+		// Handle moves via BoardStore 
+		for (const card of movedInCards) {
+			if (card.columnId && card.columnId !== currentColumn.id) {
+				console.log(`Moving card ${card.id} from ${card.columnId} to ${currentColumn.id}`);
+				boardStore.handleCardMove(String(card.id), card.columnId, currentColumn.id);
+			}
+		}
+
+		// Update local state for immediate UI feedback (BoardStore will sync)
   		columns[columnIdx].items = newItems;
   		onFinalUpdate([...columns]);
   	}

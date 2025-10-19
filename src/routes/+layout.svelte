@@ -23,6 +23,6 @@
   ndk.connect();
 </script>
 
-<div class="container viewport w-full h-full max-w-full">
+<div class="container viewport w-full h-full max-w-full dark:bg-gray-900 dark:text-white mx-auto p-0">
     {@render children?.()}
 </div>
