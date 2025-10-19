@@ -41,7 +41,6 @@
 	let showSidebar = $state(false);
 	let showPublishToggle = $state(true);
 	let showMenu = $state(true);
-	let popoverOpen = $state(false);
 	
 	// Card editing state
 	let editName = $state(card.name);
@@ -61,14 +60,6 @@
 	const attendees = $derived(card.attendees && card.attendees.length > 0
 		? card.attendees
 		: (card.author ? [card.author] : []));
-
-	function handleMenuClick() {
-		popoverOpen = !popoverOpen;
-	}
-
-	// function handleDoubleClick() {
-	// 	showModal = true;
-	// }
 
 	function handlePublishToggle() {
 		const newState = card.publishState === 'draft' ? 'published' : 'draft';
@@ -139,24 +130,20 @@
 
 	function handleRename() {
 		boardStore.editCard(String(card.id), { name: editName });
-		popoverOpen = false;
 	}
 
 	function handleColorChange() {
 		boardStore.editCard(String(card.id), { color: selectedColor });
-		popoverOpen = false;
 	}
 
 	function handleEditClick() {
 		showModal = true;
-		popoverOpen = false;
 	}
 
 	function handleDeleteClick() {
 		if (confirm(`Karte "${card.name}" wirklich löschen?`)) {
 			boardStore.removeCard(String(card.id));
 		}
-		popoverOpen = false;
 	}
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--${colorName})` : 'var(--muted)';
@@ -210,20 +197,18 @@
 				{/if}
 
 				{#if showMenu}
-					<Popover.Root bind:open={popoverOpen}>
+					<Popover.Root>
 						<Popover.Trigger
-							class="popover-trigger border-1 rounded-sm p-0"
+							class="popover-trigger border-1 rounded-sm p-1 hover:bg-accent"
 							onclick={(e) => {
-								e.preventDefault();
 								e.stopPropagation();
 							}}
 							type="button"
 							aria-label="Karten-Aktionen"
 						>
-							<EllipsisVerticalIcon />
+							<EllipsisVerticalIcon class="h-4 w-4" />
 						</Popover.Trigger>
 						<Popover.Content align="end" class="w-64" onclick={(e) => {
-							e.preventDefault();
 							e.stopPropagation();
 						}}>
 							<div class="space-y-4">

@@ -80,10 +80,20 @@
 		{ value: 'purple', label: 'Lila' }
 	];
 
+	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
+	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
+	let isDraggingCards = $state(false);
+
 	// WICHTIG: Überwache BoardStore Updates und aktualisiere Items automatisch
 	// Das ist notwendig, weil Card-Bearbeitungen (CardDialog) nicht sofort in der UI
 	// sichtbar sind, bis Column.svelte die neuen Items vom BoardStore lädt
+	// ABER: Pausiere während DnD um zu verhindern, dass Items während des Drags überschrieben werden
 	$effect(() => {
+		// Wenn gerade Drag stattfindet, update NICHT
+		if (isDraggingCards) {
+			return;
+		}
+		
 		// Zugriff auf boardStore.uiData triggert Reaktivität
 		const uiColumns = boardStore.uiData;
 		
@@ -113,11 +123,16 @@
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
   	   console.warn("got consider", name);
+  	   isDraggingCards = true;
  		items = newItems;
    }
    
    function handleDndFinalizeCards(e: any) {
      const newItems = e.detail.items;
+     // Setze isDraggingCards zurück NACH kurzer Verzögerung
+     // um zu erlauben, dass die BoardStore Updates verarbeitet werden
+     isDraggingCards = false;
+     
      // Für jetzt: einfach an den Parent callback übergeben
      // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
      onDrop(newItems);
