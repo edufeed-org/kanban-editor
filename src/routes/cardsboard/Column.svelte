@@ -63,6 +63,7 @@
 	} = $props();
 
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+	import PlusIcon from '@lucide/svelte/icons/plus';
 
 	// Local state for column editing
 	let isEditing = $state(false);
@@ -282,11 +283,7 @@
 		flex: 0 0 auto;
 		padding: 0.5rem;
 		border-top: 1px dashed var(--muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 48px;
-		cursor: pointer;
+		min-height: 24px;
 		background: linear-gradient(180deg, transparent, rgba(0,0,0,0.01));
 	}
 	.add-card-button {
@@ -342,14 +339,45 @@
 <div 
 	class="column-wrapper {isSelected ? 'border-2 border-primary rounded-lg' : ''}" 
 >
-		<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				handleHeaderClick(e as unknown as MouseEvent);
-			}
-		}} role="button" tabindex="0">
-			<div class="flex items-center justify-between w-full">
-				<div class="column-title">{name}</div>
+	<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			handleHeaderClick(e as unknown as MouseEvent);
+		}
+	}} role="button" tabindex="0">
+		<div class="flex items-center justify-between w-full">
+			<div class="column-title">{name}</div>
+			
+			<!-- Header Toolbar: Add Card + Menu -->
+			<div class="flex items-center gap-1">
+				<!-- Add Card Button -->
+				<Button 
+					variant="ghost" 
+					size="sm" 
+					class="h-6 w-6 p-0 hover:bg-accent"
+					title="Neue Karte am Anfang"
+					onclick={(e) => {
+						e.stopPropagation();
+						if (columnId) {
+							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							const newCard: CardItem = {
+								id: newCardId,
+								name: 'Neue Karte',
+								description: 'Bitte bearbeiten...',
+							};
+							// Neue Karte AM ANFANG einfügen
+							onDrop([newCard, ...items]);
+							// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
+							setTimeout(() => {
+								onSelectCard?.(String(newCardId));
+								console.log('✨ Neue Karte selektiert:', newCardId);
+							}, 0);
+						}
+					}}
+				>
+					<PlusIcon class="h-4 w-4" />
+				</Button>
+
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
 					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-6 w-6 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
@@ -359,41 +387,42 @@
 							<circle cx="12" cy="19" r="1"/>
 						</svg>
 					</Popover.Trigger>
-				<Popover.Content align="end" class="w-64">
-					<div class="space-y-4">
-						<div class="space-y-2">
-							<h4 class="font-medium text-sm">Spalte umbenennen</h4>
-							<Input bind:value={editName} placeholder="Spaltenname" />
-							<Button size="sm" onclick={handleRename} class="w-full">
-								Umbenennen
+					<Popover.Content align="end" class="w-64">
+						<div class="space-y-4">
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Spalte umbenennen</h4>
+								<Input bind:value={editName} placeholder="Spaltenname" />
+								<Button size="sm" onclick={handleRename} class="w-full">
+									Umbenennen
+								</Button>
+							</div>
+							
+							<Separator />
+							
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Farbe wählen</h4>
+								<RadioGroup.Root bind:value={selectedColor}>
+									{#each colorOptions as option}
+										<div class="flex items-center space-x-2">
+											<RadioGroup.Item value={option.value} id={`color-${option.value}`} />
+											<Label for={`color-${option.value}`}>{option.label}</Label>
+										</div>
+									{/each}
+								</RadioGroup.Root>
+								<Button size="sm" onclick={handleColorChange} class="w-full">
+									Farbe ändern
+								</Button>
+							</div>
+							
+							<Separator />
+							
+							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
+								Spalte löschen
 							</Button>
 						</div>
-						
-						<Separator />
-						
-						<div class="space-y-2">
-							<h4 class="font-medium text-sm">Farbe wählen</h4>
-							<RadioGroup.Root bind:value={selectedColor}>
-								{#each colorOptions as option}
-									<div class="flex items-center space-x-2">
-										<RadioGroup.Item value={option.value} id={`color-${option.value}`} />
-										<Label for={`color-${option.value}`}>{option.label}</Label>
-									</div>
-								{/each}
-							</RadioGroup.Root>
-							<Button size="sm" onclick={handleColorChange} class="w-full">
-								Farbe ändern
-							</Button>
-						</div>
-						
-						<Separator />
-						
-						<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
-							Spalte löschen
-						</Button>
-					</div>
-				</Popover.Content>
-			</Popover.Root>
+					</Popover.Content>
+				</Popover.Root>
+			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
@@ -406,7 +435,10 @@
 				<Card
 					card={item}
 					isSelected={selectedCardId === String(item.id)}
-					onSelect={() => onSelectCard?.(String(item.id))}
+					onSelect={() => {
+						console.log('🖱️ Card clicked:', item.id, 'selectedCardId:', selectedCardId);
+						onSelectCard?.(String(item.id));
+					}}
 					{onCardAction}
 					{onPublishStateChange}
 					{onSidebarAction}
@@ -415,36 +447,6 @@
 		{/each}
 	</div>
 
-	<!-- Footer: show drop icon and allow click to append a placeholder card -->
-	<button type="button" title="Neue Karte" class="column-footer add-card-button" onclick={() => {
-			// Erstelle neue Karte über BoardStore (persisted)
-			if (columnId) {
-				console.log('➕ Creating new card in column:', { columnId, columnName: name });
-				const newCardId = boardStore.createCard(
-					columnId,
-					'Neue Karte',
-					'Bitte bearbeiten...'
-				);
-				console.log('📌 Neue Karte erstellt:', { cardId: newCardId, columnId });
-				
-				// WICHTIG: Rufe onDrop auf, damit Board.svelte erfährt von den neuen Items
-				// Dadurch wird handleItemFinalize → onFinalUpdate aufgerufen
-				// und die neuen Daten werden zu +page.svelte propagiert
-				const newCard: CardItem = {
-					id: newCardId,
-					name: 'Neue Karte',
-					description: 'Bitte bearbeiten...',
-				};
-				
-				// Füge neue Karte zu items hinzu und rufe onDrop auf
-				onDrop([...items, newCard]);
-				
-				console.log('✓ onDrop aufgerufen mit', items.length + 1, 'Karten');
-			} else {
-				console.warn('⚠️ columnId is missing!');
-			}
-		}}>
-		<SquarePlusIcon class="h-5 w-5" />
-		<span class="sr-only">Karte ans Ende anfügen</span>
-	</button>
+	<!-- Footer: nur noch visueller Separator -->
+	<div class="column-footer"></div>
 </div>

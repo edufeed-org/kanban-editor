@@ -153,8 +153,9 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 {isSelected ? 'border-2 border-primary' : ''}"
+	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
 	data-card-id={card.id}
+	data-card-root
 	style="border-bottom: 6px solid {getCardColor(card.color)};"
 	role="button"
 	tabindex={0}
@@ -165,11 +166,15 @@
 		}
 	}}
 	onclick={(e) => {
-		// Nur bei Karte, nicht bei interaktiven Elementen
-		if ((e.target as HTMLElement).closest('button, [role="button"], a')) {
+		// Nur bei interaktiven Elementen blockieren (Button, Links, etc.)
+		// ABER NICHT auf der Root selbst!
+		const target = e.target as HTMLElement;
+		const isInteractive = target.closest('button:not([data-card-root]), [role="button"]:not([data-card-root]), a, [role="link"]');
+		if (isInteractive) {
 			return;
 		}
 		e.stopPropagation();
+		console.log('🖱️ Card.Root onclick - calling onSelect');
 		onSelect?.();
 	}}
 >

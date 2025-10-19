@@ -278,7 +278,7 @@
  						onCardAction={handleCardAction}
  						onPublishStateChange={handlePublishStateChange}
 					selectedCardId={selectedCard}
-					onSelectCard={onSelectCard}
+					onSelectCard={(cardId) => onSelectCard?.(cardId)}
  						onSidebarAction={handleSidebarAction}
 					maxCardsBeforeScroll={settings?.maxCardsBeforeScroll ?? 20}
  					/>

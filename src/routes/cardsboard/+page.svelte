@@ -45,8 +45,11 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	}
 	
 	function handleSelectCard(cardId: string) {
+		console.log('🎯 handleSelectCard called:', cardId, 'current selectedCard:', selectedCard);
+		// Toggle: Wenn gleiche Karte, deselektieren; sonst selektieren
 		selectedCard = selectedCard === cardId ? null : cardId;
 		selectedColumn = null; // Clear column selection when selecting card
+		console.log('✅ selectedCard now:', selectedCard);
 	}
 
 	// Helper-Funktion: Findet die vollständige Hierarchie einer Karte
