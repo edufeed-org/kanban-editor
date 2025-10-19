@@ -61,16 +61,19 @@
 	onSelectCard?: ((cardId: string) => void) | undefined;
    } = $props();
 
-   // mutable reference for runes compatibility
-   let columns = $state(columns_inner);
+   // Reaktive Referenz auf die Props (keine lokale Kopie!)
+   let columns = $derived(columns_inner);
 
 	function handleDndConsiderColumns(e: any) {
-     columns = e.detail.items;
-   }
-   function handleDndFinalizeColumns(e: any) {
-     onFinalUpdate(e.detail.items);
-   }
-   	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
+		// Nur für DnD-Feedback, keine lokale State-Mutation
+		// columns ist jetzt $derived und wird automatisch von boardStore.uiData aktualisiert
+	}
+	
+	function handleDndFinalizeColumns(e: any) {
+		onFinalUpdate(e.detail.items);
+	}
+	
+	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
 		// Detect card moves between columns by comparing old vs new items
 		const currentColumn = columns[columnIdx];
 		const oldItems = currentColumn.items;
@@ -79,13 +82,8 @@
 		const movedInCards = newItems.filter(newItem => 
 			!oldItems.some(oldItem => String(oldItem.id) === String(newItem.id))
 		);
-		
-		// Find cards that moved FROM this column (old cards not in new items)  
-		const movedOutCards = oldItems.filter(oldItem =>
-			!newItems.some(newItem => String(newItem.id) === String(oldItem.id))
-		);
 
-		// Handle moves via BoardStore 
+		// Handle moves via BoardStore - dies triggert automatisch UI-Updates
 		for (const card of movedInCards) {
 			if (card.columnId && card.columnId !== currentColumn.id) {
 				console.log(`Moving card ${card.id} from ${card.columnId} to ${currentColumn.id}`);
@@ -93,10 +91,9 @@
 			}
 		}
 
-		// Update local state for immediate UI feedback (BoardStore will sync)
-  		columns[columnIdx].items = newItems;
-  		onFinalUpdate([...columns]);
-  	}
+		// Benachrichtige Parent-Komponente (für Konsistenz)
+		onFinalUpdate([...columns]);
+	}
 
   	function handleCardAction(cardId: string, action: string) {
   		console.log('Card action:', cardId, action);

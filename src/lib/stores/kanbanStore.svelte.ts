@@ -32,19 +32,18 @@ type UIColumn = {
 // ============================================================================
 
 export class BoardStore {
+    private static STORAGE_KEY = 'kanban-board-data';
+    
     // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
-    private board = $state(new Board({
-        name: 'Mein KI Kanban Board',
-        description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
-        columns: [
-            { name: 'To Do', color: 'color-gradient-1' },
-            { name: 'In Progress', color: 'color-gradient-2' },
-            { name: 'Done', color: 'color-gradient-3' }
-        ]
-    }));
+    private board = $state(this.loadFromStorage());
+
+    // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
+    private updateTrigger = $state(0);
 
     // Öffentliche getter-Funktion, um die Board-Daten reaktiv abzurufen
     public get data() {
+        // Zugriff auf updateTrigger sorgt für Reaktivität
+        this.updateTrigger;
         return this.board;
     }
 
@@ -53,8 +52,11 @@ export class BoardStore {
     // ============================================================================
 
     // Konvertiert Board-Daten zu UI-kompatiblem Format (reaktiv via $derived)
-    public uiData = $derived(
-        this.board.columns.map(column => ({
+    public uiData = $derived.by(() => {
+        // Zugriff auf updateTrigger sorgt für Reaktivität
+        this.updateTrigger;
+        console.log('🔄 uiData wird neu berechnet...', this.board.columns.length, 'Spalten');
+        return this.board.columns.map(column => ({
             id: column.id,
             name: column.name,
             color: column.color,
@@ -71,8 +73,93 @@ export class BoardStore {
                 columnId: column.id,
                 boardId: this.board.id
             }))
-        }))
-    );
+        }));
+    });
+
+    // ============================================================================
+    // PRIVATE HELPER
+    // ============================================================================
+
+    private loadFromStorage(): Board {
+        if (typeof window === 'undefined') {
+            // SSR fallback
+            return this.createDefaultBoard();
+        }
+        
+        try {
+            const stored = localStorage.getItem(BoardStore.STORAGE_KEY);
+            if (stored) {
+                const data = JSON.parse(stored);
+                console.log('📂 Board aus localStorage geladen:', data.name);
+                
+                // Rekonstruiere Board-Instanz aus JSON-Daten
+                return this.reconstructBoard(data);
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Laden aus localStorage:', error);
+        }
+        
+        return this.createDefaultBoard();
+    }
+
+    private reconstructBoard(data: any): Board {
+        // Erstelle Board-Instanz mit rekonstruierten Columns/Cards
+        const boardProps = {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            publishState: data.publishState,
+            author: data.author,
+            columns: data.columns?.map((colData: any) => ({
+                id: colData.id,
+                name: colData.name,
+                color: colData.color,
+                cards: colData.cards?.map((cardData: any) => ({
+                    id: cardData.id,
+                    heading: cardData.heading,
+                    content: cardData.content,
+                    color: cardData.color,
+                    comments: cardData.comments || [],
+                    labels: cardData.labels || [],
+                    links: cardData.links || [],
+                    attendees: cardData.attendees || [],
+                    publishState: cardData.publishState || 'draft'
+                })) || []
+            })) || []
+        };
+        
+        return new Board(boardProps);
+    }
+
+    private createDefaultBoard(): Board {
+        return new Board({
+            name: 'Mein KI Kanban Board',
+            description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
+            columns: [
+                { name: 'To Do', color: 'color-gradient-1' },
+                { name: 'In Progress', color: 'color-gradient-2' },
+                { name: 'Done', color: 'color-gradient-3' }
+            ]
+        });
+    }
+
+    private saveToStorage(): void {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            const data = this.board.getContextData(true);
+            localStorage.setItem(BoardStore.STORAGE_KEY, JSON.stringify(data));
+            console.log('💾 Board in localStorage gespeichert');
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
+        }
+    }
+
+    private triggerUpdate(): void {
+        this.updateTrigger++;
+        this.saveToStorage(); // Automatisch speichern bei jeder Änderung
+        console.log('🔄 Update triggered:', this.updateTrigger);
+    }
 
     // ============================================================================
     // PROXY-METHODEN FÜR BOARD-OPERATIONEN
@@ -100,6 +187,7 @@ export class BoardStore {
 
     public moveCard(cardId: string, fromColId: string, toColId: string): void {
         this.board.moveCard(cardId, fromColId, toColId);
+        this.triggerUpdate(); // Trigger Reaktivität
         // Nach einer Änderung sollte hier der Nostr-Publish-Befehl folgen
         this.publishToNostr();
     }
@@ -107,7 +195,10 @@ export class BoardStore {
     public addCard(columnId: string, props: CardProps) {
         const column = this.board.findColumn(columnId);
         if (column) {
-            return column.addCard(props);
+            const card = column.addCard(props);
+            this.triggerUpdate(); // Trigger Reaktivität
+            this.publishToNostr();
+            return card;
         }
         throw new Error(`Column with id ${columnId} not found`);
     }
@@ -116,6 +207,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.update(updates);
+            this.triggerUpdate(); // Trigger Reaktivität
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -126,6 +218,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.column.deleteCard(cardId);
+            this.triggerUpdate(); // Trigger Reaktivität
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -170,6 +263,8 @@ export class BoardStore {
      * Wird von Column.svelte Footer aufgerufen: "Neue Karte" Button
      */
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
+        console.log('🆕 createCard aufgerufen:', { columnId, name, description });
+        
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
@@ -177,7 +272,9 @@ export class BoardStore {
         };
         
         const card = this.addCard(columnId, cardProps);
-        this.publishToNostr();
+        console.log('✅ Karte erstellt:', card.id, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        
+        // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;
     }
 
@@ -236,6 +333,9 @@ export class BoardStore {
         // Hier würde die tatsächliche Nostr-Publikation erfolgen
         // z.B. über eine WebSocket-Verbindung oder HTTP-API
         console.log('Publishing board state to Nostr...', this.board.getContextData(true));
+        
+        // Lokale Persistierung als Fallback
+        this.saveToStorage();
     }
 
     // ============================================================================

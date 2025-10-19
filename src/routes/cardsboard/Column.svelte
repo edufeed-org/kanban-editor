@@ -307,7 +307,7 @@
 	</div>
 
 	<!-- Footer: show drop icon and allow click to append a placeholder card -->
-	<button type="button" class="column-footer" onclick={() => {
+	<button type="button" class="column-footer create-card-button" onclick={() => {
 			// Direkte Erzeugung über BoardStore - triggert automatisch UI-Update
 			boardStore.createCard(
 				columnId || 'unknown', 

@@ -11,10 +11,10 @@
 
     const ndk = new NDKSvelte({
         explicitRelayUrls: [
-            "wss://relay.damus.io",
-            "wss://relay.primal.net",
-            "wss://nos.lol",
+            "ws://localhost:4869",
+            "wss://relay-rpi.edufeed.org"
         ],
+        enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
     });
 
     ndk.connect();

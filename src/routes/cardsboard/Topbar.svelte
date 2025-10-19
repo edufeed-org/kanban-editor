@@ -47,8 +47,8 @@
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
-        { url: 'wss://relay.damus.io', type: 'local', enabled: true },
-        { url: 'wss://relay.primal.net', type: 'public', enabled: true }
+        { url: 'ws://localhost:4869', type: 'local', enabled: true },
+        { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
     ]);
     
     let webhookUrl = $state('');
