@@ -354,7 +354,7 @@
 				<Button 
 					variant="ghost" 
 					size="sm" 
-					class="h-6 w-6 p-0 hover:bg-accent"
+					class="h-6 w-6 p-0 hover:bg-accent group"
 					title="Neue Karte am Anfang"
 					onclick={(e) => {
 						e.stopPropagation();

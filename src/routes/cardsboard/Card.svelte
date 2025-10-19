@@ -204,7 +204,7 @@
 				{#if showMenu}
 					<Popover.Root>
 						<Popover.Trigger
-							class="popover-trigger border-1 rounded-sm p-1 hover:bg-accent"
+							class="popover-trigger border-1 rounded-sm p-1 hover:bg-accent group"
 							onclick={(e) => {
 								e.stopPropagation();
 							}}
@@ -298,14 +298,14 @@
 
 	<Card.Footer class="px-1">
 		<div class="footer-content">
-			<div class="comments-count">
+			<div class="comments-count group">
 				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
 			</div>
-			<div class="attendees-count">
+			<div class="attendees-count group">
 				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
 			</div>
 			<button 
-				class="view-button" 
+				class="view-button group" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
 				aria-label="Anzeigen" 
 				title="Anzeigen"
@@ -314,7 +314,7 @@
 				<FullscreenIcon />
 			</button>
 			<button 
-				class="edit-button" 
+				class="edit-button group" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
 				aria-label="Bearbeiten" 
 				title="Bearbeiten"

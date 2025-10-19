@@ -22,7 +22,7 @@
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
+  --accent: oklch(57.646% 0.26532 315.837);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
@@ -108,6 +108,13 @@
     width: 18px;
     height: 18px;
   }
+}
+
+/* Icon Hover Effect with Accent Color - echte CSS-Regel */
+.group:hover svg {
+  color: var(--accent);
+  transform: scale(1.1);
+  transition: all 0.2s ease;
 }
 
 @layer base {

@@ -151,7 +151,7 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="size-9"
+                class="size-9 group"
             >
                 <PanelLeftIcon class="size-6" />
                 <span class="sr-only">Toggle Left Sidebar</span>
@@ -162,7 +162,7 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root>
-                <Dialog.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="Board-Einstellungen">
+                <Dialog.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
                     <EllipsisVerticalIcon class="size-6 border-2 rounded-sm p-0" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
@@ -214,7 +214,7 @@
                     <Dialog.Footer>
                         <Button variant="outline" onclick={() => {}}>Abbrechen</Button>
                         <Button onclick={saveBoardMeta}>Speichern & An Nostr senden</Button>
-                        <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto">
+                        <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto group">
                             <TrashIcon class="mr-2 h-4 w-4" />
                             Board löschen
                         </Button>
@@ -225,8 +225,8 @@
 
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
-                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="KI-Zusammenfassung">
-                    <SquareSigmaIcon  />
+                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
+                    <SquareSigmaIcon />
                 </Drawer.Trigger>
                 <Drawer.Content>
                     <Drawer.Header>
@@ -250,8 +250,8 @@
 
             <!-- AI Settings Sheet -->
             <Sheet.Root>
-                <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-                    <BotIcon  />
+                <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+                    <BotIcon />
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
@@ -298,11 +298,11 @@
             </DropdownMenu.Root>
 
             <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme}>
+            <Button variant="ghost" size="icon" onclick={toggleTheme} class="group">
                 {#if currentTheme === 'dark'}
-                    <SunIcon  class="size-6"/>
+                    <SunIcon class="size-6"/>
                 {:else}
-                    <MoonIcon  class="size-6"/>
+                    <MoonIcon class="size-6"/>
                 {/if}
             </Button>
             
@@ -313,9 +313,9 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="size-9"
+                class="size-9 group"
             >
-                <PanelRightIcon  class="size-6"/>
+                <PanelRightIcon class="size-6"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>
