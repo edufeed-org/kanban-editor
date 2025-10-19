@@ -10,6 +10,7 @@
 	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
+	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 
  	const flipDurationMs = 150;
 
@@ -79,13 +80,47 @@
 		{ value: 'purple', label: 'Lila' }
 	];
 
+	// WICHTIG: Überwache BoardStore Updates und aktualisiere Items automatisch
+	// Das ist notwendig, weil Card-Bearbeitungen (CardDialog) nicht sofort in der UI
+	// sichtbar sind, bis Column.svelte die neuen Items vom BoardStore lädt
+	$effect(() => {
+		// Zugriff auf boardStore.uiData triggert Reaktivität
+		const uiColumns = boardStore.uiData;
+		
+		// Suche unsere Column in den neuen UI-Daten
+		const updatedColumn = uiColumns.find(c => c.id === columnId);
+		if (updatedColumn) {
+			// Vergleiche Items - wenn sie unterschiedlich sind, aktualisiere
+			const itemsChanged = updatedColumn.items.length !== items.length ||
+				updatedColumn.items.some((newItem, idx) => {
+					const oldItem = items[idx];
+					return !oldItem || newItem.id !== oldItem.id || 
+						newItem.name !== oldItem.name ||
+						newItem.description !== oldItem.description;
+				});
+			
+			if (itemsChanged) {
+				console.log('🔄 Column.svelte: Items vom BoardStore aktualisiert', {
+					columnId,
+					oldCount: items.length,
+					newCount: updatedColumn.items.length
+				});
+				items = updatedColumn.items;
+			}
+		}
+	});
+
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
   	   console.warn("got consider", name);
  		items = newItems;
    }
+   
    function handleDndFinalizeCards(e: any) {
-     onDrop(e.detail.items);
+     const newItems = e.detail.items;
+     // Für jetzt: einfach an den Parent callback übergeben
+     // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
+     onDrop(newItems);
    }
 
    function handleCardAction(event: CustomEvent) {
@@ -307,13 +342,32 @@
 
 	<!-- Footer: show drop icon and allow click to append a placeholder card -->
 	<button type="button" class="column-footer" onclick={() => {
-			const newCard: CardItem = {
-				id: Date.now(),
-				name: 'Neue Karte (Platzhalter) - bitte bearbeiten',
-				description: 'Platzhalterkarte erstellt durch Footer-Button',
-			};
-			items = [...items, newCard];
-			onDrop(items);
+			// Erstelle neue Karte über BoardStore (persisted)
+			if (columnId) {
+				console.log('➕ Creating new card in column:', { columnId, columnName: name });
+				const newCardId = boardStore.createCard(
+					columnId,
+					'Neue Karte',
+					'Bitte bearbeiten...'
+				);
+				console.log('📌 Neue Karte erstellt:', { cardId: newCardId, columnId });
+				
+				// WICHTIG: Rufe onDrop auf, damit Board.svelte erfährt von den neuen Items
+				// Dadurch wird handleItemFinalize → onFinalUpdate aufgerufen
+				// und die neuen Daten werden zu +page.svelte propagiert
+				const newCard: CardItem = {
+					id: newCardId,
+					name: 'Neue Karte',
+					description: 'Bitte bearbeiten...',
+				};
+				
+				// Füge neue Karte zu items hinzu und rufe onDrop auf
+				onDrop([...items, newCard]);
+				
+				console.log('✓ onDrop aufgerufen mit', items.length + 1, 'Karten');
+			} else {
+				console.warn('⚠️ columnId is missing!');
+			}
 		}}>
 		<SquarePlusIcon class="h-5 w-5" />
 		<span class="sr-only">Karte ans Ende anfügen</span>

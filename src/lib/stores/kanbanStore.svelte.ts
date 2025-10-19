@@ -3,7 +3,7 @@
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
-type CardItem = {
+export type CardItem = {
     id: number | string;
     name: string;
     description?: string;
@@ -19,7 +19,7 @@ type CardItem = {
     boardId?: string;
 };
 
-type UIColumn = {
+export type UIColumn = {
     id: string;
     name: string;
     description?: string;
@@ -37,6 +37,9 @@ export class BoardStore {
     // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
     private board = $state(this.loadFromStorage());
 
+    // Separate Spalten-Reihenfolge (wird nicht mutiert, nur replace)
+    private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
+
     // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
     private updateTrigger = $state(0);
 
@@ -53,27 +56,44 @@ export class BoardStore {
 
     // Konvertiert Board-Daten zu UI-kompatiblem Format (reaktiv via $derived)
     public uiData = $derived.by(() => {
-        // Zugriff auf updateTrigger sorgt für Reaktivität
-        this.updateTrigger;
-        console.log('🔄 uiData wird neu berechnet...', this.board.columns.length, 'Spalten');
-        return this.board.columns.map(column => ({
-            id: column.id,
-            name: column.name,
-            color: column.color,
-            items: column.cards.map(card => ({
-                id: card.id,
-                name: card.heading,
-                description: card.content,
-                comments: card.comments,
-                attendees: card.attendees,
-                labels: card.labels,
-                color: card.color,
-                publishState: card.publishState,
-                author: card.attendees?.[0], // Erster Attendee als Author
-                columnId: column.id,
-                boardId: this.board.id
-            }))
-        }));
+        // WICHTIG: Direkter Zugriff auf this.board.columns für Reaktivität!
+        // (nicht nur updateTrigger - Svelte 5 muss das Arrays Property tracking sehen)
+        const columns = this.board.columns; // ← Direkter Zugriff triggert Tracking
+        const columnOrder = this._columnOrder;
+        const trigger = this.updateTrigger; // ← Auch updateTrigger als Fallback
+        
+        console.log('🔄 uiData wird neu berechnet...', columns.length, 'Spalten, trigger:', trigger);
+        
+        // Erstelle eine Map für schnellen Zugriff
+        const columnMap = new Map(columns.map(c => [c.id, c]));
+        
+        // Nutze _columnOrder für die Reihenfolge
+        const result: UIColumn[] = [];
+        for (const colId of columnOrder) {
+            const column = columnMap.get(colId);
+            if (column) {
+                result.push({
+                    id: column.id,
+                    name: column.name,
+                    color: column.color,
+                    items: column.cards.map(card => ({
+                        id: card.id,
+                        name: card.heading,
+                        description: card.content,
+                        comments: card.comments,
+                        attendees: card.attendees,
+                        labels: card.labels,
+                        color: card.color,
+                        publishState: card.publishState,
+                        author: card.attendees?.[0], // Erster Attendee als Author
+                        columnId: column.id,
+                        boardId: this.board.id
+                    }))
+                });
+            }
+        }
+        
+        return result;
     });
 
     // ============================================================================
@@ -286,6 +306,99 @@ export class BoardStore {
         if (fromColumnId !== toColumnId) {
             this.moveCard(cardId, fromColumnId, toColumnId);
         }
+    }
+
+    /**
+     * Wird von Board.svelte aufgerufen: Spalten reordern (DnD)
+     * @param reorderedColumns - Die neu angeordneten Spalten aus der UI
+     */
+    public reorderColumns(reorderedColumns: UIColumn[]): void {
+        console.log('🔄 reorderColumns aufgerufen mit', reorderedColumns.length, 'Spalten');
+        
+        // Aktualisiere die interne Reihenfolge der Spalten
+        // Die reorderedColumns enthalten die UIColumn-Struktur mit allen Karten
+        // Wir müssen die Board.columns mit den neuen Positions-IDs aktualisieren
+        
+        const newColumnOrder = reorderedColumns.map(col => col.id);
+        console.log('  Neue Reihenfolge:', newColumnOrder);
+        
+        // Sortiere board.columns nach der neuen Reihenfolge
+        this.board.columns.sort((a, b) => {
+            const indexA = newColumnOrder.indexOf(a.id);
+            const indexB = newColumnOrder.indexOf(b.id);
+            return indexA - indexB;
+        });
+        
+        // Trigger Reaktivität und speichern
+        this.triggerUpdate();
+        this.publishToNostr();
+    }
+
+    /**
+     * Vollständige Synchronisierung: Spalten-Reihenfolge UND Karten-Positionen
+     * @param uiColumns - Komplettes Update mit neuer Spalten- und Karten-Reihenfolge
+     */
+    public syncBoardState(uiColumns: UIColumn[]): void {
+        console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
+        console.log('  UI-Spalten:', uiColumns.length);
+        
+        // SCHRITT 1: Spalten-Reihenfolge
+        const newColumnOrder = uiColumns.map(c => c.id);
+        this._columnOrder = newColumnOrder;
+        
+        // SCHRITT 2: Reordne board.columns
+        const columnMap = new Map(this.board.columns.map(c => [c.id, c]));
+        const reorderedColumns: typeof this.board.columns = [];
+        for (const colId of newColumnOrder) {
+            const col = columnMap.get(colId);
+            if (col) {
+                reorderedColumns.push(col);
+            }
+        }
+        this.board.columns = reorderedColumns;
+        
+        // SCHRITT 3: Karten-Positionen synchronisieren
+        // Für jede Spalte in der UI: Aktualisiere die Karten-Reihenfolge und Position
+        for (const uiColumn of uiColumns) {
+            const boardColumn = this.board.findColumn(uiColumn.id);
+            if (!boardColumn) continue;
+            
+            // Erstelle eine Map der Karten-IDs für schnellen Zugriff
+            const cardMap = new Map(boardColumn.cards.map(c => [c.id, c]));
+            
+            // Reordne die Karten basierend auf der UI-Reihenfolge
+            const reorderedCards: typeof boardColumn.cards = [];
+            for (const uiCard of uiColumn.items) {
+                const cardIdStr = String(uiCard.id);
+                
+                // Prüfe ob die Karte bereits in dieser Spalte ist
+                let card = cardMap.get(cardIdStr);
+                
+                if (!card) {
+                    // Karte ist woanders - suche sie im gesamten Board
+                    const result = this.board.findCardAndColumn(cardIdStr);
+                    if (result && result.column.id !== uiColumn.id) {
+                        // Karte muss von anderer Spalte verschoben werden
+                        console.log(`  📍 Verschiebe Karte ${cardIdStr} von ${result.column.id} nach ${uiColumn.id}`);
+                        result.column.deleteCard(cardIdStr);
+                        boardColumn.appendCard(result.card);
+                        card = result.card;
+                    }
+                }
+                
+                if (card) {
+                    reorderedCards.push(card);
+                }
+            }
+            
+            // Setze die neue Karten-Reihenfolge
+            boardColumn.cards = reorderedCards;
+        }
+        
+        console.log('  ✓ Board-State synchronisiert');
+        
+        this.triggerUpdate();
+        this.publishToNostr();
     }
 
     /**

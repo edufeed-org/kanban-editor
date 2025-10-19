@@ -1,150 +1,289 @@
 # 📦 Svelte 5 Stores Spezifikation
 
-**Version:** 1.0  
-**Datum:** 18. Oktober 2025  
+**Version:** 2.0 (UPDATED für Svelte 5 Runes)
+**Datum:** 19. Oktober 2025  
 **Framework:** Svelte 5 (Runes), TypeScript  
-**Status:** Specification (Implementation in Meilenstein 1.1 – 1.5)
+**Status:** PARTIALLY IMPLEMENTED (Phase 1 ✅, Phase 2 🟡, Phase 3 ⏳)
 
 ---
 
-## Executive Summary
+## ⚠️ KRITISCHE ÄNDERUNG: Svelte 5 Runes Paradigma
 
-Diese Spezifikation definiert die **zentrale Zustandsverwaltung** des Kanban-Boards. Stores sind die Brücke zwischen:
+### **Dateiendung `.svelte.ts` ist NOTWENDIG!**
 
-- **BoardModel.ts** (Geschäftslogik)
-- **NDK.md** (Nostr Integration)
-- **NOSTR-USER.md** (Authentifizierung)
-- **UI-Komponenten** (Rendering)
-
-**Kritisch:** Stores ermöglichen **Offline-First** und **Export/Import** (Meilenstein 1.5).
-
----
-
-## I. Store-Architektur & Verantwortlichkeiten
-
-### Überblick
-
-```
-┌────────────────────────────────────────────────────────┐
-│  UI Layer (Svelte Components)                          │
-│  - Board.svelte, Column.svelte, Card.svelte            │
-│  - CardDialog.svelte, Chatbot.svelte                   │
-└────────────┬───────────────────────────────────────────┘
-             │ (Runes: $derived, $effect)
-    ┌────────┴──────────┬──────────────┬────────────────┐
-    ↓                   ↓              ↓                ↓
-┌────────────┐  ┌──────────────┐ ┌─────────────┐ ┌──────────────┐
-│ BoardStore │  │  AuthStore   │ │ SyncManager │ │ SettingsStore│
-│ (Primary)  │  │              │ │             │ │  (Optional)  │
-└────────────┘  └──────────────┘ └─────────────┘ └──────────────┘
-    │ $state       │ $state          │ $state        │ $state
-    │ board        │ user            │ queue         │ settings
-    ├─ CardStore   ├─ pubkey         ├─ events       ├─ theme
-    ├─ ChatStore   ├─ signer         └─ isOnline     └─ layout
-    └─ Sync        └─ profile
-       Handling
-
-    ↓  getContext('ndk')     ↓  getContext('authStore')
-
-┌────────────────────────┬─────────────────────────────┐
-│  NDK Instance          │  IndexedDB (Persistence)    │
-│  - Relay Connection    │  - Event Queue              │
-│  - Event Publishing    │  - Board Cache              │
-│  - Subscriptions       │  - Session Storage          │
-└────────────────────────┴─────────────────────────────┘
-```
-
----
-
-### 1.1 BoardStore (Primärer Store)
-
-**Datei:** `src/lib/stores/kanbanStore.ts`
-
-**Verantwortlichkeiten:**
-
-- ✅ Board-Zustand verwalten (`Board` Instanz)
-- ✅ Chat-Interface bereitstellen (`Chat` Instanz)
-- ✅ Proxy-Methoden zu BoardModel.ts
-- ✅ NDK Integration für Publish/Subscribe
-- ✅ **Export/Import (Meilenstein 1.5)**
-- ✅ SyncManager für Offline-First
-
-**Struktur:**
+Ab Svelte 5 müssen alle Stores mit **reaktiven Daten** die Endung `.svelte.ts` haben, damit der Compiler Runes transformieren kann:
 
 ```typescript
-// src/lib/stores/kanbanStore.ts
+// ❌ FALSCH: kanbanStore.ts (funktioniert NICHT)
+export class BoardStore {
+    private board = $state(...); // ← Compiler-Fehler!
+}
 
-import { Board, Chat } from '$lib/classes/BoardModel';
-import { SyncManager } from './syncManager';
-import { crush, uncrush } from 'jsoncrush';
-import type NDK from '@nostr-dev-kit/ndk';
+// ✅ RICHTIG: kanbanStore.svelte.ts (funktioniert)
+export class BoardStore {
+    private board = $state(...); // ← OK!
+    public uiData = $derived.by(...); // ← OK!
+}
+```
+
+**Betroffene Stores:**
+- ✅ **kanbanStore.svelte.ts** — Bereits konvertiert (BoardStore mit `$state`, `$derived`)
+- 🟡 **settingsStore.svelte.ts** — MUSS konvertiert werden (aktuell: Svelte 4 writable)
+- ⏳ **authStore.svelte.ts** — Noch zu erstellen (Nostr User Management)
+- ⏳ **syncManager.svelte.ts** — Noch zu erstellen (Offline-First Queue)
+
+---
+
+## II. Aktuelle Implementierung (Phase 1 ✅)
+
+### BoardStore (kanbanStore.svelte.ts)
+
+```typescript
+// src/lib/stores/kanbanStore.svelte.ts (PRODUCTION)
 
 export class BoardStore {
-  // State
-  private board = $state(new Board({ 
-    name: 'Initiales Kanban Board',
-    columns: [
-      { name: 'Materialideen' },
-      { name: 'Auswahl' },
-      { name: 'Einstieg' },
-      { name: 'Erarbeitung' },
-      { name: 'Sicherung' }
-    ]
-  }));
+    private board = $state(this.loadFromStorage()); // ← $state Rune
+    private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id)); // ← Immutable ordering
+    private updateTrigger = $state(0); // ← Reaktivitäts-Trigger
 
-  private chat = $state(new Chat(this.board));
-  private syncManager: SyncManager;
-  private ndk: NDK;
-  private authStore: AuthStore; // ← Abhängigkeit!
+    // ← $derived.by berechnet automatisch neu wenn updateTrigger/board.columns sich ändern
+    public uiData = $derived.by(() => {
+        const columns = this.board.columns; // ← Direct access für Tracking
+        const columnOrder = this._columnOrder;
+        const trigger = this.updateTrigger;
+        
+        // Transformiere zu UI-Format
+        const columnMap = new Map(columns.map(c => [c.id, c]));
+        const result: UIColumn[] = [];
+        for (const colId of columnOrder) {
+            const column = columnMap.get(colId);
+            if (column) {
+                result.push({
+                    id: column.id,
+                    name: column.name,
+                    color: column.color,
+                    items: column.cards.map(card => ({
+                        id: card.id,
+                        name: card.heading,
+                        description: card.content,
+                        // ... weitere Properties
+                    }))
+                });
+            }
+        }
+        return result;
+    });
 
-  // ──────────────────────────────────────────
-  // Constructor & Initialization
-  // ──────────────────────────────────────────
+    // ──────────────────────────────────────────
+    // Öffentliche Methoden
+    // ──────────────────────────────────────────
 
-  constructor(ndk: NDK, authStore: AuthStore) {
-    this.ndk = ndk;
-    this.authStore = authStore;
-    this.syncManager = new SyncManager(ndk);
-
-    // Initial Load from Nostr (wenn authenticated)
-    if (authStore.isAuthenticated) {
-      this.loadFromNostr();
+    public createCard(columnId: string, name: string, description?: string): string {
+        const cardProps: CardProps = {
+            heading: name,
+            content: description || 'Bitte bearbeiten...',
+            publishState: 'draft'
+        };
+        
+        const column = this.board.findColumn(columnId);
+        if (column) {
+            const card = column.addCard(cardProps); // ← Rune-safe: addCard nutzt Reassignment
+            this.triggerUpdate(); // → saveToStorage()
+            this.publishToNostr();
+            return card.id;
+        }
+        throw new Error(`Column ${columnId} not found`);
     }
-  }
 
-  // ──────────────────────────────────────────
-  // Getter (Reactive Access)
-  // ──────────────────────────────────────────
+    public updateCard(cardId: string, updates: Partial<CardProps>): void {
+        const result = this.board.findCardAndColumn(cardId);
+        if (result) {
+            result.card.update(updates);
+            this.triggerUpdate(); // ← Automatisch saveToStorage()
+            this.publishToNostr();
+        } else {
+            throw new Error(`Card ${cardId} not found`);
+        }
+    }
 
-  public get data() {
-    return this.board;
-  }
+    public syncBoardState(uiColumns: UIColumn[]): void {
+        // 3-Schritt Synchronisation
+        const newColumnOrder = uiColumns.map(c => c.id);
+        this._columnOrder = newColumnOrder;
+        
+        // Reorder board.columns
+        const columnMap = new Map(this.board.columns.map(c => [c.id, c]));
+        const reorderedColumns = [];
+        for (const colId of newColumnOrder) {
+            const col = columnMap.get(colId);
+            if (col) reorderedColumns.push(col);
+        }
+        this.board.columns = reorderedColumns; // ← Reassignment!
+        
+        // Sync card positions
+        for (const uiColumn of uiColumns) {
+            const boardColumn = this.board.findColumn(uiColumn.id);
+            if (!boardColumn) continue;
+            
+            const cardMap = new Map(boardColumn.cards.map(c => [c.id, c]));
+            const reorderedCards = [];
+            
+            for (const uiCard of uiColumn.items) {
+                const cardIdStr = String(uiCard.id);
+                let card = cardMap.get(cardIdStr);
+                
+                if (!card) {
+                    const result = this.board.findCardAndColumn(cardIdStr);
+                    if (result && result.column.id !== uiColumn.id) {
+                        result.column.deleteCard(cardIdStr);
+                        boardColumn.appendCard(result.card);
+                        card = result.card;
+                    }
+                }
+                if (card) reorderedCards.push(card);
+            }
+            boardColumn.cards = reorderedCards; // ← Reassignment!
+        }
+        
+        this.triggerUpdate(); // ← Speichert sofort
+        this.publishToNostr();
+    }
 
-  public get chatInterface() {
-    return this.chat;
-  }
+    // ──────────────────────────────────────────
+    // Private Helper
+    // ──────────────────────────────────────────
 
-  public get syncStatus() {
-    return this.syncManager.status;
-  }
+    private triggerUpdate(): void {
+        this.updateTrigger++;
+        this.saveToStorage(); // ← Synchron!
+    }
 
-  // ──────────────────────────────────────────
-  // Board Operations (Proxy Methods)
-  // ──────────────────────────────────────────
+    private saveToStorage(): void {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            const data = this.board.getContextData(true);
+            localStorage.setItem('kanban-board-data', JSON.stringify(data));
+            console.log('💾 Board in localStorage gespeichert');
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Speichern:', error);
+        }
+    }
 
-  public moveCard(cardId: string, fromColId: string, toColId: string) {
-    // 1. Lokale Änderung (sofort reactiv)
-    this.board.moveCard(cardId, fromColId, toColId);
+    private loadFromStorage(): Board {
+        if (typeof window === 'undefined') {
+            return this.createDefaultBoard();
+        }
+        
+        try {
+            const stored = localStorage.getItem('kanban-board-data');
+            if (stored) {
+                const data = JSON.parse(stored);
+                return this.reconstructBoard(data);
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Laden:', error);
+        }
+        
+        return this.createDefaultBoard();
+    }
 
-    // 2. Nostr Event veröffentlichen/queuen
-    this.publishCardUpdate(cardId, toColId);
-  }
+    private publishToNostr(): void {
+        // Stub für zukünftige Nostr Integration
+        console.log('Publishing board state to Nostr...', this.board.getContextData(true));
+        this.saveToStorage();
+    }
+}
 
-  public addColumn(props: ColumnProps): Column {
-    const column = this.board.addColumn(props);
-    this.publishBoardUpdate();
-    return column;
-  }
+// ← GLOBALE INSTANZ (nicht writable!)
+export const boardStore = new BoardStore();
+```
+
+**Kritische Design-Punkte:**
+
+1. ✅ **`$state` für Rune-Tracking** — updateTrigger wird gelesen, daher triggert $derived
+2. ✅ **`$derived.by()` berechnet automatisch neu** — keine Subscribers notwendig
+3. ✅ **Reassignments statt Mutationen** — `this.cards = [...this.cards, card]` statt `.push()`
+4. ✅ **`triggerUpdate()` synchron** — speichert sofort in localStorage (schnell genug für ~10KB)
+5. ✅ **Globale Singleton-Instanz** — kein `writable()`, nur `class BoardStore`
+
+### Column.svelte (Sync mit $effect)
+
+```svelte
+<!-- src/routes/cardsboard/Column.svelte -->
+<script lang="ts">
+    import { boardStore } from '$lib/stores/kanbanStore.svelte';
+
+    // ← Überwacht boardStore.uiData automatisch
+    $effect(() => {
+        const uiColumns = boardStore.uiData; // ← Dependency Tracking
+        
+        const updatedColumn = uiColumns.find(c => c.id === columnId);
+        if (updatedColumn) {
+            // Vergleiche Items
+            const itemsChanged = updatedColumn.items.length !== items.length ||
+                updatedColumn.items.some((newItem, idx) => {
+                    const oldItem = items[idx];
+                    return !oldItem || newItem.id !== oldItem.id || 
+                        newItem.name !== oldItem.name;
+                });
+            
+            if (itemsChanged) {
+                items = updatedColumn.items; // ← Auto-Sync!
+            }
+        }
+    });
+</script>
+```
+
+**Ablauf bei Karten-Bearbeitung:**
+
+1. User bearbeitet Karte in CardDialog
+2. `handleEditSave()` → `boardStore.editCard()`
+3. `editCard()` → `updateCard()` → `triggerUpdate()`
+4. `updateTrigger++` inkrementiert
+5. `uiData` $derived neu berechnet (weil `updateTrigger` dependency changed)
+6. `Column.svelte` $effect bemerkt `boardStore.uiData` update
+7. `items` Prop wird aktualisiert
+8. **UI re-rendert sofort** ✅
+
+### BoardModel.ts (Array-Reassignments)
+
+```typescript
+// src/lib/classes/BoardModel.ts (WICHTIG!)
+
+export class Column {
+    addCard(props: CardProps): Card {
+        const card = new Card(props);
+        // ✅ RICHTIG: Reassignment statt push()
+        this.cards = [...this.cards, card]; // ← Svelte 5 tracking!
+        return card;
+    }
+
+    appendCard(card: Card): void {
+        this.cards = [...this.cards, card]; // ← Reassignment!
+    }
+}
+
+export class Card {
+    addComment(text: string, author: string): void {
+        const comment: Comment = { /* ... */ };
+        // ✅ RICHTIG: Reassignment
+        this.comments = [...this.comments, comment]; // ← Svelte 5 tracking!
+    }
+}
+
+export class Board {
+    addColumn(props: ColumnProps): Column {
+        const column = new Column(props);
+        // ✅ RICHTIG: Reassignment
+        this.columns = [...this.columns, column]; // ← Svelte 5 tracking!
+        return column;
+    }
+}
+```
+
+---
 
   public deleteColumn(columnId: string) {
     this.board.deleteColumn(columnId);

@@ -112,7 +112,8 @@ export class Card {
             author,
             createdAt: generateTimestamp()
         };
-        this.comments.push(comment);
+        // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
+        this.comments = [...this.comments, comment];
     }
 
     deleteComment(commentId: string): void {
@@ -160,8 +161,18 @@ export class Column {
 
     addCard(props: CardProps): Card {
         const card = new Card(props);
-        this.cards.push(card);
+        // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
+        this.cards = [...this.cards, card];
         return card;
+    }
+
+    /**
+     * Fügt ein bestehendes Card-Objekt hinzu (für moveCard-Operation)
+     * @internal Nur von Board.moveCard() verwendet
+     */
+    appendCard(card: Card): void {
+        // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
+        this.cards = [...this.cards, card];
     }
 
     deleteCard(cardId: string): void {
@@ -231,7 +242,8 @@ export class Board {
 
     addColumn(props: ColumnProps): Column {
         const column = new Column(props);
-        this.columns.push(column);
+        // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
+        this.columns = [...this.columns, column];
         return column;
     }
 
@@ -266,21 +278,11 @@ export class Board {
             throw new Error('Card not found in source column');
         }
 
-        // Karte aus der Quellspalte entfernen
+        // Karte aus der Quellspalte entfernen (aber nicht löschen - die Instanz behalten!)
         fromColumn.deleteCard(cardId);
 
-        // Karte zur Zielspalte hinzufügen
-        toColumn.addCard({
-            id: card.id,
-            heading: card.heading,
-            content: card.content,
-            color: card.color,
-            comments: card.comments,
-            labels: card.labels,
-            links: card.links,
-            attendees: card.attendees,
-            publishState: card.publishState
-        });
+        // Das BESTEHENDE Card-Objekt zur Zielspalte hinzufügen (nicht mit Props rekonstruieren!)
+        toColumn.appendCard(card);
     }
 
     getContextData(full: boolean = false): {
@@ -326,7 +328,8 @@ export class Chat {
             type,
             timestamp: generateTimestamp()
         };
-        this.messages.push(message);
+        // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
+        this.messages = [...this.messages, message];
     }
 
     sendPromptToAI(prompt: string, context?: Card | Column | Board): void {

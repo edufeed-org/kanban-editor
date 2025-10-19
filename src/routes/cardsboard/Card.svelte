@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CardItem, PublishState } from "./types.js";
-	import type { CardProps } from "../../lib/classes/BoardModel.js";
+	import { boardStore, type CardItem } from "$lib/stores/kanbanStore.svelte.js";
+	import type { PublishState } from "$lib/classes/BoardModel.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -120,28 +120,31 @@
 	}
 
 	function handleEditSave(cardId: string, updates: any) {
-		// Aktualisiere die lokale Karte
-		if (updates.heading) card.name = updates.heading;
-		if (updates.content) card.description = updates.content;
-		if (updates.color) card.color = updates.color;
-		if (updates.labels) card.labels = updates.labels;
-		if (updates.publishState) card.publishState = updates.publishState;
+		// Speichere die Änderungen im BoardStore
+		boardStore.editCard(cardId, {
+			name: updates.heading,
+			description: updates.content,
+			color: updates.color,
+			labels: updates.labels
+		});
 
-		// Informiere die Elternkomponente über die Änderung
-		onCardAction?.(cardId, 'updated');
+		// WICHTIG: Triggere ein CardUpdated Event, damit Column.svelte die Items neuladen kann
+		// Das ist notwendig, weil Column.svelte nur die items Prop hat und nicht direkt
+		// auf die neuen Werte vom Board zugreifen kann
+		onCardAction?.(String(cardId), 'cardUpdated');
+		
+		// Lokale Karte wird automatisch durch uiData Reaktivität aktualisiert
 		closeModal();
 	}
 
 	function handleRename() {
-		card.name = editName;
+		boardStore.editCard(String(card.id), { name: editName });
 		popoverOpen = false;
-		onCardAction?.(String(card.id), 'renamed');
 	}
 
 	function handleColorChange() {
-		card.color = selectedColor;
+		boardStore.editCard(String(card.id), { color: selectedColor });
 		popoverOpen = false;
-		onCardAction?.(String(card.id), 'color-changed');
 	}
 
 	function handleEditClick() {
@@ -151,7 +154,7 @@
 
 	function handleDeleteClick() {
 		if (confirm(`Karte "${card.name}" wirklich löschen?`)) {
-			onCardAction?.(String(card.id), 'delete');
+			boardStore.removeCard(String(card.id));
 		}
 		popoverOpen = false;
 	}
@@ -161,13 +164,28 @@
 
 </script>
 
+<!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card  p-1 {isSelected ? 'border-2 border-primary' : ''}" 
+	class="card p-1 {isSelected ? 'border-2 border-primary' : ''}"
+	data-card-id={card.id}
+	style="border-bottom: 6px solid {getCardColor(card.color)};"
+	role="button"
+	tabindex={0}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onSelect?.();
+		}
+	}}
 	onclick={(e) => {
+		// Nur bei Karte, nicht bei interaktiven Elementen
+		if ((e.target as HTMLElement).closest('button, [role="button"], a')) {
+			return;
+		}
 		e.stopPropagation();
 		onSelect?.();
 	}}
-	style="border-bottom: 6px solid {getCardColor(card.color)};">
+>
 	<Card.Header class="px-1">
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
@@ -178,9 +196,14 @@
 						class:draft={card.publishState === 'draft'}
 						class:published={card.publishState === 'published'}
 						class:archived={card.publishState === 'archived'}
-						onclick={handlePublishToggle}
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handlePublishToggle();
+						}}
 						aria-label="Toggle publish state"
 						title="Toggle publish state"
+						type="button"
 					>
 						<span class="publish-indicator"></span>
 					</button>
@@ -188,15 +211,26 @@
 
 				{#if showMenu}
 					<Popover.Root bind:open={popoverOpen}>
-						<Popover.Trigger>
-							<EllipsisVerticalIcon class="popover-trigger border-1 rounded-sm p-0"/>
+						<Popover.Trigger
+							class="popover-trigger border-1 rounded-sm p-0"
+							onclick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+							}}
+							type="button"
+							aria-label="Karten-Aktionen"
+						>
+							<EllipsisVerticalIcon />
 						</Popover.Trigger>
-						<Popover.Content align="end" class="w-64">
+						<Popover.Content align="end" class="w-64" onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+						}}>
 							<div class="space-y-4">
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Karte umbenennen</h4>
 									<Input bind:value={editName} placeholder="Kartenname" />
-									<Button size="sm" onclick={handleRename} class="w-full">
+									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(); }} class="w-full">
 										Umbenennen
 									</Button>
 								</div>
@@ -213,18 +247,18 @@
 											</div>
 										{/each}
 									</RadioGroup.Root>
-									<Button size="sm" onclick={handleColorChange} class="w-full">
+									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleColorChange(); }} class="w-full">
 										Farbe ändern
 									</Button>
 								</div>
 								
 								<Separator />
 								
-								<Button variant="outline" size="sm" onclick={handleEditClick} class="w-full">
+								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
 								
-								<Button variant="destructive" size="sm" onclick={handleDeleteClick} class="w-full">
+								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
 									Karte löschen
 								</Button>
 							</div>
@@ -280,10 +314,22 @@
 			<div class="attendees-count">
 				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
 			</div>
-			<button class="view-button" onclick={() => (showViewModal = true)} aria-label="Anzeigen" title="Anzeigen">
+			<button 
+				class="view-button" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				aria-label="Anzeigen" 
+				title="Anzeigen"
+				type="button"
+			>
 				<FullscreenIcon />
 			</button>
-			<button class="edit-button" onclick={() => (showModal = true)} aria-label="Bearbeiten" title="Bearbeiten">
+			<button 
+				class="edit-button" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
+				aria-label="Bearbeiten" 
+				title="Bearbeiten"
+				type="button"
+			>
 				<PencilLineIcon />
 			</button>
 		</div>
@@ -490,5 +536,9 @@
 			outline-offset: 2px;
 		}
 		
+		/* Ensure buttons and interactive elements can't interfere with drag */
+		button {
+			pointer-events: auto;
+		}
 
 	</style>

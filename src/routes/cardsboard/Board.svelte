@@ -60,14 +60,64 @@
 	onSelectCard?: ((cardId: string) => void) | undefined;
    } = $props();
 
-   // mutable reference for runes compatibility
-   let columns = $state(columns_inner);
+   // Lokaler State für dndzone: Wird von dndzone mutiert
+   let columns = $state([...columns_inner]);
+   
+   // Tracke die Spalten-Reihenfolge hash um externe Änderungen zu erkennen
+   let columnOrderHash = $derived.by(() => {
+     return columns_inner.map(c => c.id).join(',');
+   });
+   
+   // Wenn die Spalten-Reihenfolge vom Parent sich ändert, synchronisiere
+   // ABER: Nur wenn KEINE dndzone-Operation in Prozess ist
+   let isDragging = $state(false);
+   
+   $effect(() => {
+     // Wenn nicht gerade Dragging, kann man die Spalten-Reihenfolge synchronisieren
+     if (!isDragging) {
+       const hash = columnOrderHash;
+       const currentHash = columns.map(c => c.id).join(',');
+       
+       if (hash !== currentHash) {
+         console.log('Spalten-Reihenfolge änderte sich - Synchronisiere:', hash);
+         // Ersetze mit neuer Reihenfolge, aber behalte die Spalten-Instanzen
+         const newColumns: typeof columns = [];
+         for (const id of hash.split(',')) {
+           const col = columns.find(c => c.id === id) || columns_inner.find(c => c.id === id);
+           if (col) newColumns.push(col);
+         }
+         columns = newColumns.length === columns_inner.length ? [...columns_inner] : newColumns;
+       }
+     }
+   });
 
 	function handleDndConsiderColumns(e: any) {
+     isDragging = true;
      columns = e.detail.items;
    }
    function handleDndFinalizeColumns(e: any) {
-     onFinalUpdate(e.detail.items);
+     isDragging = false;
+     const finalItems = e.detail.items;
+     
+     // SICHERHEIT: Filtere Duplikate bevor sie an den Parent gesendet werden
+     const seenIds = new Set<string>();
+     const deduplicated = finalItems.filter((col: any) => {
+       if (seenIds.has(col.id)) {
+         console.warn(`⚠️ Duplikat erkannt: ${col.id} - wird entfernt`);
+         return false;
+       }
+       seenIds.add(col.id);
+       return true;
+     });
+     
+     if (deduplicated.length !== finalItems.length) {
+       console.error(`❌ ${finalItems.length - deduplicated.length} Duplikat(e) gefunden und entfernt`);
+       columns = deduplicated;
+       onFinalUpdate(deduplicated);
+     } else {
+       columns = finalItems;
+       onFinalUpdate(finalItems);
+     }
    }
    	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
   		columns[columnIdx].items = newItems;
