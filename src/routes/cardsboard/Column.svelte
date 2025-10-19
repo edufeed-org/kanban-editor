@@ -10,7 +10,6 @@
 	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
-	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 
  	const flipDurationMs = 150;
 
@@ -307,13 +306,14 @@
 	</div>
 
 	<!-- Footer: show drop icon and allow click to append a placeholder card -->
-	<button type="button" class="column-footer create-card-button" onclick={() => {
-			// Direkte Erzeugung über BoardStore - triggert automatisch UI-Update
-			boardStore.createCard(
-				columnId || 'unknown', 
-				'Neue Karte', 
-				'Bitte bearbeiten...'
-			);
+	<button type="button" class="column-footer" onclick={() => {
+			const newCard: CardItem = {
+				id: Date.now(),
+				name: 'Neue Karte (Platzhalter) - bitte bearbeiten',
+				description: 'Platzhalterkarte erstellt durch Footer-Button',
+			};
+			items = [...items, newCard];
+			onDrop(items);
 		}}>
 		<SquarePlusIcon class="h-5 w-5" />
 		<span class="sr-only">Karte ans Ende anfügen</span>

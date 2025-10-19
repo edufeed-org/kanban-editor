@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { data } from "./data.js";
 import Board from "./Board.svelte";
 import Topbar from "./Topbar.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
@@ -26,9 +26,7 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 	});
 
 	function handleBoardUpdated(newColumnsData: Column[]) {
-		// DnD-Updates werden jetzt direkt über boardStore-Methoden gehandhabt
-		// Diese Funktion wird nur noch für finale Validierung genutzt
-		console.log('Board updated via DnD:', newColumnsData.length, 'columns');
+		data.set(newColumnsData);
 	}
 
 	// State für Selection
@@ -49,11 +47,11 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 	function getCardHierarchy(cardId: string | null) {
 		if (!cardId) return null;
 
-		for (const column of boardStore.uiData) {
+		for (const column of $data) {
 			const card = column.items.find(item => String(item.id) === String(cardId));
 			if (card) {
 				return {
-					boardId: card.boardId || boardStore.data.id,
+					boardId: card.boardId || "board-1",
 					columnId: card.columnId || column.id,
 					columnName: column.name,
 					cardId: card.id,
@@ -66,17 +64,17 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 
 	// Abgeleitete Hierarchie-Info
 	let selectedCardHierarchy = $derived(getCardHierarchy(selectedCard));
-	// Board-Metadaten (reaktiv auf boardStore)
-	let boardMeta = $derived({
-		title: boardStore.data.name,
-		description: boardStore.data.description || 'Projektmanagement mit KI-Unterstützung',
+	// Board-Metadaten
+	let boardMeta = $state({
+		title: 'Mein Projekt Board',
+		description: 'Projektmanagement mit KI-Unterstützung',
 		tags: ['development', 'svelte', 'nostr']
 	});
 
-	// Debug Stats (jetzt reaktiv auf boardStore)
+	// Debug Stats
 	let stats = $derived({
-		columnsCount: boardStore.uiData.length,
-		cardsCount: boardStore.uiData.reduce((sum, col) => sum + col.items.length, 0),
+		columnsCount: $data.length,
+		cardsCount: $data.reduce((sum, col) => sum + col.items.length, 0),
 		selectedColumn,
 		selectedCard
 	});
@@ -158,7 +156,7 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 		/>			<!-- Board Content - KEIN Scroll hier, nur im Board selbst -->
 			<div class="flex-1 overflow-hidden p-0 min-h-0">
 					<Board 
-						columns={boardStore.uiData} 
+						columns={$data} 
 						onFinalUpdate={handleBoardUpdated}
 						{selectedColumn}
 						{selectedCard}

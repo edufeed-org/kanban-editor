@@ -3,7 +3,6 @@
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
 	import { settingsStore } from '$lib/stores/settingsStore.js';
-	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -61,39 +60,19 @@
 	onSelectCard?: ((cardId: string) => void) | undefined;
    } = $props();
 
-   // Reaktive Referenz auf die Props (keine lokale Kopie!)
-   let columns = $derived(columns_inner);
+   // mutable reference for runes compatibility
+   let columns = $state(columns_inner);
 
 	function handleDndConsiderColumns(e: any) {
-		// Nur für DnD-Feedback, keine lokale State-Mutation
-		// columns ist jetzt $derived und wird automatisch von boardStore.uiData aktualisiert
-	}
-	
-	function handleDndFinalizeColumns(e: any) {
-		onFinalUpdate(e.detail.items);
-	}
-	
-	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
-		// Detect card moves between columns by comparing old vs new items
-		const currentColumn = columns[columnIdx];
-		const oldItems = currentColumn.items;
-		
-		// Find cards that moved TO this column (new cards not in old items)
-		const movedInCards = newItems.filter(newItem => 
-			!oldItems.some(oldItem => String(oldItem.id) === String(newItem.id))
-		);
-
-		// Handle moves via BoardStore - dies triggert automatisch UI-Updates
-		for (const card of movedInCards) {
-			if (card.columnId && card.columnId !== currentColumn.id) {
-				console.log(`Moving card ${card.id} from ${card.columnId} to ${currentColumn.id}`);
-				boardStore.handleCardMove(String(card.id), card.columnId, currentColumn.id);
-			}
-		}
-
-		// Benachrichtige Parent-Komponente (für Konsistenz)
-		onFinalUpdate([...columns]);
-	}
+     columns = e.detail.items;
+   }
+   function handleDndFinalizeColumns(e: any) {
+     onFinalUpdate(e.detail.items);
+   }
+   	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
+  		columns[columnIdx].items = newItems;
+  		onFinalUpdate([...columns]);
+  	}
 
   	function handleCardAction(cardId: string, action: string) {
   		console.log('Card action:', cardId, action);
