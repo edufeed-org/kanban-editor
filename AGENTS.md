@@ -20,6 +20,7 @@ Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte
 | Dokument | Fokus | Abhängigkeit für |
 |:---------|:-----|:-----------------|
 | **[STORES.md](./STORES.md)** (NEU) | Store-Architektur, Export/Import API (Meilenstein 1.5), Persistence | BoardStore, AuthStore, SyncManager, Offline-First |
+| **[PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md)** ⭐ NEW | Dynamische UI-Prop-Änderungen (Name, Farbe, etc.) | Spalten/Karten Bearbeitung, Persistenz |
 | **[NOSTR-USER.md](./NOSTR-USER.md)** | Benutzerauthentifizierung, NIP-07 Signer, Session-Management | AuthStore, Event-Signierung, User-Kontext |
 | **[NDK.md](./NDK.md)** | Nostr Development Kit, Event Publishing, Subscriptions, Relay-Handling | `nostrEvents.ts`, SyncManager, Live-Updates |
 | **[Kanban-NIP.md](./Kanban-NIP.md)** | Nostr Event Kinds (30301, 30302, 1), Tag-Schema | Event-Serialisierung in `nostrEvents.ts` |
@@ -39,6 +40,7 @@ kanbanStore.ts (via STORES.md)
 UI-Komponenten (Card.svelte, etc.)
     ├→ Verwenden: shadcn-svelte (UX-RULES.md)
     ├→ Lesen: BoardStore (STORES.md)
+    ├→ Bearbeiten Props: PROP-UPDATE-GUIDE.md ⭐
     └→ Rendern: Board-Daten (BoardModel.ts)
 ```
 
@@ -48,6 +50,7 @@ UI-Komponenten (Card.svelte, etc.)
 - ❌ Boards können **nicht exportiert/importiert** werden (STORES.md fehlt)
 - ❌ UI-Komponenten **verletzen UX-RULES** (UX-RULES.md ignoriert)
 - ❌ Events können **nicht publiziert** werden (NDK.md fehlt)
+- ❌ **Prop-Änderungen funktionieren nicht korrekt** (PROP-UPDATE-GUIDE.md ignoriert) ⭐
 
 ## II. Technischer Stack & Konventionen
 

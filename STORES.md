@@ -32,6 +32,21 @@ export class BoardStore {
 - ⏳ **authStore.svelte.ts** — Noch zu erstellen (Nostr User Management)
 - ⏳ **syncManager.svelte.ts** — Noch zu erstellen (Offline-First Queue)
 
+### 📖 ANLEITUNG: Dynamische Prop-Änderungen
+
+**Wenn du willst, dass der Nutzer eine Eigenschaft (z.B. Spalten-Name) in der UI ändern kann:**
+
+👉 **Lies:** [PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md) (5-Schritt Anleitung mit Beispielen)
+
+Diese Anleitung erklärt:
+1. Store-Methode erstellen (`updateColumn()`, `updateCard()`, etc.)
+2. Component Handler implementieren (z.B. `handleRename()`)
+3. `$effect` für UI-Sync hinzufügen (automatische Reaktivität)
+4. Model-Update-Methode nutzen (`column.update()`)
+5. localStorage wird automatisch gespeichert via `triggerUpdate()`
+
+**Praktisches Beispiel:** Spalten-Name ändern im Popover → sofort sichtbar im Board → bleibt nach Reload erhalten ✅
+
 ---
 
 ## II. Aktuelle Implementierung (Phase 1 ✅)

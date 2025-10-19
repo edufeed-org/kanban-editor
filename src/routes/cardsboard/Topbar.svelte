@@ -20,7 +20,9 @@
     import SunIcon from "@lucide/svelte/icons/sun";
     import BotIcon from "@lucide/svelte/icons/bot";
     import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
+    import TrashIcon from "@lucide/svelte/icons/trash";
     import SettingsPanel from './SettingsPanel.svelte';
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     
 
     // Props für Sidebar-Toggle, Title und Board-Meta
@@ -130,6 +132,13 @@
                 .filter(t => t.length > 0);
         }
     }
+
+    function handleDeleteBoard() {
+        if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
+            console.log('🗑️ Deleting entire board');
+            boardStore.deleteBoard();
+        }
+    }
     
 </script>
 
@@ -205,6 +214,10 @@
                     <Dialog.Footer>
                         <Button variant="outline" onclick={() => {}}>Abbrechen</Button>
                         <Button onclick={saveBoardMeta}>Speichern & An Nostr senden</Button>
+                        <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto">
+                            <TrashIcon class="mr-2 h-4 w-4" />
+                            Board löschen
+                        </Button>
                     </Dialog.Footer>
                 </Dialog.Content>
             </Dialog.Root>

@@ -3,6 +3,7 @@
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
 	import { settingsStore } from '$lib/stores/settingsStore.js';
+	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -221,6 +222,32 @@
 		/* background-color: var(--background); */
 		align-items: stretch;
 	}
+
+	.add-column-button {
+		width: 100%;
+		height: 100%;
+		min-height: 48px;
+		border: 2px dashed var(--muted-foreground);
+		border-radius: 0.5rem;
+		background: transparent;
+		color: var(--muted-foreground);
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.2s ease;
+		font-size: 1rem;
+	}
+
+	.add-column-button:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+		background: var(--primary)/10;
+	}
+
+	.add-column-button:active {
+		transform: scale(0.95);
+	}
 </style>
 
 <section 
@@ -255,4 +282,23 @@
  					/>
  			</div>
      {/each}
+
+	<!-- Add Column Button - ähnlich wie Column Footer -->
+	<div class="column" style="justify-content: center; padding: 1rem;">
+		<button 
+			type="button" 
+			class="add-column-button"
+			aria-label="Neue Spalte hinzufügen"
+			onclick={() => {
+				console.log('➕ Adding new column...');
+				boardStore.createColumn('Neue Spalte');
+			}}
+		>
+			<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<line x1="12" y1="5" x2="12" y2="19"></line>
+				<line x1="5" y1="12" x2="19" y2="12"></line>
+			</svg>
+			<span class="sr-only">Spalte hinzufügen</span>
+		</button>
+	</div>
 </section>

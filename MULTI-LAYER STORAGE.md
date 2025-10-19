@@ -50,6 +50,8 @@ export class BoardStore {
 
 **Grund**: Svelte 5 Runes (`$state`, `$derived`, `$effect`) funktionieren nur in `.svelte.ts` Dateien, wo der Compiler sie transformieren kann.
 
+**Praktische Anwendung:** [PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md) erklärt wie man damit dynamische Prop-Änderungen in der UI implementiert ⭐
+
 **Konsequenz**: Alle Stores mit reaktiven Daten müssen zu `.svelte.ts` konvertiert werden!
 
 ## 📊 Datenfluss-Strategien

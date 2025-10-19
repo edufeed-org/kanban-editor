@@ -16,6 +16,7 @@ START → ROADMAP.md (See phases & timeline)
 START → UX-RULES.md (Component patterns)
       → STORES.md Section XI (Export/Import UI)
       → AGENTS.md Section IX (shadcn-svelte compliance)
+      → PROP-UPDATE-GUIDE.md (Dynamische UI-Änderungen!) ⭐
 ```
 
 ### 🔐 I'm Implementing Authentication
@@ -62,6 +63,10 @@ TYPES:     BoardStore with Svelte 5 Runes
 IMPLEMENT: src/lib/utils/nostrEvents.ts
 REFERENCE: AGENTS.md Section V.1 (Event Serialization)
 FUNCTIONS: boardToNostrEvent(), cardToNostrEvent(), etc.
+
+⭐ NEW: Dynamic UI Updates
+REFERENCE: PROP-UPDATE-GUIDE.md (5-Step Implementation)
+LEARN:     How to implement user-editable props with persistence
 ```
 
 ### Phase 1.2: Offline-First (Specs Complete ✅)

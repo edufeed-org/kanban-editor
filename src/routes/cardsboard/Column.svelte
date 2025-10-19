@@ -84,6 +84,39 @@
 	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
 	let isDraggingCards = $state(false);
 
+	// WICHTIG: Überwache BoardStore Updates für Spalten-Eigenschaften (Name, Farbe)
+	// Synchronisiert automatisch wenn die Spalte im Store geändert wird
+	$effect(() => {
+		// Zugriff auf boardStore.uiData triggert Reaktivität
+		const uiColumns = boardStore.uiData;
+		
+		// Suche unsere Column in den neuen UI-Daten
+		const updatedColumn = uiColumns.find(c => c.id === columnId);
+		if (updatedColumn) {
+			// Aktualisiere Name wenn sich geändert hat
+			if (updatedColumn.name !== name) {
+				console.log('🔄 Column.svelte: Name vom BoardStore aktualisiert', {
+					columnId,
+					oldName: name,
+					newName: updatedColumn.name
+				});
+				name = updatedColumn.name;
+				editName = name; // Auch editName aktualisieren für Consistency
+			}
+			
+			// Aktualisiere Farbe wenn sich geändert hat
+			if (updatedColumn.color !== color) {
+				console.log('🔄 Column.svelte: Farbe vom BoardStore aktualisiert', {
+					columnId,
+					oldColor: color,
+					newColor: updatedColumn.color
+				});
+				color = updatedColumn.color;
+				selectedColor = color || 'slate'; // Auch selectedColor aktualisieren
+			}
+		}
+	});
+
 	// WICHTIG: Überwache BoardStore Updates und aktualisiere Items automatisch
 	// Das ist notwendig, weil Card-Bearbeitungen (CardDialog) nicht sofort in der UI
 	// sichtbar sind, bis Column.svelte die neuen Items vom BoardStore lädt
@@ -158,19 +191,25 @@
    }
 
 	function handleRename() {
-		name = editName;
+		if (editName !== name && columnId) {
+			boardStore.updateColumn(columnId, { name: editName });
+		}
 		popoverOpen = false;
 	}
 
 	function handleColorChange() {
-		color = selectedColor;
+		if (selectedColor !== color && columnId) {
+			boardStore.updateColumn(columnId, { color: selectedColor });
+		}
 		popoverOpen = false;
 	}
 
 	function handleDelete() {
-		if (confirm(`Spalte "${name}" wirklich löschen?`)) {
-			// TODO: Implement delete column
-			console.log('Delete column:', name);
+		if (confirm(`Spalte "${name}" und alle ${items.length} Karten wirklich löschen?`)) {
+			if (columnId) {
+				console.log('🗑️ Deleting column:', { columnId, name, cardsCount: items.length });
+				boardStore.deleteColumnWithCards(columnId);
+			}
 		}
 		popoverOpen = false;
 	}

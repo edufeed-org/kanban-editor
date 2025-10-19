@@ -275,6 +275,43 @@ export class BoardStore {
         }
     }
 
+    public updateColumn(columnId: string, updates: { name?: string; color?: string }): void {
+        const column = this.board.findColumn(columnId);
+        if (column) {
+            column.update(updates);
+            this.triggerUpdate(); // Trigger Reaktivität
+            this.publishToNostr();
+        } else {
+            throw new Error(`Column with id ${columnId} not found`);
+        }
+    }
+
+    public deleteColumnWithCards(columnId: string): void {
+        this.board.deleteColumn(columnId);
+        
+        // Entferne auch aus _columnOrder
+        this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+        
+        this.triggerUpdate(); // Trigger Reaktivität
+        this.publishToNostr();
+    }
+
+    public deleteBoard(): void {
+        // Lösche alles: Neue leere Board mit Standardspalten
+        this.board = new Board({
+            name: 'Neues Board',
+            columns: [
+                { name: 'To Do' },
+                { name: 'In Progress' },
+                { name: 'Done' }
+            ]
+        });
+        
+        this._columnOrder = this.board.columns.map(c => c.id);
+        this.triggerUpdate(); // Trigger Reaktivität
+        this.publishToNostr();
+    }
+
     // ============================================================================
     // UI-EVENT-HANDLER (direkt von Komponenten aufrufbar)
     // ============================================================================
@@ -296,6 +333,29 @@ export class BoardStore {
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;
+    }
+
+    /**
+     * Wird von Board.svelte aufgerufen: "Neue Spalte" Button am Ende des Boards
+     */
+    public createColumn(name: string = 'Neue Spalte'): string {
+        console.log('🆕 createColumn aufgerufen:', { name });
+        
+        const columnProps: ColumnProps = {
+            name,
+            color: 'slate'
+        };
+        
+        const column = this.board.addColumn(columnProps);
+        
+        // Aktualisiere _columnOrder: Neue Spalte am Ende hinzufügen
+        this._columnOrder = [...this._columnOrder, column.id];
+        
+        this.triggerUpdate(); // Trigger Reaktivität
+        this.publishToNostr();
+        
+        console.log('✅ Spalte erstellt:', column.id, 'Board hat jetzt', this.board.columns.length, 'Spalten');
+        return column.id;
     }
 
     /**
