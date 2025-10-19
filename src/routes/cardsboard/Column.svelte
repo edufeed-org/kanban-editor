@@ -337,7 +337,7 @@
 </style>
 
 <div 
-	class="column-wrapper {isSelected ? 'border-2 border-primary rounded-lg' : ''}" 
+	class="column-wrapper {isSelected ? 'border-2 border-ring rounded-sm p-1' : ''}" 
 >
 	<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
 		if (e.key === 'Enter' || e.key === ' ') {

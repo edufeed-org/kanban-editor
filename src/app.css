@@ -108,6 +108,15 @@
     width: 18px;
     height: 18px;
   }
+  
+  .column-wrapper.selected {
+    border-width: 2px;
+    border-style: solid;
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
 }
 
 /* Icon Hover Effect with Accent Color - echte CSS-Regel */
