@@ -13,7 +13,7 @@ Das System ist als **3-schichtige Architektur** konzipiert:
                            ↕ (Reactive Updates)
 ┌─────────────────────────────────────────────────────────┐
 │  2. Application Layer (BoardStore - Single Source)      │
-│  ├─ board = $state(Board-Instance) ← CENTRAL STATE     │
+│  ├─ board = $state(Board-Instance) ← CENTRAL STATE      │
 │  ├─ _columnOrder = $state (immutable column ordering)   │
 │  ├─ updateTrigger = $state (reactivity trigger)         │
 │  ├─ uiData = $derived.by (reactive UI transformation)   │

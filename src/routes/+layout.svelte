@@ -2,6 +2,9 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
+  import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
+  import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
+  import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
 
   interface Props {
     children?: any;

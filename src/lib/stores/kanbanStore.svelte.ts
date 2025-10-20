@@ -190,11 +190,17 @@ export class BoardStore {
     }
 
     public addColumn(props: ColumnProps) {
-        return this.board.addColumn(props);
+        const column = this.board.addColumn(props);
+        // WICHTIG: _columnOrder muss aktualisiert werden!
+        // Sonst wird die neue Spalte von uiData nicht berücksichtigt (weil $derived.by nach _columnOrder filtert)
+        this._columnOrder = [...this._columnOrder, column.id];
+        return column;
     }
 
     public deleteColumn(columnId: string): void {
         this.board.deleteColumn(columnId);
+        // WICHTIG: _columnOrder muss aktualisiert werden!
+        this._columnOrder = this._columnOrder.filter(id => id !== columnId);
     }
 
     public findColumn(columnId: string) {
@@ -346,10 +352,8 @@ export class BoardStore {
             color: 'slate'
         };
         
-        const column = this.board.addColumn(columnProps);
-        
-        // Aktualisiere _columnOrder: Neue Spalte am Ende hinzufügen
-        this._columnOrder = [...this._columnOrder, column.id];
+        // Verwende this.addColumn() (nicht this.board.addColumn()) damit _columnOrder aktualisiert wird
+        const column = this.addColumn(columnProps);
         
         this.triggerUpdate(); // Trigger Reaktivität
         this.publishToNostr();

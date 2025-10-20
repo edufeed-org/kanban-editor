@@ -64,31 +64,25 @@
 
    // Lokaler State für dndzone: Wird von dndzone mutiert
    let columns = $state([...columns_inner]);
-   
-   // Tracke die Spalten-Reihenfolge hash um externe Änderungen zu erkennen
-   let columnOrderHash = $derived.by(() => {
-     return columns_inner.map(c => c.id).join(',');
-   });
-   
-   // Wenn die Spalten-Reihenfolge vom Parent sich ändert, synchronisiere
-   // ABER: Nur wenn KEINE dndzone-Operation in Prozess ist
    let isDragging = $state(false);
    
+   // WICHTIG: Synchronisiere columns mit columns_inner (vom Parent)
+   // Das ist essentiell für die Reaktivität!
+   // Wenn Parent columns_inner ändert (z.B. neue Spalte), muss columns aktualisiert werden
    $effect(() => {
-     // Wenn nicht gerade Dragging, kann man die Spalten-Reihenfolge synchronisieren
+     // Wenn nicht gerade Dragging, synchronisiere mit Parent-Änderungen
      if (!isDragging) {
-       const hash = columnOrderHash;
-       const currentHash = columns.map(c => c.id).join(',');
+       // Vergleiche ob sich die Spalten-Reihenfolge oder IDs geändert haben
+       const parentIds = columns_inner.map(c => c.id).join(',');
+       const localIds = columns.map(c => c.id).join(',');
        
-       if (hash !== currentHash) {
-         console.log('Spalten-Reihenfolge änderte sich - Synchronisiere:', hash);
-         // Ersetze mit neuer Reihenfolge, aber behalte die Spalten-Instanzen
-         const newColumns: typeof columns = [];
-         for (const id of hash.split(',')) {
-           const col = columns.find(c => c.id === id) || columns_inner.find(c => c.id === id);
-           if (col) newColumns.push(col);
-         }
-         columns = newColumns.length === columns_inner.length ? [...columns_inner] : newColumns;
+       if (parentIds !== localIds) {
+         console.log('🔄 Board.svelte: Spalten vom Parent synchronisieren', {
+           parentIds,
+           localIds
+         });
+         // Aktualisiere mit Spalten vom Parent (aber in lokaler Reihenfolge)
+         columns = [...columns_inner];
        }
      }
    });
