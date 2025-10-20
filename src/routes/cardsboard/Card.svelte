@@ -204,15 +204,15 @@
 				{#if showMenu}
 					<Popover.Root>
 						<Popover.Trigger
-							class="popover-trigger border-1 rounded-sm p-1 hover:bg-accent group"
-							onclick={(e) => {
-								e.stopPropagation();
-							}}
-							type="button"
-							aria-label="Karten-Aktionen"
-						>
-							<EllipsisVerticalIcon class="h-4 w-4" />
-						</Popover.Trigger>
+								class="popover-trigger h-9 w-5 hover:bg-accent group"
+								onclick={(e) => {
+									e.stopPropagation();
+								}}
+								type="button"
+								aria-label="Karten-Aktionen"
+							>
+								<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+							</Popover.Trigger>
 						<Popover.Content align="end" class="w-64" onclick={(e) => {
 							e.stopPropagation();
 						}}>
@@ -314,13 +314,13 @@
 				<FullscreenIcon />
 			</button>
 			<button 
-				class="edit-button group" 
+				class="edit-button dark:hover:text-white" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
 				aria-label="Bearbeiten" 
 				title="Bearbeiten"
 				type="button"
 			>
-				<PencilLineIcon />
+				<PencilLineIcon class="h-4 w-4" />
 			</button>
 		</div>
 	</Card.Footer>
@@ -518,7 +518,7 @@
 		
 		.edit-button:hover {
 			background-color: var(--primary);
-			color: var(--secondary);
+			color: var(--secondary-foreground);
 		}
 
 		.edit-button:focus {

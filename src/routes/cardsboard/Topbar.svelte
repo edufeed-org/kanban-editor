@@ -162,8 +162,8 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root>
-                <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
-                    <EllipsisVerticalIcon class="h-4 w-4 text-black bg-gray-400 dark:text-white dark:bg-gray-400 rounded-sm p-0" />
+                <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
+                    <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
