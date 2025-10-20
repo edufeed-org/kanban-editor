@@ -30,6 +30,7 @@ Kanban boards are a popular project management tool that enables visual organiza
         ["d", "<board-d-identifier>"],
         ["title", "Board Name"],
         ["description","Board Description"], //can contain markdown too
+        ["pub","draft"], //publication state: 'draft' or 'published'
         ["alt","A board to track my work"], //Human-readable plaintext summary to be shown in non-supporting clients - as per NIP-31
 
         // List of all columns in the board below in format ["col","col-id","name","order"]
@@ -60,6 +61,7 @@ Editing the board event is possible only by the creator of the board.
         ["d", "<card-d-identifier>"],
         ["title", "Card Title"],
         ["description","Card Description"], //can contain markdown too
+        ["pub","draft"], //publication state: 'draft' or 'published'
         ["alt","A card representing a task"], //Human-readable plaintext summary to be shown in non-supporting clients - as per NIP-31
         ["s", "To do"], //status of the card
         ["rank","10"], // order of the card in the column - cards may be displayed in the ascending order of rank by default

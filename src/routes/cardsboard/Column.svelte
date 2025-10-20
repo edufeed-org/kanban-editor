@@ -10,6 +10,8 @@
 	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
+	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 
  	const flipDurationMs = 150;
 
@@ -62,6 +64,7 @@
 	} = $props();
 
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+	import PlusIcon from '@lucide/svelte/icons/plus';
 
 	// Local state for column editing
 	let isEditing = $state(false);
@@ -79,13 +82,95 @@
 		{ value: 'purple', label: 'Lila' }
 	];
 
+	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
+	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
+	let isDraggingCards = $state(false);
+
+	// WICHTIG: Überwache BoardStore Updates für Spalten-Eigenschaften (Name, Farbe)
+	// Synchronisiert automatisch wenn die Spalte im Store geändert wird
+	$effect(() => {
+		// Zugriff auf boardStore.uiData triggert Reaktivität
+		const uiColumns = boardStore.uiData;
+		
+		// Suche unsere Column in den neuen UI-Daten
+		const updatedColumn = uiColumns.find(c => c.id === columnId);
+		if (updatedColumn) {
+			// Aktualisiere Name wenn sich geändert hat
+			if (updatedColumn.name !== name) {
+				console.log('🔄 Column.svelte: Name vom BoardStore aktualisiert', {
+					columnId,
+					oldName: name,
+					newName: updatedColumn.name
+				});
+				name = updatedColumn.name;
+				editName = name; // Auch editName aktualisieren für Consistency
+			}
+			
+			// Aktualisiere Farbe wenn sich geändert hat
+			if (updatedColumn.color !== color) {
+				console.log('🔄 Column.svelte: Farbe vom BoardStore aktualisiert', {
+					columnId,
+					oldColor: color,
+					newColor: updatedColumn.color
+				});
+				color = updatedColumn.color;
+				selectedColor = color || 'slate'; // Auch selectedColor aktualisieren
+			}
+		}
+	});
+
+	// WICHTIG: Überwache BoardStore Updates und aktualisiere Items automatisch
+	// Das ist notwendig, weil Card-Bearbeitungen (CardDialog) nicht sofort in der UI
+	// sichtbar sind, bis Column.svelte die neuen Items vom BoardStore lädt
+	// ABER: Pausiere während DnD um zu verhindern, dass Items während des Drags überschrieben werden
+	$effect(() => {
+		// Wenn gerade Drag stattfindet, update NICHT
+		if (isDraggingCards) {
+			return;
+		}
+		
+		// Zugriff auf boardStore.uiData triggert Reaktivität
+		const uiColumns = boardStore.uiData;
+		
+		// Suche unsere Column in den neuen UI-Daten
+		const updatedColumn = uiColumns.find(c => c.id === columnId);
+		if (updatedColumn) {
+			// Vergleiche Items - wenn sie unterschiedlich sind, aktualisiere
+			const itemsChanged = updatedColumn.items.length !== items.length ||
+				updatedColumn.items.some((newItem, idx) => {
+					const oldItem = items[idx];
+					return !oldItem || newItem.id !== oldItem.id || 
+						newItem.name !== oldItem.name ||
+						newItem.description !== oldItem.description;
+				});
+			
+			if (itemsChanged) {
+				console.log('🔄 Column.svelte: Items vom BoardStore aktualisiert', {
+					columnId,
+					oldCount: items.length,
+					newCount: updatedColumn.items.length
+				});
+				items = updatedColumn.items;
+			}
+		}
+	});
+
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
   	   console.warn("got consider", name);
+  	   isDraggingCards = true;
  		items = newItems;
    }
+   
    function handleDndFinalizeCards(e: any) {
-     onDrop(e.detail.items);
+     const newItems = e.detail.items;
+     // Setze isDraggingCards zurück NACH kurzer Verzögerung
+     // um zu erlauben, dass die BoardStore Updates verarbeitet werden
+     isDraggingCards = false;
+     
+     // Für jetzt: einfach an den Parent callback übergeben
+     // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
+     onDrop(newItems);
    }
 
    function handleCardAction(event: CustomEvent) {
@@ -108,19 +193,25 @@
    }
 
 	function handleRename() {
-		name = editName;
+		if (editName !== name && columnId) {
+			boardStore.updateColumn(columnId, { name: editName });
+		}
 		popoverOpen = false;
 	}
 
 	function handleColorChange() {
-		color = selectedColor;
+		if (selectedColor !== color && columnId) {
+			boardStore.updateColumn(columnId, { color: selectedColor });
+		}
 		popoverOpen = false;
 	}
 
 	function handleDelete() {
-		if (confirm(`Spalte "${name}" wirklich löschen?`)) {
-			// TODO: Implement delete column
-			console.log('Delete column:', name);
+		if (confirm(`Spalte "${name}" und alle ${items.length} Karten wirklich löschen?`)) {
+			if (columnId) {
+				console.log('🗑️ Deleting column:', { columnId, name, cardsCount: items.length });
+				boardStore.deleteColumnWithCards(columnId);
+			}
 		}
 		popoverOpen = false;
 	}
@@ -177,6 +268,9 @@
 	.column-content {
 		flex: 0 0 auto; /* do not scroll individually - let column grow */
 		padding-right: 0.5rem;
+		min-height: 100px; /* Minimum dropzone height when empty */
+		border-radius: var(--radius-md);
+		padding-bottom: 10px;
 	}
 
 	/* When many cards are present we allow the column to use an inner scroll */
@@ -190,13 +284,27 @@
 		flex: 0 0 auto;
 		padding: 0.5rem;
 		border-top: 1px dashed var(--muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 48px;
-		cursor: pointer;
+		min-height: 24px;
 		background: linear-gradient(180deg, transparent, rgba(0,0,0,0.01));
 	}
+	.add-card-button {
+		border: 1px dotted var(--muted-foreground);
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--muted-foreground);
+		transition: all 0.2s ease;
+		font-size: 1rem;
+	}
+	
+
+	.add-card-button:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+		background: var(--primary)/10;
+	}
+
+	
+		
 
 	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
 
@@ -230,60 +338,88 @@
 </style>
 
 <div 
-	class="column-wrapper {isSelected ? 'border-2 border-primary rounded-lg' : ''}" 
+	class="column-wrapper {isSelected ? 'border-2 border-ring rounded-sm p-1' : ''}" 
 >
-		<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				handleHeaderClick(e as unknown as MouseEvent);
-			}
-		}} role="button" tabindex="0">
-			<div class="flex items-center justify-between w-full">
-				<div class="column-title">{name}</div>
+	<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			handleHeaderClick(e as unknown as MouseEvent);
+		}
+	}} role="button" tabindex="0">
+		<div class="flex items-center justify-between w-full">
+			<div class="column-title">{name}</div>
+			
+			<!-- Header Toolbar: Add Card + Menu -->
+			<div class="flex items-center gap-1">
+				<!-- Add Card Button -->
+				<Button 
+					variant="ghost" 
+					size="sm" 
+					class="h-6 w-6 p-0 hover:bg-accent group"
+					title="Neue Karte am Anfang"
+					onclick={(e) => {
+						e.stopPropagation();
+						if (columnId) {
+							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							const newCard: CardItem = {
+								id: newCardId,
+								name: 'Neue Karte',
+								description: 'Bitte bearbeiten...',
+							};
+							// Neue Karte AM ANFANG einfügen
+							onDrop([newCard, ...items]);
+							// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
+							setTimeout(() => {
+								onSelectCard?.(String(newCardId));
+								console.log('✨ Neue Karte selektiert:', newCardId);
+							}, 0);
+						}
+					}}
+				>
+					<PlusIcon class="h-4 w-4" />
+				</Button>
+
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
-					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-6 w-6 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="12" cy="5" r="1"/>
-							<circle cx="12" cy="12" r="1"/>
-							<circle cx="12" cy="19" r="1"/>
-						</svg>
+					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
 					</Popover.Trigger>
-				<Popover.Content align="end" class="w-64">
-					<div class="space-y-4">
-						<div class="space-y-2">
-							<h4 class="font-medium text-sm">Spalte umbenennen</h4>
-							<Input bind:value={editName} placeholder="Spaltenname" />
-							<Button size="sm" onclick={handleRename} class="w-full">
-								Umbenennen
+					<Popover.Content align="end" class="w-64">
+						<div class="space-y-4">
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Spalte umbenennen</h4>
+								<Input bind:value={editName} placeholder="Spaltenname" />
+								<Button size="sm" onclick={handleRename} class="w-full">
+									Umbenennen
+								</Button>
+							</div>
+							
+							<Separator />
+							
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Farbe wählen</h4>
+								<RadioGroup.Root bind:value={selectedColor}>
+									{#each colorOptions as option}
+										<div class="flex items-center space-x-2">
+											<RadioGroup.Item value={option.value} id={`color-${option.value}`} />
+											<Label for={`color-${option.value}`}>{option.label}</Label>
+										</div>
+									{/each}
+								</RadioGroup.Root>
+								<Button size="sm" onclick={handleColorChange} class="w-full">
+									Farbe ändern
+								</Button>
+							</div>
+							
+							<Separator />
+							
+							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
+								Spalte löschen
 							</Button>
 						</div>
-						
-						<Separator />
-						
-						<div class="space-y-2">
-							<h4 class="font-medium text-sm">Farbe wählen</h4>
-							<RadioGroup.Root bind:value={selectedColor}>
-								{#each colorOptions as option}
-									<div class="flex items-center space-x-2">
-										<RadioGroup.Item value={option.value} id={`color-${option.value}`} />
-										<Label for={`color-${option.value}`}>{option.label}</Label>
-									</div>
-								{/each}
-							</RadioGroup.Root>
-							<Button size="sm" onclick={handleColorChange} class="w-full">
-								Farbe ändern
-							</Button>
-						</div>
-						
-						<Separator />
-						
-						<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
-							Spalte löschen
-						</Button>
-					</div>
-				</Popover.Content>
-			</Popover.Root>
+					</Popover.Content>
+				</Popover.Root>
+			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
@@ -296,7 +432,10 @@
 				<Card
 					card={item}
 					isSelected={selectedCardId === String(item.id)}
-					onSelect={() => onSelectCard?.(String(item.id))}
+					onSelect={() => {
+						console.log('🖱️ Card clicked:', item.id, 'selectedCardId:', selectedCardId);
+						onSelectCard?.(String(item.id));
+					}}
 					{onCardAction}
 					{onPublishStateChange}
 					{onSidebarAction}
@@ -305,17 +444,6 @@
 		{/each}
 	</div>
 
-	<!-- Footer: show drop icon and allow click to append a placeholder card -->
-	<button type="button" class="column-footer" onclick={() => {
-			const newCard: CardItem = {
-				id: Date.now(),
-				name: 'Neue Karte (Platzhalter) - bitte bearbeiten',
-				description: 'Platzhalterkarte erstellt durch Footer-Button',
-			};
-			items = [...items, newCard];
-			onDrop(items);
-		}}>
-		<SquarePlusIcon class="h-5 w-5" />
-		<span class="sr-only">Karte ans Ende anfügen</span>
-	</button>
+	<!-- Footer: nur noch visueller Separator -->
+	<div class="column-footer"></div>
 </div>

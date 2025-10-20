@@ -20,7 +20,9 @@
     import SunIcon from "@lucide/svelte/icons/sun";
     import BotIcon from "@lucide/svelte/icons/bot";
     import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
+    import TrashIcon from "@lucide/svelte/icons/trash";
     import SettingsPanel from './SettingsPanel.svelte';
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     
 
     // Props für Sidebar-Toggle, Title und Board-Meta
@@ -47,8 +49,8 @@
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
-        { url: 'wss://relay.damus.io', type: 'local', enabled: true },
-        { url: 'wss://relay.primal.net', type: 'public', enabled: true }
+        { url: 'ws://localhost:4869', type: 'local', enabled: true },
+        { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
     ]);
     
     let webhookUrl = $state('');
@@ -130,6 +132,13 @@
                 .filter(t => t.length > 0);
         }
     }
+
+    function handleDeleteBoard() {
+        if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
+            console.log('🗑️ Deleting entire board');
+            boardStore.deleteBoard();
+        }
+    }
     
 </script>
 
@@ -142,9 +151,9 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="size-9"
+                class="h-9 w-9 group"
             >
-                <PanelLeftIcon class="size-6" />
+                <PanelLeftIcon class="h-4 w-4" />
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
@@ -153,8 +162,8 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root>
-                <Dialog.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="Board-Einstellungen">
-                    <EllipsisVerticalIcon class="size-6 border-2 rounded-sm p-0" />
+                <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
+                    <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
@@ -205,6 +214,10 @@
                     <Dialog.Footer>
                         <Button variant="outline" onclick={() => {}}>Abbrechen</Button>
                         <Button onclick={saveBoardMeta}>Speichern & An Nostr senden</Button>
+                        <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto group">
+                            <TrashIcon class="mr-2 h-4 w-4" />
+                            Board löschen
+                        </Button>
                     </Dialog.Footer>
                 </Dialog.Content>
             </Dialog.Root>
@@ -212,8 +225,8 @@
 
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
-                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all" title="KI-Zusammenfassung">
-                    <SquareSigmaIcon  />
+                <Drawer.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
+                    <SquareSigmaIcon class="h-4 w-4" />
                 </Drawer.Trigger>
                 <Drawer.Content>
                     <Drawer.Header>
@@ -237,8 +250,8 @@
 
             <!-- AI Settings Sheet -->
             <Sheet.Root>
-                <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-                    <BotIcon  />
+                <Sheet.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+                    <BotIcon class="h-4 w-4"/>
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
@@ -271,9 +284,9 @@
 
             <!-- Profile -->
             <DropdownMenu.Root>
-                <DropdownMenu.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
+                <DropdownMenu.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
                     <Avatar class="h-8 w-8">
-                        <AvatarFallback><UserRoundIcon /></AvatarFallback>
+                        <AvatarFallback class="pointer-events-none"><UserRoundIcon class="h-4 w-4 pointer-events-none" /></AvatarFallback>
                     </Avatar>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
@@ -285,11 +298,11 @@
             </DropdownMenu.Root>
 
             <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme}>
+            <Button variant="ghost" size="icon" onclick={toggleTheme} class="group h-9 w-9">
                 {#if currentTheme === 'dark'}
-                    <SunIcon  class="size-6"/>
+                    <SunIcon class="h-4 w-4"/>
                 {:else}
-                    <MoonIcon  class="size-6"/>
+                    <MoonIcon class="h-4 w-4"/>
                 {/if}
             </Button>
             
@@ -300,9 +313,9 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="size-9"
+                class="h-9 w-9 group"
             >
-                <PanelRightIcon  class="size-6"/>
+                <PanelRightIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>

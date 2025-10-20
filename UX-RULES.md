@@ -38,6 +38,7 @@ Die **Auswahl der Icons** findet über https://lucide.dev/ statt. Verwende nur I
 | **Icon-Positionierung** | Icons müssen konsistent positioniert werden. | **Setze Icons LINKS vom Text** mit den Klassen `class="mr-2 h-4 w-4"` |
 | **Icon-Namenskonvention** | Icon-Namen folgen der kebab-case Konvention. | **Beispiele**: `user` → `@lucide/svelte/icons/user`, `key-round` → `@lucide/svelte/icons/key-round`, `message-square` → `@lucide/svelte/icons/message-square` |
 | **No Emojis** | Niemals Emojis statt Icons verwenden. | **Ersetze alle Emojis** durch entsprechende Lucide Icons (🔑 → `KeyRoundIcon`, 👤 → `UserIcon`, etc.) |
+| **Icon-Hover-Effekt** | Alle Icons müssen einen konsistenten Hover-Effekt haben. | Der Parent-Button erhält die Klasse `group`. Die CSS-Regel `.group:hover svg { color: var(--accent); transform: scale(1.1); transition: all 0.2s ease; }` steuert automatisch alle SVGs. **Icons benötigen keine zusätzlichen Klassen.** Dies erstellt einen subtilen Effekt: Farbe wird zu `--accent` und Icon skaliert zu 110%. |
 
 **Beispiel: Korrekte Icon-Verwendung**
 
@@ -55,17 +56,17 @@ Die **Auswahl der Icons** findet über https://lucide.dev/ statt. Verwende nur I
 </script>
 
 <!-- ✅ RICHTIG: Icon links vom Text mit korrekten Klassen -->
-<Button>
+<Button class="group">
   <PlusIcon class="mr-2 h-4 w-4" />
   Hinzufügen
 </Button>
 
-<Button variant="outline">
+<Button variant="outline" class="group">
   <UserIcon class="mr-2 h-4 w-4" />
   Profil bearbeiten
 </Button>
 
-<Button variant="ghost">
+<Button variant="ghost" class="group">
   <SettingsIcon class="mr-2 h-4 w-4" />
   Einstellungen
 </Button>
@@ -74,7 +75,7 @@ Die **Auswahl der Icons** findet über https://lucide.dev/ statt. Verwende nur I
 <!-- <Button>🔑 Anmelden</Button> -->
 
 <!-- ✅ RICHTIG: Icon statt Emoji -->
-<Button>
+<Button class="group">
   <KeyRoundIcon class="mr-2 h-4 w-4" />
   Anmelden
 </Button>
@@ -531,7 +532,7 @@ Das Layout verwendet ein **Resizable Panel System** mit drei Hauptbereichen:
 **Beispiel State-Management:**
 
 ```typescript
-// kanbanStore.ts
+// kanbanStore.svelte.ts
 import { writable, derived } from 'svelte/store';
 
 export const selectedCard = writable<Card | null>(null);

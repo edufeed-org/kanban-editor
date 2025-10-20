@@ -16,6 +16,7 @@ START → ROADMAP.md (See phases & timeline)
 START → UX-RULES.md (Component patterns)
       → STORES.md Section XI (Export/Import UI)
       → AGENTS.md Section IX (shadcn-svelte compliance)
+      → PROP-UPDATE-GUIDE.md (Dynamische UI-Änderungen!) ⭐
 ```
 
 ### 🔐 I'm Implementing Authentication
@@ -55,13 +56,17 @@ IMPLEMENT: src/lib/classes/BoardModel.ts
 REFERENCE: AGENTS.md Section III (Interfaces & Classes)
 TYPES:     Card, Column, Board, Chat classes
 
-IMPLEMENT: src/lib/stores/kanbanStore.ts  
+IMPLEMENT: src/lib/stores/kanbanStore.svelte.ts  
 REFERENCE: STORES.md Section I (BoardStore)
 TYPES:     BoardStore with Svelte 5 Runes
 
 IMPLEMENT: src/lib/utils/nostrEvents.ts
 REFERENCE: AGENTS.md Section V.1 (Event Serialization)
 FUNCTIONS: boardToNostrEvent(), cardToNostrEvent(), etc.
+
+⭐ NEW: Dynamic UI Updates
+REFERENCE: PROP-UPDATE-GUIDE.md (5-Step Implementation)
+LEARN:     How to implement user-editable props with persistence
 ```
 
 ### Phase 1.2: Offline-First (Specs Complete ✅)
@@ -225,7 +230,7 @@ async importFromShareLink(
 
 ### ✅ BoardStore Integration (Phase 1.1)
 ```typescript
-// src/lib/stores/kanbanStore.ts
+// src/lib/stores/kanbanStore.svelte.ts
 import { Board, Chat } from '$lib/classes/BoardModel';
 import { SyncManager } from './syncManager';
 

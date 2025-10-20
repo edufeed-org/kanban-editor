@@ -20,6 +20,7 @@ Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte
 | Dokument | Fokus | Abhängigkeit für |
 |:---------|:-----|:-----------------|
 | **[STORES.md](./STORES.md)** (NEU) | Store-Architektur, Export/Import API (Meilenstein 1.5), Persistence | BoardStore, AuthStore, SyncManager, Offline-First |
+| **[PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md)** ⭐ NEW | Dynamische UI-Prop-Änderungen (Name, Farbe, etc.) | Spalten/Karten Bearbeitung, Persistenz |
 | **[NOSTR-USER.md](./NOSTR-USER.md)** | Benutzerauthentifizierung, NIP-07 Signer, Session-Management | AuthStore, Event-Signierung, User-Kontext |
 | **[NDK.md](./NDK.md)** | Nostr Development Kit, Event Publishing, Subscriptions, Relay-Handling | `nostrEvents.ts`, SyncManager, Live-Updates |
 | **[Kanban-NIP.md](./Kanban-NIP.md)** | Nostr Event Kinds (30301, 30302, 1), Tag-Schema | Event-Serialisierung in `nostrEvents.ts` |
@@ -29,7 +30,7 @@ Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte
 ```
 BoardModel.ts (Core)
     ↓
-kanbanStore.ts (via STORES.md)
+kanbanStore.svelte.ts (via STORES.md)
     ├→ Benötigt: AuthStore (NOSTR-USER.md)
     ├→ Benötigt: NDK Context (NDK.md)
     └→ Benötigt: SyncManager (AGENTS.md + STORES.md)
@@ -39,6 +40,7 @@ kanbanStore.ts (via STORES.md)
 UI-Komponenten (Card.svelte, etc.)
     ├→ Verwenden: shadcn-svelte (UX-RULES.md)
     ├→ Lesen: BoardStore (STORES.md)
+    ├→ Bearbeiten Props: PROP-UPDATE-GUIDE.md ⭐
     └→ Rendern: Board-Daten (BoardModel.ts)
 ```
 
@@ -48,6 +50,7 @@ UI-Komponenten (Card.svelte, etc.)
 - ❌ Boards können **nicht exportiert/importiert** werden (STORES.md fehlt)
 - ❌ UI-Komponenten **verletzen UX-RULES** (UX-RULES.md ignoriert)
 - ❌ Events können **nicht publiziert** werden (NDK.md fehlt)
+- ❌ **Prop-Änderungen funktionieren nicht korrekt** (PROP-UPDATE-GUIDE.md ignoriert) ⭐
 
 ## II. Technischer Stack & Konventionen
 
@@ -177,47 +180,99 @@ Diese Klasse ist die zentrale Schnittstelle zur KI (simulierter WebSocket/Nostr 
 | `sendPromptToAI(prompt: string, context?: Card \| Column \| Board)` | **Wichtig**: Sammelt den Kontext. Ruft `context.getContextData()` auf, wenn `context` übergeben wird. Erstellt das `payload`-Objekt (`{ prompt, boardContext, selectionContext }`) für den KI-Server. **Siehe STORES.md Section III für Payload-Format**. |
 | `processAIAction(action: AIAction)` | **Wichtig**: Führt die Board-Manipulation aus, ausgelöst durch die KI. Muss alle `AIAction`-Typen (insbesondere `split_card`) mit den entsprechenden Methoden der `Board`- und `Column`-Klassen abhandeln. Wird von BoardStore aufgerufen. |
 
-## IV. State Management (Svelte 5 Stores)
+## IV. State Management (Svelte 5 Stores) - **WICHTIG: .svelte.ts Konvention!**
 
-**Siehe auch:** [STORES.md](./STORES.md) für vollständige Store-Architektur, Export/Import API (Meilenstein 1.5), Context-Passing und Integration mit [NDK.md](./NDK.md) + [NOSTR-USER.md](./NOSTR-USER.md).
+**⚠️ KRITISCHE ÄNDERUNG AB SVELTE 5:**
 
-Der KI-Agent soll die folgenden Svelte 5 Stores in der Datei `src/lib/stores/kanbanStore.ts` erstellen.
+Alle Stores mit **reaktivem State** müssen die Endung `.svelte.ts` haben, damit der Compiler Runes transformieren kann!
 
 ```typescript
-// src/lib/stores/kanbanStore.ts
-
-import { Board, Chat } from '$lib/classes/BoardModel';
-import { persisted } from 'svelte-persisted-store'; // Optional, für lokale Persistenz
-
-// Die Board-Daten selbst (sollten als $state im Svelte-Runes-Kontext liegen)
-// Für die Kapselung in einem Store (für globale Verwendung) wird eine Store-Klasse benötigt,
-// die die Board-Instanz kapselt.
-// Kontext: Svelte 5 Runes Syntax
+// ❌ FALSCH: kanbanStore.svelte.ts
 export class BoardStore {
-    // Die Board-Instanz als reaktiver Zustand
-    private board = $state(new Board({ 
-        name: 'Initiales Kanban Board', 
-        columns: [{ name: 'Materialideen' }, { name: 'Auswahl' }, { name: 'Einstieg' }, { name: 'Erarbeitung' }, { name: 'Sicherung' }]
-    }));
-
-    // Öffentliche getter-Funktion, um die Board-Daten reaktiv abzurufen
-    public get data() {
-        return this.board;
-    }
-
-    // Proxy-Methoden, die die Methoden der Board-Instanz aufrufen
-    public moveCard(cardId: string, fromColId: string, toColId: string) {
-        // Die interne Klassenmethode ändern den $state-Zustand direkt.
-        this.board.moveCard(cardId, fromColId, toColId);
-        // Nach einer Änderung sollte hier der Nostr-Publish-Befehl folgen
-    }
-  
-    // ... alle weiteren Board-Methoden (addColumn, deleteColumn, etc.) als Proxy implementieren
+    private board = $state(...); // ← Compiler-Fehler: $state not recognized
 }
 
-export const boardStore = new BoardStore();
-export const chatStore = $state(new Chat(boardStore.data)); // Chat-Instanz mit Board-Referenz
+// ✅ RICHTIG: kanbanStore.svelte.ts
+export class BoardStore {
+    private board = $state(...); // ← OK! Compiler erkennt Rune
+}
 ```
+
+**Siehe auch:** [STORES.md](./STORES.md) für vollständige Store-Architektur, Runes-Spezifikation und aktuelle Implementierung.
+
+### Aktuelle Implementierung (Phase 1 ✅)
+
+```typescript
+// src/lib/stores/kanbanStore.svelte.ts (NEU: .svelte.ts!)
+
+import { Board, Chat, type CardProps } from '../classes/BoardModel.js';
+
+export class BoardStore {
+    // ← $state Runes (nur in .svelte.ts möglich!)
+    private board = $state(this.loadFromStorage());
+    private _columnOrder = $state<string[]>([...]);
+    private updateTrigger = $state(0);
+
+    // ← $derived.by berechnet automatisch neu
+    public uiData = $derived.by(() => {
+        this.updateTrigger; // ← Dependency Tracking
+        this._columnOrder;
+        // Transform board.columns zu UI-Format
+        // ...
+    });
+
+    // Alle Änderungen gehen durch zentrale Methoden:
+    public createCard(columnId: string, name: string, description?: string): string {
+        const card = this.board.findColumn(columnId)?.addCard({ 
+            heading: name, 
+            content: description 
+        });
+        
+        if (card) {
+            this.triggerUpdate(); // → saveToStorage() synchron
+            this.publishToNostr(); // async
+            return card.id;
+        }
+        throw new Error(`Column ${columnId} not found`);
+    }
+
+    public syncBoardState(uiColumns: UIColumn[]): void {
+        // Atomic 3-Step Sync:
+        // 1. Update _columnOrder
+        this._columnOrder = uiColumns.map(c => c.id);
+        
+        // 2. Reorder board.columns for persistence
+        // ... (siehe STORES.md für Details)
+        
+        // 3. Sync card positions
+        // ...
+        
+        this.triggerUpdate(); // → saveToStorage()
+        this.publishToNostr();
+    }
+
+    private triggerUpdate(): void {
+        this.updateTrigger++;
+        this.saveToStorage(); // ← Synchron!
+    }
+
+    private saveToStorage(): void {
+        const data = this.board.getContextData(true);
+        localStorage.setItem('kanban-board-data', JSON.stringify(data));
+    }
+}
+
+// ← GLOBALE SINGLETON-INSTANZ (nicht writable!)
+export const boardStore = new BoardStore();
+```
+
+**Kritische Design-Punkte:**
+
+1. ✅ **Datei MUSS `.svelte.ts` sein** — Runes funktionieren nur dort!
+2. ✅ **`$state` für reactive state** — updateTrigger wird gelesen → triggert $derived
+3. ✅ **`$derived.by()` reactive computation** — keine Subscribers notwendig
+4. ✅ **Array-Reassignments statt Mutationen** — `this.cards = [...this.cards, card]`
+5. ✅ **Globale Klassen-Instanz** — kein `writable()`, nur `export const boardStore = new BoardStore()`
 
 ## V. Zu liefernde Dateien (Aktueller Stand der Implementierung)
 
@@ -226,24 +281,26 @@ Der aktuelle Stand der Codebase zeigt folgende Struktur:
 | Datei                                 | Beschreibung                                                                                                                                                                   | Status |
 | :------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----: |
 | `src/lib/utils/idGenerator.ts`      | Enthält die Funktion `generateDTag()` und ggf. Logik für Nostr Public Keys.                                                                                                | ✅ |
-| `src/lib/classes/BoardModel.ts`     | **Die vollständige Implementierung der Interfaces und der Klassen `Card`, `Column`, `Board`, `Chat` (siehe III.).**                                             | ✅ |
-| `src/lib/stores/kanbanStore.ts`     | **Die vollständige Implementierung der Svelte 5 Stores (`BoardStore`, `chatStore`) (siehe IV. und STORES.md).**                                                                   | 🟡 |
-| **`src/routes/cardsboard/+page.svelte`** | **Hauptlayout mit Resizable Panels.** Implementiert 3-Panel-Layout mit Topbar, linker/rechter Sidebar und Hauptbereich. (siehe UX-RULES.md)                                                   | ✅ |
-| **`src/routes/cardsboard/Topbar.svelte`** | **Topbar-Komponente.** Enthält Sidebar-Toggles, Board-Titel, Settings-Sheet und Profile-Dropdown. (siehe UX-RULES.md)                                                                     | ✅ |
-| **`src/routes/cardsboard/Board.svelte`** | **Board-Container.** Iteriert über Spalten, implementiert Drag-and-Drop mit `svelte-dnd-action`. (siehe UX-RULES.md)                                                                       | ✅ |
-| **`src/routes/cardsboard/Column.svelte`** | **Spalten-Komponente.** Zeigt Spaltenheader, iteriert über Karten mit Drag-Drop-Zones. (siehe UX-RULES.md)                                                                               | ✅ |
-| **`src/routes/cardsboard/Card.svelte`** | **Karten-Komponente.** Verwendet shadcn Card-Komponenten, zeigt Metadaten und öffnet CardDialog bei Click. (siehe UX-RULES.md)                                                             | ✅ |
-| **`src/routes/cardsboard/CardDialog.svelte`** | **Card-Detail-Modal.** Implementiert Tabs für verschiedene Ansichten (Details, Comments, Links, etc.) mit shadcn Dialog-Struktur. (siehe UX-RULES.md)                                   | ✅ |
-| **`src/routes/cardsboard/types.ts`** | **TypeScript-Definitionen.** Enthält `BoardState`, `ColumnType`, `CardType` Interfaces für die echte Implementierung.                                                 | ✅ |
-| **`src/routes/cardsboard/data.ts`** | **Mock-Daten.** Beispiel-Boards und -Karten für Development und Testing.                                                                                                 | ✅ |
+| `src/lib/classes/BoardModel.ts`     | **Komplette Implementierung mit Runes-safe Array-Reassignments** (`Column.addCard()`, `Card.addComment()`, etc. nutzen `[...array, item]`)                             | ✅ |
+| `src/lib/stores/kanbanStore.svelte.ts`     | **KONVERTIERT zu .svelte.ts!** BoardStore mit `$state`, `$derived.by()`, `syncBoardState()`. Atomic 3-Step Sync für Spalten + Karten.                                    | ✅ |
+| **`src/routes/cardsboard/+page.svelte`** | **Synchronisiert mit BoardStore via boardStore.syncBoardState()** nach DnD-finalize.                                   | ✅ |
+| **`src/routes/cardsboard/Board.svelte`** | **Board-Container mit isDragging guard** zur Vermeidung von $effect-Loops. Implements DnD via svelte-dnd-action.                                                               | ✅ |
+| **`src/routes/cardsboard/Column.svelte`** | **NEU: $effect für Auto-Sync!** Überwacht `boardStore.uiData` und aktualisiert `items` Props automatisch bei Card-Updates.                                                  | ✅ |
+| **`src/routes/cardsboard/Card.svelte`** | **Mit CardDialog integration.** Bearbeitung triggert `boardStore.editCard()` → sofortige UI-Update via Column `$effect`.                                                  | ✅ |
+| **`src/routes/cardsboard/CardDialog.svelte`** | **Card-Detail-Modal mit Tabs.** `onSave` triggert `boardStore.editCard()` für Persistence.                                   | ✅ |
+| **`src/routes/cardsboard/types.ts`** | **TypeScript-Definitionen.** `CardItem`, `UIColumn`, `BoardUpdateHandler` interfaces.                                                 | ✅ |
+| **`src/routes/cardsboard/data.ts`** | **Mock-Daten.** Beispiel-Boards für Development.                                                                                                 | ✅ |
 | `src/lib/utils/testSuite.ts`        | Test-Suite ohne externes Framework. Validiert alle Kern-Funktionen.                                                                                                         | ✅ |
-| **`src/lib/utils/nostrEvents.ts`**  | **NEU: Event Serialization/Deserialization** für Board, Card, Comment. (siehe Kanban-NIP.md, NDK.md)                                                                                                       | ❌ |
-| **`src/lib/stores/syncManager.ts`** | **NEU: Offline-Sync Manager** mit Event Queue und Online/Offline Detection. (siehe STORES.md)                                                                                                  | ❌ |
+| **`src/lib/stores/settingsStore.svelte.ts`** | **🟡 MUSS KONVERTIERT WERDEN!** Aktuell: Svelte 4 `writable()` — sollte zu `.svelte.ts` mit Runes migriert werden.                                                          | 🟡 |
+| **`src/lib/stores/authStore.svelte.ts`** | **⏳ Noch zu erstellen** — Nostr User Management (`.svelte.ts` mit `$state` für user session).                                                       | ⏳ |
+| **`src/lib/utils/nostrEvents.ts`**  | **⏳ Noch zu erstellen** — Event Serialization/Deserialization (boardToNostrEvent, cardToNostrEvent).                                                                           | ⏳ |
+| **`src/lib/stores/syncManager.svelte.ts`** | **⏳ Noch zu erstellen** — Offline-Sync Manager (IndexedDB Queue, `.svelte.ts` mit `$state`).                                                                                | ⏳ |
 
-**Legende:** ✅ Vollständig | 🟡 Teilweise | ❌ Fehlt
+**Legende:** ✅ Vollständig | 🟡 MUSS KONVERTIERT | ⏳ Noch zu erstellen
 
 **📌 Dokumentations-Referenzen:**
-- **[STORES.md](./STORES.md)** — Store-Architektur, Export/Import, Context-Passing
+- **[STORES.md](./STORES.md)** — **UPDATED** für Svelte 5 Runes, aktuelle Implementierung, Konversionsanleitung
+- **[MULTI-LAYER STORAGE.md](./MULTI-LAYER STORAGE.md)** — **UPDATED** Runes Paradigma, Array-Reassignment Rules
 - **[UX-RULES.md](./UX-RULES.md)** — shadcn-svelte Komponenten, Icons, Accessibility
 - **[NDK.md](./NDK.md)** — NDK-Integration, Relay-Handling
 - **[NOSTR-USER.md](./NOSTR-USER.md)** — Authentifizierung, Signer
@@ -355,7 +412,7 @@ Das Kanban-Board muss **offline-fähig** sein und sich automatisch synchronisier
 │  └────────────────────────────────────────┘ │
 │                    ↓                         │
 │  ┌────────────────────────────────────────┐ │
-│  │  BoardStore (kanbanStore.ts)           │ │
+│  │  BoardStore (kanbanStore.svelte.ts)           │ │
 │  │  - Lokaler Zustand (in-memory)         │ │
 │  │  - Sofortige UI-Updates                │ │
 │  └────────────────────────────────────────┘ │
@@ -535,7 +592,7 @@ export class SyncManager {
 Der `BoardStore` muss erweitert werden, um den `SyncManager` zu nutzen:
 
 ```typescript
-// In src/lib/stores/kanbanStore.ts
+// In src/lib/stores/kanbanStore.svelte.ts
 
 import { SyncManager } from './syncManager';
 import { boardToNostrEvent, cardToNostrEvent } from '$lib/utils/nostrEvents';

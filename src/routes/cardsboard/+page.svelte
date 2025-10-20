@@ -1,13 +1,12 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { data } from "./data.js";
 import Board from "./Board.svelte";
 import Topbar from "./Topbar.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Separator } from "$lib/components/ui/separator/index.js";
-	import * as Resizable from "$lib/components/ui/resizable/index.js";
-	import { cn } from "$lib/utils.js";
+import { Button } from "$lib/components/ui/button/index.js";
+import { Separator } from "$lib/components/ui/separator/index.js";
+import * as Resizable from "$lib/components/ui/resizable/index.js";
+import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 
 	// Suppress passive event listener warnings for dnd-action
 	onMount(() => {
@@ -25,8 +24,15 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 		};
 	});
 
+	// Konvertiere boardStore.uiData in das Format, das Board.svelte erwartet
+	let columns = $derived.by(() => {
+		return boardStore.uiData;
+	});
+
 	function handleBoardUpdated(newColumnsData: Column[]) {
-		data.set(newColumnsData);
+		// Synchronisiere kompletten Board-State: Spalten UND Karten-Positionen
+		console.log('📋 handleBoardUpdated - Synchronisiere Board-State');
+		boardStore.syncBoardState(newColumnsData);
 	}
 
 	// State für Selection
@@ -39,15 +45,18 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 	}
 	
 	function handleSelectCard(cardId: string) {
+		console.log('🎯 handleSelectCard called:', cardId, 'current selectedCard:', selectedCard);
+		// Toggle: Wenn gleiche Karte, deselektieren; sonst selektieren
 		selectedCard = selectedCard === cardId ? null : cardId;
 		selectedColumn = null; // Clear column selection when selecting card
+		console.log('✅ selectedCard now:', selectedCard);
 	}
 
 	// Helper-Funktion: Findet die vollständige Hierarchie einer Karte
 	function getCardHierarchy(cardId: string | null) {
 		if (!cardId) return null;
 
-		for (const column of $data) {
+		for (const column of columns) {
 			const card = column.items.find(item => String(item.id) === String(cardId));
 			if (card) {
 				return {
@@ -73,8 +82,8 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 
 	// Debug Stats
 	let stats = $derived({
-		columnsCount: $data.length,
-		cardsCount: $data.reduce((sum, col) => sum + col.items.length, 0),
+		columnsCount: columns.length,
+		cardsCount: columns.reduce((sum, col) => sum + col.items.length, 0),
 		selectedColumn,
 		selectedCard
 	});
@@ -156,7 +165,7 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 		/>			<!-- Board Content - KEIN Scroll hier, nur im Board selbst -->
 			<div class="flex-1 overflow-hidden p-0 min-h-0">
 					<Board 
-						columns={$data} 
+						columns={columns} 
 						onFinalUpdate={handleBoardUpdated}
 						{selectedColumn}
 						{selectedCard}

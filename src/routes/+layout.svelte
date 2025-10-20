@@ -11,10 +11,10 @@
 
   const ndk = new NDKSvelte({
     explicitRelayUrls: [
-      "wss://relay.damus.io",
-      "wss://relay.primal.net",
-      "wss://nos.lol",
+      "ws://localhost:4869",
+      "wss://relay-rpi.edufeed.org/",
     ],
+    enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 
   // Create reactive pool store for Svelte 5
@@ -23,6 +23,6 @@
   ndk.connect();
 </script>
 
-<div class="container viewport w-full h-full max-w-full">
+<div class="container viewport w-full h-full max-w-full mx-auto p-0">
     {@render children?.()}
 </div>

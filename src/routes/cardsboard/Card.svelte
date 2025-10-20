@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CardItem, PublishState } from "./types.js";
-	import type { CardProps } from "../../lib/classes/BoardModel.js";
+	import { boardStore, type CardItem } from "$lib/stores/kanbanStore.svelte.js";
+	import type { PublishState } from "$lib/classes/BoardModel.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -41,7 +41,6 @@
 	let showSidebar = $state(false);
 	let showPublishToggle = $state(true);
 	let showMenu = $state(true);
-	let popoverOpen = $state(false);
 	
 	// Card editing state
 	let editName = $state(card.name);
@@ -62,18 +61,45 @@
 		? card.attendees
 		: (card.author ? [card.author] : []));
 
-	function handleMenuClick() {
-		popoverOpen = !popoverOpen;
-	}
-
-	// function handleDoubleClick() {
-	// 	showModal = true;
-	// }
+	// ============================================================================
+	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
+	// ============================================================================
+	$effect(() => {
+		const uiColumns = boardStore.uiData; // ← Dependency tracking
+		
+		// Finde die aktuelle Karte im Store
+		for (const col of uiColumns) {
+			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
+			if (updatedCard) {
+				// Aktualisiere publishState wenn sich geändert hat
+				if (updatedCard.publishState !== card.publishState) {
+					console.log('🔄 Card publishState updated:', updatedCard.publishState);
+					card.publishState = updatedCard.publishState;
+				}
+				
+				// Aktualisiere auch andere Props die sich ändern können
+				if (updatedCard.name !== card.name) {
+					card.name = updatedCard.name;
+					editName = updatedCard.name;
+				}
+				
+				if (updatedCard.color !== card.color) {
+					card.color = updatedCard.color;
+					selectedColor = updatedCard.color || 'slate';
+				}
+				
+				break; // Karte gefunden, keine weitere Suche nötig
+			}
+		}
+	});
 
 	function handlePublishToggle() {
 		const newState = card.publishState === 'draft' ? 'published' : 'draft';
-		card.publishState = newState;
-		// Call callback prop instead of dispatching event
+		
+		// ✅ WICHTIG: Speichere im BoardStore (PROP-UPDATE-GUIDE.md Schritt 1-2)
+		boardStore.setCardPublishState(String(card.id), newState);
+		
+		// Callback für zusätzliche UI-Logik (optional)
 		onPublishStateChange?.(String(card.id), newState);
 	}
 
@@ -120,40 +146,39 @@
 	}
 
 	function handleEditSave(cardId: string, updates: any) {
-		// Aktualisiere die lokale Karte
-		if (updates.heading) card.name = updates.heading;
-		if (updates.content) card.description = updates.content;
-		if (updates.color) card.color = updates.color;
-		if (updates.labels) card.labels = updates.labels;
-		if (updates.publishState) card.publishState = updates.publishState;
+		// Speichere die Änderungen im BoardStore
+		boardStore.editCard(cardId, {
+			name: updates.heading,
+			description: updates.content,
+			color: updates.color,
+			labels: updates.labels
+		});
 
-		// Informiere die Elternkomponente über die Änderung
-		onCardAction?.(cardId, 'updated');
+		// WICHTIG: Triggere ein CardUpdated Event, damit Column.svelte die Items neuladen kann
+		// Das ist notwendig, weil Column.svelte nur die items Prop hat und nicht direkt
+		// auf die neuen Werte vom Board zugreifen kann
+		onCardAction?.(String(cardId), 'cardUpdated');
+		
+		// Lokale Karte wird automatisch durch uiData Reaktivität aktualisiert
 		closeModal();
 	}
 
 	function handleRename() {
-		card.name = editName;
-		popoverOpen = false;
-		onCardAction?.(String(card.id), 'renamed');
+		boardStore.editCard(String(card.id), { name: editName });
 	}
 
 	function handleColorChange() {
-		card.color = selectedColor;
-		popoverOpen = false;
-		onCardAction?.(String(card.id), 'color-changed');
+		boardStore.editCard(String(card.id), { color: selectedColor });
 	}
 
 	function handleEditClick() {
 		showModal = true;
-		popoverOpen = false;
 	}
 
 	function handleDeleteClick() {
 		if (confirm(`Karte "${card.name}" wirklich löschen?`)) {
-			onCardAction?.(String(card.id), 'delete');
+			boardStore.removeCard(String(card.id));
 		}
-		popoverOpen = false;
 	}
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--${colorName})` : 'var(--muted)';
@@ -161,13 +186,33 @@
 
 </script>
 
+<!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card  p-1 {isSelected ? 'border-2 border-primary' : ''}" 
+	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
+	data-card-id={card.id}
+	data-card-root
+	style="border-bottom: 6px solid {getCardColor(card.color)};"
+	role="button"
+	tabindex={0}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onSelect?.();
+		}
+	}}
 	onclick={(e) => {
+		// Nur bei interaktiven Elementen blockieren (Button, Links, etc.)
+		// ABER NICHT auf der Root selbst!
+		const target = e.target as HTMLElement;
+		const isInteractive = target.closest('button:not([data-card-root]), [role="button"]:not([data-card-root]), a, [role="link"]');
+		if (isInteractive) {
+			return;
+		}
 		e.stopPropagation();
+		console.log('🖱️ Card.Root onclick - calling onSelect');
 		onSelect?.();
 	}}
-	style="border-bottom: 6px solid {getCardColor(card.color)};">
+>
 	<Card.Header class="px-1">
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
@@ -178,25 +223,39 @@
 						class:draft={card.publishState === 'draft'}
 						class:published={card.publishState === 'published'}
 						class:archived={card.publishState === 'archived'}
-						onclick={handlePublishToggle}
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handlePublishToggle();
+						}}
 						aria-label="Toggle publish state"
 						title="Toggle publish state"
+						type="button"
 					>
 						<span class="publish-indicator"></span>
 					</button>
 				{/if}
 
 				{#if showMenu}
-					<Popover.Root bind:open={popoverOpen}>
-						<Popover.Trigger>
-							<EllipsisVerticalIcon class="popover-trigger border-1 rounded-sm p-0"/>
-						</Popover.Trigger>
-						<Popover.Content align="end" class="w-64">
+					<Popover.Root>
+						<Popover.Trigger
+								class="popover-trigger h-9 w-5 hover:bg-accent group"
+								onclick={(e) => {
+									e.stopPropagation();
+								}}
+								type="button"
+								aria-label="Karten-Aktionen"
+							>
+								<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+							</Popover.Trigger>
+						<Popover.Content align="end" class="w-64" onclick={(e) => {
+							e.stopPropagation();
+						}}>
 							<div class="space-y-4">
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Karte umbenennen</h4>
 									<Input bind:value={editName} placeholder="Kartenname" />
-									<Button size="sm" onclick={handleRename} class="w-full">
+									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(); }} class="w-full">
 										Umbenennen
 									</Button>
 								</div>
@@ -213,18 +272,18 @@
 											</div>
 										{/each}
 									</RadioGroup.Root>
-									<Button size="sm" onclick={handleColorChange} class="w-full">
+									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleColorChange(); }} class="w-full">
 										Farbe ändern
 									</Button>
 								</div>
 								
 								<Separator />
 								
-								<Button variant="outline" size="sm" onclick={handleEditClick} class="w-full">
+								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
 								
-								<Button variant="destructive" size="sm" onclick={handleDeleteClick} class="w-full">
+								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
 									Karte löschen
 								</Button>
 							</div>
@@ -274,17 +333,29 @@
 
 	<Card.Footer class="px-1">
 		<div class="footer-content">
-			<div class="comments-count">
+			<div class="comments-count group">
 				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
 			</div>
-			<div class="attendees-count">
+			<div class="attendees-count group">
 				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
 			</div>
-			<button class="view-button" onclick={() => (showViewModal = true)} aria-label="Anzeigen" title="Anzeigen">
+			<button 
+				class="view-button group" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				aria-label="Anzeigen" 
+				title="Anzeigen"
+				type="button"
+			>
 				<FullscreenIcon />
 			</button>
-			<button class="edit-button" onclick={() => (showModal = true)} aria-label="Bearbeiten" title="Bearbeiten">
-				<PencilLineIcon />
+			<button 
+				class="edit-button dark:hover:text-white" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
+				aria-label="Bearbeiten" 
+				title="Bearbeiten"
+				type="button"
+			>
+				<PencilLineIcon class="h-4 w-4" />
 			</button>
 		</div>
 	</Card.Footer>
@@ -482,7 +553,7 @@
 		
 		.edit-button:hover {
 			background-color: var(--primary);
-			color: var(--secondary);
+			color: var(--secondary-foreground);
 		}
 
 		.edit-button:focus {
@@ -490,5 +561,9 @@
 			outline-offset: 2px;
 		}
 		
+		/* Ensure buttons and interactive elements can't interfere with drag */
+		button {
+			pointer-events: auto;
+		}
 
 	</style>

@@ -32,6 +32,7 @@ All documentation has been updated for **Phase 1.2+ Implementation**. Every docu
 | File | Size | Purpose | Priority |
 |------|------|---------|----------|
 | **[QUICK-START.md](QUICK-START.md)** | 12.6 KB | ⚡ Copy-paste code snippets, debug checklist | **START HERE** |
+| **[PROP-UPDATE-GUIDE.md](PROP-UPDATE-GUIDE.md)** | 8.2 KB | 🎯 5-Step guide for dynamic UI prop changes | **Phase 1.1** ⭐ |
 | **[DOCUMENTATION-UPDATE.md](DOCUMENTATION-UPDATE.md)** | 16.1 KB | 📖 What changed, cross-references, checklist | Phase 1.2+ |
 | **[UX-RULES.md](UX-RULES.md)** | 28.6 KB | 🎨 shadcn-svelte patterns, icons, accessibility | Phase 1.1 |
 
@@ -209,7 +210,7 @@ All documentation has been updated for **Phase 1.2+ Implementation**. Every docu
 
 **What to Code:**
 1. `src/lib/classes/BoardModel.ts` — Type signatures in AGENTS.md III
-2. `src/lib/stores/kanbanStore.ts` — Spec in STORES.md I
+2. `src/lib/stores/kanbanStore.svelte.ts` — Spec in STORES.md I
 3. `src/lib/utils/nostrEvents.ts` — Spec in AGENTS.md V.1
 
 ### Phase 1.2: Offline-First (Ready to Code ✅)

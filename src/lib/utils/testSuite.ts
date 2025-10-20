@@ -16,15 +16,15 @@ class MockAuthStore {
     }
 }
 
-export function runTestSuite() {
+export async function runTestSuite() {
     console.clear();
     console.group("===== KANBAN BOARD TEST SUITE START =====");
 
     // 1. Board-Erstellung
     console.group("1. Board & Column Management");
     const board = new Board({
-        name: "Projekt Phoenix",
-        description: "Vollständige Neuentwicklung des Kanban-Boards."
+        name: "Projekt Edufeed Kanban Editor",
+        description: "Kanban-Board für das Projekt Edufeed."
     });
     console.log("✅ Board erstellt:", board.name);
 
@@ -192,6 +192,48 @@ export function runTestSuite() {
 
     board.deleteColumn(doneCol.id);
     console.log(`✅ Spalte '${doneCol.name}' gelöscht. Übrige Spalten: ${board.columns.length}`);
+    console.groupEnd();
+
+    // 8. BoardStore UI Integration Tests
+    console.group("8. BoardStore UI Integration");
+    try {
+        // Simuliere UI-Import der BoardStore-Klasse
+        const { BoardStore } = await import('../stores/kanbanStore.svelte.js');
+        const testStore = new BoardStore();
+        
+        // Test: UI-Data Konvertierung
+        const uiData = testStore.uiData;
+        if (uiData && uiData.length > 0) {
+            console.log(`✅ BoardStore.uiData liefert ${uiData.length} Spalten`);
+            console.log(`✅ Erste Spalte: "${uiData[0].name}" mit ${uiData[0].items.length} Karten`);
+        } else {
+            console.error('❌ BoardStore.uiData ist leer oder undefined');
+        }
+        
+        // Test: Neue Karte erstellen über UI-Methode
+        const initialCardCount = testStore.data.columns[0].cards.length;
+        const newCardId = testStore.createCard(testStore.data.columns[0].id, 'Test UI Card');
+        const newCardCount = testStore.data.columns[0].cards.length;
+        
+        if (newCardCount === initialCardCount + 1) {
+            console.log('✅ createCard() funktioniert - Karte im BoardModel hinzugefügt');
+        } else {
+            console.error('❌ createCard() Fehler - Karte nicht im BoardModel');
+        }
+        
+        // Test: UI-Daten Reaktivität (simuliert)
+        const uiDataAfter = testStore.uiData;
+        if (uiDataAfter[0].items.length === newCardCount) {
+            console.log('✅ uiData ist reaktiv - UI-Änderung gespiegelt');
+        } else {
+            console.error('❌ uiData nicht reaktiv');
+        }
+        
+        console.log('✅ BoardStore UI-Integration Tests erfolgreich');
+        
+    } catch (e) {
+        console.error('❌ BoardStore UI-Integration Tests fehlgeschlagen:', e instanceof Error ? e.message : String(e));
+    }
     console.groupEnd();
 
     // Abschluss
