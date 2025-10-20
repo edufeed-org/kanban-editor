@@ -56,7 +56,7 @@ IMPLEMENT: src/lib/classes/BoardModel.ts
 REFERENCE: AGENTS.md Section III (Interfaces & Classes)
 TYPES:     Card, Column, Board, Chat classes
 
-IMPLEMENT: src/lib/stores/kanbanStore.ts  
+IMPLEMENT: src/lib/stores/kanbanStore.svelte.ts  
 REFERENCE: STORES.md Section I (BoardStore)
 TYPES:     BoardStore with Svelte 5 Runes
 
@@ -230,7 +230,7 @@ async importFromShareLink(
 
 ### ✅ BoardStore Integration (Phase 1.1)
 ```typescript
-// src/lib/stores/kanbanStore.ts
+// src/lib/stores/kanbanStore.svelte.ts
 import { Board, Chat } from '$lib/classes/BoardModel';
 import { SyncManager } from './syncManager';
 

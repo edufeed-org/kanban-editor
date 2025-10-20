@@ -210,7 +210,7 @@ All documentation has been updated for **Phase 1.2+ Implementation**. Every docu
 
 **What to Code:**
 1. `src/lib/classes/BoardModel.ts` — Type signatures in AGENTS.md III
-2. `src/lib/stores/kanbanStore.ts` — Spec in STORES.md I
+2. `src/lib/stores/kanbanStore.svelte.ts` — Spec in STORES.md I
 3. `src/lib/utils/nostrEvents.ts` — Spec in AGENTS.md V.1
 
 ### Phase 1.2: Offline-First (Ready to Code ✅)

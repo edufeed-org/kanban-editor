@@ -227,7 +227,7 @@ let cards = $derived($cardsSubscription);
 ### Implementierung
 
 ```typescript
-// src/lib/stores/kanbanStore.ts
+// src/lib/stores/kanbanStore.svelte.ts
 
 import { persisted } from 'svelte-persisted-store';
 import type NDK from '@nostr-dev-kit/ndk';

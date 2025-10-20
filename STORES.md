@@ -14,7 +14,7 @@
 Ab Svelte 5 müssen alle Stores mit **reaktiven Daten** die Endung `.svelte.ts` haben, damit der Compiler Runes transformieren kann:
 
 ```typescript
-// ❌ FALSCH: kanbanStore.ts (funktioniert NICHT)
+// ❌ FALSCH: kanbanStore.svelte.ts (funktioniert NICHT)
 export class BoardStore {
     private board = $state(...); // ← Compiler-Fehler!
 }

@@ -37,7 +37,7 @@ This document summarizes the comprehensive documentation updates made to the Kan
   ```
   BoardModel.ts (Core)
       ↓
-  kanbanStore.ts (via STORES.md)
+  kanbanStore.svelte.ts (via STORES.md)
       ├→ Benötigt: AuthStore (NOSTR-USER.md)
       ├→ Benötigt: NDK Context (NDK.md)
       └→ Benötigt: SyncManager (mit Dexie — STORES.md)
@@ -292,7 +292,7 @@ README.md (Documentation Navigation Map)
 **Files to Implement:**
 1. `src/lib/classes/BoardModel.ts` — Type signatures complete (AGENTS.md Section III)
 2. `src/lib/utils/nostrEvents.ts` — Serialization spec complete (AGENTS.md Section V.1)
-3. `src/lib/stores/kanbanStore.ts` — Store spec complete (STORES.md Section I)
+3. `src/lib/stores/kanbanStore.svelte.ts` — Store spec complete (STORES.md Section I)
 4. `src/routes/cardsboard/*.svelte` — UI patterns in UX-RULES.md + STORES.md Section XI
 
 **Documentation Coverage:** 📚 100%
@@ -398,7 +398,7 @@ pnpm install jsoncrush
 **Priority 3: BoardStore Complete (Phase 1.1+)**
 ```bash
 # Reference: STORES.md Section I
-# File: src/lib/stores/kanbanStore.ts
+# File: src/lib/stores/kanbanStore.svelte.ts
 # Status: Spec complete, integrate with SyncManager
 ```
 

@@ -37,7 +37,7 @@
   - [ ] `nostrEventToCard(event): CardProps`
   - [ ] `createCommentEvent(text, cardRef, cardEventId, ndk): NDKEvent`
 
-- [ ] **`src/lib/stores/kanbanStore.ts`** – Integration mit NDK
+- [ ] **`src/lib/stores/kanbanStore.svelte.ts`** – Integration mit NDK
   - [ ] Ersetze `console.log()` mit echtem `event.publish()`
   - [ ] Implementiere `publishToNostr()` Methode
   - [ ] Implementiere `loadFromNostr()` für initiales Laden

@@ -30,7 +30,7 @@ Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte
 ```
 BoardModel.ts (Core)
     ↓
-kanbanStore.ts (via STORES.md)
+kanbanStore.svelte.ts (via STORES.md)
     ├→ Benötigt: AuthStore (NOSTR-USER.md)
     ├→ Benötigt: NDK Context (NDK.md)
     └→ Benötigt: SyncManager (AGENTS.md + STORES.md)
@@ -187,7 +187,7 @@ Diese Klasse ist die zentrale Schnittstelle zur KI (simulierter WebSocket/Nostr 
 Alle Stores mit **reaktivem State** müssen die Endung `.svelte.ts` haben, damit der Compiler Runes transformieren kann!
 
 ```typescript
-// ❌ FALSCH: kanbanStore.ts
+// ❌ FALSCH: kanbanStore.svelte.ts
 export class BoardStore {
     private board = $state(...); // ← Compiler-Fehler: $state not recognized
 }
@@ -412,7 +412,7 @@ Das Kanban-Board muss **offline-fähig** sein und sich automatisch synchronisier
 │  └────────────────────────────────────────┘ │
 │                    ↓                         │
 │  ┌────────────────────────────────────────┐ │
-│  │  BoardStore (kanbanStore.ts)           │ │
+│  │  BoardStore (kanbanStore.svelte.ts)           │ │
 │  │  - Lokaler Zustand (in-memory)         │ │
 │  │  - Sofortige UI-Updates                │ │
 │  └────────────────────────────────────────┘ │
@@ -592,7 +592,7 @@ export class SyncManager {
 Der `BoardStore` muss erweitert werden, um den `SyncManager` zu nutzen:
 
 ```typescript
-// In src/lib/stores/kanbanStore.ts
+// In src/lib/stores/kanbanStore.svelte.ts
 
 import { SyncManager } from './syncManager';
 import { boardToNostrEvent, cardToNostrEvent } from '$lib/utils/nostrEvents';

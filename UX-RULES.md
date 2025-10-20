@@ -532,7 +532,7 @@ Das Layout verwendet ein **Resizable Panel System** mit drei Hauptbereichen:
 **Beispiel State-Management:**
 
 ```typescript
-// kanbanStore.ts
+// kanbanStore.svelte.ts
 import { writable, derived } from 'svelte/store';
 
 export const selectedCard = writable<Card | null>(null);

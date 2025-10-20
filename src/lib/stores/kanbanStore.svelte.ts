@@ -1,4 +1,4 @@
-// src/lib/stores/kanbanStore.ts
+// src/lib/stores/kanbanStore.svelte.ts
 
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 

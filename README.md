@@ -210,7 +210,7 @@ src/
 │   ├── classes/
 │   │   └── BoardModel.ts          # ✅ Card, Column, Board, Chat Klassen
 │   ├── stores/
-│   │   ├── kanbanStore.ts         # ✅ Hauptstore mit Svelte 5 Runes
+│   │   ├── kanbanStore.svelte.ts         # ✅ Hauptstore mit Svelte 5 Runes
 │   │   ├── authStore.ts           # 🟡 User Authentication (Phase 1.4)
 │   │   └── syncManager.ts         # 🟡 Offline-Sync Manager mit Dexie (Phase 1.2)
 │   ├── utils/

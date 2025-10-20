@@ -46,7 +46,7 @@ Um dich schnell zurechtzufinden, hier ein Überblick über die wichtigsten Verze
 
 *   `src/lib/classes/BoardModel.ts`: **Das Herzstück der Anwendung.** Hier sind die Klassen `Board`, `Column`, `Card` und `Chat` definiert, die die gesamte Geschäftslogik kapseln.
 *   `src/lib/stores/`: Hier liegen die globalen Svelte-Stores, die den Zustand der Anwendung verwalten.
-    *   `kanbanStore.ts`: Verwaltet die aktive `Board`-Instanz.
+    *   `kanbanStore.svelte.ts`: Verwaltet die aktive `Board`-Instanz.
     *   `syncManager.ts`: **(Gesucht!)** Kümmert sich um die Offline-Synchronisation.
 *   `src/routes/cardsboard/`: Enthält alle Svelte-Komponenten für das Kanban-Board.
     *   `+page.svelte`: Das Hauptlayout der Seite.

@@ -69,7 +69,7 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
 
 **Dateien betroffen:**
 - NEU: `src/lib/stores/syncManager.ts`
-- ERWEITERT: `src/lib/stores/kanbanStore.ts`
+- ERWEITERT: `src/lib/stores/kanbanStore.svelte.ts`
 
 ---
 
@@ -108,7 +108,7 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
 
 **Dateien betroffen:**
 - ERWEITERT: `src/lib/classes/BoardModel.ts` (Card-Klasse)
-- ERWEITERT: `src/lib/stores/kanbanStore.ts`
+- ERWEITERT: `src/lib/stores/kanbanStore.svelte.ts`
 - ERWEITERT: `src/lib/components/Card.svelte`
 
 ---
@@ -217,7 +217,7 @@ Alle Erweiterungen sind **additiv**:
 3. Online/Offline Szenarien testen
 
 ### Phase 3: BoardStore Integration (1-2 Tage)
-1. `kanbanStore.ts` um Nostr-Publishing erweitern
+1. `kanbanStore.svelte.ts` um Nostr-Publishing erweitern
 2. Live-Subscriptions implementieren
 3. End-to-End Tests
 
