@@ -61,10 +61,45 @@
 		? card.attendees
 		: (card.author ? [card.author] : []));
 
+	// ============================================================================
+	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
+	// ============================================================================
+	$effect(() => {
+		const uiColumns = boardStore.uiData; // ← Dependency tracking
+		
+		// Finde die aktuelle Karte im Store
+		for (const col of uiColumns) {
+			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
+			if (updatedCard) {
+				// Aktualisiere publishState wenn sich geändert hat
+				if (updatedCard.publishState !== card.publishState) {
+					console.log('🔄 Card publishState updated:', updatedCard.publishState);
+					card.publishState = updatedCard.publishState;
+				}
+				
+				// Aktualisiere auch andere Props die sich ändern können
+				if (updatedCard.name !== card.name) {
+					card.name = updatedCard.name;
+					editName = updatedCard.name;
+				}
+				
+				if (updatedCard.color !== card.color) {
+					card.color = updatedCard.color;
+					selectedColor = updatedCard.color || 'slate';
+				}
+				
+				break; // Karte gefunden, keine weitere Suche nötig
+			}
+		}
+	});
+
 	function handlePublishToggle() {
 		const newState = card.publishState === 'draft' ? 'published' : 'draft';
-		card.publishState = newState;
-		// Call callback prop instead of dispatching event
+		
+		// ✅ WICHTIG: Speichere im BoardStore (PROP-UPDATE-GUIDE.md Schritt 1-2)
+		boardStore.setCardPublishState(String(card.id), newState);
+		
+		// Callback für zusätzliche UI-Logik (optional)
 		onPublishStateChange?.(String(card.id), newState);
 	}
 
