@@ -151,9 +151,9 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="size-9 group"
+                class="h-9 w-9 group"
             >
-                <PanelLeftIcon class="size-6" />
+                <PanelLeftIcon class="h-4 w-4" />
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
@@ -162,8 +162,8 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root>
-                <Dialog.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
-                    <EllipsisVerticalIcon class="size-6 border-2 rounded-sm p-0" />
+                <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
+                    <EllipsisVerticalIcon class="h-4 w-4 text-black bg-gray-400 dark:text-white dark:bg-gray-400 rounded-sm p-0" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
@@ -225,8 +225,8 @@
 
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
-                <Drawer.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
-                    <SquareSigmaIcon />
+                <Drawer.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
+                    <SquareSigmaIcon class="h-4 w-4" />
                 </Drawer.Trigger>
                 <Drawer.Content>
                     <Drawer.Header>
@@ -250,8 +250,8 @@
 
             <!-- AI Settings Sheet -->
             <Sheet.Root>
-                <Sheet.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
-                    <BotIcon />
+                <Sheet.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+                    <BotIcon class="h-4 w-4"/>
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
@@ -284,9 +284,9 @@
 
             <!-- Profile -->
             <DropdownMenu.Root>
-                <DropdownMenu.Trigger class="inline-flex items-center justify-center size-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
+                <DropdownMenu.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
                     <Avatar class="h-8 w-8">
-                        <AvatarFallback><UserRoundIcon /></AvatarFallback>
+                        <AvatarFallback class="pointer-events-none"><UserRoundIcon class="h-4 w-4 pointer-events-none" /></AvatarFallback>
                     </Avatar>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
@@ -298,11 +298,11 @@
             </DropdownMenu.Root>
 
             <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme} class="group">
+            <Button variant="ghost" size="icon" onclick={toggleTheme} class="group h-9 w-9">
                 {#if currentTheme === 'dark'}
-                    <SunIcon class="size-6"/>
+                    <SunIcon class="h-4 w-4"/>
                 {:else}
-                    <MoonIcon class="size-6"/>
+                    <MoonIcon class="h-4 w-4"/>
                 {/if}
             </Button>
             
@@ -313,9 +313,9 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="size-9 group"
+                class="h-9 w-9 group"
             >
-                <PanelRightIcon class="size-6"/>
+                <PanelRightIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>

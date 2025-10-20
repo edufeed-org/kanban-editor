@@ -11,6 +11,7 @@
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 
  	const flipDurationMs = 150;
 
@@ -381,11 +382,7 @@
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
 					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-6 w-6 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all">
-						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="12" cy="5" r="1"/>
-							<circle cx="12" cy="12" r="1"/>
-							<circle cx="12" cy="19" r="1"/>
-						</svg>
+						<EllipsisVerticalIcon class="h-4 w-4" />
 					</Popover.Trigger>
 					<Popover.Content align="end" class="w-64">
 						<div class="space-y-4">
