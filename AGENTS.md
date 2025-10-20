@@ -59,8 +59,39 @@ UI-Komponenten (Card.svelte, etc.)
 | **Framework**     | Svelte 5 (unter Verwendung der neuen Runes-Syntax)                                    |
 | **Sprache**       | TypeScript (strikte Typisierung für alle Klassen und Funktionen)                     |
 | **Zustand**       | Svelte 5 `$state()` und `$derived()` für Stores und reaktive Werte.              |
-| **Dateiendungen** | `.ts` für Logik/Klassen, `.svelte` für Komponenten.                             |
+| **Dateiendungen** | `.ts` für Logik/Klassen, `.svelte` für Komponenten, `.svelte.ts` für Stores mit Runes!            |
 | **Nostr-IDs**     | Generierung von `d-tag`-ähnlichen IDs durch eine Hilfsfunktion `generateDTag()`. |
+
+### ⚠️ KRITISCH: BoardStore vs direkter Board-Zugriff
+
+**REGEL:** IMMER `boardStore.XXX()` Methoden nutzen, NIEMALS `board.XXX()` direkt aufrufen!
+
+```typescript
+// ❌ FALSCH - Keine Reaktivität, keine Persistierung!
+const column = board.findColumn('col-id');
+column.addCard({heading: 'Neue Karte'});
+// localStorage NICHT aktualisiert
+// UI zeigt NICHTS neu
+// Nostr NICHT publiziert
+
+// ✅ RICHTIG - Alles funktioniert automatisch!
+boardStore.createCard('col-id', 'Neue Karte');
+// → triggerUpdate() wird aufgerufen
+// → localStorage synchron aktualisiert
+// → uiData $derived wird neu berechnet
+// → Column.svelte $effect wird getriggert
+// → UI zeigt neue Karte sofort
+// → (Später) Nostr Event wird publiziert
+```
+
+**Warum?** `triggerUpdate()` ist die Brücke zwischen Model und UI:
+1. `board` ist reiner Datencontainer (keine Reaktivität)
+2. `BoardStore` ist reaktiv mit `$state` und `$derived`
+3. Nur `boardStore.XXX()` ruft `triggerUpdate()` auf
+4. `triggerUpdate()` inkrementiert `updateTrigger` State
+5. Das triggert `$derived.by()` Neuberechnung
+6. Das triggert `$effect` in Components
+7. Das updatet die UI
 
 ## III. Core Data Model (TypeScript Interfaces und Klassen)
 

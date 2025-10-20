@@ -44,32 +44,64 @@ UI-Komponenten (Svelte)
 
 ### ✅ Neue Karte erstellen
 ```typescript
-// RICHTIG: Via Store
+// RICHTIG: Via BoardStore (mit triggerUpdate Cascade)
 const cardId = boardStore.createCard('column-id', 'Titel', 'Beschreibung');
+// → boardStore.createCard()
+//   → board.findColumn().addCard() [Model-Layer]
+//   → triggerUpdate() [CRITICAL!]
+//   → updateTrigger++ [triggers $derived]
+//   → uiData recalculates [new UIColumn[]]
+//   → Column.svelte $effect detects change [items prop updated]
+//   → Card.svelte re-renders [UI zeigt neue Karte]
 
-// FALSCH: Direkt Column.addCard() - nicht persisted!
+// FALSCH: Direkt Board/Column nutzen - KEINE Reaktivität!
+const column = board.findColumn('col-id');
 const card = column.addCard({heading: '...'});
+// ❌ triggerUpdate() nicht aufgerufen!
+// ❌ localStorage nicht aktualisiert
+// ❌ uiData nicht recalculated
+// ❌ $effect nicht triggered
+// ❌ UI zeigt keine neue Karte!
 ```
 
 ### ✅ Spalten-Name ändern (mit persistency)
 **Folge:** PROP-UPDATE-GUIDE.md 5-Schritt Checkliste
 1. Store-Methode: `boardStore.updateColumn(colId, { name: newName })`
-2. Handler in Component: `handleRename()` ruft Store auf
-3. `$effect` überwacht `boardStore.uiData` und synced lokale Props
-4. localStorage wird automatisch via `triggerUpdate()` gespeichert
-5. (Später) Nostr-Event wird via `publishToNostr()` gesendet
+   - ❌ NICHT: `board.findColumn(colId).update()` direkt aufrufen!
+2. Handler in Component: `handleRename()` ruft **Store** auf (nicht board!)
+3. Store ruft `board.findColumn().update()` auf
+4. Store ruft `triggerUpdate()` auf (CRITICAL!)
+   - Dies inkrementiert `updateTrigger` → triggert $derived
+5. `$effect` in Column.svelte überwacht `boardStore.uiData` und synced lokale Props
+6. localStorage wird automatisch via `triggerUpdate()` gespeichert
+7. (Später) Nostr-Event wird via `publishToNostr()` gesendet
 
-### ✅ Kommentar hinzufügen
+### ✅ Kommentar hinzufügen (via Store!)
 ```typescript
+// RICHTIG
+await boardStore.addComment(cardId, 'Mein Kommentar');
+// → boardStore.addComment()
+//   → card.addComment() [Model-Layer]
+//   → triggerUpdate() [CRITICAL!]
+//   → Reactivity cascade…
+//   → Card.svelte re-renders mit neuem Kommentar
+
+// FALSCH: Direkt auf Card-Instanz
 card.addComment('Text', 'npub1...');
-// Wichtig: Array wird reassigniert! (this.comments = [...])
-// Triggers $derived in boardStore.uiData
+// ❌ triggerUpdate() nicht aufgerufen!
+// ❌ UI wird nicht aktualisiert!
+// ❌ localStorage nicht gespeichert!
 ```
 
 ### ✅ Karte zwischen Spalten verschieben (DnD)
 ```typescript
 // Nach DnD-Finalize in Board.svelte:
 boardStore.syncBoardState(newUIColumns); // Atomic 3-Step Sync
+// → Spalten-Reihenfolge aktualisiert
+// → triggerUpdate() aufgerufen (CRITICAL!)
+// → Reactivity cascade
+// → UI synchronisiert
+// → localStorage aktualisiert
 ```
 
 ### ✅ UI-Icons verwenden
@@ -491,9 +523,107 @@ export class BoardStore {
 }
 ```
 
+### Fehler 6: Prop-Mutation Warning in Component (NEW - CRITICAL!)
+**Problem:** "ownership_invalid_mutation" Warning in Card.svelte nach $effect Update
+```typescript
+// ❌ FALSCH - Mutiert Prop direkt
+$effect(() => {
+    card.name = newValue;  // ← ownership_invalid_mutation Warning!
+    card.color = newColor; // ← Forbidden!
+});
+
+// ✅ RICHTIG - Lokale State Variablen nutzen
+let localName = $state(card.name);
+let localColor = $state(card.color || 'slate');
+
+$effect(() => {
+    if (nameChanged) {
+        localName = card.name; // ← OK! Update nur lokale State
+    }
+    if (colorChanged) {
+        localColor = card.color || 'slate'; // ← OK!
+    }
+});
+
+// Template nutzt lokale Variablen, NICHT card Props
+<input bind:value={localName} />                           // ← RICHTIG
+<div class:draft={localPublishState === 'draft'} />       // ← RICHTIG
+```
+
+**Warum:** Svelte 5 strict ownership model:
+- Props gehören dem **Parent** (z.B. Column.svelte)
+- Child (z.B. Card.svelte) darf Props **NICHT mutieren**
+- Nur Parent darf `card = {...}` reassignieren
+- Child darf nur lokale `$state` Variablen mutieren
+
 ---
 
 ## 🔐 Security First Pattern (KRITISCH!)
+
+### ⚠️ **CRITICAL: Prop-Mutationen in Svelte 5 sind VERBOTEN**
+
+```typescript
+// ❌ FALSCH - Wird ownership_invalid_mutation Warning werfen!
+// In Card.svelte $effect:
+$effect(() => {
+    card.name = newName;          // ← MUTATION! Forbidden!
+    card.color = newColor;        // ← MUTATION! Forbidden!
+    card.publishState = 'draft';  // ← MUTATION! Forbidden!
+});
+
+// ✅ RICHTIG - Lokale State Variablen nutzen
+let localName = $state(card.name);
+let localColor = $state(card.color || 'slate');
+let localPublishState = $state(card.publishState);
+
+$effect(() => {
+    // Nur lokale Variablen UPDATEN, nicht Prop!
+    if (cardNameChanged) {
+        localName = card.name;
+    }
+    if (cardColorChanged) {
+        localColor = card.color || 'slate';
+    }
+});
+
+// Template nutzt lokale Variablen:
+<input bind:value={localName} />      // ← OK
+<div class:draft={localPublishState === 'draft'} /> // ← OK
+```
+
+**Warum?** Svelte 5 Runes verwenden strict ownership model:
+- Parent komponenten **dürfen nicht** den State von Props direkt mutieren
+- Die Karte (Card Prop) gehört dem Parent (Column)
+- Nur der Parent darf `card = {...}` reassignieren
+- Child (Card.svelte) darf nur lokale `$state` Variablen mutieren
+
+**Consequence wenn ignoriert:**
+- 🔴 Runtime Warning: "ownership_invalid_mutation"
+- 🔴 Unpredictable behavior
+- 🔴 Data consistency broken
+- 🔴 Build wird fehlschlagen mit `pnpm run check`
+
+**Pattern zur Vermeidung (Card.svelte Template):**
+```svelte
+<script lang="ts">
+  let { card } = $props();  // ← Read-only Prop!
+  
+  // Lokale State für Editing
+  let localName = $state(card.name);
+  let localColor = $state(card.color || 'slate');
+  
+  function handleSave() {
+    // Store-API aufrufen (nicht card mutieren!)
+    boardStore.updateCard(card.id, {
+      heading: localName,
+      color: localColor
+    });
+  }
+</script>
+
+<input bind:value={localName} />
+<button onclick={handleSave}>Speichern</button>
+```
 
 ### Private Key Handling (aus NOSTR-USER.md)
 

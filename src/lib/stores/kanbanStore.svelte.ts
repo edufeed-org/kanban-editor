@@ -85,7 +85,7 @@ export class BoardStore {
                         labels: card.labels,
                         color: card.color,
                         publishState: card.publishState,
-                        author: card.attendees?.[0], // Erster Attendee als Author
+                        author: card.author || card.attendees?.[0], // author oder erster Attendee
                         columnId: column.id,
                         boardId: this.board.id
                     }))
@@ -227,6 +227,28 @@ export class BoardStore {
             return card;
         }
         throw new Error(`Column with id ${columnId} not found`);
+    }
+
+    /**
+     * Upsert-Operation: Fügt Karte hinzu ODER aktualisiert sie, wenn sie bereits existiert
+     * 
+     * Primärer Use-Case: Nostr Events laden/synchronisieren
+     * - Wenn Karte mit gleicher ID existiert → Update durchführen
+     * - Wenn Karte nicht existiert → Neue Karte in targetColumnId erstellen
+     * 
+     * @param targetColumnId - Spalte, in die neue Karten aufgenommen werden
+     * @param props - Die Kartendaten (MUSS eine ID haben!)
+     * @returns Die neue oder aktualisierte Karte
+     */
+    public upsertCard(targetColumnId: string, props: CardProps) {
+        if (!props.id) {
+            throw new Error('upsertCard requires props.id to be set (from Nostr d-tag)');
+        }
+
+        const card = this.board.upsertCard(targetColumnId, props);
+        this.triggerUpdate(); // Trigger Reaktivität
+        this.publishToNostr();
+        return card;
     }
 
     public updateCard(cardId: string, updates: Partial<CardProps>): void {

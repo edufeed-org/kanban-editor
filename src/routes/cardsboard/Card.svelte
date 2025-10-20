@@ -42,7 +42,12 @@
 	let showPublishToggle = $state(true);
 	let showMenu = $state(true);
 	
-	// Card editing state
+	// Card local state (nicht die Prop direkt mutieren!)
+	let localName = $state(card.name);
+	let localColor = $state(card.color || 'slate');
+	let localPublishState = $state(card.publishState);
+	
+	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
 
@@ -71,20 +76,21 @@
 		for (const col of uiColumns) {
 			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
 			if (updatedCard) {
-				// Aktualisiere publishState wenn sich geändert hat
-				if (updatedCard.publishState !== card.publishState) {
+				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
+				// Das verhindert ownership_invalid_mutation Warnungen
+				if (updatedCard.publishState !== localPublishState) {
 					console.log('🔄 Card publishState updated:', updatedCard.publishState);
-					card.publishState = updatedCard.publishState;
+					localPublishState = updatedCard.publishState;
 				}
 				
-				// Aktualisiere auch andere Props die sich ändern können
-				if (updatedCard.name !== card.name) {
-					card.name = updatedCard.name;
+				// Aktualisiere auch andere lokale Props die sich ändern können
+				if (updatedCard.name !== localName) {
+					localName = updatedCard.name;
 					editName = updatedCard.name;
 				}
 				
-				if (updatedCard.color !== card.color) {
-					card.color = updatedCard.color;
+				if (updatedCard.color !== localColor) {
+					localColor = updatedCard.color || 'slate';
 					selectedColor = updatedCard.color || 'slate';
 				}
 				
@@ -94,7 +100,7 @@
 	});
 
 	function handlePublishToggle() {
-		const newState = card.publishState === 'draft' ? 'published' : 'draft';
+		const newState = localPublishState === 'draft' ? 'published' : 'draft';
 		
 		// ✅ WICHTIG: Speichere im BoardStore (PROP-UPDATE-GUIDE.md Schritt 1-2)
 		boardStore.setCardPublishState(String(card.id), newState);
@@ -191,7 +197,7 @@
 	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
 	data-card-id={card.id}
 	data-card-root
-	style="border-bottom: 6px solid {getCardColor(card.color)};"
+	style="border-bottom: 6px solid {getCardColor(localColor)};"
 	role="button"
 	tabindex={0}
 	onkeydown={(e) => {
@@ -217,12 +223,18 @@
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
 			<div class="header-actions">
+				{#if card.author}
+					<div class="author-info" title={card.author}>
+						<span class="author-label">von</span>
+						<code class="author-npub">{card.author.slice(0, 8)}...</code>
+					</div>
+				{/if}
 				{#if showPublishToggle}
 					<button
 						class="publish-toggle"
-						class:draft={card.publishState === 'draft'}
-						class:published={card.publishState === 'published'}
-						class:archived={card.publishState === 'archived'}
+						class:draft={localPublishState === 'draft'}
+						class:published={localPublishState === 'published'}
+						class:archived={localPublishState === 'archived'}
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -372,11 +384,11 @@
 			id: String(card.id),
 			heading: card.name,
 			content: card.description,
-			color: card.color,
+			color: localColor,
 			comments: card.comments,
 			labels: card.labels,
 			attendees: card.attendees,
-			publishState: card.publishState
+			publishState: localPublishState
 		}}
 		isOpen={showModal}
 		onClose={closeModal}
@@ -407,6 +419,28 @@
 			align-items: center;
 			gap: 0.5em;
 			flex-shrink: 0;
+		}
+
+		/* Author info styling */
+		.author-info {
+			display: flex;
+			align-items: center;
+			gap: 0.35em;
+			font-size: 0.7em;
+			color: var(--muted-foreground);
+			background-color: var(--muted);
+			padding: 0.25em 0.4em;
+			border-radius: 3px;
+		}
+
+		.author-label {
+			font-weight: 500;
+		}
+
+		.author-npub {
+			font-family: monospace;
+			font-size: 0.85em;
+			color: var(--foreground);
 		}
 
 		/* Status indicator styling */

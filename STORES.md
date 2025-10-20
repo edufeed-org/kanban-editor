@@ -14,9 +14,9 @@
 Ab Svelte 5 müssen alle Stores mit **reaktiven Daten** die Endung `.svelte.ts` haben, damit der Compiler Runes transformieren kann:
 
 ```typescript
-// ❌ FALSCH: kanbanStore.svelte.ts (funktioniert NICHT)
+// ❌ FALSCH: kanbanStore.ts (funktioniert NICHT)
 export class BoardStore {
-    private board = $state(...); // ← Compiler-Fehler!
+    private board = $state(...); // ← Compiler-Fehler: $ is not defined!
 }
 
 // ✅ RICHTIG: kanbanStore.svelte.ts (funktioniert)
@@ -32,6 +32,41 @@ export class BoardStore {
 - ⏳ **authStore.svelte.ts** — Noch zu erstellen (Nostr User Management)
 - ⏳ **syncManager.svelte.ts** — Noch zu erstellen (Offline-First Queue)
 
+### ⭐ WICHTIG: Die Reaktivitätskette (triggerUpdate → $derived → $effect)
+
+**Dies ist der Schlüssel zur Svelte 5 Reaktivität:**
+
+```
+Nutzer-Action (z.B. Karte erstellt)
+    ↓
+boardStore.createCard() [Store-Methode]
+    ↓
+board.findColumn().addCard() [Model-Layer, keine Reaktivität nötig]
+    ↓
+this.triggerUpdate() [CRITICAL! - Increment updateTrigger]
+    ↓
+updateTrigger++ [$state wird aktualisiert]
+    ↓
+uiData $derived.by() [Dependency tracking: updateTrigger wurde gelesen!]
+    ↓
+uiData wird NEU berechnet [Transformiert Board → UIColumn[]]
+    ↓
+Column.svelte $effect detects change [$effect liest boardStore.uiData]
+    ↓
+items Prop wird gesetzt [parent prop update]
+    ↓
+Card.svelte re-renders [component subscribed zu items Prop]
+    ↓
+UI zeigt neue Karte ✅
+```
+
+**Kritische Punkte:**
+
+1. ❌ **triggerUpdate() vergessen** → `updateTrigger` nicht aktualisiert → `$derived` wird nicht neu berechnet → `$effect` wird nicht getriggert → UI zeigt alte Daten
+2. ❌ **Board direkt mutieren** (z.B. `board.addColumn()` ohne Store) → Keine Reaktivität → UI zeigt nichts
+3. ✅ **Board.addColumn()** IMMER über Store-Methode aufrufen → `triggerUpdate()` automatisch
+4. ✅ **Array-Reassignments** nutzen (z.B. `this.cards = [...this.cards, card]`) → Trigger Dependency Tracking
+
 ### 📖 ANLEITUNG: Dynamische Prop-Änderungen
 
 **Wenn du willst, dass der Nutzer eine Eigenschaft (z.B. Spalten-Name) in der UI ändern kann:**
@@ -43,9 +78,15 @@ Diese Anleitung erklärt:
 2. Component Handler implementieren (z.B. `handleRename()`)
 3. `$effect` für UI-Sync hinzufügen (automatische Reaktivität)
 4. Model-Update-Methode nutzen (`column.update()`)
-5. localStorage wird automatisch gespeichert via `triggerUpdate()`
+5. `triggerUpdate()` wird automatisch aufgerufen
+6. localStorage wird automatisch gespeichert
 
 **Praktisches Beispiel:** Spalten-Name ändern im Popover → sofort sichtbar im Board → bleibt nach Reload erhalten ✅
+
+**WARNUNG:** Nicht vergessen - wenn `triggerUpdate()` nicht aufgerufen wird:
+- 🔴 Daten nicht im localStorage gespeichert
+- 🔴 UI zeigt alte Daten
+- 🔴 Nach Reload sind Änderungen weg!
 
 ---
 

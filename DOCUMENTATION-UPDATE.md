@@ -439,4 +439,254 @@ For questions about:
 
 ---
 
-**Last Updated:** 2025 | **Version:** 2.0 (Complete Documentation Integration)
+**Last Updated:** 17.10.2025 | **Version:** 2.0 (Complete Documentation Integration)
+
+
+---
+
+
+# Dokumentations-Updates: Svelte 5 $effect Pattern & BoardStore API
+
+**Datum:** 19.10.2025  
+**Thema:** Klärung und Standardisierung der Svelte 5 Runes Patterns und BoardStore Architektur  
+**Status:** ✅ COMPLETE
+
+---
+
+## 🎯 Ziel dieser Updates
+
+Die Implementierung der Upsert-Funktionalität und die Behebung von Svelte 5 Reaktivitätsproblemen erforderten eine **Überarbeitung der Dokumentation**, um:
+
+1. ✅ **Korrekte Muster zu beschreiben** - Nicht alte/veraltete Approachen
+2. ✅ **Häufige Fehler zu warnen** - Prop-Mutationen, fehlende `triggerUpdate()`
+3. ✅ **Die Reaktivitätskette zu erklären** - Wie `$state` → `$derived` → `$effect` → UI zusammenhängen
+4. ✅ **BoardStore vs Board zu klären** - Immer Store-API nutzen, nicht direkt Board
+
+---
+
+## 📋 Aktualisierte Dateien
+
+### 1. **copilot-instructions.md** (`.github/`)
+**Fokus:** Schnell-Referenz und häufige Fehler
+
+**Änderungen:**
+- ✅ Section "Schnell-Referenz für Häufige Aufgaben" - erweitert mit detaillierten ❌ FALSCH vs ✅ RICHTIG Beispielen
+- ✅ Explizite Warnung: "Immer `boardStore.XXX()` nutzen, NIEMALS `board.XXX()` direkt!"
+- ✅ New Error #6: "Prop-Mutation Warning in Component" - Detaillierte Erklärung des lokalen State Patterns
+- ✅ Vollständiger "Security First Pattern" Section mit Prop-Mutation Anti-Pattern
+- ✅ `triggerUpdate()` Cascade erläutert in Schnell-Referenz
+
+**Key Updates:**
+```typescript
+// ❌ FALSCH - Board direkt nutzen
+column.addCard({heading: '...'});
+
+// ✅ RICHTIG - Store API
+boardStore.createCard('column-id', 'Titel', 'Beschreibung');
+// → triggerUpdate() automatisch
+// → localStorage synchron
+// → UI updated sofort
+```
+
+---
+
+### 2. **UPSERT-IMPLEMENTATION.md**
+**Fokus:** Upsert-Spezifikation und Implementierung
+
+**Änderungen:**
+- ✅ New Warning am Anfang: "Diese Implementierung nutzt das neue Svelte 5 `$effect` Pattern"
+- ✅ Expliziter Hinweis: "NICHT: Direkt `board.upsertCard()` aufrufen - KEINE Reaktivität!"
+- ✅ Praktisches Beispiel mit vollständiger Reaktivitätskette (5 Schritte)
+
+**Key Points:**
+- Upsert ist spaltenübergreifend (sucht Karte in allen Spalten)
+- IMMER `boardStore.upsertCard()` nutzen (nicht `board.upsertCard()`)
+- `triggerUpdate()` ist kritisch für Reaktivität
+
+---
+
+### 3. **PROP-UPDATE-GUIDE.md** ⭐ GROSSES UPDATE
+**Fokus:** Dynamische Prop-Änderungen in der UI - NEU: Lokale State Pattern
+
+**Änderungen:**
+- ✅ **NEW SECTION:** "Svelte 5 Prop-Mutation Anti-Pattern" am Anfang (KRITISCH!)
+- ✅ Zeigt ❌ FALSCH: Direktes Prop-Mutieren in `$effect`
+- ✅ Zeigt ✅ RICHTIG: Lokale State Variablen Pattern
+- ✅ Erklärt warum: "Props gehören Parent, Child darf nur Lokale mutieren"
+- ✅ Praktisches Beispiel: Card.svelte mit `localName`, `localColor`, `localPublishState`
+- ✅ Workflow: User ändert Input → `handleSave()` → `boardStore.updateCard()` → Parent setzt neuen Prop
+
+**Praktisches Pattern:**
+```svelte
+<script lang="ts">
+  let { card } = $props();  // ← Read-only!
+  
+  // Lokale State Variablen
+  let localName = $state(card.name);
+  let localColor = $state(card.color || 'slate');
+  
+  $effect(() => {
+    localName = card.name;   // ← OK! Sync lokale Var
+    localColor = card.color || 'slate';
+  });
+  
+  function handleSave() {
+    boardStore.updateCard(card.id, {
+      heading: localName,
+      color: localColor
+    });  // ← Store ruft Board auf, triggert Update
+  }
+</script>
+
+<input bind:value={localName} />
+<button onclick={handleSave}>Speichern</button>
+```
+
+---
+
+### 4. **STORES.md**
+**Fokus:** Store-Architektur und `$effect` Abhängigkeitskette
+
+**Änderungen:**
+- ✅ **NEW SECTION:** "Die Reaktivitätskette (triggerUpdate → $derived → $effect)"
+- ✅ Visuelle Darstellung der 8-Schritt Cascade (User Action bis UI Update)
+- ✅ Kritische Punkte hervorgehoben (triggerUpdate vergessen = Reaktivität broken)
+- ✅ Warnung: "Wenn triggerUpdate() nicht aufgerufen wird: ❌ Daten nicht gespeichert, ❌ UI zeigt alte Daten"
+
+**Visualisierung:**
+```
+User-Action → boardStore.createCard() 
+  → board.findColumn().addCard() 
+  → triggerUpdate() [CRITICAL!]
+  → updateTrigger++ [$state updated]
+  → uiData recalculates [$derived.by]
+  → Column.svelte $effect triggers
+  → items Prop updated
+  → Card.svelte re-renders
+  → UI zeigt neue Karte ✅
+```
+
+---
+
+### 5. **MULTI-LAYER STORAGE.md**
+**Fokus:** 3-Layer Architecture mit neuem lokalen State Pattern
+
+**Änderungen:**
+- ✅ **NEW SECTION:** "Lokale State Pattern in Komponenten" (CRITICAL!)
+- ✅ ❌ FALSCH vs ✅ RICHTIG Vergleich für Prop-Mutations
+- ✅ Erklärt Ownership Model: "Props gehören Parent, lokale State gehört Child"
+- ✅ Verlinkt zu [PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md)
+
+---
+
+### 6. **AGENTS.md**
+**Fokus:** Technischer Stack und BoardStore vs Board Clarification
+
+**Änderungen:**
+- ✅ **NEW SECTION:** "BoardStore vs direkter Board-Zugriff" (KRITISCH!)
+- ✅ Explizite REGEL: "IMMER `boardStore.XXX()` nutzen, NIEMALS `board.XXX()` direkt!"
+- ✅ Vergleich mit 7-Punkt Erklärung warum Store-API notwendig ist
+- ✅ Updated "Schnell-Referenz" mit erweiterten Cascades
+
+**Key Pattern:**
+```
+❌ FALSCH: board.findColumn().addCard() 
+           → Keine Reaktivität
+           → localStorage nicht aktualisiert
+           → UI zeigt nichts
+
+✅ RICHTIG: boardStore.createCard()
+            → triggerUpdate() aufgerufen
+            → localStorage sync aktualisiert
+            → uiData $derived recalculated
+            → $effect triggered
+            → UI updated sofort
+```
+
+---
+
+## 🔑 Kern-Erkenntnisse aus den Updates
+
+### 1. **Svelte 5 Strict Ownership Model**
+- Props gehören dem **Parent**
+- Child darf Props **NICHT mutieren** → ownership_invalid_mutation Warning
+- Lösung: Lokale State Variablen verwenden
+
+### 2. **Die Reaktivitätskette**
+```
+$state (updateTrigger) 
+  → $derived.by (uiData) 
+  → $effect (Component Sync) 
+  → UI Re-render
+```
+Jeder Schritt ist KRITISCH. Falls `triggerUpdate()` vergessen: Kette bricht!
+
+### 3. **BoardStore ist die Source of Truth**
+- NIEMALS direkt auf `board` zugreifen
+- Immer `boardStore.XXX()` Methoden nutzen
+- Store ruft `triggerUpdate()` auf → Reaktivität garantiert
+
+### 4. **Lokales State Pattern in Komponenten**
+```svelte
+<script>
+  let { card } = $props();  // Read-only
+  let localName = $state(card.name);  // Lokale Kopie
+  
+  $effect(() => {
+    localName = card.name;  // Sync von Parent Prop
+  });
+  
+  function save() {
+    boardStore.updateCard(card.id, { heading: localName });
+    // Store triggert Parent Update → Parent setzt neuen card Prop
+  }
+</script>
+```
+
+---
+
+## 🎓 Learning Path für neue Developer
+
+**Beim Start eines neuen Feature - in dieser Reihenfolge lesen:**
+
+1. **AGENTS.md** - Was ist das System? (BoardModel.ts)
+2. **STORES.md** - Wie wird State managed? (Runes, triggerUpdate)
+3. **PROP-UPDATE-GUIDE.md** ⭐ - Wie ändern Nutzer Properties? (lokale State)
+4. **MULTI-LAYER STORAGE.md** - Wie persistiert es? (localStorage, Nostr)
+5. **UX-RULES.md** - Wie baue ich UI? (shadcn-svelte, Icons)
+
+---
+
+## ✅ Validierung
+
+**Alle Updates folgen jetzt:**
+- ✅ Svelte 5 Runes Best Practices
+- ✅ Strict Ownership Model Konvention
+- ✅ BoardStore-First Pattern
+- ✅ Explizite Fehlerwarnung und Lösungen
+- ✅ Visuelle Cascades und Diagramme
+- ✅ ❌ FALSCH vs ✅ RICHTIG Vergleiche
+
+---
+
+## 🔗 Related Files
+
+- [UPSERT-IMPLEMENTATION.md](./UPSERT-IMPLEMENTATION.md) - Upsert-Spezifikation
+- [QUICK-REF-UPSERT.md](./QUICK-REF-UPSERT.md) - Quick-Reference für Upsert
+- [copilot-instructions.md](./.github/copilot-instructions.md) - Detaillierte Agent-Anweisungen
+
+---
+
+## 📌 Zusammenfassung der Key-Rules
+
+| Rule | Wo Dokumentiert | Warum |
+|------|-----------------|-------|
+| Immer `boardStore.XXX()`, nie `board.XXX()` | AGENTS.md, STORES.md | triggerUpdate() nur im Store |
+| `triggerUpdate()` nach Board-Änderungen | copilot-instructions, STORES.md | Cascades $derived und $effect |
+| Lokale State statt Prop-Mutationen | PROP-UPDATE-GUIDE.md, MULTI-LAYER | Strict Ownership Model |
+| `.svelte.ts` für Stores mit Runes | STORES.md, AGENTS.md | Compiler muss Runes transformieren |
+| Array-Reassignments nicht Mutationen | MULTI-LAYER, copilot-instructions | Dependency Tracking |
+
+---
+
+**Status:** ✅ Alle Dokumentationen sind jetzt **korrekt, konsistent und vollständig** aligned mit der Svelte 5 Implementierung!

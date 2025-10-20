@@ -54,6 +54,58 @@ export class BoardStore {
 
 **Konsequenz**: Alle Stores mit reaktiven Daten müssen zu `.svelte.ts` konvertiert werden!
 
+### ⭐ **Lokale State Pattern in Komponenten** (NEW - CRITICAL!)
+
+**In Svelte 5 darf man Props NICHT direkt mutieren!** Nutze stattdessen lokale State Variablen:
+
+```svelte
+<!-- ❌ FALSCH: Prop mutation in $effect -->
+<script lang="ts">
+    let { card } = $props();
+    
+    $effect(() => {
+        card.name = newValue;  // ← ownership_invalid_mutation!
+    });
+</script>
+
+<!-- ✅ RICHTIG: Lokale State Variablen -->
+<script lang="ts">
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    
+    let { card } = $props();  // ← Read-only!
+    
+    // Lokale Variablen für Editing (gehören zu Card.svelte)
+    let localName = $state(card.name);
+    let localColor = $state(card.color || 'slate');
+    
+    // Optional: Sync wenn Prop ändert
+    $effect(() => {
+        localName = card.name;
+        localColor = card.color || 'slate';
+    });
+    
+    function handleSave() {
+        // Store-API aufrufen!
+        boardStore.updateCard(card.id, {
+            heading: localName,
+            color: localColor
+        });
+    }
+</script>
+
+<!-- Template nutzt lokaleName, nicht card.name -->
+<input bind:value={localName} />
+<button onclick={handleSave}>Speichern</button>
+```
+
+**Warum?**
+- Props gehören dem Parent (z.B. Column.svelte)
+- Child darf nur eigene Lokale State mutieren
+- Store vermittelt Parent-Updates (Parent setzt neue `card` Prop)
+- Strenge Ownership verhindert Seiteneffekte
+
+**Siehe auch:** [PROP-UPDATE-GUIDE.md](./PROP-UPDATE-GUIDE.md) — Vollständige 5-Schritt Anleitung
+
 ## 📊 Datenfluss-Strategien
 
 ### 1. **BoardStore = Single Source of Truth** (Svelte 5 Runes)

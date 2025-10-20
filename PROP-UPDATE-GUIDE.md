@@ -2,6 +2,76 @@
 
 Diese Anleitung beschreibt die komplette Implementierung für Eigenschaften (Props), die Nutzer in der UI ändern können und die Änderungen persistent sein sollen.
 
+## ⚠️ KRITISCH: Svelte 5 Prop-Mutation Anti-Pattern
+
+**WARNUNG:** Svelte 5 hat einen **strikten Ownership Model**. Props dürfen von Child-Komponenten NICHT direkt mutiert werden!
+
+### ❌ FALSCH: Direktes Prop-Mutieren in $effect
+
+```svelte
+<script lang="ts">
+    let { card } = $props();  // ← Prop vom Parent
+    
+    $effect(() => {
+        card.name = newValue;      // ❌ MUTATION! Forbidden!
+        card.color = newColor;     // ❌ ownership_invalid_mutation Warning!
+    });
+</script>
+
+<input bind:value={card.name} />  <!-- ❌ FALSCH! -->
+```
+
+**Consequence:**
+- 🔴 Warning: "ownership_invalid_mutation"
+- 🔴 Unpredictable behavior
+- 🔴 Build fails with `pnpm run check`
+
+### ✅ RICHTIG: Lokale State Variablen verwenden
+
+```svelte
+<script lang="ts">
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    
+    let { card } = $props();  // ← Read-only Prop vom Parent
+    
+    // Lokale State Variablen für Editing
+    let localName = $state(card.name);
+    let localColor = $state(card.color || 'slate');
+    let localPublishState = $state(card.publishState);
+    
+    // Optionale: Update lokale Variablen wenn Prop ändert
+    $effect(() => {
+        localName = card.name;
+        localColor = card.color || 'slate';
+        localPublishState = card.publishState;
+    });
+    
+    function handleSave() {
+        // Store-API aufrufen (nicht card mutieren!)
+        boardStore.updateCard(card.id, {
+            heading: localName,
+            color: localColor,
+            publishState: localPublishState
+        });
+    }
+</script>
+
+<!-- Template nutzt lokale Variablen, NICHT Props! -->
+<input bind:value={localName} />
+<div class:draft={localPublishState === 'draft'}>...</div>
+<button onclick={handleSave}>Speichern</button>
+```
+
+**Warum funktioniert das?**
+
+1. **Prop ist read-only:** `card` gehört dem Parent (z.B. Column.svelte)
+2. **Lokale State gehört Child:** `localName` ist private zu Card.svelte
+3. **Child darf Lokale mutieren:** `localName = newValue` ist OK
+4. **Parent aktualisiert Prop:** Nur Parent darf `card = {...}` setzen
+5. **Store vermittelt:** `boardStore.updateCard()` informiert Parent → Parent setzt neuen `card` Prop
+
+---
+
 ## 📋 Übersicht
 
 Wenn du möchtest, dass ein Nutzer eine Eigenschaft (z.B. Spalten-Name, Karten-Titel, Farbe) ändern kann und diese Änderung:

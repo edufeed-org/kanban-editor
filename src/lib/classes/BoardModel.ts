@@ -34,6 +34,7 @@ export interface CardProps {
     links?: Link[];
     attendees?: string[];
     publishState?: PublishState;
+    author?: string; // Nostr Public Key (npub) - Ersteller der Karte
 }
 
 export interface ColumnProps {
@@ -71,6 +72,7 @@ export class Card {
     public links: Link[] = [];
     public attendees: string[] = [];
     public publishState: PublishState = 'draft';
+    public author?: string; // Nostr Public Key (npub) - Ersteller der Karte
     public createdAt: string;
     public updatedAt: string;
 
@@ -84,6 +86,7 @@ export class Card {
         this.links = props.links || [];
         this.attendees = props.attendees || [];
         this.publishState = props.publishState || 'draft';
+        this.author = props.author;
         this.createdAt = generateTimestamp();
         this.updatedAt = this.createdAt;
     }
@@ -96,6 +99,7 @@ export class Card {
         if (props.links !== undefined) this.links = props.links;
         if (props.attendees !== undefined) this.attendees = props.attendees;
         if (props.publishState !== undefined) this.publishState = props.publishState;
+        if (props.author !== undefined) this.author = props.author;
 
         this.updatedAt = generateTimestamp();
     }
@@ -265,6 +269,14 @@ export class Board {
         return null;
     }
 
+    /**
+     * Findet eine Karte über alle Spalten hinweg anhand ihrer ID (spaltenübergreifend)
+     * Nützlich für Upsert-Operationen aus Nostr
+     */
+    findCardById(cardId: string): { card: Card; column: Column } | null {
+        return this.findCardAndColumn(cardId);
+    }
+
     moveCard(cardId: string, fromColId: string, toColId: string): void {
         const fromColumn = this.findColumn(fromColId);
         const toColumn = this.findColumn(toColId);
@@ -283,6 +295,36 @@ export class Board {
 
         // Das BESTEHENDE Card-Objekt zur Zielspalte hinzufügen (nicht mit Props rekonstruieren!)
         toColumn.appendCard(card);
+    }
+
+    /**
+     * Upsert-Operation: Fügt Karte hinzu ODER aktualisiert sie, wenn sie bereits existiert
+     * Spaltenübergreifend! Wenn die Karte woanders existiert, wird sie nicht verschoben.
+     * 
+     * @param targetColumnId - Spalte, in die die Karte aufgenommen wird
+     * @param cardProps - Die Kartendaten
+     * @returns Die neue oder aktualisierte Karte
+     */
+    upsertCard(targetColumnId: string, cardProps: CardProps): Card {
+        const targetColumn = this.findColumn(targetColumnId);
+        if (!targetColumn) {
+            throw new Error(`Target column ${targetColumnId} not found`);
+        }
+
+        // Prüfe ob die Karte bereits existiert (spaltenübergreifend)
+        const existing = this.findCardById(cardProps.id!);
+        
+        if (existing) {
+            // ✅ UPDATE: Karte existiert bereits - nur Daten aktualisieren
+            // Die Karte BLEIBT in ihrer aktuellen Spalte!
+            existing.card.update(cardProps);
+            return existing.card;
+        } else {
+            // ✅ INSERT: Neue Karte - zu Zielspalte hinzufügen
+            const newCard = new Card(cardProps);
+            targetColumn.cards = [...targetColumn.cards, newCard];
+            return newCard;
+        }
     }
 
     getContextData(full: boolean = false): {
