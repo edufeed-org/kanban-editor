@@ -1,5 +1,12 @@
+# Project Specific
 test-results
+archive/
+
+# Node
 node_modules
+
+# IDE
+./vscode
 
 # Output
 .output
@@ -34,6 +41,4 @@ CODE-ANALYSE.md
 .kilocode/rules/SHADCN.md
 .github
 /tasks
-STATUS-REPORT.md
 
-KOMMENTARE/

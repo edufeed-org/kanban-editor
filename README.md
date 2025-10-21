@@ -14,14 +14,13 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 ## 📚 Dokumentation
 
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
-- **[ROADMAP.md](./ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
+- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
-- **[STORES.md](./STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
-- **[CODE-ANALYSE.md](./CODE-ANALYSE.md)** - Aktueller Codebase-Status (17.10.2025)
-- **[NDK.md](./NDK.md)** - NDK Integration & Nostr-Event Publishing
-- **[Kanban-NIP.md](./Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
-- **[NOSTR-USER.md](./NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
-- **[UX-RULES.md](./UX-RULES.md)** - shadcn-svelte UI Guidelines
+- **[STORES.md](./docs/ARCHITECTURE/STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
+- **[NDK.md](./docs/ARCHITECTURE/NDK.md)** - NDK Integration & Nostr-Event Publishing
+- **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
+- **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
+- **[UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)** - shadcn-svelte UI Guidelines
 - **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie
 
 ### 🗺️ Documentation Map (für Entwickler)
