@@ -591,6 +591,6 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 
 **Projekt-Status:** 🔴 Phase 1 in Entwicklung  
 **Letzte Aktualisierung:** 18. Oktober 2025  
-**Repository:** [johappel/nostr-cli](https://github.com/edufeed-org/kanban-editor)
+**Repository:** [edufeed-org/nostr-cli](https://github.com/edufeed-org/kanban-editor)
 
 Für den aktuellen Entwicklungsstand siehe [CODE-ANALYSE.md](./CODE-ANALYSE.md) und [ROADMAP.md](./ROADMAP.md).
