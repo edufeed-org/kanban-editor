@@ -52,6 +52,8 @@ export interface BoardProps {
     publishState?: PublishState;
     author?: string;
     createdAt?: number;
+    tags?: string[];
+    ccLicense?: string;
 }
 
 export interface AIAction {
@@ -230,6 +232,8 @@ export class Board {
     public author?: string;
     public createdAt: string;
     public updatedAt: string;
+    public tags: string[] = [];
+    public ccLicense: string = 'cc-by-4.0';
 
     constructor(props: BoardProps) {
         this.id = props.id || generateDTag('board');
@@ -238,12 +242,22 @@ export class Board {
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
+        this.tags = props.tags || [];
+        this.ccLicense = props.ccLicense || 'cc-by-4.0';
         this.createdAt = generateTimestamp();
         this.updatedAt = this.createdAt;
     }
 
     setPublishState(state: PublishState): void {
         this.publishState = state;
+        this.updatedAt = generateTimestamp();
+    }
+
+    update(props: { name?: string; description?: string; tags?: string[]; ccLicense?: string }): void {
+        if (props.name !== undefined) this.name = props.name;
+        if (props.description !== undefined) this.description = props.description;
+        if (props.tags !== undefined) this.tags = props.tags;
+        if (props.ccLicense !== undefined) this.ccLicense = props.ccLicense;
         this.updatedAt = generateTimestamp();
     }
 
@@ -334,12 +348,22 @@ export class Board {
         id: string,
         name: string,
         description: string,
+        tags: string[],
+        ccLicense: string,
+        publishState: PublishState,
+        createdAt: string,
+        updatedAt: string,
         columns: any[]
     } {
         return {
             id: this.id,
             name: this.name,
             description: this.description || '',
+            tags: this.tags,
+            ccLicense: this.ccLicense,
+            publishState: this.publishState,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
             columns: this.columns.map(col => col.getContextData(full))
         };
     }

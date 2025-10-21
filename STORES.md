@@ -1550,14 +1550,176 @@ pnpm add -D @types/jsoncrush
 
 ---
 
-## XII. Dokumentation Links
+## XII. Board Metadata Persistierung (NEU - Phase 1 ✅)
 
-- **[AGENTS.md](./AGENTS.md)** – BoardModel.ts, Chat.ts Spezifikation
-- **[NDK.md](./NDK.md)** – NDK Initialisierung & Event API
-- **[NOSTR-USER.md](./NOSTR-USER.md)** – AuthStore & Signer Integration
-- **[ROADMAP.md](./ROADMAP.md)** – Meilensteine 1.1 – 1.5
+### 📋 Metadata-Felder im Board-Modell
+
+Die `BoardProps` Schnittstelle unterstützt jetzt erweiterte Metadaten:
+
+```typescript
+export interface BoardProps {
+    id?: string;
+    name: string;
+    description?: string;
+    columns?: ColumnProps[];
+    publishState?: PublishState;
+    author?: string;
+    tags?: string[];           // ← NEW: Array von Tags
+    ccLicense?: string;        // ← NEW: CC Lizenz-Typ
+}
+```
+
+**Neue Felder:**
+- **`tags: string[]`** – Array von Tag-Strings zur Board-Kategorisierung
+  - Beispiel: `["frontend", "design", "priorität-hoch"]`
+  - Persistiert als JSON-Array in localStorage
+  - Im Topbar-Dialog als komma-getrennte Eingabe dargestellt
+  
+- **`ccLicense: string`** – Creative Commons Lizenz für Board-Inhalte
+  - Optionen: `'cc-by-4.0'`, `'cc-by-nc-4.0'`, `'cc-by-sa-4.0'`, etc.
+  - Standard: `'cc-by-4.0'` (Attribution erforderlich, kommerzielle Nutzung erlaubt)
+  - Zukünftig: Nostr-Event Tags für License-Sharing
+
+### 🔄 Persistierungs-Flow (updateCurrentBoardMeta)
+
+```
+Topbar Dialog (Nutzer ändert Tags/License)
+    ↓
+saveBoardMeta() [Form Handler]
+    ├─ Parse tags: "tag1, tag2" → ["tag1", "tag2"]
+    └─ Call boardStore.updateCurrentBoardMeta({ tags, ccLicense })
+    ↓
+boardStore.updateCurrentBoardMeta(updates)
+    ├─ this.board.update(updates) [Model update mit updatedAt]
+    └─ this.triggerUpdate() [→ localStorage + publishToNostr()]
+    ↓
+localStorage.setItem('kanban-${boardId}', JSON.stringify(boardData))
+    ├─ { id, name, description, tags, ccLicense, publishState, ... }
+    └─ ✅ Persisted sofort & synchron
+    ↓
+$derived boardStore.boardMeta [Re-berechnung]
+    └─ $effect in Topbar detects changes [Dialog zeigt neue Werte]
+    ↓
+UI aktualisiert sich automatisch ✅
+```
+
+### 📝 Topbar Form Integration
+
+**Form-Felder in `metaForm`:**
+```typescript
+let metaForm = $state({
+    title: boardMeta?.title || 'Mein Projekt Board',
+    description: boardMeta?.description || '',
+    tags: boardMeta?.tags?.join(', ') || '',                    // ← NEW: Join tags for display
+    license: 'cc-by-4.0',                                       // ← NEW: CC License selector
+    publishState: 'draft' as 'draft' | 'published' | 'archived'
+});
+```
+
+**Form Handler (saveBoardMeta) - Persistiert alle Metadaten:**
+```typescript
+function saveBoardMeta() {
+    // Parse tags from comma-separated string to array
+    const tagsArray = metaForm.tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    
+    // Call store with ALL metadata
+    boardStore.updateCurrentBoardMeta({
+        name: metaForm.title,
+        description: metaForm.description,
+        tags: tagsArray,                    // ← NEW
+        ccLicense: metaForm.license         // ← NEW
+    });
+    
+    boardStore.setPublishState(metaForm.publishState);
+    
+    // Dialog closes, UI syncs automatically via $effect
+    dialogOpen = false;
+}
+```
+
+**Form Sync (beim Dialog öffnen) - Lädt aktuelle Werte:**
+```typescript
+$effect(() => {
+    if (dialogOpen) {
+        metaForm.title = currentBoardTitle;
+        metaForm.description = currentBoardDescription;
+        metaForm.tags = boardStore.data?.tags?.join(', ') || '';      // ← NEW: Reload tags
+        metaForm.license = boardStore.data?.ccLicense || 'cc-by-4.0'; // ← NEW: Reload license
+        metaForm.publishState = currentBoardPublishState;
+    }
+});
+```
+
+### 💾 localStorage Schema
+
+```json
+{
+  "kanban-board-41815b6f...": {
+    "id": "board-41815b6f5921aef...",
+    "name": "Frontend Development",
+    "description": "Sprint Q4 2025",
+    "tags": ["frontend", "ui-components", "priority-high"],       // ← NEW: Gespeichert als Array
+    "ccLicense": "cc-by-4.0",                                     // ← NEW: Lizenz-Typ
+    "publishState": "published",
+    "columns": [...],
+    "updatedAt": "2025-10-20T15:30:45.123Z"
+  }
+}
+```
+
+### 🔗 BoardStore API
+
+**Neue/Erweiterte Methoden:**
+
+```typescript
+// Aktualisiere ALLE Board-Metadaten (Name, Description, Tags, License)
+boardStore.updateCurrentBoardMeta({
+    name?: string;
+    description?: string;
+    tags?: string[];        // ← NEW
+    ccLicense?: string;     // ← NEW
+}): void
+
+// Zugriff auf aktuelle Metadaten über $derived
+boardStore.boardMeta = $derived({
+    name: string;
+    description: string;
+    tags: string[];         // ← NEW
+    ccLicense: string;      // ← NEW
+})
+
+// RawBoard-Daten mit allen Feldern
+boardStore.data = $derived({
+    id: string;
+    name: string;
+    description: string;
+    tags: string[];         // ← NEW
+    ccLicense: string;      // ← NEW
+    publishState: PublishState;
+    columns: Column[];
+    updatedAt: string;
+})
+```
+
+### ✅ Implementierungs-Checkliste
+
+- ✅ **BoardProps Interface** – `tags` und `ccLicense` hinzugefügt (AGENTS.md, BoardModel.ts)
+- ✅ **Board Class** – Felder initialisiert mit Defaults (tags=[], ccLicense='cc-by-4.0')
+- ✅ **Board.update()** – Beide Felder werden aktualisiert & `updatedAt` gesetzt
+- ✅ **boardStore.updateCurrentBoardMeta()** – Signature erweitert, neue Parameter akzeptiert
+- ✅ **Topbar saveBoardMeta()** – Parst tags & übergibt beide an Store
+- ✅ **Topbar $effect** – Sync-Logik für beide Felder beim Dialog öffnen
+- ✅ **localStorage** – Persisterung automatisch via `triggerUpdate()`
+- 🟡 **Optional: UI-Display** – Tags als Badges in BoardsList anzeigen (Future)
+- 🟡 **Optional: License Info** – Badge im Board-Header anzeigen (Future)
 
 ---
+
+## XIII. Dokumentation Links
+
 
 **Zuletzt aktualisiert:** 18. Oktober 2025  
 **Nächster Review:** Nach Implementierung von Meilenstein 1.1

@@ -1,6 +1,7 @@
 // src/lib/stores/kanbanStore.svelte.ts
 
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
+import { generateTimestamp } from '../utils/idGenerator.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
 export type CardItem = {
@@ -165,17 +166,48 @@ export class BoardStore {
         }
         
         try {
-            // Lade das ERSTE Board aus der Board-Liste
+            // Lade das zuletzt AUFGERUFENE Board aus der Board-Liste (via lastAccessedAt)
             const boardIds = this.loadBoardIds();
             
             if (boardIds.length > 0) {
-                // Lade das erste Board (neueste zuerst)
-                const firstBoardId = boardIds[0];
-                const stored = localStorage.getItem(`kanban-${firstBoardId}`);
+                // Finde das Board mit dem neuesten lastAccessedAt (oder fallback zu updatedAt)
+                let mostRecentBoardId = boardIds[0];
+                let mostRecentTime = 0;
                 
+                console.log('🔍 Suche zuletzt aufgerufenes Board...');
+                
+                for (const boardId of boardIds) {
+                    const stored = localStorage.getItem(`kanban-${boardId}`);
+                    if (stored) {
+                        try {
+                            const data = JSON.parse(stored);
+                            // Priorisiere lastAccessedAt für MRU-Reload (wann zuletzt geöffnet)
+                            const lastAccessed = data.lastAccessedAt || data.updatedAt || data.createdAt;
+                            
+                            // ⚠️ WICHTIG: ISO-String zu Timestamp konvertieren für numerischen Vergleich!
+                            const timestamp = lastAccessed 
+                                ? (typeof lastAccessed === 'string' 
+                                    ? new Date(lastAccessed).getTime() 
+                                    : lastAccessed)
+                                : 0;
+                            
+                            console.log(`  Board: ${data.name} | lastAccessedAt: ${lastAccessed} | timestamp: ${timestamp}`);
+                            
+                            if (timestamp > mostRecentTime) {
+                                mostRecentTime = timestamp;
+                                mostRecentBoardId = boardId;
+                                console.log(`    → Neuer Kandidat!`);
+                            }
+                        } catch (e) {
+                            console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
+                        }
+                    }
+                }
+                
+                const stored = localStorage.getItem(`kanban-${mostRecentBoardId}`);
                 if (stored) {
                     const data = JSON.parse(stored);
-                    console.log('📂 Board aus localStorage geladen:', data.name);
+                    console.log('✅ Zuletzt aufgerufenes Board geladen:', data.name);
                     return this.reconstructBoard(data);
                 }
             }
@@ -195,6 +227,8 @@ export class BoardStore {
             description: data.description,
             publishState: data.publishState,
             author: data.author,
+            tags: data.tags || [], // ← NEU: Tags laden
+            ccLicense: data.ccLicense || 'cc-by-4.0', // ← NEU: License laden
             columns: data.columns?.map((colData: any) => ({
                 id: colData.id,
                 name: colData.name,
@@ -259,7 +293,7 @@ export class BoardStore {
      * Gibt alle gespeicherten Boards in chronologischer Reihenfolge zurück (neueste zuerst)
      * REAKTIV: updateTrigger wird gelesen um Neuberechnung zu triggern
      */
-    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number }> {
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> {
         // 🔥 WICHTIG: updateTrigger lesen damit Svelte diese Methode als abhängig registriert!
         const trigger = this.updateTrigger;
         // 🔥 WICHTIG: boardIds lesen damit bei Änderungen neu berechnet wird!
@@ -268,7 +302,7 @@ export class BoardStore {
         if (typeof window === 'undefined') return [];
         
         try {
-            const boards: Array<{ id: string; name: string; description?: string; createdAt: number }> = [];
+            const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> = [];
             
             // Nutze die gespeicherte Liste statt durchsuche alle localStorage-Keys
             for (const boardId of ids) {
@@ -279,11 +313,18 @@ export class BoardStore {
                 if (stored) {
                     try {
                         const data = JSON.parse(stored);
+                        // updatedAt is ISO string, parse to timestamp for sorting
+                        // PRIORISIERE updatedAt (wann bearbeitet) für LISTE-SORTIERUNG
+                        const updatedAtTime = data.updatedAt 
+                            ? new Date(data.updatedAt).getTime() 
+                            : (data.createdAt || Date.now());
+                        
                         boards.push({
                             id: boardId,
                             name: data.name || 'Unbenanntes Board',
                             description: data.description,
-                            createdAt: data.createdAt || Date.now()
+                            createdAt: data.createdAt || Date.now(),
+                            updatedAt: updatedAtTime
                         });
                     } catch (e) {
                         console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
@@ -291,8 +332,11 @@ export class BoardStore {
                 }
             }
             
-            // Sortiere nach createdAt (neueste zuerst)
-            return boards.sort((a, b) => b.createdAt - a.createdAt);
+            // Sortiere nach updatedAt (zuletzt BEARBEITETE zuerst!) - für Board-Liste Anzeige
+            // WICHTIG: updatedAt != lastAccessedAt!
+            //   - updatedAt = wann wurde Board GEÄNDERT (Metadata/Karten) → für Liste-Sortierung
+            //   - lastAccessedAt = wann wurde Board GEÖFFNET → für Reload-MRU (in loadFromStorage)
+            return boards.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         } catch (error) {
             console.error('❌ Fehler beim Laden aller Boards:', error);
             return [];
@@ -382,9 +426,17 @@ export class BoardStore {
             const data = JSON.parse(stored);
             this.board = this.reconstructBoard(data);
             this._columnOrder = this.board.columns.map(c => c.id);
-            this.triggerUpdate();
             
-            console.log('✅ Board geladen:', boardId, this.board.name);
+            // ✨ NEU: Setze lastAccessedAt auf JETZT (für MRU-Reload)
+            // Nutze direkte localStorage-Update OHNE triggerUpdate() um Endlosschleife zu vermeiden
+            data.lastAccessedAt = generateTimestamp();
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            
+            // 🔥 WICHTIG: Nur updateTrigger erhöhen (für UI-Reaktivität), aber NICHT saveToStorage() aufrufen!
+            // Grund: saveToStorage() würde board.getContextData() nutzen, das lastAccessedAt nicht enthält
+            this.updateTrigger++;
+            
+            console.log('✅ Board geladen:', boardId, this.board.name, '(lastAccessedAt aktualisiert)');
             return true;
         } catch (error) {
             console.error('❌ Fehler beim Laden von Board:', boardId, error);
@@ -452,17 +504,22 @@ export class BoardStore {
     }
 
     /**
-     * Aktualisiert die Metadaten des aktuellen Boards (Name, Beschreibung, etc.)
+     * Aktualisiert die Metadaten des aktuellen Boards (Name, Beschreibung, Tags, Lizenz, etc.)
      */
-    public updateCurrentBoardMeta(updates: { name?: string; description?: string }): void {
-        if (updates.name !== undefined) {
-            this.board.name = updates.name;
-        }
-        if (updates.description !== undefined) {
-            this.board.description = updates.description;
-        }
-        this.triggerUpdate(); // 🔥 WICHTIG: speichert zu localStorage und triggert $derived Neuberechnung
-        console.log('✅ Board-Metadaten aktualisiert:', { name: this.board.name, description: this.board.description });
+    public updateCurrentBoardMeta(updates: { 
+        name?: string
+        description?: string
+        tags?: string[]
+        ccLicense?: string
+    }): void {
+        this.board.update(updates); // ✅ Nutze board.update() damit updatedAt gesetzt wird!
+        this.triggerUpdate(); // 🔥 speichert zu localStorage und triggert $derived Neuberechnung
+        console.log('✅ Board-Metadaten aktualisiert:', { 
+            name: this.board.name, 
+            description: this.board.description,
+            tags: this.board.tags,
+            ccLicense: this.board.ccLicense
+        });
     }
 
     // ============================================================================

@@ -11,6 +11,7 @@
     import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import { Badge } from '$lib/components/ui/badge/index.js';
+    import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
@@ -43,24 +44,36 @@
         title: boardMeta?.title || 'Mein Projekt Board',
         description: boardMeta?.description || '',
         tags: boardMeta?.tags?.join(', ') || '',
-        license: 'cc-by-4.0'
+        license: 'cc-by-4.0',
+        publishState: 'draft' as 'draft' | 'published' | 'archived'
     });
 
     let dialogOpen = $state(false);
+    let previousDialogState = $state(false); // ← NEU: Track previous state
     
     // 🔥 WICHTIG: Nutze $derived vom Store - das ist reactive!
-    // boardStore.boardMeta wird automatisch neu berechnet wenn board.name/description sich ändern
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
+    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
     
-    // Synchronisiere metaForm nur wenn Dialog geöffnet wird
+    // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
     $effect(() => {
-        if (dialogOpen) {
+        // Nur triggern wenn Dialog von false → true wechselt (Opening Event!)
+        if (dialogOpen && !previousDialogState) {
             // Beim Öffnen: Lade aktuelle Werte vom Store
             metaForm.title = currentBoardTitle;
             metaForm.description = currentBoardDescription;
-            console.log('🔄 Topbar: Dialog geöffnet, metaForm synchronisiert:', currentBoardTitle);
+            metaForm.tags = boardStore.data?.tags?.join(', ') || '';
+            metaForm.license = boardStore.data?.ccLicense || 'cc-by-4.0';
+            metaForm.publishState = currentBoardPublishState;
+            console.log('🔄 Topbar: Dialog geöffnet, metaForm synchronisiert:', {
+                title: currentBoardTitle,
+                tags: metaForm.tags,
+                license: metaForm.license
+            });
         }
+        // Update previous state NACH dem Check
+        previousDialogState = dialogOpen;
     });
 
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
@@ -139,23 +152,33 @@
     }
 
     function saveBoardMeta() {
-        // 1. Aktualisiere Board-Name und Beschreibung im Store
+        // Parse tags from comma-separated string to array
+        const tagsArray = metaForm.tags
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+        
+        // 1. Aktualisiere alle Board-Metadaten im Store
         boardStore.updateCurrentBoardMeta({
             name: metaForm.title,
-            description: metaForm.description
+            description: metaForm.description,
+            tags: tagsArray,
+            ccLicense: metaForm.license
         });
+        
+        // 2. Aktualisiere publishState separat
+        boardStore.setPublishState(metaForm.publishState);
         
         console.log('✅ Board-Meta gespeichert:', {
             name: metaForm.title,
-            description: metaForm.description
+            description: metaForm.description,
+            tags: tagsArray,
+            ccLicense: metaForm.license,
+            publishState: metaForm.publishState
         });
         
-        // 2. ⚡ WICHTIG: Schließe Dialog NACH Update, damit $derived neu berechnet wird
-        // Das triggert die $derived(getCurrentBoardMeta().name) neu
+        // 3. Schließe Dialog
         dialogOpen = false;
-        
-        // 3. Force $derived update durch kleine Verzögerung
-        // Damit Svelte den neuen Wert vom Store in currentBoardTitle sieht
         console.log('🔄 currentBoardTitle wird neu berechnet:', currentBoardTitle);
     }
 
@@ -214,6 +237,24 @@
                                 bind:value={metaForm.description} 
                                 placeholder="Projekt-Beschreibung"
                             />
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <Label>Veröffentlichungsstatus</Label>
+                            <RadioGroup.Root bind:value={metaForm.publishState}>
+                                <div class="flex items-center space-x-2">
+                                    <RadioGroup.Item value="draft" id="state-draft" />
+                                    <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <RadioGroup.Item value="published" id="state-published" />
+                                    <Label for="state-published" class="font-normal">Veröffentlicht (Nostr)</Label>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <RadioGroup.Item value="archived" id="state-archived" />
+                                    <Label for="state-archived" class="font-normal">Archiviert</Label>
+                                </div>
+                            </RadioGroup.Root>
                         </div>
                         
                         <div class="space-y-2">

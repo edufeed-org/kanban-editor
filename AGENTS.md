@@ -145,6 +145,8 @@ export interface BoardProps {
     columns?: ColumnProps[];
     publishState?: PublishState; 
     author?: string; // npub-Key
+    tags?: string[]; // Array von Tags für Board-Kategorisierung, Komma-getrennt in Topbar
+    ccLicense?: string; // CC Lizenz-Typ (z.B. 'cc-by-4.0', 'cc-by-nc-4.0'), Default: 'cc-by-4.0'
 }
 
 export interface AIAction {

@@ -39,7 +39,10 @@
 	let showModal = $state(false);
 	let showViewModal = $state(false);
 	let showSidebar = $state(false);
-	let showPublishToggle = $state(true);
+	
+	// 🔥 WICHTIG: showPublishToggle hängt vom Board-publishState ab!
+	let boardPublishState = $derived(boardStore.data?.publishState || 'draft');
+	let showPublishToggle = $derived(boardPublishState === 'published');
 	let showMenu = $state(true);
 	
 	// Card local state (nicht die Prop direkt mutieren!)

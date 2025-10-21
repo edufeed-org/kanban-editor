@@ -556,6 +556,38 @@ $effect(() => {
 - Nur Parent darf `card = {...}` reassignieren
 - Child darf nur lokale `$state` Variablen mutieren
 
+### Fehler 7: Timestamp-Vergleich verwendet String statt Number (NEW - CRITICAL!)
+**Problem:** ISO-String Timestamps werden direkt verglichen → falsches Ergebnis!
+```typescript
+// ❌ FALSCH - String-Vergleich funktioniert NICHT für Timestamps!
+const timestamp = data.lastAccessedAt || data.updatedAt || 0;
+if (timestamp > mostRecentTime) {  // ← String-Vergleich statt numerisch!
+    mostRecentTime = timestamp;
+}
+
+// ✅ RICHTIG - ISO-String zu Timestamp konvertieren
+const lastAccessed = data.lastAccessedAt || data.updatedAt;
+const timestamp = lastAccessed 
+    ? (typeof lastAccessed === 'string' 
+        ? new Date(lastAccessed).getTime()  // ← Parse zu Number!
+        : lastAccessed)
+    : 0;
+
+if (timestamp > mostRecentTime) {  // ← Numerischer Vergleich ✓
+    mostRecentTime = timestamp;
+}
+```
+
+**Warum:** ISO-Strings (z.B. `"2025-10-21T12:20:00.000Z"`) werden lexikographisch verglichen, nicht numerisch!
+
+**Beispiel Bug:**
+- Board A: `lastAccessedAt: "2025-10-21T12:20:00Z"` → als String: `"2025-10-21T12:20:00Z"`
+- Board B: `lastAccessedAt: "2025-10-21T11:30:00Z"` → als String: `"2025-10-21T11:30:00Z"`
+- String-Vergleich: `"2025-10-21T12:20:00Z" > "2025-10-21T11:30:00Z"` → funktioniert **zufällig**
+- ABER: `"2025-10-21T09:00:00Z" > "2025-10-21T11:00:00Z"` → **FALSE** (weil String-Vergleich Zeichen-weise!)
+
+**Lösung:** IMMER `new Date(isoString).getTime()` für numerischen Vergleich verwenden!
+
 ---
 
 ## 🔐 Security First Pattern (KRITISCH!)
@@ -1376,6 +1408,7 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 |-----------|----------|--------|
 | Private Keys in Storage | 🔴 CRITICAL | Delete all code & redo from scratch |
 | Missing `triggerUpdate()` | 🔴 CRITICAL | Data loss on reload! |
+| **Timestamp String-Vergleich** | 🔴 **CRITICAL** | **MRU-Logic broken! Parse to Number first!** |
 | Wrong Icon Syntax | 🟠 HIGH | Icons nicht sichtbar, UI broken |
 | `$effect` mit falschem Wert | 🟠 HIGH | Sync broken, inconsistent state |
 | No isDragging Guard (DnD) | 🟠 HIGH | DnD completely broken |
@@ -1411,6 +1444,8 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 15. **Phase-Awareness**: Welche Phase? Welcher Meilenstein? Abhängigkeiten?
 16. **Vor Commit:** Pre-Commit Checklist durchgehen (siehe Rule Violations Section)
 17. **Bei Regelkonflikt:** Rule Change Request Template verwenden (keine Ad-hoc-Anpassungen!)
+18. **⚠️ NEU: Timestamp-Vergleiche MÜSSEN numerisch sein!** ← ISO-String zu `new Date().getTime()` konvertieren!
+    - 🛑 **Violation Detection:** `if (isoString > timestamp)` → ❌ String-Vergleich! Parse zu Number first!
 
 ---
 
