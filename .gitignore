@@ -1,5 +1,13 @@
+# Project Specific
 test-results
+KOMMENTARE/
+archive/
+
+# Node
 node_modules
+
+# IDE
+./vscode
 
 # Output
 .output
@@ -35,5 +43,3 @@ CODE-ANALYSE.md
 /tasks
 STATUS-REPORT.md
 
-KOMMENTARE/
-archive/
