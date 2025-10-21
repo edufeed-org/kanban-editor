@@ -33,15 +33,35 @@ export type UIColumn = {
 
 export class BoardStore {
     private static STORAGE_KEY = 'kanban-board-data';
+    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // 🔥 NEUE LISTE!
     
     // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
     private board = $state(this.loadFromStorage());
+    
+    // 🔥 NEUE: Liste aller Board-IDs (für Multi-Board-Verwaltung)
+    private boardIds = $state<string[]>(this.loadBoardIds());
 
     // Separate Spalten-Reihenfolge (wird nicht mutiert, nur replace)
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
 
     // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
     private updateTrigger = $state(0);
+
+    constructor() {
+        // 🔥 KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
+        // (Das passiert beim ersten Laden wenn ein Default Board erstellt wird)
+        if (typeof window !== 'undefined') {
+            const currentBoardId = this.board.id;
+            if (!this.boardIds.includes(currentBoardId)) {
+                console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
+                this.boardIds = [...this.boardIds, currentBoardId];
+                this.saveBoardIds();
+                
+                // Speichere auch das Default Board selbst
+                this.saveToStorage();
+            }
+        }
+    }
 
     // Öffentliche getter-Funktion, um die Board-Daten reaktiv abzurufen
     public get data() {
@@ -96,9 +116,47 @@ export class BoardStore {
         return result;
     });
 
+    // 🔥 WICHTIG: Reaktive Board-Metadaten für Topbar und andere Komponenten
+    // Diese $derived wird neu berechnet sobald board.name oder board.description sich ändern
+    public boardMeta = $derived({
+        id: this.board.id,
+        name: this.board.name,
+        description: this.board.description,
+        trigger: this.updateTrigger  // Auch updateTrigger als Fallback-Dependency
+    });
+
     // ============================================================================
     // PRIVATE HELPER
     // ============================================================================
+
+    private loadBoardIds(): string[] {
+        if (typeof window === 'undefined') return [];
+        
+        try {
+            const stored = localStorage.getItem(BoardStore.BOARDS_LIST_KEY);
+            if (stored) {
+                const ids = JSON.parse(stored);
+                console.log('📋 Board-IDs geladen:', ids);
+                return ids;
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Laden der Board-IDs:', error);
+        }
+        
+        // Neue App - keine alten Boards zu migrieren
+        return [];
+    }
+
+    private saveBoardIds(): void {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            localStorage.setItem(BoardStore.BOARDS_LIST_KEY, JSON.stringify(this.boardIds));
+            console.log('💾 Board-IDs gespeichert:', this.boardIds.length);
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Speichern der Board-IDs:', error);
+        }
+    }
 
     private loadFromStorage(): Board {
         if (typeof window === 'undefined') {
@@ -107,18 +165,25 @@ export class BoardStore {
         }
         
         try {
-            const stored = localStorage.getItem(BoardStore.STORAGE_KEY);
-            if (stored) {
-                const data = JSON.parse(stored);
-                console.log('📂 Board aus localStorage geladen:', data.name);
+            // Lade das ERSTE Board aus der Board-Liste
+            const boardIds = this.loadBoardIds();
+            
+            if (boardIds.length > 0) {
+                // Lade das erste Board (neueste zuerst)
+                const firstBoardId = boardIds[0];
+                const stored = localStorage.getItem(`kanban-${firstBoardId}`);
                 
-                // Rekonstruiere Board-Instanz aus JSON-Daten
-                return this.reconstructBoard(data);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    console.log('📂 Board aus localStorage geladen:', data.name);
+                    return this.reconstructBoard(data);
+                }
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Laden aus localStorage:', error);
         }
         
+        // Keine Boards vorhanden - erstelle Default Board
         return this.createDefaultBoard();
     }
 
@@ -156,9 +221,11 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'To Do', color: 'color-gradient-1' },
-                { name: 'In Progress', color: 'color-gradient-2' },
-                { name: 'Done', color: 'color-gradient-3' }
+                { name: 'Backlog', color: 'muted' },
+                { name: 'To Do', color: 'chart-1' },
+                { name: 'In Progress', color: 'chart-2' },
+                { name: 'Done', color: 'chart-3' },
+                { name: 'Archive', color: 'muted' }
             ]
         });
     }
@@ -168,8 +235,11 @@ export class BoardStore {
         
         try {
             const data = this.board.getContextData(true);
-            localStorage.setItem(BoardStore.STORAGE_KEY, JSON.stringify(data));
-            console.log('💾 Board in localStorage gespeichert');
+            // 🔥 WICHTIG: Board.id ist bereits "board-TIMESTAMP", daher nutze es direkt als Schlüssel!
+            // z.B. Board.id = "board-1761035980797" → Key = "kanban-board-1761035980797"
+            const storageKey = `kanban-${this.board.id}`;
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            console.log('💾 Board in localStorage gespeichert:', storageKey);
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
         }
@@ -179,6 +249,220 @@ export class BoardStore {
         this.updateTrigger++;
         this.saveToStorage(); // Automatisch speichern bei jeder Änderung
         console.log('🔄 Update triggered:', this.updateTrigger);
+    }
+
+    // ============================================================================
+    // MULTI-BOARD VERWALTUNG
+    // ============================================================================
+
+    /**
+     * Gibt alle gespeicherten Boards in chronologischer Reihenfolge zurück (neueste zuerst)
+     * REAKTIV: updateTrigger wird gelesen um Neuberechnung zu triggern
+     */
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number }> {
+        // 🔥 WICHTIG: updateTrigger lesen damit Svelte diese Methode als abhängig registriert!
+        const trigger = this.updateTrigger;
+        // 🔥 WICHTIG: boardIds lesen damit bei Änderungen neu berechnet wird!
+        const ids = this.boardIds;
+        
+        if (typeof window === 'undefined') return [];
+        
+        try {
+            const boards: Array<{ id: string; name: string; description?: string; createdAt: number }> = [];
+            
+            // Nutze die gespeicherte Liste statt durchsuche alle localStorage-Keys
+            for (const boardId of ids) {
+                // 🔥 WICHTIG: boardId ist bereits "board-...", daher nutze "kanban-..." als Key
+                const storageKey = `kanban-${boardId}`;
+                const stored = localStorage.getItem(storageKey);
+                
+                if (stored) {
+                    try {
+                        const data = JSON.parse(stored);
+                        boards.push({
+                            id: boardId,
+                            name: data.name || 'Unbenanntes Board',
+                            description: data.description,
+                            createdAt: data.createdAt || Date.now()
+                        });
+                    } catch (e) {
+                        console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
+                    }
+                }
+            }
+            
+            // Sortiere nach createdAt (neueste zuerst)
+            return boards.sort((a, b) => b.createdAt - a.createdAt);
+        } catch (error) {
+            console.error('❌ Fehler beim Laden aller Boards:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Filtert Boards nach Suchbegriff
+     * REAKTIV: updateTrigger wird gelesen um Neuberechnung zu triggern
+     */
+    public filterBoards(searchTerm: string): Array<{ id: string; name: string; description?: string; createdAt: number }> {
+        // 🔥 WICHTIG: updateTrigger lesen damit Svelte diese Methode als abhängig registriert!
+        const trigger = this.updateTrigger;
+        
+        const allBoards = this.getAllBoards();
+        const term = searchTerm.toLowerCase().trim();
+        
+        if (!term) return allBoards;
+        
+        return allBoards.filter(board => 
+            board.name.toLowerCase().includes(term) ||
+            (board.description?.toLowerCase().includes(term) ?? false)
+        );
+    }
+
+    /**
+     * Erstellt ein neues Board mit Default-Spalten und speichert es
+     */
+    public createBoard(name: string = 'Neues Board'): string {
+        const newBoard = new Board({
+            name,
+            description: '',
+            columns: [
+                { name: 'Backlog', color: 'muted' },
+                { name: 'To Do', color: 'chart-1' },
+                { name: 'In Progress', color: 'chart-2' },
+                { name: 'Done', color: 'chart-3' },
+                { name: 'Archive', color: 'muted' }
+            ]
+        });
+        
+        // Board.id ist jetzt durch Board Constructor gesetzt (mit generateDTag('board'))
+        const newBoardId = newBoard.id;
+        const now = Date.now();
+        
+        // Speichere das neue Board als separate Einheit
+        if (typeof window !== 'undefined') {
+            try {
+                const data = newBoard.getContextData(true);
+                // @ts-ignore - Wir wissen, dass createdAt existiert, aber getContextData() gibt es nicht zurück
+                data.createdAt = now;
+                // 🔥 WICHTIG: Key ist "kanban-board-...", da Board.id bereits "board-..." ist
+                localStorage.setItem(`kanban-${newBoardId}`, JSON.stringify(data));
+                
+                // 🔥 WICHTIG: Füge die Board-ID zur Liste hinzu!
+                this.boardIds = [...this.boardIds, newBoardId];
+                this.saveBoardIds();
+                
+                console.log('✅ Neues Board erstellt:', newBoardId, name);
+                
+                // 🔥 WICHTIG: Triggere updateTrigger damit $derived.by() in BoardsList neu berechnet wird!
+                this.updateTrigger++;
+                
+            } catch (error) {
+                console.error('❌ Fehler beim Speichern des neuen Boards:', error);
+            }
+        }
+        
+        return newBoardId;
+    }
+
+    /**
+     * Lädt ein Board mit der gegebenen ID und macht es zum aktiven Board
+     */
+    public loadBoard(boardId: string): boolean {
+        if (typeof window === 'undefined') return false;
+        
+        try {
+            // 🔥 WICHTIG: boardId ist bereits "board-...", daher nutze "kanban-board-..." als Key
+            const storageKey = `kanban-${boardId}`;
+            const stored = localStorage.getItem(storageKey);
+            if (!stored) {
+                console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
+                return false;
+            }
+            
+            const data = JSON.parse(stored);
+            this.board = this.reconstructBoard(data);
+            this._columnOrder = this.board.columns.map(c => c.id);
+            this.triggerUpdate();
+            
+            console.log('✅ Board geladen:', boardId, this.board.name);
+            return true;
+        } catch (error) {
+            console.error('❌ Fehler beim Laden von Board:', boardId, error);
+            return false;
+        }
+    }
+
+    /**
+     * Löscht ein Board mit der gegebenen ID
+     */
+    public deleteBoard(boardId?: string): boolean {
+        const targetId = boardId || this.board.id;
+        
+        if (typeof window === 'undefined') return false;
+        
+        try {
+            // 🔥 WICHTIG: targetId ist bereits "board-...", daher nutze "kanban-..." als Key
+            localStorage.removeItem(`kanban-${targetId}`);
+            
+            // 🔥 WICHTIG: Entferne die Board-ID aus der Liste!
+            this.boardIds = this.boardIds.filter(id => id !== targetId);
+            this.saveBoardIds();
+            
+            console.log('🗑️ Board gelöscht:', targetId);
+            
+            // 🔥 WICHTIG: Triggere updateTrigger damit $derived.by() in BoardsList neu berechnet wird!
+            this.updateTrigger++;
+            
+            // Wenn das aktuelle Board gelöscht wurde, lade ein anderes oder Default
+            if (targetId === this.board.id) {
+                const allBoards = this.getAllBoards();
+                if (allBoards.length > 0) {
+                    this.loadBoard(allBoards[0].id);
+                } else {
+                    // Keine anderen Boards, erstelle Default
+                    this.board = this.createDefaultBoard();
+                    this._columnOrder = this.board.columns.map(c => c.id);
+                    this.triggerUpdate();
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Fehler beim Löschen von Board:', targetId, error);
+            return false;
+        }
+    }
+
+    /**
+     * Gibt die ID des aktuellen Boards zurück
+     */
+    public getCurrentBoardId(): string {
+        return this.board.id;
+    }
+
+    /**
+     * Gibt die Metadaten des aktuellen Boards zurück
+     */
+    public getCurrentBoardMeta(): { id: string; name: string; description?: string } {
+        return {
+            id: this.board.id,
+            name: this.board.name,
+            description: this.board.description
+        };
+    }
+
+    /**
+     * Aktualisiert die Metadaten des aktuellen Boards (Name, Beschreibung, etc.)
+     */
+    public updateCurrentBoardMeta(updates: { name?: string; description?: string }): void {
+        if (updates.name !== undefined) {
+            this.board.name = updates.name;
+        }
+        if (updates.description !== undefined) {
+            this.board.description = updates.description;
+        }
+        this.triggerUpdate(); // 🔥 WICHTIG: speichert zu localStorage und triggert $derived Neuberechnung
+        console.log('✅ Board-Metadaten aktualisiert:', { name: this.board.name, description: this.board.description });
     }
 
     // ============================================================================
@@ -324,21 +608,7 @@ export class BoardStore {
         this.publishToNostr();
     }
 
-    public deleteBoard(): void {
-        // Lösche alles: Neue leere Board mit Standardspalten
-        this.board = new Board({
-            name: 'Neues Board',
-            columns: [
-                { name: 'To Do' },
-                { name: 'In Progress' },
-                { name: 'Done' }
-            ]
-        });
-        
-        this._columnOrder = this.board.columns.map(c => c.id);
-        this.triggerUpdate(); // Trigger Reaktivität
-        this.publishToNostr();
-    }
+
 
     // ============================================================================
     // UI-EVENT-HANDLER (direkt von Komponenten aufrufbar)

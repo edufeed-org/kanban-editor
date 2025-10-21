@@ -12,6 +12,7 @@
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	
 
  	const flipDurationMs = 150;
 
@@ -376,7 +377,7 @@
 						}
 					}}
 				>
-					<PlusIcon class="h-4 w-4" />
+					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
 
 				<!-- Spalten-Aktionen Popover -->

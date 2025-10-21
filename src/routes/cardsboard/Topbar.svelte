@@ -46,6 +46,23 @@
         license: 'cc-by-4.0'
     });
 
+    let dialogOpen = $state(false);
+    
+    // 🔥 WICHTIG: Nutze $derived vom Store - das ist reactive!
+    // boardStore.boardMeta wird automatisch neu berechnet wenn board.name/description sich ändern
+    let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
+    let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
+    
+    // Synchronisiere metaForm nur wenn Dialog geöffnet wird
+    $effect(() => {
+        if (dialogOpen) {
+            // Beim Öffnen: Lade aktuelle Werte vom Store
+            metaForm.title = currentBoardTitle;
+            metaForm.description = currentBoardDescription;
+            console.log('🔄 Topbar: Dialog geöffnet, metaForm synchronisiert:', currentBoardTitle);
+        }
+    });
+
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
@@ -122,15 +139,24 @@
     }
 
     function saveBoardMeta() {
-        // Aktualisiere die boardMeta (würde normalerweise auch an Nostr gesendet werden)
-        if (boardMeta) {
-            boardMeta.title = metaForm.title;
-            boardMeta.description = metaForm.description;
-            boardMeta.tags = metaForm.tags
-                .split(',')
-                .map(t => t.trim())
-                .filter(t => t.length > 0);
-        }
+        // 1. Aktualisiere Board-Name und Beschreibung im Store
+        boardStore.updateCurrentBoardMeta({
+            name: metaForm.title,
+            description: metaForm.description
+        });
+        
+        console.log('✅ Board-Meta gespeichert:', {
+            name: metaForm.title,
+            description: metaForm.description
+        });
+        
+        // 2. ⚡ WICHTIG: Schließe Dialog NACH Update, damit $derived neu berechnet wird
+        // Das triggert die $derived(getCurrentBoardMeta().name) neu
+        dialogOpen = false;
+        
+        // 3. Force $derived update durch kleine Verzögerung
+        // Damit Svelte den neuen Wert vom Store in currentBoardTitle sieht
+        console.log('🔄 currentBoardTitle wird neu berechnet:', currentBoardTitle);
     }
 
     function handleDeleteBoard() {
@@ -159,9 +185,11 @@
             
             <Separator orientation="vertical" class="min-w-4" />
             
-            <span class="font-semibold text-lg hidden sm:inline-block">{title}</span>
+            <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
+            <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
+            
             <!-- Board Meta Settings Button (3 Punkte) -->
-            <Dialog.Root>
+            <Dialog.Root bind:open={dialogOpen}>
                 <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
                     <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
                 </Dialog.Trigger>
@@ -212,7 +240,7 @@
                     </div>
                     
                     <Dialog.Footer>
-                        <Button variant="outline" onclick={() => {}}>Abbrechen</Button>
+                        <Button variant="outline" onclick={() => { dialogOpen = false; }}>Abbrechen</Button>
                         <Button onclick={saveBoardMeta}>Speichern & An Nostr senden</Button>
                         <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto group">
                             <TrashIcon class="mr-2 h-4 w-4" />

@@ -51,6 +51,7 @@ export interface BoardProps {
     columns?: ColumnProps[];
     publishState?: PublishState;
     author?: string;
+    createdAt?: number;
 }
 
 export interface AIAction {
@@ -77,7 +78,7 @@ export class Card {
     public updatedAt: string;
 
     constructor(props: CardProps) {
-        this.id = props.id || generateDTag();
+        this.id = props.id || generateDTag('card');
         this.heading = props.heading;
         this.content = props.content;
         this.color = props.color;
@@ -111,7 +112,7 @@ export class Card {
 
     addComment(text: string, author: string): void {
         const comment: Comment = {
-            id: generateDTag(),
+            id: generateDTag('comment'),
             text,
             author,
             createdAt: generateTimestamp()
@@ -152,7 +153,7 @@ export class Column {
     public cards: Card[] = [];
 
     constructor(props: ColumnProps) {
-        this.id = props.id || generateDTag();
+        this.id = props.id || generateDTag('column');
         this.name = props.name;
         this.color = props.color;
         this.cards = (props.cards || []).map(cardProps => new Card(cardProps));
@@ -197,17 +198,19 @@ export class Column {
         }
     }
 
-    getContextData(full: boolean = false): { id: string, name: string, cards: any[] } {
+    getContextData(full: boolean = false): { id: string, name: string, color?: string, cards: any[] } {
         if (full) {
             return {
                 id: this.id,
                 name: this.name,
+                color: this.color,
                 cards: this.cards.map(card => card.getContextData())
             };
         } else {
             return {
                 id: this.id,
                 name: this.name,
+                color: this.color,
                 cards: this.cards.map(card => ({ id: card.id, heading: card.heading }))
             };
         }
@@ -229,7 +232,7 @@ export class Board {
     public updatedAt: string;
 
     constructor(props: BoardProps) {
-        this.id = props.id || generateDTag();
+        this.id = props.id || generateDTag('board');
         this.name = props.name;
         this.description = props.description;
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
@@ -364,7 +367,7 @@ export class Chat {
 
     addMessage(text: string, sender: 'user' | 'ai', type: 'message' | 'action' = 'message'): void {
         const message: ChatMessage = {
-            id: generateDTag(),
+            id: generateDTag('comment'),
             text,
             sender,
             type,

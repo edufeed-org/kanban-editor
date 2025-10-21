@@ -1,6 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import Board from "./Board.svelte";
+import BoardsList from "./BoardsList.svelte";
 import Topbar from "./Topbar.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
@@ -28,6 +29,14 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	let columns = $derived.by(() => {
 		return boardStore.uiData;
 	});
+
+	// Aktuelles Board Meta
+	let currentBoardId = $derived(boardStore.getCurrentBoardId());
+	let boardMeta = $derived(boardStore.getCurrentBoardMeta());
+	
+	// 🔥 WICHTIG: Direkter reaktiver Zugriff für Topbar!
+	// Damit Svelte erkennt, dass sich der Titel geändert hat
+	let boardTitle = $derived(boardStore.getCurrentBoardMeta().name);
 
 	function handleBoardUpdated(newColumnsData: Column[]) {
 		// Synchronisiere kompletten Board-State: Spalten UND Karten-Positionen
@@ -73,12 +82,6 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 
 	// Abgeleitete Hierarchie-Info
 	let selectedCardHierarchy = $derived(getCardHierarchy(selectedCard));
-	// Board-Metadaten
-	let boardMeta = $state({
-		title: 'Mein Projekt Board',
-		description: 'Projektmanagement mit KI-Unterstützung',
-		tags: ['development', 'svelte', 'nostr']
-	});
 
 	// Debug Stats
 	let stats = $derived({
@@ -136,17 +139,9 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 				class="border-r bg-muted/10 overflow-y-auto"
 				onResize={(size: number) => { leftSidebarSize = size; }}
 			>
-				<div class="p-4 space-y-4">
-					<h2 class="text-sm font-semibold">Meine Boards</h2>
-					<div class="space-y-2">
-						<button class="w-full text-left rounded-md bg-primary/10 px-3 py-2 text-sm hover:bg-primary/20">
-							{boardMeta.title}
-						</button>
-					</div>
-					<Separator />
-					<button class="w-full rounded-md border border-dashed px-3 py-2 text-sm hover:bg-muted">
-						+ Neues Board
-					</button>
+				<div class="p-4 h-full flex flex-col overflow-hidden">
+					<h2 class="text-sm font-semibold mb-4">Meine Boards</h2>
+					<BoardsList {currentBoardId} />
 				</div>
 			</Resizable.Pane>
 			
@@ -158,8 +153,12 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 			<main class="flex flex-1 flex-col overflow-hidden min-w-0">
 		<!-- Topbar mit integrierten Sidebar-Triggern -->
 		<Topbar
-			title={boardMeta.title}
-			{boardMeta}
+			title={boardTitle}
+			boardMeta={{
+				title: boardTitle,
+				description: '',
+				tags: []
+			}}
 			onToggleLeftSidebar={toggleLeftSidebar}
 			onToggleRightSidebar={toggleRightSidebar}
 		/>			<!-- Board Content - KEIN Scroll hier, nur im Board selbst -->
