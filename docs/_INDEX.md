@@ -11,8 +11,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ### 👨‍💼 Product Manager / Stakeholder
 **Ziel:** Produkt-Vision, Roadmap, Features verstehen
 
-1. **Start:** [`README.md`](../../README.md) (15 min Überblick)
-2. **Vertiefung:** [`KONZEPT.md`](../../KONZEPT.md) (Vision & Use Cases)
+1. **Start:** [`README.md`](../README.md) (15 min Überblick)
+2. **Vertiefung:** [`KONZEPT.md`](../KONZEPT.md) (Vision & Use Cases)
 3. **Planung:** [`COLLABORATION/ROADMAP.md`](./COLLABORATION/ROADMAP.md) (Phasen & Meilensteine)
 4. **Support:** [`COLLABORATION/CONTRIBUTING.md`](./COLLABORATION/CONTRIBUTING.md) (Contribution Policy)
 
@@ -22,8 +22,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Ziel:** UI bauen mit Svelte, Komponenten mit shadcn-svelte
 
 **Learning Path:**
-1. **Einführung:** [`README.md`](../../README.md)
-2. **Core Spec:** [`AGENTS.md`](../../AGENTS.md) (Tech Spezifikation)
+1. **Einführung:** [`README.md`](../README.md)
+2. **Core Spec:** [`AGENTS.md`](../AGENTS.md) (Tech Spezifikation)
 3. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Svelte 5 $state, $derived)
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
 5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect)
@@ -40,7 +40,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Ziel:** Nostr Events publizieren, NDK nutzen, Auth implementieren
 
 **Learning Path:**
-1. **Core Spec:** [`AGENTS.md`](../../AGENTS.md)
+1. **Core Spec:** [`AGENTS.md`](../AGENTS.md)
 2. **NDK Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 3. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
 4. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
@@ -57,7 +57,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Ziel:** KI-Integration, Chat-Klasse, Kontext-Serialisierung
 
 **Learning Path:**
-1. **Tech Spezifikation:** [`AGENTS.md`](../../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
+1. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
 2. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
 3. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 
@@ -72,8 +72,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Ziel:** Testszenarien verstehen, Bugs reproduzieren
 
 **Learning Path:**
-1. **Überblick:** [`README.md`](../../README.md)
-2. **Tech Details:** [`AGENTS.md`](../../AGENTS.md) (Abschnitt VIII: Test-Suite)
+1. **Überblick:** [`README.md`](../README.md)
+2. **Tech Details:** [`AGENTS.md`](../AGENTS.md) (Abschnitt VIII: Test-Suite)
 3. **Offline Testing:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Offline-First Szenarien)
 
 ---
@@ -88,7 +88,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **State Management** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) | 45 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
-| **Technical Spec** | [`AGENTS.md`](../../AGENTS.md) | 90 min |
+| **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 
 ### 🔧 Integration & Technologie
 
@@ -103,8 +103,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | Ziel | Dokument |
 |------|----------|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
-| **Vollständige Spezifikation** | [`AGENTS.md`](../../AGENTS.md) |
-| **Produktvision** | [`KONZEPT.md`](../../KONZEPT.md) |
+| **Vollständige Spezifikation** | [`AGENTS.md`](../AGENTS.md) |
+| **Produktvision** | [`KONZEPT.md`](../KONZEPT.md) |
 | **Roadmap & Meilensteine** | [`COLLABORATION/ROADMAP.md`](./COLLABORATION/ROADMAP.md) |
 
 ---
@@ -112,10 +112,10 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ## 🔗 Schnelle Links
 
 ### 📦 Top-Level Dateien
-- [`README.md`](../../README.md) — Projekt-Übersicht
-- [`AGENTS.md`](../../AGENTS.md) — Vollständige technische Spezifikation
-- [`CHANGELOG.md`](../../CHANGELOG.md) — Versionshistorie
-- [`KONZEPT.md`](../../KONZEPT.md) — Stakeholder-freundliche Produktvision
+- [`README.md`](../README.md) — Projekt-Übersicht
+- [`AGENTS.md`](../AGENTS.md) — Vollständige technische Spezifikation
+- [`CHANGELOG.md`](../CHANGELOG.md) — Versionshistorie
+- [`KONZEPT.md`](../KONZEPT.md) — Stakeholder-freundliche Produktvision
 
 ### 🏛️ docs/ Struktur
 ```
