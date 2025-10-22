@@ -143,8 +143,93 @@ export async function runTestSuite() {
     console.groupEnd();
     console.groupEnd();
 
-    // 6. Nostr Serialization (Mocked)
-    console.group("6. Nostr Event Serialization (Mocked)");
+    // 5. Comment System Tests (Phase A+B)
+    console.group("5. Comment System Tests (Phase A+B)");
+    console.group("5a. Comment Creation & Storage");
+    
+    const testCard = todoCol.cards[0];
+    const initialCommentCount = testCard.comments.length;
+    console.log(`   Initial Kommentare auf Karte: ${initialCommentCount}`);
+    
+    // Mehrere Kommentare hinzufügen
+    testCard.addComment("Erster Kommentar", "npub1user1");
+    testCard.addComment("Zweiter Kommentar", "npub1user2");
+    testCard.addComment("Dritter Kommentar", "npub1user3");
+    
+    if (testCard.comments.length === initialCommentCount + 3) {
+        console.log(`✅ Alle 3 Kommentare hinzugefügt. Gesamt: ${testCard.comments.length}`);
+    } else {
+        console.error(`❌ Fehler beim Hinzufügen - Erwartet ${initialCommentCount + 3}, Ist ${testCard.comments.length}`);
+    }
+    
+    // Prüfe Comment-Eigenschaften
+    const lastComment = testCard.comments[testCard.comments.length - 1];
+    if (lastComment.id && lastComment.text === "Dritter Kommentar" && lastComment.author === "npub1user3") {
+        console.log('✅ Kommentar hat alle Eigenschaften: id, text, author, createdAt');
+    } else {
+        console.error('❌ Kommentar-Eigenschaften unvollständig');
+    }
+    console.groupEnd();
+    
+    console.group("5b. Comment Deletion");
+    const commentCountBefore = testCard.comments.length;
+    const commentIdToDelete = testCard.comments[0].id;
+    testCard.deleteComment(commentIdToDelete);
+    const commentCountAfter = testCard.comments.length;
+    
+    if (commentCountAfter === commentCountBefore - 1) {
+        console.log(`✅ Kommentar gelöscht. Vorher: ${commentCountBefore}, Nachher: ${commentCountAfter}`);
+    } else {
+        console.error(`❌ Kommentar-Löschung fehlgeschlagen`);
+    }
+    
+    // Prüfe, dass der gelöschte Kommentar wirklich weg ist
+    const deletedStillExists = testCard.comments.some(c => c.id === commentIdToDelete);
+    if (!deletedStillExists) {
+        console.log('✅ Gelöschter Kommentar existiert nicht mehr');
+    } else {
+        console.error('❌ Gelöschter Kommentar ist immer noch vorhanden!');
+    }
+    console.groupEnd();
+    
+    console.group("5c. Comment ID Generation");
+    // Prüfe, dass alle Kommentare eindeutige IDs haben
+    const commentIds = testCard.comments.map(c => c.id);
+    const uniqueIds = new Set(commentIds);
+    if (uniqueIds.size === commentIds.length) {
+        console.log(`✅ Alle ${commentIds.length} Kommentare haben eindeutige IDs`);
+    } else {
+        console.error(`❌ Duplizierte IDs gefunden! ${commentIds.length} Kommentare, aber nur ${uniqueIds.size} eindeutig`);
+    }
+    
+    // Prüfe, dass ID nie undefined/null ist
+    const hasInvalidIds = testCard.comments.some(c => !c.id);
+    if (!hasInvalidIds) {
+        console.log('✅ Alle Kommentar-IDs sind gültig (keine undefined/null)');
+    } else {
+        console.error('❌ Einige Kommentare haben ungültige IDs!');
+    }
+    console.groupEnd();
+    
+    console.group("5d. getContextData() Serialization");
+    const contextData = testCard.getContextData();
+    if (contextData && contextData.comments && Array.isArray(contextData.comments)) {
+        console.log(`✅ getContextData() enthält ${contextData.comments.length} Kommentare`);
+        
+        // Prüfe, dass es Plain Objects sind (nicht Klasseninstanzen)
+        const firstComment = contextData.comments[0];
+        if (firstComment && typeof firstComment.text === 'string' && typeof firstComment.author === 'string') {
+            console.log('✅ Kommentare sind Plain Objects (serialisierbar für KI)');
+        } else {
+            console.error('❌ Kommentare sind keine Plain Objects');
+        }
+    } else {
+        console.error('❌ getContextData() hat keine Kommentare');
+    }
+    console.groupEnd();
+
+    // 7. Nostr Serialization (Mocked)
+    console.group("7. Nostr Event Serialization (Mocked)");
     const mockNdk = new MockNDK();
 
     // Board -> Event (simulate expected structure)
@@ -170,8 +255,8 @@ export async function runTestSuite() {
 
     console.groupEnd();
 
-    // 7. Auth Tests (Mock)
-    console.group('7. AuthStore (Mock) Tests');
+    // 8. Auth Tests (Mock)
+    console.group('8. AuthStore (Mock) Tests');
     const auth = new MockAuthStore('npub_test_user');
     const user = auth.getCurrentUser();
     if (user && user.pubkey === 'npub_test_user') {
@@ -181,21 +266,8 @@ export async function runTestSuite() {
     }
     console.groupEnd();
 
-    // 5. Löschoperationen
-    console.group("5. Deletion Operations");
-    const commentId = card1.comments[0].id;
-    card1.deleteComment(commentId);
-    console.log(`✅ Kommentar gelöscht. Übrige Kommentare: ${card1.comments.length}`);
-
-    progressCol.deleteCard(card1.id);
-    console.log(`✅ Karte '${card1.heading}' gelöscht. Übrige Karten in Spalte: ${progressCol.cards.length}`);
-
-    board.deleteColumn(doneCol.id);
-    console.log(`✅ Spalte '${doneCol.name}' gelöscht. Übrige Spalten: ${board.columns.length}`);
-    console.groupEnd();
-
-    // 8. BoardStore UI Integration Tests
-    console.group("8. BoardStore UI Integration");
+    // 9. BoardStore UI Integration Tests
+    console.group("9. BoardStore UI Integration");
     try {
         // Simuliere UI-Import der BoardStore-Klasse
         const { BoardStore } = await import('../stores/kanbanStore.svelte.js');

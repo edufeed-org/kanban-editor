@@ -2,11 +2,31 @@
 
 Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, gebaut mit **Svelte 5** und **TypeScript**.
 
+## 🧪 Tests ausführen
+
+**Schnellstart (30 Sekunden):**
+```bash
+pnpm run dev
+# Browser: http://localhost:5173/test
+# Click: "▶️ Tests ausführen"
+```
+
+**Dokumentation:** → [`docs/TESTSUITE/INDEX.md`](./docs/TESTSUITE/INDEX.md)
+
+## 💬 Kommentar-System
+
+**Status:** ✅ Phase A+B Production-Ready | ⏳ Phase C-E Planned
+
+**Dokumentation:** → [`docs/FEATURE/COMMENTS.md`](./docs/FEATURE/COMMENTS.md)
+
+---
+
 ## 🎯 Features
 
 - ✅ **Offline-First:** Arbeiten Sie ohne Internetverbindung, automatische Synchronisation bei Reconnect
 - 🧠 **KI-Integration:** Intelligente Karten-Aufteilung und Aufgaben-Management
 - 🌐 **Nostr-basiert:** Dezentrale Speicherung über Nostr-Relays (NIP-30301/30302)
+- 💬 **Kommentar-System:** Lokal persistent mit lokalisierter UI (in Phase D: Nostr Publishing)
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
 - 🔒 **Typsicher:** Vollständig in TypeScript implementiert
 - 💬 **Kommentare:** Nostr-basierte Kommentare mit Reactions & Zaps

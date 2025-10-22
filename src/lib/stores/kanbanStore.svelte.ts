@@ -628,6 +628,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.addComment(text, author);
+            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -638,6 +639,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.deleteComment(commentId);
+            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);

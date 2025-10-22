@@ -28,11 +28,14 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
 5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect)
 6. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
+7. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
 - Store-Methode hinzufügen? → [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
 - Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md)
+- Tests ausführen? → [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md)
+- Kommentare implementieren? → [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md)
 
 ---
 
@@ -89,6 +92,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
+| **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
+| **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
 
 ### 🔧 Integration & Technologie
 
@@ -103,6 +108,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | Ziel | Dokument |
 |------|----------|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
+| **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
+| **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
 | **Vollständige Spezifikation** | [`AGENTS.md`](../AGENTS.md) |
 | **Produktvision** | [`KONZEPT.md`](../KONZEPT.md) |
 | **Roadmap & Meilensteine** | [`COLLABORATION/ROADMAP.md`](./COLLABORATION/ROADMAP.md) |
@@ -131,9 +138,15 @@ docs/
 ├── COLLABORATION/
 │   ├── ROADMAP.md             # Phasen & Meilensteine
 │   └── CONTRIBUTING.md        # Beitrag-Richtlinien
-└── GUIDES/
-    ├── QUICK-START.md         # Schnelleinstieg
-    └── Kanban-NIP.md          # Event Schema
+├── GUIDES/
+│   ├── QUICK-START.md         # Schnelleinstieg
+│   └── Kanban-NIP.md          # Event Schema
+├── TESTSUITE/
+│   ├── INDEX.md               # Test Suite Navigation Hub
+│   ├── STATUS.md              # Quick Status & Überblick
+│   └── GUIDE.md               # Ausführliche Anleitung
+└── FEATURE/
+    └── COMMENTS.md            # Kommentar-System Feature
 ```
 
 ---
@@ -200,6 +213,8 @@ docs/
 | **Architecture** | ✅ Komplett | 21. Oktober 2025 |
 | **Guides** | ✅ Komplett | 21. Oktober 2025 |
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
+| **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
+| **Features** | ✅ Komplett (Comments) | 22. Oktober 2025 |
 | **Examples** | 🟡 Teilweise | — |
 | **Troubleshooting** | 🟡 Teilweise | — |
 
@@ -207,5 +222,5 @@ docs/
 
 ---
 
-**Letzte Aktualisierung:** 21. Oktober 2025  
+**Letzte Aktualisierung:** 22. Oktober 2025  
 **Nächste Überprüfung:** Mit jedem Release

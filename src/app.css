@@ -61,7 +61,7 @@
   --accent: oklch(57.646% 0.26532 315.837);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(86.401% 0.00884 16.717 / 0.815);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.541 0.281 293.009);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -116,6 +116,9 @@
     box-shadow: 0 6px 18px rgba(0,0,0,0.06);
     transform: translateY(-2px);
     background: color-mix(in srgb, var(--accent) 6%, transparent);
+  }
+  .border-muted{
+    border-color: var(--muted)!important;
   }
 }
 

@@ -114,7 +114,7 @@ export class Card {
 
     addComment(text: string, author: string): void {
         const comment: Comment = {
-            id: generateDTag('comment'),
+            id: generateDTag('comment') || `comment-${Date.now()}-${Math.random()}`, // ← Fallback für Safety
             text,
             author,
             createdAt: generateTimestamp()

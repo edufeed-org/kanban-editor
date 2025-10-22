@@ -376,7 +376,7 @@
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
 	<CardViewDialog
-		{card}
+		cardId={card.id}
 		isOpen={showViewModal}
 		onClose={() => (showViewModal = false)}
 	/>

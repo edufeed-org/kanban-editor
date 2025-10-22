@@ -152,7 +152,7 @@
 
 		<form onsubmit={handleSubmit} class="w-full">
 			<Tabs.Root bind:value={activeTab} class="w-full">
-				<Tabs.List class="grid w-full grid-cols-2">
+				<Tabs.List class="bg-muted text-muted-foreground h-9 items-center justify-center rounded-lg p-[3px] text-muted-foreground grid w-full grid-cols-2">
 					<Tabs.Trigger value="content">Inhalt</Tabs.Trigger>
 					<Tabs.Trigger value="settings">Einstellungen</Tabs.Trigger>
 				</Tabs.List>
