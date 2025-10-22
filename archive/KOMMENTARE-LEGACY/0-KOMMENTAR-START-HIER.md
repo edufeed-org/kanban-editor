@@ -73,25 +73,31 @@
 <!-- Kommentar Input Form -->
 <div class="pt-4 border-t">
   <form onsubmit={handleAddComment} class="space-y-3">
-    <Textarea
-      bind:value={commentText}
-      placeholder="Schreiben Sie einen Kommentar..."
-      class="min-h-24 resize-none"
-    />
-    <div class="flex gap-2 justify-end">
-      <Button variant="outline" onclick={() => (commentText = '')}>
-        Abbrechen
-      </Button>
-      <Button type="submit" disabled={!commentText.trim() || isLoading}>
-        {#if isLoading}
-          <LoaderIcon class="mr-2 h-4 w-4 animate-spin" />
-          Wird abgesendet...
-        {:else}
-          <SendIcon class="mr-2 h-4 w-4" />
-          Absenden
-        {/if}
-      </Button>
-    </div>
+    <Fieldset disabled={isLoading} class="w-full">
+      <Field>
+        <Label for="commentText">Neuen Kommentar hinzufügen</Label>
+        <Textarea
+          id="commentText"
+          bind:value={commentText}
+          placeholder="Schreiben Sie einen Kommentar..."
+          class="min-h-24 resize-none"
+        />
+        <div class="flex gap-2 justify-end pt-2">
+          <Button variant="outline" onclick={() => (commentText = '')}>
+            Abbrechen
+          </Button>
+          <Button type="submit" disabled={!commentText.trim() || isLoading}>
+            {#if isLoading}
+              <LoaderIcon class="mr-2 h-4 w-4 animate-spin" />
+              Wird abgesendet...
+            {:else}
+              <SendIcon class="mr-2 h-4 w-4" />
+              Absenden
+            {/if}
+          </Button>
+        </div>
+      </Field>
+    </Fieldset>
   </form>
 </div>
 ```
