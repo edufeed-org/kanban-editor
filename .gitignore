@@ -38,6 +38,5 @@ storybook-static
 # Gemini
 .gemini
 .kilocode/rules/SHADCN.md
-.github
 /tasks
 
