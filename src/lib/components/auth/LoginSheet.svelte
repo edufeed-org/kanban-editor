@@ -7,7 +7,8 @@
   import { Badge } from "$lib/components/ui/badge/index.js";
   import { authStore } from '$lib/stores/authStore.svelte';
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
-
+  import Nos2x from './assets/nos2x.png';
+  import Alby from './assets/alby.svg';
   
   interface Props {
     open: boolean;
@@ -128,17 +129,21 @@
             
             <div class="grid gap-3">
               <div class="flex items-center gap-3 p-3 border rounded-lg">
-                <img src="/icons/alby.svg" alt="Alby" class="w-6 h-6" />
+                <img src={Alby} alt="Alby" class="w-6 h-10" />
                 <div class="flex-1">
-                  <p class="font-medium">Alby</p>
+                  <a href="https://getalby.com/alby-extension"  target="_blank" class="text-blue-600 hover:underline">
+                    <p class="font-medium">Alby</p>
+                  </a>
                   <p class="text-xs text-muted-foreground">Lightning Wallet + Nostr</p>
                 </div>
               </div>
               
               <div class="flex items-center gap-3 p-3 border rounded-lg">
-                <img src="/icons/nos2x.svg" alt="nos2x" class="w-6 h-6" />
+                <img src={Nos2x} alt="nos2x" class="w-6 h-6" />
                 <div class="flex-1">
-                  <p class="font-medium">nos2x</p>
+                  <a href="https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp/" target="_blank" class="text-blue-600 hover:underline">
+                    <p class="font-medium">nos2x</p>
+                  </a>
                   <p class="text-xs text-muted-foreground">Nostr Signer Extension</p>
                 </div>
               </div>
@@ -154,13 +159,6 @@
               {/if}
               Connect Extension
             </Button>
-            
-            <p class="text-xs text-center text-muted-foreground">
-              Don't have an extension? 
-              <a href="https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp/" target="_blank" class="text-blue-600 hover:underline">
-                Install Nos2x
-              </a>
-            </p>
           </div>
         </Tabs.Content>
         
