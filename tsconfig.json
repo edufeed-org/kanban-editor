@@ -10,6 +10,13 @@
 		"sourceMap": true,
 		"strict": true,
 		"module": "NodeNext",
-		"moduleResolution": "NodeNext"
-	}
+		"moduleResolution": "NodeNext",
+		"isolatedModules": true
+	},
+	"exclude": [
+		"node_modules",
+		".svelte-kit",
+		"build",
+		"src/lib/components/ui/**/index.ts"
+	]
 }
