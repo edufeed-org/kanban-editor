@@ -271,6 +271,7 @@ export class BoardStore {
                     content: cardData.content,
                     image: cardData.image, // ← image MUSS hier sein!
                     color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
+                    author: cardData.author, // ← ✅ FIXED: author hinzugefügt!
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
                     links: cardData.links || [],
@@ -399,9 +400,13 @@ export class BoardStore {
      * Erstellt ein neues Board mit Default-Spalten und speichert es
      */
     public createBoard(name: string = 'Neues Board'): string {
+        // ✅ Nutze getUserName() für lesbare author (statt pubkey!)
+        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        
         const newBoard = new Board({
             name,
             description: '',
+            author: author, // ✅ Nutze den Namen für bessere UX!
             columns: [
                 { name: 'Backlog', color: 'muted' },
                 { name: 'To Do', color: 'chart-1' },
@@ -713,18 +718,19 @@ export class BoardStore {
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
         console.log('🆕 createCard aufgerufen:', { columnId, name, description });
         
-        // ✅ WICHTIG: Setze den autor vom aktuellen User (wie bei Comments!)
-        const author = authStore.getPubkey();
+        // ✅ WICHTIG: Nutze getUserName() für lesbare author (statt pubkey!)
+        // Fallback: pubkey, dann 'anonymous'
+        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
         
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
             publishState: 'draft',
-            author: author || undefined // Setze author wenn authentifiziert
+            author: author // ✅ Nutze den Namen für bessere UX!
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'mit author:', author?.slice(0, 8) + '...', 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;

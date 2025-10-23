@@ -5,6 +5,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
@@ -62,11 +63,11 @@
 			console.log('📝 commentText:', commentText);
 			console.log('🏪 boardStore vorhanden:', !!boardStore);
 			
-			// TODO: Phase C - Get author from authStore
-			// Für MVP: Placeholder author
-			const author = 'anonymous'; // Wird in Phase C durch authStore.currentUser.pubkey ersetzt
+			// ✅ FIXED: Nutze authStore.getUserName() für schönere Anzeige!
+			// Fallback auf pubkey wenn kein Name vorhanden, final fallback auf 'anonymous'
+			const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
 
-			console.log('➡️ Rufe boardStore.addComment() auf...');
+			console.log('➡️ Rufe boardStore.addComment() auf mit author:', author);
 			boardStore.addComment(card.id as string, commentText.trim(), author);
 
 			// UI Update - Kommentar sollte sofort sichtbar sein via $effect

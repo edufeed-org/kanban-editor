@@ -143,6 +143,7 @@ export class Card {
             image: this.image,
             labels: this.labels,
             publishState: this.publishState,
+            author: this.author, // ← ✅ FIXED: author hinzugefügt!
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
             links: this.links.map(l => ({ url: l.url, title: l.title }))
         };
@@ -358,6 +359,7 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
+        author?: string, // ← ✅ FIXED: author zur Return Type hinzugefügt!
         columns: any[]
     } {
         return {
@@ -369,6 +371,7 @@ export class Board {
             publishState: this.publishState,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            author: this.author, // ← ✅ FIXED: author hinzugefügt!
             columns: this.columns.map(col => col.getContextData(full))
         };
     }
