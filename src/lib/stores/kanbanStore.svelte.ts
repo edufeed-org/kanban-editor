@@ -2,6 +2,7 @@
 
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 import { generateTimestamp } from '../utils/idGenerator.js';
+import { authStore } from './authStore.svelte.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
 export type CardItem = {
@@ -712,14 +713,18 @@ export class BoardStore {
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
         console.log('🆕 createCard aufgerufen:', { columnId, name, description });
         
+        // ✅ WICHTIG: Setze den autor vom aktuellen User (wie bei Comments!)
+        const author = authStore.getPubkey();
+        
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
-            publishState: 'draft'
+            publishState: 'draft',
+            author: author || undefined // Setze author wenn authentifiziert
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        console.log('✅ Karte erstellt:', card.id, 'mit author:', author?.slice(0, 8) + '...', 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;

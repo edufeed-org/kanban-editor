@@ -15,9 +15,9 @@
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import TrashIcon from "@lucide/svelte/icons/trash";
 	import UsersIcon from "@lucide/svelte/icons/users";
+	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
-
 
 	let {
 		card,
@@ -70,6 +70,10 @@
 	const attendees = $derived(card.attendees && card.attendees.length > 0
 		? card.attendees
 		: (card.author ? [card.author] : []));
+
+	// the nostr pubkey of the author of the card
+	// Converting to array provides more consistency and reusability for UI components
+	let authors = $derived(card.author ? [card.author] : []);
 
 	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
@@ -384,10 +388,19 @@
 	<Card.Footer class="px-1">
 		<div class="footer-content">
 			<div class="comments-count group">
-				<MessageSquareIcon /> {#if localComments.length > 0}{localComments.length}{/if}
+				<button 
+				class="view-button group" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				aria-label="Anzeigen" 
+				title="Anzeigen"
+				type="button"
+				>
+					<MessageSquareIcon /> {#if localComments.length > 0}{localComments.length}{/if}
+				</button>
+		
 			</div>
 			<div class="attendees-count group">
-				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
+				<UserIcon /> {#if authors.length > 0}{authors[0]}{/if}
 			</div>
 			<button 
 				class="view-button group" 
