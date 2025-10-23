@@ -28,9 +28,10 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
 5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect)
 6. **🆕 Reactive Flow Bugs:** [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) (Prop vs State Pattern!)
-7. **🆕 Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
-8. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
-9. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
+7. **🆕 Author Field Attribution:** [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) (Serialisierung & Persistierung!)
+8. **🆕 Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
+9. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
+10. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
@@ -47,15 +48,18 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 **Learning Path:**
 1. **Core Spec:** [`AGENTS.md`](../AGENTS.md)
-2. **NDK Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
-3. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
-4. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
-5. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
+2. **🆕 AuthStore Integration:** [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) (Komplette API Reference)
+3. **NDK Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
+4. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
+5. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
+6. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
+7. **🆕 Author Field Attribution:** [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) (Serialisierung!)
 
 **Häufige Aufgaben:**
 - Event publizieren? → [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
-- User authentifizieren? → [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
+- User authentifizieren? → [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)
 - Event-Schema verstehen? → [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
+- Board/Card Author? → [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)
 
 ---
 
@@ -93,6 +97,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Svelte 5 Runes** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | 30 min |
 | **State Management** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) | 45 min |
 | **🆕 Reactive Flow Bugs** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) | 20 min |
+| **🆕 Author Field Attribution** | [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) | 25 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
@@ -103,6 +108,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 | Thema | Dokument | Umfang |
 |-------|----------|--------|
+| **🆕 AuthStore Integration** | [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | 30 min |
 | **NDK Setup** | [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md) | 20 min |
 | **User Auth** | [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | 40 min |
 | **Offline-First** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Abschnitt IV) | 30 min |
@@ -113,6 +119,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |------|----------|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
+| **🆕 AuthStore Integration** | [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) |
+| **🆕 Author Field Attribution** | [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) |
 | **Reactive Flow Debugging** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) |
 | **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
@@ -140,6 +148,7 @@ docs/
 │   ├── REACTIVITY.md          # Svelte 5 Runes + $effect
 │   ├── STORES.md              # State Management
 │   ├── 🆕 REACTIVE-FLOW-VERIFICATION.md  # Debugging Guide
+│   ├── 🆕 AUTHOR-FIELD-ATTRIBUTION.md  # Serialisierung & Persistierung
 │   ├── NDK.md                 # Nostr Integration
 │   ├── NOSTR-USER.md          # Authentication
 │   └── UX-RULES.md            # shadcn-svelte Guidelines
@@ -148,6 +157,7 @@ docs/
 │   └── CONTRIBUTING.md        # Beitrag-Richtlinien
 ├── GUIDES/
 │   ├── QUICK-START.md         # Schnelleinstieg
+│   ├── 🆕 AUTHSTORE-INTEGRATION-GUIDE.md  # AuthStore API Reference
 │   └── Kanban-NIP.md          # Event Schema
 ├── TESTSUITE/
 │   ├── INDEX.md               # Test Suite Navigation Hub
@@ -224,6 +234,8 @@ docs/
 | Kategorie | Status | Letzte Aktualisierung |
 |-----------|--------|----------------------|
 | **Architecture** | ✅ Komplett | 21. Oktober 2025 |
+| **🆕 Author Field Attribution** | ✅ Neu | 23. Oktober 2025 |
+| **🆕 AuthStore Integration Guide** | ✅ Neu | 23. Oktober 2025 |
 | **🆕 Reactive Flow Debugging** | ✅ Neu | 21. Oktober 2025 |
 | **🆕 Prop vs State Cheat Sheet** | ✅ Neu | 21. Oktober 2025 |
 | **Guides** | ✅ Komplett | 21. Oktober 2025 |
@@ -237,5 +249,5 @@ docs/
 
 ---
 
-**Letzte Aktualisierung:** 21. Oktober 2025  
+**Letzte Aktualisierung:** 23. Oktober 2025 (Author Field Attribution + AuthStore Integration Guide hinzugefügt)  
 **Nächste Überprüfung:** Mit jedem Release

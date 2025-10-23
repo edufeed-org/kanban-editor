@@ -1812,3 +1812,303 @@ REACTIVE FLOW VERIFICATION = 5 SCHRITTE
 
 **Zeit zum Durchlaufen:** ~5-10 Minuten pro Component
 **Wert:** Spart Stunden beim Debugging! 🚀
+
+---
+
+## X. ⚠️ KRITISCH: getContextData() Serialisierung Pattern
+
+### Problem: Felder nicht in localStorage gespeichert
+
+**Symptom:** Ein `$state` Feld ist auf der Klasse definiert, wird aktualisiert, aber verschwindet nach Browser-Reload.
+
+**Root Cause:** Das Feld ist NICHT in der `getContextData()` Rückgabe enthalten!
+
+**Beispiel aus der Praxis:**
+```typescript
+// ❌ FALSCH - author wird nicht serialisiert
+export class Card {
+  public author?: string;  // ← Feld existiert!
+  
+  getContextData() {
+    return {
+      id: this.id,
+      heading: this.heading,
+      content: this.content,
+      // ⚠️ author FEHLT hier!
+    };
+  }
+}
+
+// ✅ RICHTIG - author wird serialisiert
+export class Card {
+  public author?: string;
+  
+  getContextData() {
+    return {
+      id: this.id,
+      heading: this.heading,
+      content: this.content,
+      author: this.author,  // ← MUSS hier sein!
+    };
+  }
+}
+```
+
+### Die Serialisierungs-Kette
+
+```
+1. Model ($state Feld)
+   ↓
+2. getContextData() (SERIALISIERUNG)
+   ↓
+3. boardStore.saveToStorage() (JSON.stringify)
+   ↓
+4. localStorage (Persistierung)
+   ↓
+5. Browser-Reload → reconstructBoard() (Deserialisierung)
+   ↓
+6. Feld ist wieder da! ✅
+```
+
+**FEHLER IN SCHRITT 2 = TOTALVERLUST!**
+
+### Die Regel
+
+**🔴 RULE: Alle öffentlichen $state Felder MÜSSEN in getContextData() enthalten sein**
+
+Diese Regel gilt für:
+- `class Board` → `Board.getContextData()`
+- `class Column` → `Column.getContextData()`
+- `class Card` → `Card.getContextData()`
+- `interface CardProps` / `interface BoardProps` (update Return Type!)
+
+### Checklist für neue Felder
+
+Wenn du ein neues Feld zu einer Klasse hinzufügst:
+
+```typescript
+// 1. Definiere das Feld auf der Klasse
+export class Card {
+  public mynewField?: string;  // ← Schritt 1
+  
+  // 2. Füge es zum Props-Interface hinzu
+  // (wenn nicht bereits dort)
+  
+  // 3. Setze es im Constructor
+  constructor(props: CardProps) {
+    this.mynewField = props.mynewField;  // ← Schritt 2
+  }
+  
+  // 4. KRITISCH: Füge es zu getContextData() hinzu!
+  getContextData() {
+    return {
+      // ... andere Felder ...
+      mynewField: this.mynewField,  // ← Schritt 3 (NICHT VERGESSEN!)
+    };
+  }
+  
+  // 5. Update die Return Type in Dokumentation
+  // getContextData(): Omit<CardProps, '...'> & { mynewField: string | undefined }
+}
+
+// 6. In boardStore.svelte.ts: reconstructBoard()
+// auch das neue Feld laden
+const card = new Card({
+  // ...
+  mynewField: cardData.mynewField,  // ← Schritt 4
+});
+```
+
+**Test nach Hinzufügen:**
+```typescript
+// Browser Console:
+localStorage.setItem('test-board', JSON.stringify(board.getContextData()));
+const loaded = JSON.parse(localStorage.getItem('test-board'));
+console.log('mynewField in storage?', 'mynewField' in loaded);  // MUSS true sein!
+```
+
+### Praktisches Beispiel: author Field Fix
+
+Dies war das Problem, das den Session 5 ausgelöst hat:
+
+**Fehler in BoardModel.ts Line ~145:**
+```typescript
+// ❌ VORHER - Card.getContextData()
+getContextData() {
+  return {
+    id: this.id,
+    heading: this.heading,
+    content: this.content,
+    labels: this.labels,
+    // ⚠️ author FEHLT!
+  };
+}
+
+// ✅ NACHHER
+getContextData() {
+  return {
+    id: this.id,
+    heading: this.heading,
+    content: this.content,
+    labels: this.labels,
+    author: this.author,  // ← HINZUGEFÜGT
+  };
+}
+```
+
+**Fehler in BoardModel.ts Line ~373:**
+```typescript
+// ❌ VORHER - Board.getContextData()
+getContextData() {
+  return {
+    id: this.id,
+    name: this.name,
+    columns: this.columns.map(c => c.getContextData()),
+    // ⚠️ author FEHLT!
+  };
+}
+
+// ✅ NACHHER
+getContextData() {
+  return {
+    id: this.id,
+    name: this.name,
+    columns: this.columns.map(c => c.getContextData()),
+    author: this.author,  // ← HINZUGEFÜGT
+  };
+}
+```
+
+**Fehler in kanbanStore.svelte.ts Line ~264:**
+```typescript
+// ❌ VORHER - reconstructBoard() lud nicht das author Feld
+const card = new Card({
+  heading: cardData.heading,
+  content: cardData.content,
+  // ⚠️ author nicht geladen!
+});
+
+// ✅ NACHHER
+const card = new Card({
+  heading: cardData.heading,
+  content: cardData.content,
+  author: cardData.author,  // ← HINZUGEFÜGT
+});
+```
+
+### Impact dieser Regel
+
+Diese Serialisierungs-Kette ist für folgende Funktionalität **KRITISCH**:
+
+1. **localStorage Persistierung** - Alle Felder müssen serialisiert werden
+2. **Browser-Reload** - Daten wieder laden aus Storage
+3. **Nostr Event Publishing** (Phase 2) - Events brauchen alle Felder
+4. **Export/Import Feature** (Phase 1.5) - Boards mussten vollständig exportierbar sein
+5. **Multi-Device Sync** (Phase 3) - Alle Felder sind notwendig
+
+**Wenn diese Regel verletzt wird:**
+- ❌ Felder verschwinden nach Browser-Reload
+- ❌ Nostr Events sind unvollständig
+- ❌ Export/Import funktioniert nicht
+- ❌ Benutzer-Daten werden verloren
+- ❌ Sync zwischen Geräten unmöglich
+
+### Warum ist das so kritisch?
+
+**Historischer Kontext:**
+- Months of debugging Sessions 1-4 zeigten: board.author = 'Dev User' ✓ aber localStorage hatte `null`
+- Root Cause fand sich erst nach umfassender Code-Analyse
+- Die `getContextData()` Methode war das "Missing Link"
+- Danach waren alle Felder konsistent: Model ↔ Storage ↔ UI
+
+**Lerneffekt für zukünftige Phasen:**
+- Neue Felder (z.B. für NIP-07, Tags, Reactions, etc.) MÜSSEN von Anfang an in getContextData()
+- Das ist nicht "nice to have" sondern **MUSS sein**
+- Sonst wieder Monate debugging!
+
+---
+
+## XI. Author Attribution & Benutzer-Kontext
+
+### Overview
+
+Jede Karte, Spalte und das Board selbst können einen `author` haben, der angibt, wer die Entität erstellt hat. Dies ist wichtig für:
+- **Accountability**: Wer hat was erstellt?
+- **Zukunft (Phase 2)**: Permissions-System (nur Author kann bearbeiten)
+- **Zukunft (Phase 3)**: Audit Trail für Nostr Events
+- **UI**: Freundliche Anzeige statt Pubkey
+
+### Author-Zuweisungs-Logik
+
+**Fallback-Kette (wichtig!)**
+
+```typescript
+// 1. Beste Option: Display Name (z.B. "Dev User")
+const author = authStore.getUserName()
+  // 2. Fallback: Public Key (Hex, z.B. "0000...0001")
+  || authStore.getPubkey()
+  // 3. Letzter Ausweg: 'anonymous'
+  || 'anonymous';
+
+// Beispiel Browser Console:
+// → authStore.getUserName() returns "Alice"
+// → UI zeigt: "Alice" (nicht "0000...0001")
+// → Nach Logout: authStore.getUserName() returns null
+// → getContextData() speichert pubkey statt name
+// → Nach Reload: UI zeigt "0000...0001" (was lokal gespeichert war)
+```
+
+**Praktische Anwendung:**
+
+```typescript
+// In kanbanStore.svelte.ts - createBoard()
+export class BoardStore {
+  public createBoard(name: string, description?: string): string {
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    
+    const board = new Board({
+      name,
+      description,
+      author  // ← wird hier gespeichert
+    });
+    
+    this.board = board;
+    this.triggerUpdate();
+    return board.id;
+  }
+  
+  public createCard(columnId: string, heading: string): string {
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    
+    const column = this.board.findColumn(columnId);
+    const card = new Card({
+      heading,
+      author  // ← wird hier gespeichert
+    });
+    
+    column?.addCard(card);
+    this.triggerUpdate();
+    return card.id;
+  }
+}
+```
+
+### Wo wird author angezeigt?
+
+- **CardViewDialog**: "Kommentar von: <author>"
+- **LeftSidebarFooter**: "Eingeloggt als: <author>" (nach Phase 2)
+- **Zukünftig (Phase 3)**: "Erstellt von: <author>" bei Card-Details
+
+### Authentifizierungs-Integration
+
+Siehe: `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`
+
+Die AuthStore stellt folgende Methoden bereit:
+- `getUserName(): string | null` - Display Name (bevorzugt)
+- `getPubkey(): string | null` - Hex Format
+- `getNpub(): string | null` - Bech32 Format
+- `loginWithDummy()` - Entwicklung
+- `loginWithNsec()` - Entwicklung
+- `loginWithNIP07()` - Production (Phase 2)
+
+**Wichtig:** AuthStore wird im `+layout.svelte` initialisiert und ist global verfügbar!

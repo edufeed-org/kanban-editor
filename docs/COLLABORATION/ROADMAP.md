@@ -23,6 +23,38 @@
 
 ## 🔴 Phase 1: Foundation & Core Implementation (Priorität: Hoch)
 
+### 🆕 Abgeschlossene Meilensteine
+
+#### ✅ 1.0: Author Field Attribution (COMPLETED 23. Oktober 2025)
+
+**Ziel:** Board und Card Author-Felder werden korrekt zu localStorage gespeichert  
+**Status:** ✅ **DONE**
+
+**Was wurde gefixt:**
+- ✅ Card.getContextData() gibt jetzt `author` zurück (Line ~145)
+- ✅ Board.getContextData() gibt jetzt `author` zurück (Line ~373)
+- ✅ reconstructBoard() lädt jetzt `author` korrekt (Line ~264)
+- ✅ createBoard() & createCard() nutzen userName Fallback-Kette (Lines ~401, ~716)
+- ✅ Comments zeigen lesbare Namen statt Hex-Pubkeys
+
+**Dokumentation:**
+- 📚 [`docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](../ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) - Vollständige Root-Cause Analyse
+- 📚 [`docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](../GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) - AuthStore API Reference
+- 📚 `AGENTS.md` Sections X & XI - Critical Patterns für Zukunft
+- 📚 `copilot-instructions.md` Sections 21 & 22 - Rules & Violations
+
+**Key Learnings:**
+- **Pattern:** Alle `$state` Felder MÜSSEN in `getContextData()` sein!
+- **Pattern:** Fallback-Kette: userName → pubkey → 'anonymous'
+- **Pattern:** Serialisierungs-Chain: Model → getContextData() → Storage → After-Reload
+
+**Impact für Zukunft:**
+- ✅ Phase 1.5 (Export/Import): Nutzt jetzt korrekt serialisierte Daten
+- ✅ Phase 2 (NIP-07): AuthStore vollständig dokumentiert
+- ✅ Phase 3 (Nostr Publishing): Board/Card Author sind korrekt initialisiert
+
+---
+
 ### Meilenstein 1.1: Nostr Event Publishing (Priorität: Hoch)
 
 **Ziel:** Board und Card Events können publiziert werden  

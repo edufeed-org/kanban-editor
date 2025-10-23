@@ -1469,6 +1469,152 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 
 ---
 
+## 21. ⚠️ CRITICAL: getContextData() muss ALLE $state Felder serialisieren!
+
+### Regel
+
+**Wenn du ein neues Feld zu einer Model-Klasse hinzufügst, MUSS es AUCH in getContextData() sein!**
+
+```typescript
+// ❌ FALSCH - Feld definiert aber nicht serialisiert
+export class Card {
+  public author?: string;  // ← Feld existiert
+  
+  getContextData() {
+    return { id, heading, content };  // ← author FEHLT!
+  }
+}
+
+// ✅ RICHTIG - Feld ist definiert UND serialisiert
+export class Card {
+  public author?: string;
+  
+  getContextData() {
+    return { id, heading, content, author };  // ← author ist dabei!
+  }
+}
+```
+
+### Warum ist das kritisch?
+
+Die Serialisierungs-Kette funktioniert so:
+
+```
+1. Model: board.author = 'Dev User'       ← Feld auf Instanz
+2. Serialisierung: getContextData()        ← MUSS author zurückgeben!
+3. localStorage: JSON.stringify(...)       ← author muss im JSON sein!
+4. Browser-Reload: reconstructBoard()      ← author wird wieder geladen
+5. UI: zeigt author                        ← Alles funktioniert! ✓
+```
+
+**Wenn Schritt 2 vergessen wird:**
+- ❌ localStorage hat `"author": null`
+- ❌ Nach Reload ist author weg
+- ❌ Benutzer-Daten verloren
+- ❌ Nostr Events unvollständig
+
+### Checkliste beim Hinzufügen neuer Felder
+
+```
+[ ] 1. Feld auf Klasse definiert? (z.B. public author?: string)
+[ ] 2. Im Props-Interface? (z.B. interface CardProps { author?: string })
+[ ] 3. Im Constructor gesetzt? (z.B. this.author = props.author)
+[ ] 4. In getContextData() zurückgegeben? (z.B. author: this.author)
+[ ] 5. Return-Type Dokumentation aktualisiert?
+[ ] 6. In reconstructBoard() geladen? (z.B. author: cardData.author)
+```
+
+**Test:**
+```typescript
+// Browser Console:
+const board = new Board({name: 'Test', author: 'Alice'});
+const serialized = board.getContextData();
+console.log('author' in serialized);  // MUSS true sein!
+```
+
+### Real-World Beispiel: author Field Session 5
+
+Dies war der Bug, der mehrere Sessions brauchte um zu fixen:
+
+| Ort | Bug | Fix |
+|-----|-----|-----|
+| Line ~145 | Card.getContextData() fehlt author | + `author: this.author` |
+| Line ~373 | Board.getContextData() fehlt author | + `author: this.author` |
+| Line ~264 | reconstructBoard() lud nicht author | + `author: cardData.author` |
+| Line ~401/716 | createBoard/createCard nutzte getPubkey() statt getUserName() | + getUserName() Fallback |
+
+**Lerneffekt:** Months of debugging hätten verhindert werden können, wenn diese Checkliste am Anfang bekannt gewesen wäre!
+
+---
+
+## 22. Author Attribution Pattern (userName → pubkey → anonymous)
+
+### Fallback-Kette
+
+Immer diese Reihenfolge nutzen:
+
+```typescript
+const author = authStore.getUserName()    // 1. Best: Readable name
+  || authStore.getPubkey()                // 2. Fallback: Hex pubkey
+  || 'anonymous';                         // 3. Last resort: Generic
+
+// Beispiel:
+// Bei Login: author = "Alice" (getName returns readable)
+// Nach Logout: author = "0000...0001" (getPubkey() still works)
+// Offline: author = 'anonymous' (both unavailable)
+```
+
+### Wo wird author zugewiesen?
+
+```typescript
+// ✅ In kanbanStore.svelte.ts
+
+public createBoard(name: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const board = new Board({ name, author });  // ← author gesetzt!
+  this.triggerUpdate();
+}
+
+public createCard(columnId: string, heading: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const card = new Card({ heading, author });  // ← author gesetzt!
+  column?.addCard(card);
+  this.triggerUpdate();
+}
+
+public async addComment(cardId: string, text: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const comment: Comment = { text, author, createdAt: new Date().toISOString() };
+  // ... speichern ...
+}
+```
+
+### UI-Display (CardViewDialog.svelte)
+
+```svelte
+<!-- ✅ RICHTIG - Nutzt Fallback-Kette -->
+<div class="comment-header">
+  Von: {comment.author}  <!-- ← Zeigt "Alice" oder "0000..." oder "anonymous" -->
+</div>
+
+<!-- ❌ FALSCH - Direkte Pubkey ohne Fallback -->
+<div class="comment-header">
+  Von: {authStore.getPubkey()}  <!-- ← Zeigt immer Hex, nicht Name! -->
+</div>
+```
+
+### Auth-Integration (LeftSidebarFooter.svelte)
+
+```svelte
+<!-- Zeigt eingeloggten User -->
+<div class="auth-status">
+  <Avatar name={authStore.getUserName()} />
+  <span>{authStore.getUserName() || 'Gast'}</span>
+</div>
+```
+
+---
+
 ## 🔗 Schnelle Links
 
 - **GitHub Repository:** https://github.com/edufeed-org/kanban-editor
@@ -1478,11 +1624,13 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 - **UI Components:** `src/lib/components/ui/`
 - **Core Models:** `src/lib/classes/BoardModel.ts`
 - **Store Implementation:** `src/lib/stores/kanbanStore.svelte.ts`
+- **Auth Guide:** `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`
+- **Author Attribution:** `docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`
 
 ---
 
-**Stand:** 20. Oktober 2025 | Aktualisiert durch AI-Agent Analyse  
-**Letzter Eintrag:** 21. Oktober 2025 - Reactive Data Flow Verification Routine hinzugefügt
+**Stand:** 23. Oktober 2025 | Aktualisiert durch Author-Field-Fix Session  
+**Letzter Eintrag:** 23. Oktober 2025 - getContextData() Serialisierung + Author Attribution Pattern hinzugefügt
 
 ---
 
