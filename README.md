@@ -585,11 +585,11 @@ runTestSuite();
 - [ ] Mobile App (React Native/Flutter)
 - [ ] Tool-Integrationen (LMS, Calendar, etc.)
 
-**Siehe [ROADMAP.md](./ROADMAP.md) für die vollständige priorisierte Roadmap mit Akzeptanz-Kriterien.**
+**Siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) für die vollständige priorisierte Roadmap mit Akzeptanz-Kriterien.**
 
 ## 🤝 Contributing
 
-Siehe [CONTRIBUTING.md](./CONTRIBUTING.md) für Richtlinien.
+Siehe [CONTRIBUTING.md](./docs/COLLABORATION/CONTRIBUTING.md) für Richtlinien.
 
 1. Fork das Repository
 2. Feature Branch erstellen (`git checkout -b feature/amazing-feature`)
@@ -597,7 +597,7 @@ Siehe [CONTRIBUTING.md](./CONTRIBUTING.md) für Richtlinien.
 4. Branch pushen (`git push origin feature/amazing-feature`)
 5. Pull Request erstellen
 
-**Bitte beachten:** PRs sollten gegen Meilensteine in [ROADMAP.md](./ROADMAP.md) ausgerichtet sein.
+**Bitte beachten:** PRs sollten gegen Meilensteine in [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) ausgerichtet sein.
 
 ## 📄 Lizenz
 
@@ -622,4 +622,4 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 **Letzte Aktualisierung:** 18. Oktober 2025  
 **Repository:** [edufeed-org/nostr-cli](https://github.com/edufeed-org/kanban-editor)
 
-Für den aktuellen Entwicklungsstand siehe [CODE-ANALYSE.md](./CODE-ANALYSE.md) und [ROADMAP.md](./ROADMAP.md).
+Für den aktuellen Entwicklungsstand siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md).
