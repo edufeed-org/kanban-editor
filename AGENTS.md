@@ -1508,3 +1508,607 @@ import { MessageSquare, Trash, Send } from "lucide-svelte";
   Kommentare
 </Button>
 ```
+
+---
+
+# X. Reactive Data Flow Verification Checklist (KRITISCH! 🔴)
+
+## Hintergrund: Das "Prop vs State" Problem
+
+**Fehler:** Ein Wert wird in einer `$state` Variable aktualisiert, aber die Template zeigt immer noch den alten Wert aus der Prop.
+
+**Ursache:** Template verwendet `card.image` (Prop) statt `localImage` ($state Variable).
+
+**Impact:** Komplexe reaktive Flows mit triggerUpdate() → $derived → $effect scheinen "broken" zu sein, obwohl alles funktioniert!
+
+### Real-World Beispiel aus diesem Projekt:
+
+```typescript
+// ❌ FALSCH - Template zeigt alte Prop
+let localImage = $state(card.image || '');
+$effect(() => {
+    if (updatedCard.image !== localImage) {
+        localImage = updatedCard.image;  // ← WIRD AKTUALISIERT!
+    }
+});
+
+// In Template:
+{#if card.image}  <!-- ← FALSCH! Liest alte Prop! -->
+    <img src={card.image} />
+{/if}
+
+// ✅ RICHTIG - Template zeigt neue State
+{#if localImage}  <!-- ← RICHTIG! Liest neue State! -->
+    <img src={localImage} />
+{/if}
+```
+
+**Debugging wurde schwierig, weil:**
+1. Console zeigte: `🔄 Card image updated: https://...` ✓
+2. Aber UI zeigte: kein Bild ✗
+3. $effect funktionierte perfekt, Template war schuldig!
+
+---
+
+## Verification Routine: "Reactive Flow Audit"
+
+Verwende diese Checkliste IMMER wenn du:
+- ✅ Store-State aktualisierst (z.B. `boardStore.editCard()`)
+- ✅ $effect implementierst (z.B. zum Sync von Props)
+- ✅ Komponenten-Props anzeigst (z.B. Karten-Daten)
+- ✅ Komplexe reactive chains baust
+
+### SCHRITT 1: Data Source Mapping
+
+```
+Frage: Wo kommt der Wert her?
+
+Option A: Externe Quelle (Prop vom Parent)
+   → Nur READ-ONLY!
+   → Template kann {card.image} nutzen
+   → ABER: $effect kann Prop nicht mutieren! (ownership violation)
+
+Option B: Komponenten-interne State ($state Variable)
+   → READ-WRITE möglich
+   → Template MUSS {localImage} nutzen (nicht {card.image}!)
+   → $effect kann hier updaten: localImage = newValue
+
+Option C: Berechneter Wert ($derived oder $derived.by)
+   → NUR READ (automatisch berechnet)
+   → Template: {derivedValue}
+```
+
+**Checkliste:**
+```typescript
+// 1. Identifiziere alle Werte die in der Template verwendet werden:
+//    ❓ card.image - Woher kommt das?
+//       → Prop vom Parent? → Template kann {card.image} nutzen
+//       → ABER: Kann Parent immer mitaktualisieren?
+
+// 2. Wird der Wert von $effect geändert?
+//    ❓ Ja? → MUSS eine lokale $state Variable sein!
+//       → Nicht die Prop direkt!
+
+// 3. Ist es lokal, aber nicht in Template?
+//    ❓ Dann wird es nicht neu gerendert!
+//       → Muss in Template explizit gelesen werden!
+```
+
+### SCHRITT 2: Reaktive Abhängigkeiten überprüfen
+
+Für **jeden Wert**, der in der Template angezeigt wird:
+
+```typescript
+// TEMPLATE zeigt: {localImage}
+//                 ↑
+//                 Woher kommt dieser Wert?
+
+// Trace 1: Kommt von Prop
+//    card.image → localImage = $state(card.image)
+//                                        ↑
+//                                        Wird Prop aktualisiert vom Parent?
+//                                        Wenn NEIN → Problem!
+
+// Trace 2: Wird von $effect aktualisiert
+//    $effect(() => {
+//        if (updatedCard.image !== localImage) {
+//            localImage = updatedCard.image  // ← OK!
+//        }
+//    })
+//                                        ↑
+//                                        Was triggert $effect?
+//                                        boardStore.uiData?
+//                                        ✓ Muss in Dependencies sein!
+
+// Trace 3: $derived oder berechneter Wert
+//    let computed = $derived(boardStore.data?.image)
+//                                        ↑
+//                                        Automatisch reaktiv
+//                                        ✓ OK!
+```
+
+**Checkliste:**
+```typescript
+// Für {localImage} in Template:
+// ✅ const localImage = $state(card.image || ''); // Hat Initialwert
+// ✅ $effect(() => { localImage = updatedCard.image; }); // Wird in $effect aktualisiert
+// ✅ $effect hängt von richtigem Dependency ab (z.B. boardStore.uiData)
+// ✅ Template nutzt {localImage} NICHT {card.image}
+// ❌ Template nutzt {card.image} statt {localImage} ← BUG!
+```
+
+### SCHRITT 3: Component-Level Template Audit
+
+**Vor** du commitst, durchlaufe jede Component-Variable in der Template:
+
+```svelte
+<script>
+  let { card } = $props();
+  let localName = $state(card.name);
+  let localImage = $state(card.image || '');
+  
+  $effect(() => {
+    // Diese Werte können sich ändern
+    if (updatedCard.image !== localImage) {
+      localImage = updatedCard.image; // ← LOKAL UPDATE
+    }
+  });
+</script>
+
+<!-- Template Audit Checklist: -->
+<div>
+  <!-- ✅ RICHTIG: Nutzt lokale State -->
+  {card.name}           <!-- ✓ Prop (OK, read-only) -->
+  {localImage}          <!-- ✓ State (OK, reaktiv) -->
+  {derivedValue}        <!-- ✓ $derived (OK, auto-reaktiv) -->
+  
+  <!-- ❌ FALSCH: Nutzt alte Prop statt State -->
+  {card.image}          <!-- ✗ FALSCH! Sollte {localImage} sein! -->
+  
+  <!-- ❌ FALSCH: Nutzt nicht-initialisierte Variable -->
+  {nonExistentValue}    <!-- ✗ undefined! -->
+</div>
+```
+
+**Automatisierte Checks:**
+```bash
+# Grep alle {card.} Variablen in Template
+grep -n "{card\." src/routes/cardsboard/Card.svelte
+
+# Dann überprüfe: Gibt es ein local{PropertyName}?
+#   {card.image}  → Muss es auch let localImage geben? JA!
+#   {card.name}   → Muss es auch let localName geben? JA!
+```
+
+### SCHRITT 4: $effect Dependencies überprüfen
+
+**Häufiger Fehler:** $effect wird nicht ausgelöst, weil Dependency falsch ist.
+
+```typescript
+// ❌ FALSCH: Beobachtet falsches Dependency
+$effect(() => {
+    const newValue = boardStore.data;  // ← Zu granular!
+    // Wenn nur eine Sub-Property ändert, triggert $effect nicht!
+});
+
+// ✅ RICHTIG: Beobachtet die richtige Ebene
+$effect(() => {
+    const uiColumns = boardStore.uiData;  // ← $derived.by() Rückgabewert
+    // Wenn updateTrigger ändert → uiData wird neu berechnet
+    // → $effect triggered! ✓
+});
+
+// ✅ AUCH RICHTIG: Explizit lesen für Dependency Tracking
+$effect(() => {
+    const trigger = boardStore.updateTrigger;  // ← Explizite Dependency
+    const data = boardStore.data;
+    // Beide werden tracked
+});
+```
+
+**Checkliste:**
+```typescript
+// Für jede $effect:
+// ✅ Liest es den GESAMTEN Wert? boardStore.uiData (nicht boardStore.uiData[0].items)
+// ✅ Sind $state Variablen explizit gelesen? const trigger = ...;
+// ✅ Werden $derived Werte verwendet? (nicht die zugrundeliegende $state)
+// ✅ Gibt es circular dependencies? (z.B. $effect mutiert seine eigene Dependency?)
+```
+
+### SCHRITT 5: Template Rendering Verification
+
+**Vor dem Commit: Manueller Test**
+
+```typescript
+// Test Pattern für reactive values:
+
+// 1. STATE CHANGE
+boardStore.editCard(cardId, { image: 'https://new-image.jpg' });
+
+// 2. VERIFY IN CONSOLE (während test)
+console.log('localImage:', localImage);  // Should be new URL
+console.log('card.image:', card.image);   // Might still be old (Parent nicht updated)
+console.log('Template shows:', ???);      // SCHAU SELBST!
+
+// 3. WENN TEMPLATE ALTE WERT ZEIGT
+//    → localImage ist nicht in Template benutzt
+//    → Template benutzt card.image statt localImage
+//    → FIX: Ändere Template zu {localImage}
+```
+
+---
+
+## Automated Lint Rules (zur copilot-instructions.md hinzufügen)
+
+```
+RULE: Local State Variables in Components
+
+Wenn eine lokale $state Variable existiert, MUSS die Template diese nutzen,
+nicht die Prop!
+
+PATTERN:
+let local{PropertyName} = $state(prop.{PropertyName});
+// MUSS in Template verwendet werden
+{local{PropertyName}}
+
+EXAMPLES:
+❌ let localImage = $state(card.image); ... Template: {card.image}
+✅ let localImage = $state(card.image); ... Template: {localImage}
+
+❌ let localName = $state(card.name); ... Template: {card.name}
+✅ let localName = $state(card.name); ... Template: {localName}
+
+DETECTION:
+grep -E "let local[A-Z].*=.*\\\$state.*\\..*;" src/...
+Then check: Template NEVER uses the prop directly!
+```
+
+---
+
+## FAQ: Reactive Flow Issues
+
+### Q: Meine $effect wird nicht ausgelöst!
+**A:** Überprüfe die Dependencies. Nutze ein Tool um zu sehen, was gelesen wird:
+```typescript
+$effect(() => {
+    console.log('$effect triggered with:', { 
+        updateTrigger: boardStore.updateTrigger,
+        uiData: boardStore.uiData.length 
+    });
+});
+```
+
+### Q: Meine State wird aktualisiert, aber Template zeigt alter Wert!
+**A:** Template nutzt die Prop statt State Variable. Siehe "SCHRITT 3: Template Audit"
+
+### Q: Änderungen funktionieren nach Reload, nicht davor!
+**A:** triggerUpdate() wird nicht aufgerufen. Siehe COPILOT-INSTRUCTIONS.md "triggerUpdate() verification"
+
+### Q: Warum kann ich Prop nicht direkt mutieren?
+**A:** Svelte 5 Ownership Model. Props gehören Parent. Nutze lokale $state für Mutations!
+
+---
+
+## Zusammenfassung der Routine
+
+```
+REACTIVE FLOW VERIFICATION = 5 SCHRITTE
+
+1. Data Source Mapping
+   → Woher kommt jeder Wert? (Prop, State, Derived?)
+
+2. Dependency Tracing
+   → Wird der Wert aktualisiert? Wie?
+
+3. Template Audit
+   → Template nutzt richtige Variable? (local* statt prop.*)
+
+4. $effect Verification
+   → Beobachtet die richtige Dependency?
+
+5. Manual Test
+   → Speichern → Console überprüfen → UI kontrollieren
+```
+
+**Zeit zum Durchlaufen:** ~5-10 Minuten pro Component
+**Wert:** Spart Stunden beim Debugging! 🚀
+
+---
+
+## X. ⚠️ KRITISCH: getContextData() Serialisierung Pattern
+
+### Problem: Felder nicht in localStorage gespeichert
+
+**Symptom:** Ein `$state` Feld ist auf der Klasse definiert, wird aktualisiert, aber verschwindet nach Browser-Reload.
+
+**Root Cause:** Das Feld ist NICHT in der `getContextData()` Rückgabe enthalten!
+
+**Beispiel aus der Praxis:**
+```typescript
+// ❌ FALSCH - author wird nicht serialisiert
+export class Card {
+  public author?: string;  // ← Feld existiert!
+  
+  getContextData() {
+    return {
+      id: this.id,
+      heading: this.heading,
+      content: this.content,
+      // ⚠️ author FEHLT hier!
+    };
+  }
+}
+
+// ✅ RICHTIG - author wird serialisiert
+export class Card {
+  public author?: string;
+  
+  getContextData() {
+    return {
+      id: this.id,
+      heading: this.heading,
+      content: this.content,
+      author: this.author,  // ← MUSS hier sein!
+    };
+  }
+}
+```
+
+### Die Serialisierungs-Kette
+
+```
+1. Model ($state Feld)
+   ↓
+2. getContextData() (SERIALISIERUNG)
+   ↓
+3. boardStore.saveToStorage() (JSON.stringify)
+   ↓
+4. localStorage (Persistierung)
+   ↓
+5. Browser-Reload → reconstructBoard() (Deserialisierung)
+   ↓
+6. Feld ist wieder da! ✅
+```
+
+**FEHLER IN SCHRITT 2 = TOTALVERLUST!**
+
+### Die Regel
+
+**🔴 RULE: Alle öffentlichen $state Felder MÜSSEN in getContextData() enthalten sein**
+
+Diese Regel gilt für:
+- `class Board` → `Board.getContextData()`
+- `class Column` → `Column.getContextData()`
+- `class Card` → `Card.getContextData()`
+- `interface CardProps` / `interface BoardProps` (update Return Type!)
+
+### Checklist für neue Felder
+
+Wenn du ein neues Feld zu einer Klasse hinzufügst:
+
+```typescript
+// 1. Definiere das Feld auf der Klasse
+export class Card {
+  public mynewField?: string;  // ← Schritt 1
+  
+  // 2. Füge es zum Props-Interface hinzu
+  // (wenn nicht bereits dort)
+  
+  // 3. Setze es im Constructor
+  constructor(props: CardProps) {
+    this.mynewField = props.mynewField;  // ← Schritt 2
+  }
+  
+  // 4. KRITISCH: Füge es zu getContextData() hinzu!
+  getContextData() {
+    return {
+      // ... andere Felder ...
+      mynewField: this.mynewField,  // ← Schritt 3 (NICHT VERGESSEN!)
+    };
+  }
+  
+  // 5. Update die Return Type in Dokumentation
+  // getContextData(): Omit<CardProps, '...'> & { mynewField: string | undefined }
+}
+
+// 6. In boardStore.svelte.ts: reconstructBoard()
+// auch das neue Feld laden
+const card = new Card({
+  // ...
+  mynewField: cardData.mynewField,  // ← Schritt 4
+});
+```
+
+**Test nach Hinzufügen:**
+```typescript
+// Browser Console:
+localStorage.setItem('test-board', JSON.stringify(board.getContextData()));
+const loaded = JSON.parse(localStorage.getItem('test-board'));
+console.log('mynewField in storage?', 'mynewField' in loaded);  // MUSS true sein!
+```
+
+### Praktisches Beispiel: author Field Fix
+
+Dies war das Problem, das den Session 5 ausgelöst hat:
+
+**Fehler in BoardModel.ts Line ~145:**
+```typescript
+// ❌ VORHER - Card.getContextData()
+getContextData() {
+  return {
+    id: this.id,
+    heading: this.heading,
+    content: this.content,
+    labels: this.labels,
+    // ⚠️ author FEHLT!
+  };
+}
+
+// ✅ NACHHER
+getContextData() {
+  return {
+    id: this.id,
+    heading: this.heading,
+    content: this.content,
+    labels: this.labels,
+    author: this.author,  // ← HINZUGEFÜGT
+  };
+}
+```
+
+**Fehler in BoardModel.ts Line ~373:**
+```typescript
+// ❌ VORHER - Board.getContextData()
+getContextData() {
+  return {
+    id: this.id,
+    name: this.name,
+    columns: this.columns.map(c => c.getContextData()),
+    // ⚠️ author FEHLT!
+  };
+}
+
+// ✅ NACHHER
+getContextData() {
+  return {
+    id: this.id,
+    name: this.name,
+    columns: this.columns.map(c => c.getContextData()),
+    author: this.author,  // ← HINZUGEFÜGT
+  };
+}
+```
+
+**Fehler in kanbanStore.svelte.ts Line ~264:**
+```typescript
+// ❌ VORHER - reconstructBoard() lud nicht das author Feld
+const card = new Card({
+  heading: cardData.heading,
+  content: cardData.content,
+  // ⚠️ author nicht geladen!
+});
+
+// ✅ NACHHER
+const card = new Card({
+  heading: cardData.heading,
+  content: cardData.content,
+  author: cardData.author,  // ← HINZUGEFÜGT
+});
+```
+
+### Impact dieser Regel
+
+Diese Serialisierungs-Kette ist für folgende Funktionalität **KRITISCH**:
+
+1. **localStorage Persistierung** - Alle Felder müssen serialisiert werden
+2. **Browser-Reload** - Daten wieder laden aus Storage
+3. **Nostr Event Publishing** (Phase 2) - Events brauchen alle Felder
+4. **Export/Import Feature** (Phase 1.5) - Boards mussten vollständig exportierbar sein
+5. **Multi-Device Sync** (Phase 3) - Alle Felder sind notwendig
+
+**Wenn diese Regel verletzt wird:**
+- ❌ Felder verschwinden nach Browser-Reload
+- ❌ Nostr Events sind unvollständig
+- ❌ Export/Import funktioniert nicht
+- ❌ Benutzer-Daten werden verloren
+- ❌ Sync zwischen Geräten unmöglich
+
+### Warum ist das so kritisch?
+
+**Historischer Kontext:**
+- Months of debugging Sessions 1-4 zeigten: board.author = 'Dev User' ✓ aber localStorage hatte `null`
+- Root Cause fand sich erst nach umfassender Code-Analyse
+- Die `getContextData()` Methode war das "Missing Link"
+- Danach waren alle Felder konsistent: Model ↔ Storage ↔ UI
+
+**Lerneffekt für zukünftige Phasen:**
+- Neue Felder (z.B. für NIP-07, Tags, Reactions, etc.) MÜSSEN von Anfang an in getContextData()
+- Das ist nicht "nice to have" sondern **MUSS sein**
+- Sonst wieder Monate debugging!
+
+---
+
+## XI. Author Attribution & Benutzer-Kontext
+
+### Overview
+
+Jede Karte, Spalte und das Board selbst können einen `author` haben, der angibt, wer die Entität erstellt hat. Dies ist wichtig für:
+- **Accountability**: Wer hat was erstellt?
+- **Zukunft (Phase 2)**: Permissions-System (nur Author kann bearbeiten)
+- **Zukunft (Phase 3)**: Audit Trail für Nostr Events
+- **UI**: Freundliche Anzeige statt Pubkey
+
+### Author-Zuweisungs-Logik
+
+**Fallback-Kette (wichtig!)**
+
+```typescript
+// 1. Beste Option: Display Name (z.B. "Dev User")
+const author = authStore.getUserName()
+  // 2. Fallback: Public Key (Hex, z.B. "0000...0001")
+  || authStore.getPubkey()
+  // 3. Letzter Ausweg: 'anonymous'
+  || 'anonymous';
+
+// Beispiel Browser Console:
+// → authStore.getUserName() returns "Alice"
+// → UI zeigt: "Alice" (nicht "0000...0001")
+// → Nach Logout: authStore.getUserName() returns null
+// → getContextData() speichert pubkey statt name
+// → Nach Reload: UI zeigt "0000...0001" (was lokal gespeichert war)
+```
+
+**Praktische Anwendung:**
+
+```typescript
+// In kanbanStore.svelte.ts - createBoard()
+export class BoardStore {
+  public createBoard(name: string, description?: string): string {
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    
+    const board = new Board({
+      name,
+      description,
+      author  // ← wird hier gespeichert
+    });
+    
+    this.board = board;
+    this.triggerUpdate();
+    return board.id;
+  }
+  
+  public createCard(columnId: string, heading: string): string {
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    
+    const column = this.board.findColumn(columnId);
+    const card = new Card({
+      heading,
+      author  // ← wird hier gespeichert
+    });
+    
+    column?.addCard(card);
+    this.triggerUpdate();
+    return card.id;
+  }
+}
+```
+
+### Wo wird author angezeigt?
+
+- **CardViewDialog**: "Kommentar von: <author>"
+- **LeftSidebarFooter**: "Eingeloggt als: <author>" (nach Phase 2)
+- **Zukünftig (Phase 3)**: "Erstellt von: <author>" bei Card-Details
+
+### Authentifizierungs-Integration
+
+Siehe: `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`
+
+Die AuthStore stellt folgende Methoden bereit:
+- `getUserName(): string | null` - Display Name (bevorzugt)
+- `getPubkey(): string | null` - Hex Format
+- `getNpub(): string | null` - Bech32 Format
+- `loginWithDummy()` - Entwicklung
+- `loginWithNsec()` - Entwicklung
+- `loginWithNIP07()` - Production (Phase 2)
+
+**Wichtig:** AuthStore wird im `+layout.svelte` initialisiert und ist global verfügbar!

@@ -2,11 +2,31 @@
 
 Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, gebaut mit **Svelte 5** und **TypeScript**.
 
+## 🧪 Tests ausführen
+
+**Schnellstart (30 Sekunden):**
+```bash
+pnpm run dev
+# Browser: http://localhost:5173/test
+# Click: "▶️ Tests ausführen"
+```
+
+**Dokumentation:** → [`docs/TESTSUITE/INDEX.md`](./docs/TESTSUITE/INDEX.md)
+
+## 💬 Kommentar-System
+
+**Status:** ✅ Phase A+B Production-Ready | ⏳ Phase C-E Planned
+
+**Dokumentation:** → [`docs/FEATURE/COMMENTS.md`](./docs/FEATURE/COMMENTS.md)
+
+---
+
 ## 🎯 Features
 
 - ✅ **Offline-First:** Arbeiten Sie ohne Internetverbindung, automatische Synchronisation bei Reconnect
 - 🧠 **KI-Integration:** Intelligente Karten-Aufteilung und Aufgaben-Management
 - 🌐 **Nostr-basiert:** Dezentrale Speicherung über Nostr-Relays (NIP-30301/30302)
+- 💬 **Kommentar-System:** Lokal persistent mit lokalisierter UI (in Phase D: Nostr Publishing)
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
 - 🔒 **Typsicher:** Vollständig in TypeScript implementiert
 - 💬 **Kommentare:** Nostr-basierte Kommentare mit Reactions & Zaps
@@ -16,7 +36,10 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
 - **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
+- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema
 - **[STORES.md](./docs/ARCHITECTURE/STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
+- **[🆕 AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)** - Serialisierung & Persistierung Pattern
+- **[🆕 AUTHSTORE-INTEGRATION-GUIDE.md](./docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)** - AuthStore API Reference
 - **[NDK.md](./docs/ARCHITECTURE/NDK.md)** - NDK Integration & Nostr-Event Publishing
 - **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
 - **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
@@ -27,16 +50,17 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 
 **Start hier:**
 - Neu im Projekt? → **[KONZEPT.md](./KONZEPT.md)** (15 min Überblick)
-- Development starten? → **[AGENTS.md](./AGENTS.md) → [STORES.md](./STORES.md)**
+- Development starten? → **[📚 Dokumentations-Index](./docs/_INDEX.md)** (Wähle deine Rolle!)
+- Code-Beispiele? → **[AGENTS.md](./AGENTS.md) + [UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)**
 
 **Nach Rolle:**
 
 | Rolle | Start | Nächste | Referenz |
 |-------|-------|--------|----------|
 | **Product Manager** | KONZEPT.md | ROADMAP.md | — |
-| **Frontend Dev** | AGENTS.md | UX-RULES.md, STORES.md | Komponenten- Referenz |
-| **Nostr Dev** | NDK.md | Kanban-NIP.md | nostrEvents.ts |
-| **Backend/Auth** | NOSTR-USER.md | NDK.md | Session-Management |
+| **Frontend Dev** | 📚 Index (Frontend Path) | UX-RULES.md | AUTHOR-FIELD-ATTRIBUTION.md |
+| **Nostr Dev** | 📚 Index (Nostr Path) | NDK.md | AUTHSTORE-INTEGRATION-GUIDE.md |
+| **Backend/Auth** | AUTHSTORE-INTEGRATION-GUIDE.md | NOSTR-USER.md | Session-Management |
 | **KI-Integration** | AGENTS.md (Chat-Klasse) | ROADMAP.md (Phase 3) | — |
 
 **Dependency Graph:**
@@ -44,11 +68,15 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 ```
 ┌─ Start: KONZEPT.md (Stakeholder-freundlich)
 │
+├─ Navigation: 📚 Dokumentations-Index
+│   └→ Wähle deine Rolle → Learning Path
+│
 ├─ Core Technical: AGENTS.md
 │   ├→ BoardModel.ts (Klassen)
 │   ├→ STORES.md (State Management)
 │   │   ├→ NDK.md (Event Publishing)
-│   │   ├→ NOSTR-USER.md (Auth)
+│   │   ├→ AUTHSTORE-INTEGRATION-GUIDE.md (Auth API)
+│   │   ├→ AUTHOR-FIELD-ATTRIBUTION.md (Serialisierung!)
 │   │   └→ ROADMAP.md (Milestones)
 │   └→ UX-RULES.md (Komponenten)
 │
@@ -62,9 +90,10 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 
 **Meilenstein-Links:**
 
+- **Phase 1.0** ✅ (Author Field Attribution) — siehe AUTHOR-FIELD-ATTRIBUTION.md + AUTHSTORE-INTEGRATION-GUIDE.md
 - **Phase 1.1** (Nostr Publishing) — siehe AGENTS.md + STORES.md
 - **Phase 1.2** (Offline-First) — siehe STORES.md (SyncManager)
-- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./STORES.md) Section III** ⭐
+- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./docs/ARCHITECTURE/STORES.md) Section III** ⭐
 - **Phase 2.1** (UI Components) — siehe UX-RULES.md + AGENTS.md
 - **Phase 3.1** (KI-Integration) — siehe AGENTS.md (Chat-Klasse) + ROADMAP.md
 

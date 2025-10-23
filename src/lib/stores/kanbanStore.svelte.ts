@@ -2,6 +2,7 @@
 
 import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 import { generateTimestamp } from '../utils/idGenerator.js';
+import { authStore } from './authStore.svelte.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
 export type CardItem = {
@@ -33,8 +34,7 @@ export type UIColumn = {
 // ============================================================================
 
 export class BoardStore {
-    private static STORAGE_KEY = 'kanban-board-data';
-    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // 🔥 NEUE LISTE!
+    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // Schlüssel für Liste aller Board-IDs
     
     // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
     private board = $state(this.loadFromStorage());
@@ -46,10 +46,11 @@ export class BoardStore {
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
 
     // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
-    private updateTrigger = $state(0);
+    // PUBLIC: Wird von Components gelesen als $derived-Abhängigkeit
+    public updateTrigger = $state(0);
 
     constructor() {
-        // 🔥 KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
+        // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
         // (Das passiert beim ersten Laden wenn ein Default Board erstellt wird)
         if (typeof window !== 'undefined') {
             const currentBoardId = this.board.id;
@@ -61,6 +62,9 @@ export class BoardStore {
                 // Speichere auch das Default Board selbst
                 this.saveToStorage();
             }
+            
+            // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
+            this.exposeCurrentBoardIdToWindow();
         }
     }
 
@@ -83,6 +87,16 @@ export class BoardStore {
         const columnOrder = this._columnOrder;
         const trigger = this.updateTrigger; // ← Auch updateTrigger als Fallback
         
+        // 🔥 WICHTIG: Auch alle card.comments Arrays direkt lesen!
+        // Das garantiert, dass Änderungen an comments die Ableitung triggern
+        columns.forEach(col => {
+            col.cards.forEach(card => {
+                // Direkter Zugriff auf comments für Dependency Tracking
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const _ = card.comments;
+            });
+        });
+        
         console.log('🔄 uiData wird neu berechnet...', columns.length, 'Spalten, trigger:', trigger);
         
         // Erstelle eine Map für schnellen Zugriff
@@ -93,24 +107,25 @@ export class BoardStore {
         for (const colId of columnOrder) {
             const column = columnMap.get(colId);
             if (column) {
-                result.push({
-                    id: column.id,
-                    name: column.name,
-                    color: column.color,
-                    items: column.cards.map(card => ({
-                        id: card.id,
-                        name: card.heading,
-                        description: card.content,
-                        comments: card.comments,
-                        attendees: card.attendees,
-                        labels: card.labels,
-                        color: card.color,
-                        publishState: card.publishState,
-                        author: card.author || card.attendees?.[0], // author oder erster Attendee
-                        columnId: column.id,
-                        boardId: this.board.id
-                    }))
-                });
+                    result.push({
+                        id: column.id,
+                        name: column.name,
+                        color: column.color,
+                        items: column.cards.map(card => ({
+                            id: card.id,
+                            name: card.heading,
+                            description: card.content,
+                            image: card.image,
+                            comments: card.comments,
+                            attendees: card.attendees,
+                            labels: card.labels,
+                            color: card.color,
+                            publishState: card.publishState,
+                            author: card.author || card.attendees?.[0], // author oder erster Attendee
+                            columnId: column.id,
+                            boardId: this.board.id
+                        }))
+                    });
             }
         }
         
@@ -129,6 +144,23 @@ export class BoardStore {
     // ============================================================================
     // PRIVATE HELPER
     // ============================================================================
+
+    /**
+     * 🔥 DEBUGGING: Speichert die aktuelle Board-ID im window-Objekt
+     * Ermöglicht einfache Console-Tests: 
+     * JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))
+     */
+    private exposeCurrentBoardIdToWindow(): void {
+        if (typeof window === 'undefined') return;
+        
+        const boardId = this.board.id;
+        (window as any).CURRENT_KANBAN_BOARD_ID = boardId;
+        (window as any).CURRENT_KANBAN_BOARD_STORAGE_ID = 'kanban-'+boardId;
+        
+        console.log(`✅ Board-ID verfügbar: window.CURRENT_KANBAN_BOARD_ID = "${boardId}"`);
+        console.log('📊 localStorage testen:');
+        console.log(`   JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))`);
+    }
 
     private loadBoardIds(): string[] {
         if (typeof window === 'undefined') return [];
@@ -232,12 +264,14 @@ export class BoardStore {
             columns: data.columns?.map((colData: any) => ({
                 id: colData.id,
                 name: colData.name,
-                color: colData.color,
+                color: colData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                 cards: colData.cards?.map((cardData: any) => ({
                     id: cardData.id,
                     heading: cardData.heading,
                     content: cardData.content,
-                    color: cardData.color,
+                    image: cardData.image, // ← image MUSS hier sein!
+                    color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
+                    author: cardData.author, // ← ✅ FIXED: author hinzugefügt!
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
                     links: cardData.links || [],
@@ -255,11 +289,11 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'Backlog', color: 'muted' },
-                { name: 'To Do', color: 'chart-1' },
-                { name: 'In Progress', color: 'chart-2' },
-                { name: 'Done', color: 'chart-3' },
-                { name: 'Archive', color: 'muted' }
+                { name: 'Backlog', color: 'slate' },
+                { name: 'To Do', color: 'blue' },
+                { name: 'In Progress', color: 'orange' },
+                { name: 'Done', color: 'green' },
+                { name: 'Archive', color: 'red' }
             ]
         });
     }
@@ -366,9 +400,13 @@ export class BoardStore {
      * Erstellt ein neues Board mit Default-Spalten und speichert es
      */
     public createBoard(name: string = 'Neues Board'): string {
+        // ✅ Nutze getUserName() für lesbare author (statt pubkey!)
+        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        
         const newBoard = new Board({
             name,
             description: '',
+            author: author, // ✅ Nutze den Namen für bessere UX!
             columns: [
                 { name: 'Backlog', color: 'muted' },
                 { name: 'To Do', color: 'chart-1' },
@@ -618,6 +656,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.setPublishState(state);
+            this.triggerUpdate(); // ← CRITICAL FIX: Trigger Reaktivität + localStorage!
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -628,6 +667,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.addComment(text, author);
+            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -638,6 +678,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.deleteComment(commentId);
+            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -677,14 +718,19 @@ export class BoardStore {
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
         console.log('🆕 createCard aufgerufen:', { columnId, name, description });
         
+        // ✅ WICHTIG: Nutze getUserName() für lesbare author (statt pubkey!)
+        // Fallback: pubkey, dann 'anonymous'
+        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
-            publishState: 'draft'
+            publishState: 'draft',
+            author: author // ✅ Nutze den Namen für bessere UX!
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;
@@ -824,10 +870,11 @@ export class BoardStore {
     /**
      * Wird von UI aufgerufen: Kartendetails bearbeiten  
      */
-    public editCard(cardId: string, updates: { name?: string; description?: string; color?: string; labels?: string[] }): void {
+    public editCard(cardId: string, updates: { name?: string; description?: string; image?: string; color?: string; labels?: string[] }): void {
         const cardProps: Partial<CardProps> = {};
         if (updates.name !== undefined) cardProps.heading = updates.name;
         if (updates.description !== undefined) cardProps.content = updates.description;
+        if (updates.image !== undefined) cardProps.image = updates.image;
         if (updates.color !== undefined) cardProps.color = updates.color;
         if (updates.labels !== undefined) cardProps.labels = updates.labels;
         

@@ -74,13 +74,12 @@
 	let popoverOpen = $state(false);
 
 	const colorOptions = [
-		{ value: 'slate', label: 'Slate' },
-		{ value: 'red', label: 'Rot' },
-		{ value: 'orange', label: 'Orange' },
-		{ value: 'yellow', label: 'Gelb' },
-		{ value: 'green', label: 'Grün' },
-		{ value: 'blue', label: 'Blau' },
-		{ value: 'purple', label: 'Lila' }
+		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
+		{ value: 'blue', label: 'Blau', cssVar: '--color-blue' },
+		{ value: 'green', label: 'Grün', cssVar: '--color-green' },
+		{ value: 'orange', label: 'Orange', cssVar: '--color-orange' },
+		{ value: 'red', label: 'Rot', cssVar: '--color-red' },
+		{ value: 'purple', label: 'Lila', cssVar: '--color-purple' }
 	];
 
 	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
@@ -190,21 +189,15 @@
    }
 
    function getCardColor(colorName: string | undefined): string {
-   		return colorName ? `var(--${colorName})` : 'var(--muted)';
+   		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
    }
 
-	function handleRename() {
+	function handleRenameChange() {
+		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
 		if (editName !== name && columnId) {
+			console.log('📝 Column name changed:', { old: name, new: editName });
 			boardStore.updateColumn(columnId, { name: editName });
 		}
-		popoverOpen = false;
-	}
-
-	function handleColorChange() {
-		if (selectedColor !== color && columnId) {
-			boardStore.updateColumn(columnId, { color: selectedColor });
-		}
-		popoverOpen = false;
 	}
 
 	function handleDelete() {
@@ -336,6 +329,37 @@
 	.column-content::-webkit-scrollbar-thumb:hover {
 		opacity: 0.5;
 	}
+
+	/* Color Circle Picker Styles */
+	.color-circle {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		border: 2px solid transparent;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.color-circle:hover {
+		transform: scale(1.1);
+		box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+	}
+
+	.color-circle.selected {
+		border-color: white;
+		box-shadow: 0 0 0 3px var(--accent), 0 0 12px rgba(0, 0, 0, 0.3);
+	}
+
+	.color-circle .checkmark {
+		width: 1.25rem;
+		height: 1.25rem;
+		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+	}
 </style>
 
 <div 
@@ -389,27 +413,45 @@
 						<div class="space-y-4">
 							<div class="space-y-2">
 								<h4 class="font-medium text-sm">Spalte umbenennen</h4>
-								<Input bind:value={editName} placeholder="Spaltenname" />
-								<Button size="sm" onclick={handleRename} class="w-full">
-									Umbenennen
-								</Button>
+								<Input 
+									bind:value={editName} 
+									placeholder="Spaltenname"
+									onchange={handleRenameChange}
+									onblur={handleRenameChange}
+								/>
 							</div>
 							
 							<Separator />
 							
 							<div class="space-y-2">
 								<h4 class="font-medium text-sm">Farbe wählen</h4>
-								<RadioGroup.Root bind:value={selectedColor}>
+								<div class="flex flex-wrap gap-3">
 									{#each colorOptions as option}
-										<div class="flex items-center space-x-2">
-											<RadioGroup.Item value={option.value} id={`color-${option.value}`} />
-											<Label for={`color-${option.value}`}>{option.label}</Label>
-										</div>
+										<button
+											class="color-circle"
+											class:selected={selectedColor === option.value}
+											style="background-color: var({option.cssVar})"
+											onclick={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												selectedColor = option.value;
+												// 🎯 DIREKT SPEICHERN ohne auf Button zu warten!
+												if (columnId) {
+													boardStore.updateColumn(columnId, { color: option.value });
+													popoverOpen = false;
+												}
+											}}
+											title={option.label}
+											aria-label={option.label}
+										>
+											{#if selectedColor === option.value}
+												<svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+													<polyline points="20 6 9 17 4 12"></polyline>
+												</svg>
+											{/if}
+										</button>
 									{/each}
-								</RadioGroup.Root>
-								<Button size="sm" onclick={handleColorChange} class="w-full">
-									Farbe ändern
-								</Button>
+								</div>
 							</div>
 							
 							<Separator />

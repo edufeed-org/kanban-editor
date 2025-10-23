@@ -8,6 +8,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
+	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import type { CardProps, PublishState } from '../../lib/classes/BoardModel.js';
 
 	interface Props {
@@ -19,10 +20,48 @@
 
 	const { card, isOpen, onClose, onSave }: Props = $props();
 
+	// 🔥 KRITISCH: Lese die aktuelle Karte DIREKT aus boardStore.uiData
+	// Das stellt sicher, dass Änderungen (z.B. image) sofort sichtbar sind!
+	let currentCard = $derived.by(() => {
+		if (!card?.id) return card;
+		
+		// Lese updateTrigger als Dependency-Tracking-Trick
+		// Jedes Mal wenn triggerUpdate() aufgerufen wird, wird diese $derived neu berechnet
+		const trigger = boardStore.updateTrigger;
+		console.log('🔍 CardDialog: currentCard aktualisiert, trigger:', trigger);
+		
+		for (const col of boardStore.uiData) {
+			const found = col.items.find(c => String(c.id) === String(card.id));
+			if (found) return found;
+		}
+		return card;
+	});
+
+	// 🆕 Preview-Daten: werden IMMER aktualisiert (nicht von isUserEditing blockiert!)
+	// Diese $derived zeigt die GESPEICHERTEN Änderungen, unabhängig vom Formular
+	let previewCard = $derived.by(() => {
+		// Lese updateTrigger explizit als Dependency
+		const trigger = boardStore.updateTrigger;
+		console.log('🔍 previewCard: updateTrigger =', trigger);
+		
+		// Finde die aktuelle Karte im Store
+		for (const col of boardStore.uiData) {
+			console.log('  Checking column:', col.id, 'with', col.items.length, 'items');
+			const found = col.items.find(c => String(c.id) === String(card?.id));
+			if (found) {
+				console.log('  ✓ Found card in column:', col.id, 'image:', found.image);
+				return found;
+			}
+		}
+		console.log('  ✗ Card not found in any column, returning currentCard');
+		return currentCard;
+	});
+
 	// Form-Schema mit Zod
 	const cardSchema = z.object({
 		heading: z.string().min(1, 'Titel ist erforderlich').max(200, 'Titel ist zu lang'),
 		content: z.string().max(5000, 'Beschreibung ist zu lang'),
+		image: z.string().url('Ungültige Image-URL').optional().or(z.literal('')),
 		labels: z.array(z.string()),
 		links: z.array(
 			z.object({
@@ -38,6 +77,7 @@
 	let formData = $state<Partial<CardProps>>({
 		heading: '',
 		content: '',
+		image: '',
 		labels: [],
 		links: [],
 		publishState: 'draft'
@@ -46,6 +86,7 @@
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
 	let activeTab = $state<'content' | 'settings'>('content');
+	let isUserEditing = $state(false); // Guard gegen $effect Überschreibung während Editing
 
 	// Neue Label und Link Input
 	let newLabel = $state('');
@@ -54,13 +95,24 @@
 
 	// Synchronisiere formData wenn Karte sich ändert
 	$effect(() => {
-		if (card) {
+		// Nicht zurückschreiben wenn Benutzer gerade editiert!
+		if (isUserEditing) return;
+		
+		if (currentCard) {
+			// currentCard kann entweder CardItem (aus uiData) oder CardProps sein
+			// CardItem hat: name, description (statt heading, content)
+			// CardProps hat: heading, content
+			const heading = ('heading' in currentCard) ? currentCard.heading : (currentCard as any).name;
+			const content = ('content' in currentCard) ? currentCard.content : (currentCard as any).description;
+			const links = ('links' in currentCard) ? currentCard.links : [];
+			
 			formData = {
-				heading: card.heading || '',
-				content: card.content || '',
-				labels: [...(card.labels || [])],
-				links: [...(card.links || [])],
-				publishState: card.publishState || 'draft'
+				heading: heading || '',
+				content: content || '',
+				image: currentCard.image || '',
+				labels: [...(currentCard.labels || [])],
+				links: [...(links || [])],
+				publishState: currentCard.publishState || 'draft'
 			};
 			errors = {};
 			newLabel = '';
@@ -85,6 +137,15 @@
 		return true;
 	}
 
+	// Wenn Modal öffnet/schließt, setze isUserEditing Flag
+	$effect(() => {
+		if (isOpen) {
+			isUserEditing = true; // ← EDITIEREN: Keine $effect Überschreibung während Modal offen ist
+		} else {
+			isUserEditing = false; // ← MODAL ZU: Kann wieder $effect Überschreibung zulassen
+		}
+	});
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
@@ -98,10 +159,18 @@
 			onSave(card.id, {
 				heading: formData.heading,
 				content: formData.content,
+				image: formData.image,
 				labels: formData.labels,
 				links: formData.links,
 				publishState: formData.publishState as PublishState
 			});
+			
+			// 🔥 KRITISCH: Gib der Reaktivität Zeit, sich zu aktualisieren
+			// Die onSave ist synchron, aber die $derived.by() und $effect 
+			// brauchen einen Microtask um zu feuern
+			await new Promise(resolve => setTimeout(resolve, 0));
+			
+			isUserEditing = false; // ← Erlaube wieder $effect Überschreibung
 			onClose();
 		} finally {
 			isSubmitting = false;
@@ -152,7 +221,7 @@
 
 		<form onsubmit={handleSubmit} class="w-full">
 			<Tabs.Root bind:value={activeTab} class="w-full">
-				<Tabs.List class="grid w-full grid-cols-2">
+				<Tabs.List class="bg-muted text-muted-foreground h-9 items-center justify-center rounded-lg p-[3px] text-muted-foreground grid w-full grid-cols-2">
 					<Tabs.Trigger value="content">Inhalt</Tabs.Trigger>
 					<Tabs.Trigger value="settings">Einstellungen</Tabs.Trigger>
 				</Tabs.List>
@@ -188,6 +257,54 @@
 						</FieldContent>
 						{#if errors.content}
 							<FieldError errors={[{ message: errors.content }]} />
+						{/if}
+					</Field>
+
+					<Field>
+						<FieldLabel for="image">Kartenbild (URL)</FieldLabel>
+						<FieldContent>
+							<Input
+								id="image"
+								bind:value={formData.image}
+								placeholder="https://example.com/image.jpg"
+								disabled={isSubmitting}
+								aria-invalid={!!errors.image}
+							/>
+						</FieldContent>
+						{#if errors.image}
+							<FieldError errors={[{ message: errors.image }]} />
+						{/if}
+						
+						<!-- 🔥 PREVIEW: Zeige GESPEICHERTE Bild (reaktiv!) -->
+						{#if previewCard?.image}
+							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted">
+								<img
+									src={previewCard.image}
+									alt="Kartenbild-Vorschau (gespeichert)"
+									class="w-full h-full object-cover"
+									onerror={(e) => {
+										(e.target as HTMLImageElement).style.display = 'none';
+									}}
+								/>
+								<div class="text-xs text-muted-foreground p-1 text-center bg-muted/50">
+									✓ Gespeichert
+								</div>
+							</div>
+						{:else if formData.image}
+							<!-- FALLBACK: Zeige INPUT-Vorschau während Editing -->
+							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted border-2 border-blue-400">
+								<img
+									src={formData.image}
+									alt="Kartenbild-Vorschau"
+									class="w-full h-full object-cover"
+									onerror={(e) => {
+										(e.target as HTMLImageElement).style.display = 'none';
+									}}
+								/>
+								<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
+									(Vorschau - noch nicht gespeichert)
+								</div>
+							</div>
 						{/if}
 					</Field>
 

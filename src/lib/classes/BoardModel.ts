@@ -29,6 +29,7 @@ export interface CardProps {
     heading: string;
     content?: string;
     color?: string;
+    image?: string; // URL zum Kartenbild
     comments?: Comment[];
     labels?: string[];
     links?: Link[];
@@ -70,6 +71,7 @@ export class Card {
     public heading: string;
     public content?: string;
     public color?: string;
+    public image?: string; // URL zum Kartenbild
     public comments: Comment[] = [];
     public labels: string[] = [];
     public links: Link[] = [];
@@ -84,6 +86,7 @@ export class Card {
         this.heading = props.heading;
         this.content = props.content;
         this.color = props.color;
+        this.image = props.image;
         this.comments = props.comments || [];
         this.labels = props.labels || [];
         this.links = props.links || [];
@@ -98,6 +101,7 @@ export class Card {
         if (props.heading !== undefined) this.heading = props.heading;
         if (props.content !== undefined) this.content = props.content;
         if (props.color !== undefined) this.color = props.color;
+        if (props.image !== undefined) this.image = props.image;
         if (props.labels !== undefined) this.labels = props.labels;
         if (props.links !== undefined) this.links = props.links;
         if (props.attendees !== undefined) this.attendees = props.attendees;
@@ -114,7 +118,7 @@ export class Card {
 
     addComment(text: string, author: string): void {
         const comment: Comment = {
-            id: generateDTag('comment'),
+            id: generateDTag('comment') || `comment-${Date.now()}-${Math.random()}`, // ← Fallback für Safety
             text,
             author,
             createdAt: generateTimestamp()
@@ -136,8 +140,10 @@ export class Card {
             heading: this.heading,
             content: this.content,
             color: this.color,
+            image: this.image,
             labels: this.labels,
             publishState: this.publishState,
+            author: this.author, // ← ✅ FIXED: author hinzugefügt!
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
             links: this.links.map(l => ({ url: l.url, title: l.title }))
         };
@@ -353,6 +359,7 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
+        author?: string, // ← ✅ FIXED: author zur Return Type hinzugefügt!
         columns: any[]
     } {
         return {
@@ -364,6 +371,7 @@ export class Board {
             publishState: this.publishState,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            author: this.author, // ← ✅ FIXED: author hinzugefügt!
             columns: this.columns.map(col => col.getContextData(full))
         };
     }

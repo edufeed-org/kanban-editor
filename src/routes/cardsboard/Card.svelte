@@ -6,7 +6,6 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Label } from "$lib/components/ui/label/index.js";
-	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
@@ -16,9 +15,9 @@
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import TrashIcon from "@lucide/svelte/icons/trash";
 	import UsersIcon from "@lucide/svelte/icons/users";
+	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
-
 
 	let {
 		card,
@@ -48,20 +47,23 @@
 	// Card local state (nicht die Prop direkt mutieren!)
 	let localName = $state(card.name);
 	let localColor = $state(card.color || 'slate');
+	let localImage = $state(card.image || '');
 	let localPublishState = $state(card.publishState);
+	
+	// Lokale Kommentare Anzahl State - wird von der $effect aktualisiert!
+	let localComments = $state(card.comments || []);
 	
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
 
 	const colorOptions = [
-		{ value: 'slate', label: 'Slate' },
-		{ value: 'red', label: 'Rot' },
-		{ value: 'orange', label: 'Orange' },
-		{ value: 'yellow', label: 'Gelb' },
-		{ value: 'green', label: 'Grün' },
-		{ value: 'blue', label: 'Blau' },
-		{ value: 'purple', label: 'Lila' }
+		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
+		{ value: 'blue', label: 'Blau', cssVar: '--color-blue' },
+		{ value: 'green', label: 'Grün', cssVar: '--color-green' },
+		{ value: 'orange', label: 'Orange', cssVar: '--color-orange' },
+		{ value: 'red', label: 'Rot', cssVar: '--color-red' },
+		{ value: 'purple', label: 'Lila', cssVar: '--color-purple' }
 	];
 
 	// Ensure minimum 1 attendee (author should always be included)
@@ -69,16 +71,22 @@
 		? card.attendees
 		: (card.author ? [card.author] : []));
 
+	// the nostr pubkey of the author of the card
+	// Converting to array provides more consistency and reusability for UI components
+	let authors = $derived(card.author ? [card.author] : []);
+
 	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
 	// ============================================================================
 	$effect(() => {
 		const uiColumns = boardStore.uiData; // ← Dependency tracking
+		console.log('🔍 Card.svelte $effect triggered for card:', card.id, 'found in', uiColumns.length, 'columns');
 		
 		// Finde die aktuelle Karte im Store
 		for (const col of uiColumns) {
 			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
 			if (updatedCard) {
+				console.log('  ✓ Card found in column:', col.id);
 				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
 				// Das verhindert ownership_invalid_mutation Warnungen
 				if (updatedCard.publishState !== localPublishState) {
@@ -95,6 +103,21 @@
 				if (updatedCard.color !== localColor) {
 					localColor = updatedCard.color || 'slate';
 					selectedColor = updatedCard.color || 'slate';
+				}
+				
+				if (updatedCard.image !== localImage) {
+					console.log('🔄 Card image updated:', updatedCard.image);
+					localImage = updatedCard.image || '';
+				}
+				
+				// Aktualisiere auch die Anzahl der Kommentare
+				// Vergleiche die Länge oder das JSON, um zu erkennen ob sich etwas geändert hat
+				const commentsJSON = JSON.stringify(updatedCard.comments || []);
+				const localCommentsJSON = JSON.stringify(localComments);
+				
+				if (commentsJSON !== localCommentsJSON) {
+					console.log('🔄 Card comments updated:', (updatedCard.comments || []).length, 'comments');
+					localComments = updatedCard.comments || [];
 				}
 				
 				break; // Karte gefunden, keine weitere Suche nötig
@@ -159,6 +182,7 @@
 		boardStore.editCard(cardId, {
 			name: updates.heading,
 			description: updates.content,
+			image: updates.image,
 			color: updates.color,
 			labels: updates.labels
 		});
@@ -172,12 +196,12 @@
 		closeModal();
 	}
 
-	function handleRename() {
-		boardStore.editCard(String(card.id), { name: editName });
-	}
-
-	function handleColorChange() {
-		boardStore.editCard(String(card.id), { color: selectedColor });
+	function handleRenameChange() {
+		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
+		if (editName !== card.name) {
+			console.log('📝 Card name changed:', { old: card.name, new: editName });
+			boardStore.editCard(String(card.id), { name: editName });
+		}
 	}
 
 	function handleEditClick() {
@@ -190,7 +214,7 @@
 		}
 	}
 	function getCardColor(colorName: string | undefined): string {
-		return colorName ? `var(--${colorName})` : 'var(--muted)';
+		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
 	}
 
 </script>
@@ -269,27 +293,42 @@
 							<div class="space-y-4">
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Karte umbenennen</h4>
-									<Input bind:value={editName} placeholder="Kartenname" />
-									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(); }} class="w-full">
-										Umbenennen
-									</Button>
+									<Input 
+										bind:value={editName} 
+										placeholder="Kartenname"
+										onchange={handleRenameChange}
+										onblur={handleRenameChange}
+									/>
 								</div>
 								
 								<Separator />
 								
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Farbe wählen</h4>
-									<RadioGroup.Root bind:value={selectedColor}>
+									<div class="flex flex-wrap gap-3">
 										{#each colorOptions as option}
-											<div class="flex items-center space-x-2">
-												<RadioGroup.Item value={option.value} id={`card-color-${option.value}-${card.id}`} />
-												<Label for={`card-color-${option.value}-${card.id}`}>{option.label}</Label>
-											</div>
+											<button
+												class="color-circle"
+												class:selected={selectedColor === option.value}
+												style="background-color: var({option.cssVar})"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													selectedColor = option.value;
+													// 🎯 DIREKT SPEICHERN ohne auf Button zu warten!
+													boardStore.editCard(String(card.id), { color: option.value });
+												}}
+												title={option.label}
+												aria-label={option.label}
+											>
+												{#if selectedColor === option.value}
+													<svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+														<polyline points="20 6 9 17 4 12"></polyline>
+													</svg>
+												{/if}
+											</button>
 										{/each}
-									</RadioGroup.Root>
-									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleColorChange(); }} class="w-full">
-										Farbe ändern
-									</Button>
+									</div>
 								</div>
 								
 								<Separator />
@@ -320,10 +359,10 @@
 		{/if}
 
 		<!-- Image Section -->
-		{#if card.image}
+		{#if localImage}
 			<div class="card-image-container">
 				<img
-					src={card.image}
+					src={localImage}
 					alt={card.name}
 					class="card-image"
 					onclick={handleImageClick}
@@ -349,10 +388,19 @@
 	<Card.Footer class="px-1">
 		<div class="footer-content">
 			<div class="comments-count group">
-				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
+				<button 
+				class="view-button group" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				aria-label="Anzeigen" 
+				title="Anzeigen"
+				type="button"
+				>
+					<MessageSquareIcon /> {#if localComments.length > 0}{localComments.length}{/if}
+				</button>
+		
 			</div>
 			<div class="attendees-count group">
-				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}
+				<UserIcon /> {#if authors.length > 0}{authors[0]}{/if}
 			</div>
 			<button 
 				class="view-button group" 
@@ -376,7 +424,7 @@
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
 	<CardViewDialog
-		{card}
+		cardId={card.id}
 		isOpen={showViewModal}
 		onClose={() => (showViewModal = false)}
 	/>
@@ -598,9 +646,40 @@
 			outline-offset: 2px;
 		}
 		
-		/* Ensure buttons and interactive elements can't interfere with drag */
-		button {
-			pointer-events: auto;
-		}
+	/* Ensure buttons and interactive elements can't interfere with drag */
+	button {
+		pointer-events: auto;
+	}
+
+	/* Color Circle Picker Styles */
+	.color-circle {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		border: 2px solid transparent;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.color-circle:hover {
+		transform: scale(1.1);
+		box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+	}
+
+	.color-circle.selected {
+		border-color: white;
+		box-shadow: 0 0 0 3px var(--accent), 0 0 12px rgba(0, 0, 0, 0.3);
+	}
+
+	.color-circle .checkmark {
+		width: 1.25rem;
+		height: 1.25rem;
+		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+	}
 
 	</style>

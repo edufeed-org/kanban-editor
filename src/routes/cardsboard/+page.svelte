@@ -2,6 +2,7 @@
 import { onMount } from 'svelte';
 import Board from "./Board.svelte";
 import BoardsList from "./BoardsList.svelte";
+import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
 import Topbar from "./Topbar.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
@@ -141,7 +142,10 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 			>
 				<div class="p-4 h-full flex flex-col overflow-hidden">
 					<h2 class="text-sm font-semibold mb-4">Meine Boards</h2>
-					<BoardsList {currentBoardId} />
+					<div class="flex-1 overflow-y-auto min-h-0">
+						<BoardsList {currentBoardId} />
+					</div>
+					<LeftSidebarFooter />
 				</div>
 			</Resizable.Pane>
 			
