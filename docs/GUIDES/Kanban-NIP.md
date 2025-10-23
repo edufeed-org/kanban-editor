@@ -63,7 +63,8 @@ Editing the board event is possible only by the creator of the board.
         ["description","Card Description"], //can contain markdown too
         ["pub","draft"], //publication state: 'draft' or 'published'
         ["alt","A card representing a task"], //Human-readable plaintext summary to be shown in non-supporting clients - as per NIP-31
-        ["s", "To do"], //status of the card
+        ["s", "col2-id"],              // PRIMARY: Unique column reference
+        ["col_label", "In Progress"],  // SECONDARY: Human-readable for display
         ["rank","10"], // order of the card in the column - cards may be displayed in the ascending order of rank by default
 
         // card url attachments with 'u' tags similar to NIP-98
@@ -222,5 +223,141 @@ To maintain a consistent board state:
 {
 "kinds": [30302],
 "#a": ["30301:<board-creator-pubkey>:<board-d-identifier>"]
+}
+```
+
+### Private & Collaborative Boards
+
+To support private boards accessible only to a specific group of users, this NIP proposes the use of **NIP-59 Gift Wrap**. All events associated with a private board MUST be wrapped within a `kind: 1059` (GiftWrap) event. This allows for efficient filtering using a context tag on the outer wrapper.
+
+**Principle:** A unique, non-human-readable context tag is created by hashing the board's unique address (`<kind>:<pubkey>:<d-tag>`). This hash is added as a `t`-tag to the outer `kind: 1059` wrapper, allowing clients to fetch only events related to a specific board.
+
+---
+
+#### Example 1: Creating a Private Board
+
+Let's assume a board with two members: `<creator-pubkey>` and `<member1-pubkey>`.
+
+**1. Define Board Address and Context Hash:**
+-   Board Address: `30301:<creator-pubkey>:my-private-project`
+-   Context Hash (`t`-tag): `sha256("30301:<creator-pubkey>:my-private-project")` -> `8c8a...`
+
+**2. Create the Inner Board Event (`kind: 30301`):**
+This is a standard board event, but it **must** include `p`-tags for all members.
+
+```javascript
+// Inner Event (The "Gift")
+{
+    "kind": 30301,
+    "pubkey": "<creator-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["d", "my-private-project"],
+        ["title", "My Secret Project"],
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"]
+        // ... other board tags like "col"
+    ],
+    "content": "A private board for planning world domination."
+}
+```
+
+**3. Wrap it in a `kind: 1059` Event:**
+This is the event that gets published to relays.
+
+```javascript
+// Outer Wrapper (Published Event)
+{
+    "kind": 1059,
+    "pubkey": "<creator-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"],
+        ["t", "8c8a..."] // The context hash for efficient filtering
+    ],
+    "content": "<encrypted JSON of the inner kind: 30301 event>"
+}
+```
+
+---
+
+#### Example 2: Adding a Card to the Private Board
+
+**1. Create the Inner Card Event (`kind: 30302`):**
+The card references the board via the `a`-tag and also includes `p`-tags for the group.
+
+```javascript
+// Inner Event (The "Gift")
+{
+    "kind": 30302,
+    "pubkey": "<creator-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["d", "new-card-123"],
+        ["title", "Design the Lair"],
+        ["a", "30301:<creator-pubkey>:my-private-project"],
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"]
+    ],
+    "content": "The lair needs a volcano."
+}
+```
+
+**2. Wrap it in a `kind: 1059` Event:**
+The wrapper uses the **same context hash (`t`-tag)** as the board.
+
+```javascript
+// Outer Wrapper (Published Event)
+{
+    "kind": 1059,
+    "pubkey": "<creator-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"],
+        ["t", "8c8a..."] // The SAME context hash
+    ],
+    "content": "<encrypted JSON of the inner kind: 30302 event>"
+}
+```
+
+---
+
+#### Example 3: Commenting on a Private Card
+
+**1. Create the Inner Comment Event (`kind: 1`):**
+The comment references the card via the `a`-tag.
+
+```javascript
+// Inner Event (The "Gift")
+{
+    "kind": 1,
+    "pubkey": "<member1-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["a", "30302:<creator-pubkey>:new-card-123"],
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"]
+    ],
+    "content": "A shark tank would also be a great addition."
+}
+```
+
+**2. Wrap it in a `kind: 1059` Event:**
+Again, the wrapper uses the same board context hash.
+
+```javascript
+// Outer Wrapper (Published Event)
+{
+    "kind": 1059,
+    "pubkey": "<member1-pubkey>",
+    "created_at": ...,
+    "tags": [
+        ["p", "<creator-pubkey>"],
+        ["p", "<member1-pubkey>"],
+        ["t", "8c8a..."] // The SAME context hash
+    ],
+    "content": "<encrypted JSON of the inner kind: 1 event>"
 }
 ```

@@ -2,6 +2,51 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
+  import { setContext } from 'svelte';
+  import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
+  import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
+  import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
+  import { initializeAuth } from '$lib/stores/authStore.svelte';
+
+
+  interface Props {
+    children?: any;
+  }
+
+  const { children } = $props();
+
+  const ndk = new NDKSvelte({
+    explicitRelayUrls: [
+      "ws://localhost:4869",
+      "wss://relay-rpi.edufeed.org/",
+    ],
+    enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
+  });
+
+  const authStore = initializeAuth(ndk);
+
+  // Create reactive pool store for Svelte 5
+  const pool = createReactivePool(ndk);
+
+  ndk.connect();
+
+  setContext('ndk', ndk);
+  setContext('authStore', authStore);
+</script>
+
+<div class="container viewport w-full h-full max-w-full mx-auto p-0">
+    {@render children?.()}
+</div>
+
+
+<!-- 
+TODO: The piece of code below introduces the logic of blocking access for unauthenticated users.
+      For now, let's allow anonymous access. Aftwards, the logic below should be fully implemented.
+
+<script lang="ts">
+  import "../app.css";
+  import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
+  import { NDKSvelte } from "@nostr-dev-kit/svelte";
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
@@ -41,8 +86,9 @@
 
 
 <div class="min-h-screen bg-background">
+-->
   <!-- Top Navigation -->
-  <header class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  <!-- <header class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
     <div class="container flex h-14 items-center justify-between">
       <div class="flex items-center gap-4">
         <h1 class="text-xl font-semibold">Kanban Board</h1>
@@ -62,10 +108,10 @@
         {/if}
       </div>
     </div>
-  </header>
+  </header> -->
   
   <!-- Main Content -->
-  <main class="container viewport w-full h-full max-w-full mx-auto p-0">
+  <!-- <main class="container viewport w-full h-full max-w-full mx-auto p-0">
     {#if authStore.isAuthenticated}
       {@render children?.()}
     {:else}
@@ -82,10 +128,10 @@
         </div>
       </div>
     {/if}
-  </main>
+  </main> -->
   
   <!-- Auth Modals -->
-  <LoginSheet 
+  <!-- <LoginSheet 
     open={showLoginSheet} 
     onClose={() => showLoginSheet = false}
   />
@@ -94,4 +140,4 @@
     open={showProfileEditor}
     onClose={() => showProfileEditor = false}
   />
-</div>
+</div> -->

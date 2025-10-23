@@ -23,6 +23,38 @@
 
 ## 🔴 Phase 1: Foundation & Core Implementation (Priorität: Hoch)
 
+### 🆕 Abgeschlossene Meilensteine
+
+#### ✅ 1.0: Author Field Attribution (COMPLETED 23. Oktober 2025)
+
+**Ziel:** Board und Card Author-Felder werden korrekt zu localStorage gespeichert  
+**Status:** ✅ **DONE**
+
+**Was wurde gefixt:**
+- ✅ Card.getContextData() gibt jetzt `author` zurück (Line ~145)
+- ✅ Board.getContextData() gibt jetzt `author` zurück (Line ~373)
+- ✅ reconstructBoard() lädt jetzt `author` korrekt (Line ~264)
+- ✅ createBoard() & createCard() nutzen userName Fallback-Kette (Lines ~401, ~716)
+- ✅ Comments zeigen lesbare Namen statt Hex-Pubkeys
+
+**Dokumentation:**
+- 📚 [`docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](../ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) - Vollständige Root-Cause Analyse
+- 📚 [`docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](../GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) - AuthStore API Reference
+- 📚 `AGENTS.md` Sections X & XI - Critical Patterns für Zukunft
+- 📚 `copilot-instructions.md` Sections 21 & 22 - Rules & Violations
+
+**Key Learnings:**
+- **Pattern:** Alle `$state` Felder MÜSSEN in `getContextData()` sein!
+- **Pattern:** Fallback-Kette: userName → pubkey → 'anonymous'
+- **Pattern:** Serialisierungs-Chain: Model → getContextData() → Storage → After-Reload
+
+**Impact für Zukunft:**
+- ✅ Phase 1.5 (Export/Import): Nutzt jetzt korrekt serialisierte Daten
+- ✅ Phase 2 (NIP-07): AuthStore vollständig dokumentiert
+- ✅ Phase 3 (Nostr Publishing): Board/Card Author sind korrekt initialisiert
+
+---
+
 ### Meilenstein 1.1: Nostr Event Publishing (Priorität: Hoch)
 
 **Ziel:** Board und Card Events können publiziert werden  
@@ -119,33 +151,77 @@
 ### Meilenstein 1.3: Kommentar-System Grundlagen (Priorität: Hoch)
 
 **Ziel:** Kommentare werden als Nostr Kind 1 Events gespeichert  
-**Status:** 🟡 PLANNED
+**Status:** ✅ PHASE A+B DONE | ⏳ Phase C-E PLANNED
 
-#### Zu implementieren:
+#### Phase A+B: Implementiert ✅
 
-- [ ] **Card-Klasse erweitern** (`src/lib/classes/BoardModel.ts`)
-  - [ ] Nostr-spezifische Properties: `eventId`, `author`
-  - [ ] `loadCommentsFromNostr(ndk): Promise<void>`
-  - [ ] `addCommentToNostr(ndk, text): Promise<Comment>`
-  - [ ] `deleteCommentFromNostr(ndk, commentId): Promise<void>`
-  - [ ] `subscribeToComments(ndk, callback): () => void` (Cleanup-Funktion)
+- ✅ **Card-Klasse erweitert** (`src/lib/classes/BoardModel.ts`)
+  - ✅ Comment-Model mit `id`, `text`, `author`, `createdAt`
+  - ✅ `addComment(text, author)` Methode
+  - ✅ `deleteComment(commentId)` Methode
+  - ✅ `getContextData()` enthält Kommentare für KI
 
-- [ ] **BoardStore erweitern**
-  - [ ] `addComment(cardId, text): Promise<void>`
-  - [ ] `deleteComment(cardId, commentId): Promise<void>`
-  - [ ] `loadComments(cardId): Promise<void>`
-  - [ ] Auto-subscribe bei Card-Load
+- ✅ **BoardStore erweitert** (`src/lib/stores/kanbanStore.svelte.ts`)
+  - ✅ `addComment(cardId, text, author): void` mit `triggerUpdate()`
+  - ✅ `deleteComment(cardId, commentId): void` mit `triggerUpdate()`
+  - ✅ Vollständige Reaktivitätskette (Storage, UI, Nostr vorbereitet)
 
-- [ ] **Tests**
-  - [ ] Comment-Event Creation
-  - [ ] Comment-Deletion (NIP-09)
-  - [ ] Comment Subscriptions
+- ✅ **UI-Formular implementiert** (`src/routes/cardsboard/CardViewDialog.svelte`)
+  - ✅ Kommentar-Input (Textarea) mit Icons (@lucide/svelte/icons/*)
+  - ✅ "Kommentar absenden" Button (SendIcon, default variant)
+  - ✅ Delete-Buttons mit TrashIcon pro Kommentar (ghost variant)
+  - ✅ Loading-State mit Spinner (LoaderIcon)
+  - ✅ Form Validation (disabled bei leerem Text)
+  - ✅ Bestehende Kommentare Liste mit scrollbar
 
-**Acceptance Criteria:**
-- ✅ Kommentare werden als Kind 1 Events publiziert
-- ✅ Kommentare haben korrekte Tags (`a`, `p`, `e`)
-- ✅ Kommentar-Löschung erzeugt Kind 5 Event
-- ✅ Neue Kommentare erscheinen in Echtzeit
+- ✅ **Tests**
+  - ✅ 11 Kommentar-Tests in testSuite.ts (alle bestanden)
+  - ✅ Syntax-Check: 0 errors, 0 warnings
+  - ✅ Production Build: erfolgreich
+  - ✅ localStorage Persistierung: funktioniert
+
+- ✅ **Dokumentation**
+  - ✅ `/docs/FEATURE/COMMENTS.md` mit vollständiger Doku
+  - ✅ Bug-Fix Root-Cause dokumentiert
+  - ✅ Datenfluss & Architektur erklärt
+
+#### Phase C-E: Zu implementieren ⏳
+
+- [ ] **Phase C: AuthStore Integration** (Priorität: Hoch)
+  - [ ] `authStore.svelte.ts` mit `$state` für User-Session
+  - [ ] NIP-07 Signer Integration (window.nostr)
+  - [ ] Ersetze 'anonymous' mit `authStore.currentUser.pubkey`
+  - [ ] Session-Management mit TTL
+  - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** NOSTR-USER.md
+
+- [ ] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
+  - [ ] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
+  - [ ] Event-Tags: `a` (board-ref), `e` (card-event), `p` (author)
+  - [ ] Integration in `boardStore.publishToNostr()`
+  - [ ] Comment-Deletion mit NIP-09 Kind 5 Events
+  - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** NDK.md, Kanban-NIP.md
+
+- [ ] **Phase E: Offline-First Sync** (Priorität: Mittel)
+  - [ ] `syncManager.svelte.ts` mit IndexedDB Queue (Dexie)
+  - [ ] `publishOrQueue()` - Events queuen wenn offline
+  - [ ] `syncQueue()` mit Retry-Logik (2^retries, max 3)
+  - [ ] Conflict Resolution (Last-Write-Wins)
+  - **Geschätzter Aufwand:** 4-5 Stunden | **Dokumentation:** AGENTS.md Section VI
+
+**Acceptance Criteria (Phase A+B - ERFÜLLT):**
+- ✅ Kommentare sind lokal persistent (localStorage)
+- ✅ Kommentare erscheinen SOFORT in der UI (Svelte Runes)
+- ✅ Kommentare können gelöscht werden
+- ✅ UI/UX konform mit UX-RULES.md (icons, buttons, spacing)
+- ✅ 15/15 copilot-instructions Regeln erfüllt
+- ✅ Keine TypeScript-Fehler
+- ✅ Kommentare werden mit Author & Timestamp gespeichert
+
+**Acceptance Criteria (Phase D - ausstehend):**
+- ⏳ Kommentare werden als Kind 1 Events publiziert
+- ⏳ Kommentare haben korrekte Tags (`a`, `p`, `e`)
+- ⏳ Kommentar-Löschung erzeugt Kind 5 Event
+- ⏳ Neue Kommentare erscheinen in Echtzeit über Relays
 
 ---
 

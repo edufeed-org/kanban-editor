@@ -219,7 +219,7 @@ export class BoardStore {
         
         try {
             const data = this.board.getContextData(true);
-            localStorage.setItem('kanban-board-data', JSON.stringify(data));
+            localStorage.setItem('CURRENT_KANBAN_BOARD_STORAGE_ID', JSON.stringify(data));
             console.log('💾 Board in localStorage gespeichert');
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern:', error);
@@ -232,7 +232,7 @@ export class BoardStore {
         }
         
         try {
-            const stored = localStorage.getItem('kanban-board-data');
+            const stored = localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID');
             if (stored) {
                 const data = JSON.parse(stored);
                 return this.reconstructBoard(data);
@@ -338,8 +338,11 @@ export class Board {
     }
 }
 ```
-
----
+### boardStore-API für Zustandsänderungen und Publishing
+1. Eine Methode wie addCard wird von der UI aufgerufen, um eine Zustandsänderung zu initiieren.
+2. Die Methode ändert den internen Board-Zustand (z.B. fügt eine Karte hinzu).
+3. Nach der Zustandsänderung wird publishBoardUpdate() aufgerufen, um die Änderung zu Nostr zu veröffentlichen.
+```typescript
 
   public deleteColumn(columnId: string) {
     this.board.deleteColumn(columnId);

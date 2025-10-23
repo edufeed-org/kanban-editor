@@ -1409,6 +1409,8 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 | Private Keys in Storage | 🔴 CRITICAL | Delete all code & redo from scratch |
 | Missing `triggerUpdate()` | 🔴 CRITICAL | Data loss on reload! |
 | **Timestamp String-Vergleich** | 🔴 **CRITICAL** | **MRU-Logic broken! Parse to Number first!** |
+| **Template uses Prop instead of $state** | 🔴 **CRITICAL** | **UI shows old values! Use local{Property} pattern!** |
+| **$derived.by() without explicit Rune reads** | 🔴 **CRITICAL** | **$effect never triggers! Read updateTrigger!** |
 | Wrong Icon Syntax | 🟠 HIGH | Icons nicht sichtbar, UI broken |
 | `$effect` mit falschem Wert | 🟠 HIGH | Sync broken, inconsistent state |
 | No isDragging Guard (DnD) | 🟠 HIGH | DnD completely broken |
@@ -1446,6 +1448,170 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 17. **Bei Regelkonflikt:** Rule Change Request Template verwenden (keine Ad-hoc-Anpassungen!)
 18. **⚠️ NEU: Timestamp-Vergleiche MÜSSEN numerisch sein!** ← ISO-String zu `new Date().getTime()` konvertieren!
     - 🛑 **Violation Detection:** `if (isoString > timestamp)` → ❌ String-Vergleich! Parse zu Number first!
+19. **🔴 CRITICAL: Prop vs State Template Pattern** ← Verhindert Reactive Flow Bugs!
+    - ✅ **Rule**: Wenn `let local{Property} = $state(prop.{Property})` existiert, MUSS Template `{local{Property}}` nutzen
+    - 🛑 **Violation**: Template nutzt `{prop.{Property}}` statt `{local{Property}}` → ❌ UI zeigt alte Werte!
+    - 📋 **Implementierung**: Siehe AGENTS.md Section X für 5-Schritt Verification Routine
+20. **$derived.by() MUSS Rune-Dependencies explizit lesen**
+    - ✅ **Rule**: `const trigger = boardStore.updateTrigger;` MUSS irgendwo gelesen werden
+    - 🛑 **Violation**: `$derived.by()` ohne explizite Rune-Reads → ❌ Nicht reaktiv!
+    - **Beispiel**: 
+      ```typescript
+      // ❌ FALSCH - updateTrigger wird nicht gelesen
+      let derived = $derived.by(() => boardStore.uiData);
+      
+      // ✅ RICHTIG - updateTrigger explizit gelesen
+      let derived = $derived.by(() => {
+          const trigger = boardStore.updateTrigger; // ← MUST!
+          return boardStore.uiData;
+      });
+      ```
+
+---
+
+## 21. ⚠️ CRITICAL: getContextData() muss ALLE $state Felder serialisieren!
+
+### Regel
+
+**Wenn du ein neues Feld zu einer Model-Klasse hinzufügst, MUSS es AUCH in getContextData() sein!**
+
+```typescript
+// ❌ FALSCH - Feld definiert aber nicht serialisiert
+export class Card {
+  public author?: string;  // ← Feld existiert
+  
+  getContextData() {
+    return { id, heading, content };  // ← author FEHLT!
+  }
+}
+
+// ✅ RICHTIG - Feld ist definiert UND serialisiert
+export class Card {
+  public author?: string;
+  
+  getContextData() {
+    return { id, heading, content, author };  // ← author ist dabei!
+  }
+}
+```
+
+### Warum ist das kritisch?
+
+Die Serialisierungs-Kette funktioniert so:
+
+```
+1. Model: board.author = 'Dev User'       ← Feld auf Instanz
+2. Serialisierung: getContextData()        ← MUSS author zurückgeben!
+3. localStorage: JSON.stringify(...)       ← author muss im JSON sein!
+4. Browser-Reload: reconstructBoard()      ← author wird wieder geladen
+5. UI: zeigt author                        ← Alles funktioniert! ✓
+```
+
+**Wenn Schritt 2 vergessen wird:**
+- ❌ localStorage hat `"author": null`
+- ❌ Nach Reload ist author weg
+- ❌ Benutzer-Daten verloren
+- ❌ Nostr Events unvollständig
+
+### Checkliste beim Hinzufügen neuer Felder
+
+```
+[ ] 1. Feld auf Klasse definiert? (z.B. public author?: string)
+[ ] 2. Im Props-Interface? (z.B. interface CardProps { author?: string })
+[ ] 3. Im Constructor gesetzt? (z.B. this.author = props.author)
+[ ] 4. In getContextData() zurückgegeben? (z.B. author: this.author)
+[ ] 5. Return-Type Dokumentation aktualisiert?
+[ ] 6. In reconstructBoard() geladen? (z.B. author: cardData.author)
+```
+
+**Test:**
+```typescript
+// Browser Console:
+const board = new Board({name: 'Test', author: 'Alice'});
+const serialized = board.getContextData();
+console.log('author' in serialized);  // MUSS true sein!
+```
+
+### Real-World Beispiel: author Field Session 5
+
+Dies war der Bug, der mehrere Sessions brauchte um zu fixen:
+
+| Ort | Bug | Fix |
+|-----|-----|-----|
+| Line ~145 | Card.getContextData() fehlt author | + `author: this.author` |
+| Line ~373 | Board.getContextData() fehlt author | + `author: this.author` |
+| Line ~264 | reconstructBoard() lud nicht author | + `author: cardData.author` |
+| Line ~401/716 | createBoard/createCard nutzte getPubkey() statt getUserName() | + getUserName() Fallback |
+
+**Lerneffekt:** Months of debugging hätten verhindert werden können, wenn diese Checkliste am Anfang bekannt gewesen wäre!
+
+---
+
+## 22. Author Attribution Pattern (userName → pubkey → anonymous)
+
+### Fallback-Kette
+
+Immer diese Reihenfolge nutzen:
+
+```typescript
+const author = authStore.getUserName()    // 1. Best: Readable name
+  || authStore.getPubkey()                // 2. Fallback: Hex pubkey
+  || 'anonymous';                         // 3. Last resort: Generic
+
+// Beispiel:
+// Bei Login: author = "Alice" (getName returns readable)
+// Nach Logout: author = "0000...0001" (getPubkey() still works)
+// Offline: author = 'anonymous' (both unavailable)
+```
+
+### Wo wird author zugewiesen?
+
+```typescript
+// ✅ In kanbanStore.svelte.ts
+
+public createBoard(name: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const board = new Board({ name, author });  // ← author gesetzt!
+  this.triggerUpdate();
+}
+
+public createCard(columnId: string, heading: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const card = new Card({ heading, author });  // ← author gesetzt!
+  column?.addCard(card);
+  this.triggerUpdate();
+}
+
+public async addComment(cardId: string, text: string) {
+  const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+  const comment: Comment = { text, author, createdAt: new Date().toISOString() };
+  // ... speichern ...
+}
+```
+
+### UI-Display (CardViewDialog.svelte)
+
+```svelte
+<!-- ✅ RICHTIG - Nutzt Fallback-Kette -->
+<div class="comment-header">
+  Von: {comment.author}  <!-- ← Zeigt "Alice" oder "0000..." oder "anonymous" -->
+</div>
+
+<!-- ❌ FALSCH - Direkte Pubkey ohne Fallback -->
+<div class="comment-header">
+  Von: {authStore.getPubkey()}  <!-- ← Zeigt immer Hex, nicht Name! -->
+</div>
+```
+
+### Auth-Integration (LeftSidebarFooter.svelte)
+
+```svelte
+<!-- Zeigt eingeloggten User -->
+<div class="auth-status">
+  <Avatar name={authStore.getUserName()} />
+  <span>{authStore.getUserName() || 'Gast'}</span>
+</div>
+```
 
 ---
 
@@ -1458,10 +1624,13 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 - **UI Components:** `src/lib/components/ui/`
 - **Core Models:** `src/lib/classes/BoardModel.ts`
 - **Store Implementation:** `src/lib/stores/kanbanStore.svelte.ts`
+- **Auth Guide:** `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`
+- **Author Attribution:** `docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`
 
 ---
 
-**Stand:** 20. Oktober 2025 | Aktualisiert durch AI-Agent Analyse
+**Stand:** 23. Oktober 2025 | Aktualisiert durch Author-Field-Fix Session  
+**Letzter Eintrag:** 23. Oktober 2025 - getContextData() Serialisierung + Author Attribution Pattern hinzugefügt
 
 ---
 
@@ -1469,15 +1638,16 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 
 Diese Copilot-Instructions enthalten:
 
-- **~1300 Zeilen** kompakte, actionierbare Anleitung
+- **~1500 Zeilen** kompakte, actionierbare Anleitung
 - **18 Schnell-Referenz-Aufgaben** mit Code-Beispielen
 - **4 Core Architecture Patterns** mit Diagrammen
 - **5 häufige Fehler-Szenarien** mit Fixes
-- **10 kritische Rule-Violations** mit Detection-Patterns
-- **8 CRITICAL Violations** die sofort behoben werden MÜSSEN
+- **12 kritische Rule-Violations** mit Detection-Patterns (neu: +2 Rune-spezifische Rules)
+- **11 CRITICAL Violations** die sofort behoben werden MÜSSEN (neu: +3 für Prop vs State Pattern)
 - **Pre-Commit Checklist** mit 18-Punkt Verifikation
 - **Rule Change Request Template** für Ausnahmen
-- **17 Best Practices** mit Violation-Hinweisen
+- **20 Best Practices** mit Violation-Hinweisen (neu: +3 Svelte 5 Rune-spezifische Rules)
 - **Vollständige Cross-References** zu AGENTS.md, STORES.md, NDK.md, etc.
+- **🆕 Reactive Data Flow Verification Checklist** mit 5-Schritt-Routine (AGENTS.md Section X)
 
 **Diese Anleitung macht AI-Agenten sofort produktiv und sicherheit-bewusst!** 🚀
