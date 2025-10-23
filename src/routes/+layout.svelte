@@ -7,9 +7,7 @@
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
   import { initializeAuth } from '$lib/stores/authStore.svelte';
   import { setContext } from 'svelte';
-  import LoginSheet from '$lib/components/auth/LoginSheet.svelte';
-  import UserHeader from '$lib/components/auth/UserHeader.svelte';
-  import ProfileEditor from '$lib/components/auth/ProfileEditor.svelte';
+  import { LoginSheet, UserHeader, ProfileEditor } from '$lib/components/auth/index.js';
   import { Button } from "$lib/components/ui/button/index.js";
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
 
