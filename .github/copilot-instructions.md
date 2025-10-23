@@ -1409,6 +1409,8 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 | Private Keys in Storage | 🔴 CRITICAL | Delete all code & redo from scratch |
 | Missing `triggerUpdate()` | 🔴 CRITICAL | Data loss on reload! |
 | **Timestamp String-Vergleich** | 🔴 **CRITICAL** | **MRU-Logic broken! Parse to Number first!** |
+| **Template uses Prop instead of $state** | 🔴 **CRITICAL** | **UI shows old values! Use local{Property} pattern!** |
+| **$derived.by() without explicit Rune reads** | 🔴 **CRITICAL** | **$effect never triggers! Read updateTrigger!** |
 | Wrong Icon Syntax | 🟠 HIGH | Icons nicht sichtbar, UI broken |
 | `$effect` mit falschem Wert | 🟠 HIGH | Sync broken, inconsistent state |
 | No isDragging Guard (DnD) | 🟠 HIGH | DnD completely broken |
@@ -1446,6 +1448,24 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 17. **Bei Regelkonflikt:** Rule Change Request Template verwenden (keine Ad-hoc-Anpassungen!)
 18. **⚠️ NEU: Timestamp-Vergleiche MÜSSEN numerisch sein!** ← ISO-String zu `new Date().getTime()` konvertieren!
     - 🛑 **Violation Detection:** `if (isoString > timestamp)` → ❌ String-Vergleich! Parse zu Number first!
+19. **🔴 CRITICAL: Prop vs State Template Pattern** ← Verhindert Reactive Flow Bugs!
+    - ✅ **Rule**: Wenn `let local{Property} = $state(prop.{Property})` existiert, MUSS Template `{local{Property}}` nutzen
+    - 🛑 **Violation**: Template nutzt `{prop.{Property}}` statt `{local{Property}}` → ❌ UI zeigt alte Werte!
+    - 📋 **Implementierung**: Siehe AGENTS.md Section X für 5-Schritt Verification Routine
+20. **$derived.by() MUSS Rune-Dependencies explizit lesen**
+    - ✅ **Rule**: `const trigger = boardStore.updateTrigger;` MUSS irgendwo gelesen werden
+    - 🛑 **Violation**: `$derived.by()` ohne explizite Rune-Reads → ❌ Nicht reaktiv!
+    - **Beispiel**: 
+      ```typescript
+      // ❌ FALSCH - updateTrigger wird nicht gelesen
+      let derived = $derived.by(() => boardStore.uiData);
+      
+      // ✅ RICHTIG - updateTrigger explizit gelesen
+      let derived = $derived.by(() => {
+          const trigger = boardStore.updateTrigger; // ← MUST!
+          return boardStore.uiData;
+      });
+      ```
 
 ---
 
@@ -1461,7 +1481,8 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 
 ---
 
-**Stand:** 20. Oktober 2025 | Aktualisiert durch AI-Agent Analyse
+**Stand:** 20. Oktober 2025 | Aktualisiert durch AI-Agent Analyse  
+**Letzter Eintrag:** 21. Oktober 2025 - Reactive Data Flow Verification Routine hinzugefügt
 
 ---
 
@@ -1469,15 +1490,16 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 
 Diese Copilot-Instructions enthalten:
 
-- **~1300 Zeilen** kompakte, actionierbare Anleitung
+- **~1500 Zeilen** kompakte, actionierbare Anleitung
 - **18 Schnell-Referenz-Aufgaben** mit Code-Beispielen
 - **4 Core Architecture Patterns** mit Diagrammen
 - **5 häufige Fehler-Szenarien** mit Fixes
-- **10 kritische Rule-Violations** mit Detection-Patterns
-- **8 CRITICAL Violations** die sofort behoben werden MÜSSEN
+- **12 kritische Rule-Violations** mit Detection-Patterns (neu: +2 Rune-spezifische Rules)
+- **11 CRITICAL Violations** die sofort behoben werden MÜSSEN (neu: +3 für Prop vs State Pattern)
 - **Pre-Commit Checklist** mit 18-Punkt Verifikation
 - **Rule Change Request Template** für Ausnahmen
-- **17 Best Practices** mit Violation-Hinweisen
+- **20 Best Practices** mit Violation-Hinweisen (neu: +3 Svelte 5 Rune-spezifische Rules)
 - **Vollständige Cross-References** zu AGENTS.md, STORES.md, NDK.md, etc.
+- **🆕 Reactive Data Flow Verification Checklist** mit 5-Schritt-Routine (AGENTS.md Section X)
 
 **Diese Anleitung macht AI-Agenten sofort produktiv und sicherheit-bewusst!** 🚀

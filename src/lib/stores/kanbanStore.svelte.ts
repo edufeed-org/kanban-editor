@@ -45,7 +45,8 @@ export class BoardStore {
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
 
     // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
-    private updateTrigger = $state(0);
+    // PUBLIC: Wird von Components gelesen als $derived-Abhängigkeit
+    public updateTrigger = $state(0);
 
     constructor() {
         // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
@@ -105,24 +106,25 @@ export class BoardStore {
         for (const colId of columnOrder) {
             const column = columnMap.get(colId);
             if (column) {
-                result.push({
-                    id: column.id,
-                    name: column.name,
-                    color: column.color,
-                    items: column.cards.map(card => ({
-                        id: card.id,
-                        name: card.heading,
-                        description: card.content,
-                        comments: card.comments,
-                        attendees: card.attendees,
-                        labels: card.labels,
-                        color: card.color,
-                        publishState: card.publishState,
-                        author: card.author || card.attendees?.[0], // author oder erster Attendee
-                        columnId: column.id,
-                        boardId: this.board.id
-                    }))
-                });
+                    result.push({
+                        id: column.id,
+                        name: column.name,
+                        color: column.color,
+                        items: column.cards.map(card => ({
+                            id: card.id,
+                            name: card.heading,
+                            description: card.content,
+                            image: card.image,
+                            comments: card.comments,
+                            attendees: card.attendees,
+                            labels: card.labels,
+                            color: card.color,
+                            publishState: card.publishState,
+                            author: card.author || card.attendees?.[0], // author oder erster Attendee
+                            columnId: column.id,
+                            boardId: this.board.id
+                        }))
+                    });
             }
         }
         
@@ -266,6 +268,7 @@ export class BoardStore {
                     id: cardData.id,
                     heading: cardData.heading,
                     content: cardData.content,
+                    image: cardData.image, // ← image MUSS hier sein!
                     color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
@@ -647,6 +650,7 @@ export class BoardStore {
         const result = this.board.findCardAndColumn(cardId);
         if (result) {
             result.card.setPublishState(state);
+            this.triggerUpdate(); // ← CRITICAL FIX: Trigger Reaktivität + localStorage!
             this.publishToNostr();
         } else {
             throw new Error(`Card with id ${cardId} not found`);
@@ -855,10 +859,11 @@ export class BoardStore {
     /**
      * Wird von UI aufgerufen: Kartendetails bearbeiten  
      */
-    public editCard(cardId: string, updates: { name?: string; description?: string; color?: string; labels?: string[] }): void {
+    public editCard(cardId: string, updates: { name?: string; description?: string; image?: string; color?: string; labels?: string[] }): void {
         const cardProps: Partial<CardProps> = {};
         if (updates.name !== undefined) cardProps.heading = updates.name;
         if (updates.description !== undefined) cardProps.content = updates.description;
+        if (updates.image !== undefined) cardProps.image = updates.image;
         if (updates.color !== undefined) cardProps.color = updates.color;
         if (updates.labels !== undefined) cardProps.labels = updates.labels;
         

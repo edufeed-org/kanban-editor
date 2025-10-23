@@ -118,16 +118,33 @@
 					<Tabs.Trigger value="content">Inhalt</Tabs.Trigger>
 					<Tabs.Trigger value="comments">Kommentare ({(displayComments || []).length})</Tabs.Trigger>
 				</Tabs.List>			<!-- Content Tab -->
-			<Tabs.Content value="content" class="space-y-4 w-full">
-				{#if card.description}
-					<div class="space-y-2 w-full">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
-						<label class="text-sm font-medium">Beschreibung</label>
-						<div class="p-3 bg-muted rounded-md text-sm break-words whitespace-pre-wrap">
-							{card.description}
-						</div>
+		<Tabs.Content value="content" class="space-y-4 w-full">
+			{#if card.image}
+				<div class="space-y-2 w-full">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
+					<label class="text-sm font-medium">Kartenbild</label>
+					<div class="rounded-md overflow-hidden max-h-64 bg-muted">
+						<img
+							src={card.image}
+							alt="Kartenbild"
+							class="w-full h-full object-cover"
+							onerror={(e) => {
+								(e.target as HTMLImageElement).style.display = 'none';
+							}}
+						/>
 					</div>
-				{/if}
+				</div>
+			{/if}
+
+			{#if card.description}
+				<div class="space-y-2 w-full">
+					<!-- svelte-ignore a11y_label_has_associated_control -->
+					<label class="text-sm font-medium">Beschreibung</label>
+					<div class="p-3 bg-muted rounded-md text-sm break-words whitespace-pre-wrap">
+						{card.description}
+					</div>
+				</div>
+			{/if}
 
 				{#if card.labels && card.labels.length > 0}
 					<div class="space-y-2">

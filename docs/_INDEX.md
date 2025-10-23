@@ -27,13 +27,16 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 3. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Svelte 5 $state, $derived)
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
 5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect)
-6. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
-7. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
+6. **🆕 Reactive Flow Bugs:** [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) (Prop vs State Pattern!)
+7. **🆕 Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
+8. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
+9. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
 - Store-Methode hinzufügen? → [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
-- Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md)
+- Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) oder [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md)
+- Reactive Bugs fixen? → [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md)
 - Tests ausführen? → [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md)
 - Kommentare implementieren? → [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md)
 
@@ -89,6 +92,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |-------|----------|--------|
 | **Svelte 5 Runes** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | 30 min |
 | **State Management** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) | 45 min |
+| **🆕 Reactive Flow Bugs** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) | 20 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
@@ -108,6 +112,8 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | Ziel | Dokument |
 |------|----------|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
+| **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
+| **Reactive Flow Debugging** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) |
 | **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
 | **Vollständige Spezifikation** | [`AGENTS.md`](../AGENTS.md) |
@@ -128,10 +134,12 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ```
 docs/
 ├── REFERENCE/
-│   └── _INDEX.md              ← Sie sind hier
+│   ├── _INDEX.md              ← Sie sind hier
+│   └── 🆕 PROP-VS-STATE-CHEATSHEET.md  # Quick Ref
 ├── ARCHITECTURE/
 │   ├── REACTIVITY.md          # Svelte 5 Runes + $effect
 │   ├── STORES.md              # State Management
+│   ├── 🆕 REACTIVE-FLOW-VERIFICATION.md  # Debugging Guide
 │   ├── NDK.md                 # Nostr Integration
 │   ├── NOSTR-USER.md          # Authentication
 │   └── UX-RULES.md            # shadcn-svelte Guidelines
@@ -156,10 +164,15 @@ docs/
 | Rollen-spezifisch | Zeitbudget | Dokumente |
 |---|---|---|
 | **PM / Stakeholder** | 30 min | README + KONZEPT + ROADMAP |
-| **Frontend Dev** | 2-3 Std. | README + AGENTS + UX-RULES + REACTIVITY + STORES |
+| **Frontend Dev** | 3-4 Std. | README + AGENTS + UX-RULES + REACTIVITY + REACTIVE-FLOW-VERIFICATION + STORES + PROP-VS-STATE-CHEATSHEET |
 | **Nostr Dev** | 1.5-2 Std. | AGENTS + NDK + NOSTR-USER + Kanban-NIP |
 | **KI Dev** | 1-1.5 Std. | AGENTS (Chat Sektion) + STORES |
-| **Vollständiges Team** | 4-5 Std. | Alle Dokumente |
+| **Vollständiges Team** | 5-6 Std. | Alle Dokumente |
+
+**Priorisiert für Frontend Devs (Zeit sparen):**
+1. PROP-VS-STATE-CHEATSHEET.md (5 min)
+2. REACTIVE-FLOW-VERIFICATION.md (20 min)
+3. Dann REACTIVITY.md (30 min)
 
 ---
 
@@ -211,6 +224,8 @@ docs/
 | Kategorie | Status | Letzte Aktualisierung |
 |-----------|--------|----------------------|
 | **Architecture** | ✅ Komplett | 21. Oktober 2025 |
+| **🆕 Reactive Flow Debugging** | ✅ Neu | 21. Oktober 2025 |
+| **🆕 Prop vs State Cheat Sheet** | ✅ Neu | 21. Oktober 2025 |
 | **Guides** | ✅ Komplett | 21. Oktober 2025 |
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
@@ -222,5 +237,5 @@ docs/
 
 ---
 
-**Letzte Aktualisierung:** 22. Oktober 2025  
+**Letzte Aktualisierung:** 21. Oktober 2025  
 **Nächste Überprüfung:** Mit jedem Release

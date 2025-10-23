@@ -47,6 +47,7 @@
 	// Card local state (nicht die Prop direkt mutieren!)
 	let localName = $state(card.name);
 	let localColor = $state(card.color || 'slate');
+	let localImage = $state(card.image || '');
 	let localPublishState = $state(card.publishState);
 	
 	// Lokale Kommentare Anzahl State - wird von der $effect aktualisiert!
@@ -75,11 +76,13 @@
 	// ============================================================================
 	$effect(() => {
 		const uiColumns = boardStore.uiData; // ← Dependency tracking
+		console.log('🔍 Card.svelte $effect triggered for card:', card.id, 'found in', uiColumns.length, 'columns');
 		
 		// Finde die aktuelle Karte im Store
 		for (const col of uiColumns) {
 			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
 			if (updatedCard) {
+				console.log('  ✓ Card found in column:', col.id);
 				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
 				// Das verhindert ownership_invalid_mutation Warnungen
 				if (updatedCard.publishState !== localPublishState) {
@@ -96,6 +99,11 @@
 				if (updatedCard.color !== localColor) {
 					localColor = updatedCard.color || 'slate';
 					selectedColor = updatedCard.color || 'slate';
+				}
+				
+				if (updatedCard.image !== localImage) {
+					console.log('🔄 Card image updated:', updatedCard.image);
+					localImage = updatedCard.image || '';
 				}
 				
 				// Aktualisiere auch die Anzahl der Kommentare
@@ -170,6 +178,7 @@
 		boardStore.editCard(cardId, {
 			name: updates.heading,
 			description: updates.content,
+			image: updates.image,
 			color: updates.color,
 			labels: updates.labels
 		});
@@ -346,10 +355,10 @@
 		{/if}
 
 		<!-- Image Section -->
-		{#if card.image}
+		{#if localImage}
 			<div class="card-image-container">
 				<img
-					src={card.image}
+					src={localImage}
 					alt={card.name}
 					class="card-image"
 					onclick={handleImageClick}
