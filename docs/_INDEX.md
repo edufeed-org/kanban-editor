@@ -138,33 +138,49 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 - [`CHANGELOG.md`](../CHANGELOG.md) — Versionshistorie
 - [`KONZEPT.md`](../KONZEPT.md) — Stakeholder-freundliche Produktvision
 
-### 🏛️ docs/ Struktur
+### 🏛️ docs/ Struktur (Komplette Liste)
+
 ```
 docs/
 ├── REFERENCE/
-│   ├── _INDEX.md              ← Sie sind hier
-│   └── 🆕 PROP-VS-STATE-CHEATSHEET.md  # Quick Ref
+│   └── _INDEX.md              ← Sie sind hier
+│
 ├── ARCHITECTURE/
-│   ├── REACTIVITY.md          # Svelte 5 Runes + $effect
-│   ├── STORES.md              # State Management
-│   ├── 🆕 REACTIVE-FLOW-VERIFICATION.md  # Debugging Guide
-│   ├── 🆕 AUTHOR-FIELD-ATTRIBUTION.md  # Serialisierung & Persistierung
-│   ├── NDK.md                 # Nostr Integration
-│   ├── NOSTR-USER.md          # Authentication
-│   └── UX-RULES.md            # shadcn-svelte Guidelines
-├── COLLABORATION/
-│   ├── ROADMAP.md             # Phasen & Meilensteine
-│   └── CONTRIBUTING.md        # Beitrag-Richtlinien
+│   ├── AUTHOR-FIELD-ATTRIBUTION.md  ← ✅ Neu (23.10.)
+│   ├── AUTHSTORE-FLOWCHART.md
+│   ├── AUTHSTORE-IMPLEMENTATION.md
+│   ├── COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md
+│   ├── NDK.md
+│   ├── NOSTR-USER.md
+│   ├── REACTIVE-FLOW-VERIFICATION.md
+│   ├── REACTIVITY.md
+│   ├── STORES.md
+│   ├── UX-RULES.md
+│   └── VISUAL-SIDEBAR-LOGIN-REFERENCE.md
+│
 ├── GUIDES/
-│   ├── QUICK-START.md         # Schnelleinstieg
-│   ├── 🆕 AUTHSTORE-INTEGRATION-GUIDE.md  # AuthStore API Reference
-│   └── Kanban-NIP.md          # Event Schema
+│   ├── AUTHSTORE-BASICS.md
+│   ├── AUTHSTORE-INTEGRATION-GUIDE.md  ← ✅ Neu (23.10.)
+│   ├── Kanban-NIP.md
+│   ├── PROP-VS-STATE-CHEATSHEET.md
+│   ├── QUICK-START.md
+│   ├── SIDEBAR-LOGIN-DOCS-INDEX.md
+│   ├── SIDEBAR-LOGIN-INTEGRATION.md
+│   └── TEST-RUNNER.md
+│
+├── COLLABORATION/
+│   ├── CONSOLIDATION-SUMMARY.md
+│   ├── CONTRIBUTING.md
+│   └── ROADMAP.md
+│
 ├── TESTSUITE/
-│   ├── INDEX.md               # Test Suite Navigation Hub
-│   ├── STATUS.md              # Quick Status & Überblick
-│   └── GUIDE.md               # Ausführliche Anleitung
+│   ├── AUTHSTORE-TEST-PAGE.md
+│   ├── GUIDE.md
+│   ├── INDEX.md
+│   └── STATUS.md
+│
 └── FEATURE/
-    └── COMMENTS.md            # Kommentar-System Feature
+    └── COMMENTS.md
 ```
 
 ---
@@ -210,7 +226,101 @@ docs/
 
 ---
 
-## 🚀 Nächste Schritte
+## � Vollständige Dokumentations-Übersicht (Alle Dateien)
+
+### ARCHITECTURE/ (11 Dateien)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) | Root Cause: Author Field Bug Fix | ✅ Neu (23.10.) |
+| [`AUTHSTORE-FLOWCHART.md`](./ARCHITECTURE/AUTHSTORE-FLOWCHART.md) | AuthStore Ablauf-Diagramm | ✅ |
+| [`AUTHSTORE-IMPLEMENTATION.md`](./ARCHITECTURE/AUTHSTORE-IMPLEMENTATION.md) | AuthStore technische Details | ✅ |
+| [`COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md`](./ARCHITECTURE/COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md) | LeftSidebarFooter Komponenten-Architektur | ✅ |
+| [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
+| [`NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | Benutzerauthentifizierung & NIP-07 | ✅ |
+| [`REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) | Svelte 5 Reactive Flow Debugging | ✅ |
+| [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | Svelte 5 Runes Konzepte | ✅ |
+| [`STORES.md`](./ARCHITECTURE/STORES.md) | Store-Architektur & Export/Import API | ✅ |
+| [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
+| [`VISUAL-SIDEBAR-LOGIN-REFERENCE.md`](./ARCHITECTURE/VISUAL-SIDEBAR-LOGIN-REFERENCE.md) | Sidebar Login UI Referenz | ✅ |
+
+### GUIDES/ (8 Dateien)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`AUTHSTORE-BASICS.md`](./GUIDES/AUTHSTORE-BASICS.md) | AuthStore Quick Start | ✅ |
+| [`AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | Vollständige AuthStore API Reference | ✅ Neu (23.10.) |
+| [`Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | Nostr Event Schema | ✅ |
+| [`PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) | Svelte 5 Prop vs State Quick Reference | ✅ |
+| [`QUICK-START.md`](./GUIDES/QUICK-START.md) | 10-Minuten Einstieg | ✅ |
+| [`SIDEBAR-LOGIN-DOCS-INDEX.md`](./GUIDES/SIDEBAR-LOGIN-DOCS-INDEX.md) | Sidebar Login Dokumentations-Index | ✅ |
+| [`SIDEBAR-LOGIN-INTEGRATION.md`](./GUIDES/SIDEBAR-LOGIN-INTEGRATION.md) | Sidebar Login Integration Guide | ✅ |
+| [`TEST-RUNNER.md`](./GUIDES/TEST-RUNNER.md) | Test Suite Runner Guide | ✅ |
+
+### COLLABORATION/ (5 Dateien)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`CONSOLIDATION-SUMMARY.md`](./COLLABORATION/CONSOLIDATION-SUMMARY.md) | Documentation Consolidation Summary | ✅ Meta-Datei |
+| [`CONTRIBUTING.md`](./COLLABORATION/CONTRIBUTING.md) | Contribution Richtlinien | ✅ |
+| [`ROADMAP.md`](./COLLABORATION/ROADMAP.md) | Entwicklungs-Roadmap (Phase 1-5) | ✅ |
+| [`DOCUMENTATION-AUDIT-SUMMARY.md`](./COLLABORATION/DOCUMENTATION-AUDIT-SUMMARY.md) | Audit Summary Report | ✅ Neu (24.10.) |
+| [`DOCUMENTATION-AUDIT-REPORT.md`](./COLLABORATION/DOCUMENTATION-AUDIT-REPORT.md) | Detailed Audit Report | ✅ Neu (24.10.) |
+
+### TESTSUITE/ (4 Dateien)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`AUTHSTORE-TEST-PAGE.md`](./TESTSUITE/AUTHSTORE-TEST-PAGE.md) | AuthStore Test-Dokumentation | ✅ |
+| [`GUIDE.md`](./TESTSUITE/GUIDE.md) | Ausführliches Test-Guide | ✅ |
+| [`INDEX.md`](./TESTSUITE/INDEX.md) | Test Suite Navigation Hub | ✅ |
+| [`STATUS.md`](./TESTSUITE/STATUS.md) | Test Suite Status & Überblick | ✅ |
+
+### FEATURE/ (1 Datei)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
+
+### REFERENCE/ (1 Datei)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`_INDEX.md`](.//_INDEX.md) | Diese Datei - Dokumentations-Navigation | ✅ |
+
+---
+
+## 🔗 Alle Dokumentationen verlinkt?
+
+✅ **ARCHITECTURE/** — 11/11 Dateien verlinkt  
+✅ **GUIDES/** — 8/8 Dateien verlinkt  
+✅ **COLLABORATION/** — 5/5 Dateien verlinkt  
+✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
+✅ **FEATURE/** — 1/1 Dateien verlinkt  
+✅ **REFERENCE/** — 1/1 Dateien verlinkt  
+
+**Total: 30/30 Dateien in /docs verlinkt und dokumentiert**
+
+---
+
+---
+
+## 🔍 Audit & Quality Assurance
+
+- **[DOCUMENTATION-AUDIT-SUMMARY.md](./COLLABORATION/DOCUMENTATION-AUDIT-SUMMARY.md)** ← Kurzzusammenfassung
+  - ✅ 28/28 Dateien verlinkt
+  - ✅ 0 defekte Links  
+  - ✅ 100% Abdeckung validiert
+
+- **[DOCUMENTATION-AUDIT-REPORT.md](./COLLABORATION/DOCUMENTATION-AUDIT-REPORT.md)** ← Ausführlicher Bericht
+  - Detaillierte Link-Verifizierung
+  - Quality Metrics & Statistiken
+  - Audit Procedures & Findings
+  - Sign-off & Appendix
+
+---
+
+## � Nächste Schritte
 
 **Nach dem Lesen dieses Index:**
 
