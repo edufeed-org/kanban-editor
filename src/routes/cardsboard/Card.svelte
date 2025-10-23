@@ -50,6 +50,9 @@
 	let localColor = $state(card.color || 'slate');
 	let localPublishState = $state(card.publishState);
 	
+	// Lokale Kommentare Anzahl State - wird von der $effect aktualisiert!
+	let localComments = $state(card.comments || []);
+	
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
@@ -95,6 +98,16 @@
 				if (updatedCard.color !== localColor) {
 					localColor = updatedCard.color || 'slate';
 					selectedColor = updatedCard.color || 'slate';
+				}
+				
+				// Aktualisiere auch die Anzahl der Kommentare
+				// Vergleiche die Länge oder das JSON, um zu erkennen ob sich etwas geändert hat
+				const commentsJSON = JSON.stringify(updatedCard.comments || []);
+				const localCommentsJSON = JSON.stringify(localComments);
+				
+				if (commentsJSON !== localCommentsJSON) {
+					console.log('🔄 Card comments updated:', (updatedCard.comments || []).length, 'comments');
+					localComments = updatedCard.comments || [];
 				}
 				
 				break; // Karte gefunden, keine weitere Suche nötig
@@ -349,7 +362,7 @@
 	<Card.Footer class="px-1">
 		<div class="footer-content">
 			<div class="comments-count group">
-				<MessageSquareIcon /> {#if (card.comments || []).length > 0}{(card.comments || []).length}{/if}
+				<MessageSquareIcon /> {#if localComments.length > 0}{localComments.length}{/if}
 			</div>
 			<div class="attendees-count group">
 				<UsersIcon /> {#if attendees.length > 0}{attendees.length}{/if}

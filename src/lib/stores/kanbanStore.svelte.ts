@@ -33,8 +33,7 @@ export type UIColumn = {
 // ============================================================================
 
 export class BoardStore {
-    private static STORAGE_KEY = 'kanban-board-data';
-    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // 🔥 NEUE LISTE!
+    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // Schlüssel für Liste aller Board-IDs
     
     // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
     private board = $state(this.loadFromStorage());
@@ -49,7 +48,7 @@ export class BoardStore {
     private updateTrigger = $state(0);
 
     constructor() {
-        // 🔥 KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
+        // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
         // (Das passiert beim ersten Laden wenn ein Default Board erstellt wird)
         if (typeof window !== 'undefined') {
             const currentBoardId = this.board.id;
@@ -61,6 +60,9 @@ export class BoardStore {
                 // Speichere auch das Default Board selbst
                 this.saveToStorage();
             }
+            
+            // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
+            this.exposeCurrentBoardIdToWindow();
         }
     }
 
@@ -82,6 +84,16 @@ export class BoardStore {
         const columns = this.board.columns; // ← Direkter Zugriff triggert Tracking
         const columnOrder = this._columnOrder;
         const trigger = this.updateTrigger; // ← Auch updateTrigger als Fallback
+        
+        // 🔥 WICHTIG: Auch alle card.comments Arrays direkt lesen!
+        // Das garantiert, dass Änderungen an comments die Ableitung triggern
+        columns.forEach(col => {
+            col.cards.forEach(card => {
+                // Direkter Zugriff auf comments für Dependency Tracking
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const _ = card.comments;
+            });
+        });
         
         console.log('🔄 uiData wird neu berechnet...', columns.length, 'Spalten, trigger:', trigger);
         
@@ -129,6 +141,23 @@ export class BoardStore {
     // ============================================================================
     // PRIVATE HELPER
     // ============================================================================
+
+    /**
+     * 🔥 DEBUGGING: Speichert die aktuelle Board-ID im window-Objekt
+     * Ermöglicht einfache Console-Tests: 
+     * JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))
+     */
+    private exposeCurrentBoardIdToWindow(): void {
+        if (typeof window === 'undefined') return;
+        
+        const boardId = this.board.id;
+        (window as any).CURRENT_KANBAN_BOARD_ID = boardId;
+        (window as any).CURRENT_KANBAN_BOARD_STORAGE_ID = 'kanban-'+boardId;
+        
+        console.log(`✅ Board-ID verfügbar: window.CURRENT_KANBAN_BOARD_ID = "${boardId}"`);
+        console.log('📊 localStorage testen:');
+        console.log(`   JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))`);
+    }
 
     private loadBoardIds(): string[] {
         if (typeof window === 'undefined') return [];

@@ -90,52 +90,27 @@
 **Features:**
 - ✅ Textarea für Kommentar-Input mit Placeholder
 - ✅ Icons: SendIcon, TrashIcon, LoaderIcon (korrekte `@lucide/svelte/icons/*` Syntax)
-- ✅ Button Varianten: outline, default (UX-RULES konform)
 - ✅ Loading-State mit animiertem Spinner
 - ✅ Form Validation: Buttons deaktiviert bei leerem Text oder während Submit
 - ✅ Delete-Funktionalität für bestehende Kommentare
-- ✅ Kommentare-Liste mit scrollbar (max-h-64)
+- ✅ Kommentare-Liste mit scrollbar
 - ✅ Datumsanzeige (lokalisiert auf Deutsch)
 - ✅ Empty-State: "Keine Kommentare vorhanden"
 
 ---
 
-### Phase B: Bug-Fix ✅
+### Phase B: Fixes
 
 **Datei:** `src/lib/stores/kanbanStore.svelte.ts`
 
-#### Problem identifiziert:
-
-Kommentare wurden zu localStorage gespeichert, aber **erschienen NICHT in der UI**, bis die Seite neugeladen wurde.
-
-**Root Cause:** `triggerUpdate()` fehlte nach `addComment()` und `deleteComment()`:
 
 ```typescript
-// ❌ VORHER: Keine Reaktivität!
+// Vollständige Reaktivitätskette!
 public addComment(cardId: string, text: string, author: string): void {
     const result = this.board.findCardAndColumn(cardId);
     if (result) {
         result.card.addComment(text, author);
-        // ❌ triggerUpdate() FEHLTE!
-        // Daher:
-        // - updateTrigger wird NICHT aktualisiert
-        // - uiData $derived wird NICHT neu berechnet
-        // - $effect wird NICHT getriggert
-        // - UI zeigt ALTE Daten
-        // - localStorage wird NICHT aktualisiert
-    }
-}
-```
-
-#### Bug-Fix implementiert:
-
-```typescript
-// ✅ NACHHER: Vollständige Reaktivitätskette!
-public addComment(cardId: string, text: string, author: string): void {
-    const result = this.board.findCardAndColumn(cardId);
-    if (result) {
-        result.card.addComment(text, author);
-        this.triggerUpdate(); // ✅ KRITISCH!
+        this.triggerUpdate(); // ✅ WICHTIG!
     }
 }
 
@@ -143,7 +118,7 @@ public deleteComment(cardId: string, commentId: string): void {
     const result = this.board.findCardAndColumn(cardId);
     if (result) {
         result.card.deleteComment(commentId);
-        this.triggerUpdate(); // ✅ KRITISCH!
+        this.triggerUpdate(); // ✅ WICHTIG!
     }
 }
 ```
@@ -168,6 +143,8 @@ card.addComment() (Model-Layer)
 ✅ Card.svelte re-rendert
     ↓
 ✅ CardViewDialog zeigt neuen Kommentar SOFORT
+    ↓
+✅ Card zeigt veränderte Anzahl der Kommentare SOFORT
     ↓
 ✅ localStorage wird automatisch gespeichert [triggerUpdate() → saveToStorage()]
 ```
@@ -288,7 +265,7 @@ Nach Kommentar-Hinzufügen sieht die gespeicherte Struktur so aus:
 // 3. localStorage-Verifikation
 // - Öffne DevTools (F12)
 // - Tippe in Console ein:
-JSON.parse(localStorage.getItem('kanban-board-data'))
+JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))
 // ✅ Erwartet: Sollte neuen Kommentar unter cards[].comments enthalten
 
 // 4. KOMMENTAR LÖSCHEN
@@ -298,7 +275,61 @@ JSON.parse(localStorage.getItem('kanban-board-data'))
 // ✅ localStorage wird aktualisiert
 ```
 
----
+###  Nützliche Test-Skripte für die Console
+
+```javascript
+// Alle Board-Daten mit Kommentaren
+const showBoard = () => {
+  const board = JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'));
+  console.table(board);
+  return board;
+};
+
+// Nur Kommentare zeigen
+const showComments = () => {
+  const board = JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'));
+  let allComments = [];
+  board.columns.forEach(col => {
+    col.cards.forEach(card => {
+      if (card.comments?.length > 0) {
+        card.comments.forEach(c => {
+          allComments.push({
+            card: card.heading,
+            text: c.text,
+            author: c.author,
+            date: c.createdAt
+          });
+        });
+      }
+    });
+  });
+  console.table(allComments);
+  return allComments;
+};
+
+// Board-Statistik
+const boardStats = () => {
+  const board = JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'));
+  let totalCards = 0;
+  let totalComments = 0;
+  
+  board.columns.forEach(col => {
+    totalCards += col.cards.length;
+    col.cards.forEach(card => {
+      totalComments += card.comments?.length || 0;
+    });
+  });
+  
+  console.log(`📋 Board: ${board.name}`);
+  console.log(`🏢 Spalten: ${board.columns.length}`);
+  console.log(`📇 Karten: ${totalCards}`);
+  console.log(`💬 Kommentare: ${totalComments}`);
+};
+
+boardStats();
+
+```
+
 
 ## ✅ Regel-Einhaltung (copilot-instructions.md)
 
