@@ -350,22 +350,7 @@
                     </div>
                 </Sheet.Content>
             </Sheet.Root>
-
-            <!-- Profile -->
-            <DropdownMenu.Root>
-                <DropdownMenu.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
-                    <Avatar class="h-8 w-8">
-                        <AvatarFallback class="pointer-events-none"><UserRoundIcon class="h-4 w-4 pointer-events-none" /></AvatarFallback>
-                    </Avatar>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end">
-                    <DropdownMenu.Label>{currentUser.name}</DropdownMenu.Label>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item>Profil</DropdownMenu.Item>
-                    <DropdownMenu.Item>Abmelden</DropdownMenu.Item>
-                </DropdownMenu.Content>
-            </DropdownMenu.Root>
-
+            
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class="group h-9 w-9">
                 {#if currentTheme === 'dark'}

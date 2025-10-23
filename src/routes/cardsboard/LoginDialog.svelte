@@ -1,11 +1,12 @@
+<script lang="ts">
 /**
  * Login Modal - Basics Authentication UI
  * 
- * 🎯 Ermöglicht Benutzer-Login mit Dummy-User
+ * Ermöglicht Benutzer-Login mit Dummy-User
  * Später wird dies durch richtige NIP-07 Authentication ersetzt
  */
 
-<script lang="ts">
+
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
