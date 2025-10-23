@@ -261,12 +261,12 @@ export class BoardStore {
             columns: data.columns?.map((colData: any) => ({
                 id: colData.id,
                 name: colData.name,
-                color: colData.color,
+                color: colData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                 cards: colData.cards?.map((cardData: any) => ({
                     id: cardData.id,
                     heading: cardData.heading,
                     content: cardData.content,
-                    color: cardData.color,
+                    color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
                     links: cardData.links || [],
@@ -284,11 +284,11 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'Backlog', color: 'muted' },
-                { name: 'To Do', color: 'chart-1' },
-                { name: 'In Progress', color: 'chart-2' },
-                { name: 'Done', color: 'chart-3' },
-                { name: 'Archive', color: 'muted' }
+                { name: 'Backlog', color: 'slate' },
+                { name: 'To Do', color: 'blue' },
+                { name: 'In Progress', color: 'orange' },
+                { name: 'Done', color: 'green' },
+                { name: 'Archive', color: 'red' }
             ]
         });
     }

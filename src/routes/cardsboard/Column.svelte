@@ -192,18 +192,12 @@
    		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
    }
 
-	function handleRename() {
+	function handleRenameChange() {
+		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
 		if (editName !== name && columnId) {
+			console.log('📝 Column name changed:', { old: name, new: editName });
 			boardStore.updateColumn(columnId, { name: editName });
 		}
-		popoverOpen = false;
-	}
-
-	function handleColorChange() {
-		if (selectedColor !== color && columnId) {
-			boardStore.updateColumn(columnId, { color: selectedColor });
-		}
-		popoverOpen = false;
 	}
 
 	function handleDelete() {
@@ -419,10 +413,12 @@
 						<div class="space-y-4">
 							<div class="space-y-2">
 								<h4 class="font-medium text-sm">Spalte umbenennen</h4>
-								<Input bind:value={editName} placeholder="Spaltenname" />
-								<Button size="sm" onclick={handleRename} class="w-full">
-									Umbenennen
-								</Button>
+								<Input 
+									bind:value={editName} 
+									placeholder="Spaltenname"
+									onchange={handleRenameChange}
+									onblur={handleRenameChange}
+								/>
 							</div>
 							
 							<Separator />

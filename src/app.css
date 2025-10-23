@@ -44,12 +44,12 @@
   --column-border: oklch(82.443% 0.05459 254.539);
   
   /* Card Colors for Color Picker */
-  --color-slate: oklch(0.552 0.016 285.938);
-  --color-blue: oklch(0.6 0.118 184.704);
-  --color-green: #10b981;
-  --color-orange: oklch(0.646 0.222 41.116);
-  --color-red: oklch(0.577 0.245 27.325);
-  --color-purple: oklch(0.606 0.25 292.717);
+  --color-slate: oklch(88.734% 0.02327 285.861 / 0.945);
+  --color-blue: oklch(36.012% 0.24863 264.466);
+  --color-green: #5bd337;
+  --color-orange: oklch(76.57% 0.15684 77.795);
+  --color-red: oklch(0.704 0.191 22.216);
+  --color-purple: oklch(0.541 0.281 293.009);
 }
 
 :root.dark,
@@ -88,10 +88,10 @@
   --column-border: oklch(39.123% 0.02512 257.554);
   
   /* Card Colors for Color Picker - Dark Mode */
-  --color-slate: oklch(0.705 0.015 286.067);
-  --color-blue: oklch(0.696 0.17 162.48);
-  --color-green: #34d399;
-  --color-orange: oklch(0.488 0.243 264.376);
+  --color-slate: oklch(32.579% 0.00353 286.054 / 0.945);
+  --color-blue: oklch(36.012% 0.24863 264.466);
+  --color-green: #0ef347;
+  --color-orange: oklch(76.57% 0.15684 77.795);
   --color-red: oklch(0.704 0.191 22.216);
   --color-purple: oklch(0.541 0.281 293.009);
 }

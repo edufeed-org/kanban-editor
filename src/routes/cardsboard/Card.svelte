@@ -183,8 +183,12 @@
 		closeModal();
 	}
 
-	function handleRename() {
-		boardStore.editCard(String(card.id), { name: editName });
+	function handleRenameChange() {
+		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
+		if (editName !== card.name) {
+			console.log('📝 Card name changed:', { old: card.name, new: editName });
+			boardStore.editCard(String(card.id), { name: editName });
+		}
 	}
 
 	function handleEditClick() {
@@ -276,10 +280,12 @@
 							<div class="space-y-4">
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Karte umbenennen</h4>
-									<Input bind:value={editName} placeholder="Kartenname" />
-									<Button size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRename(); }} class="w-full">
-										Umbenennen
-									</Button>
+									<Input 
+										bind:value={editName} 
+										placeholder="Kartenname"
+										onchange={handleRenameChange}
+										onblur={handleRenameChange}
+									/>
 								</div>
 								
 								<Separator />
