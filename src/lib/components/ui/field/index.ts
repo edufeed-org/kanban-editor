@@ -10,6 +10,7 @@ import Separator from "./field-separator.svelte";
 import Error from "./field-error.svelte";
 
 export {
+	// TODO: we may want to rename it to Root, otherwise we will keep having Field.Field
 	Field,
 	Set,
 	Legend,
