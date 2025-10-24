@@ -17,8 +17,8 @@
 
   const ndk = new NDKSvelte({
     explicitRelayUrls: [
-      "ws://localhost:4869",
       "wss://relay-rpi.edufeed.org/",
+      "wss://relay.damus.io/",
     ],
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
