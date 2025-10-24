@@ -2,7 +2,7 @@
 	import { flip } from 'svelte/animate';
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
-	import { settingsStore } from '$lib/stores/settingsStore.js';
+	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
@@ -17,19 +17,10 @@
 	// Board Element Referenz (für potentielle zukünftige Features)
 	let boardElement: HTMLElement | undefined;
 
-	// Subscribe to settings store
-	let settings = $state<any>(null);
-	let unsubscribe: (() => void) | undefined;
+	// Direkt auf settingsStore.settings zugreifen (Svelte 5 Runes)
+	let settings = $derived(settingsStore.settings);
 	
-	$effect(() => {
-		if (!unsubscribe) {
-			unsubscribe = settingsStore.subscribe((s) => {
-				settings = s;
-			});
-		}
-		return () => unsubscribe?.();
-	});
- 	// This is a known issue with svelte-dnd-action library
+	// This is a known issue with svelte-dnd-action library
  	if (typeof window !== 'undefined') {
  			// Override console.warn to suppress the specific passive listener warning
  			const originalWarn = console.warn;

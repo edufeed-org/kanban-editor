@@ -1231,7 +1231,7 @@ function sanitizeImageUrl(url: string): string {
 
 ```bash
 # .env.production
-PUBLIC_NOSTR_RELAYS="wss://relay.damus.io,wss://relay.primal.net"
+PUBLIC_NOSTR_RELAYS="wss://relay-rpi.edufeed.org,wss://relay.primal.net"
 PUBLIC_APP_ENVIRONMENT="production"
 PUBLIC_ENABLE_NSEC_LOGIN="false"  # Disable in production!
 ```
