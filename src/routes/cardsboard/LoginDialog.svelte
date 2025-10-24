@@ -1,9 +1,6 @@
 <script lang="ts">
 /**
  * Login Modal - Basics Authentication UI
- * 
- * Ermöglicht Benutzer-Login mit Dummy-User
- * Später wird dies durch richtige NIP-07 Authentication ersetzt
  */
 
 
@@ -23,14 +20,6 @@
 	let nsecInput = $state('');
 	let isLoading = $derived(authStore.isLoading);
 	let errorMessage = $derived(authStore.errorMessage);
-
-	async function handleDummyLogin() {
-		const success = await authStore.loginWithDummy(userName);
-		if (success) {
-			open = false;
-			userName = 'Dev User'; // Reset
-		}
-	}
 
 	async function handleNsecLogin() {
 		const success = await authStore.loginWithNsec(nsecInput, 'nsec User');
@@ -60,37 +49,25 @@
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<Tabs value="dummy" class="w-full">
+		<Tabs value="nip07" class="w-full">
 			<TabsList class="grid w-full grid-cols-3">
-				<TabsTrigger value="dummy">
-					<UserIcon class="h-4 w-4 mr-2" />
-					Dummy
+				<TabsTrigger value="nip07" title="WIP">
+					<LogInIcon class="h-4 w-4 mr-2" />
+					NIP-07
 				</TabsTrigger>
 				<TabsTrigger value="nsec" title="WIP">
 					<KeyRoundIcon class="h-4 w-4 mr-2" />
 					nsec
 				</TabsTrigger>
-				<TabsTrigger value="nip07" title="WIP">
-					<LogInIcon class="h-4 w-4 mr-2" />
-					NIP-07
-				</TabsTrigger>
 			</TabsList>
 
-			<!-- DUMMY USER LOGIN -->
-			<TabsContent value="dummy" class="space-y-4">
+						<!-- NIP-07 LOGIN (WIP) -->
+			<TabsContent value="nip07" class="space-y-4">
 				<div class="space-y-2">
-					<Label for="username">Display Name</Label>
-					<Input
-						id="username"
-						bind:value={userName}
-						placeholder="z.B. 'Dev User'"
-						disabled={isLoading}
-					/>
+					<p class="text-sm text-muted-foreground">
+						Verbinde dich mit einer Browser-Extension wie Alby oder nos2x.
+					</p>
 				</div>
-
-				<p class="text-xs text-muted-foreground">
-					ℹ️ Dies erstellt einen Dummy-User mit Mock-Daten für lokale Tests.
-				</p>
 
 				{#if errorMessage}
 					<div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
@@ -99,15 +76,16 @@
 				{/if}
 
 				<Button
-					onclick={handleDummyLogin}
-					disabled={isLoading || !userName}
+					onclick={handleNip07Login}
+					disabled={isLoading}
+					variant="outline"
 					class="w-full"
 				>
 					{#if isLoading}
 						Wird geladen...
 					{:else}
 						<LogInIcon class="h-4 w-4 mr-2" />
-						Mit Dummy anmelden
+						Mit NIP-07 anmelden
 					{/if}
 				</Button>
 			</TabsContent>
@@ -150,34 +128,7 @@
 				</Button>
 			</TabsContent>
 
-			<!-- NIP-07 LOGIN (WIP) -->
-			<TabsContent value="nip07" class="space-y-4">
-				<div class="space-y-2">
-					<p class="text-sm text-muted-foreground">
-						Verbinde dich mit einer Browser-Extension wie Alby oder nos2x.
-					</p>
-				</div>
 
-				{#if errorMessage}
-					<div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
-						{errorMessage}
-					</div>
-				{/if}
-
-				<Button
-					onclick={handleNip07Login}
-					disabled={isLoading}
-					variant="outline"
-					class="w-full"
-				>
-					{#if isLoading}
-						Wird geladen...
-					{:else}
-						<LogInIcon class="h-4 w-4 mr-2" />
-						Mit NIP-07 anmelden
-					{/if}
-				</Button>
-			</TabsContent>
 		</Tabs>
 
 		<Dialog.Footer class="text-xs text-muted-foreground">
