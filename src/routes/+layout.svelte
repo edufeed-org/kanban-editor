@@ -28,7 +28,7 @@
   const authStore = initializeAuth(ndk);
 
   // Create reactive pool store for Svelte 5
-  const pool = createReactivePool(ndk);
+  createReactivePool(ndk);
 
   setContext('ndk', ndk);
   setContext('authStore', authStore);

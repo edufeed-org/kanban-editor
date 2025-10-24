@@ -1,5 +1,6 @@
 <script lang="ts">
     import KeyRoundIcon from "@lucide/svelte/icons/key-round";
+    import { resolve } from '$app/paths';
     import * as Avatar from "$lib/components/ui/avatar/index.js";
     import Button from "$lib/components/ui/button/button.svelte";
     import Card from "$lib/components/ui/card/card.svelte";
@@ -62,7 +63,7 @@
                 <CardTitle>Nostr Profile</CardTitle>
                 <CardDescription>Displaying profile for {currentUser?.profile?.name || 'Jack Dorsey'}</CardDescription>
             </CardHeader>
-            <a href="/cardsboard">
+            <a href={resolve('/cardsboard')}>
                 <CardContent>
                     <div class="flex items-center space-x-3">
                         <Avatar.Root class="h-8 w-8 flex-shrink-0">

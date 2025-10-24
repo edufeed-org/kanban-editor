@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button/index.js';
     import { Badge } from '$lib/components/ui/badge/index.js';
     import * as Drawer from '$lib/components/ui/drawer/index.js';
 

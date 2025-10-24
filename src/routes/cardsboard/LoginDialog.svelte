@@ -16,7 +16,6 @@
 
 	let { open = $bindable(false) }: { open: boolean } = $props();
 
-	let userName = $state('Dev User');
 	let nsecInput = $state('');
 	let isLoading = $derived(authStore.isLoading);
 	let errorMessage = $derived(authStore.errorMessage);
@@ -166,8 +165,6 @@
 					onclick={async (e) => {
 						const form = (e.currentTarget as HTMLElement).closest('form');
 						const remoteUrl = (form?.querySelector('input[name="nip46-url"]') as HTMLInputElement)?.value || '';
-						const pubkey = (form?.querySelector('input[name="nip46-pubkey"]') as HTMLInputElement)?.value || '';
-						// guard if method missing
 						if (typeof authStore.loginWithNip46 !== 'function') {
 							console.error('loginWithNip46 not implemented on authStore');
 							return;
