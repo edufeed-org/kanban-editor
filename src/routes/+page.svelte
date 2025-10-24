@@ -9,12 +9,11 @@
     import CardTitle from "$lib/components/ui/card/card-title.svelte";
     import Kind1PostCreationForm from "$lib/components/Kind1PostCreationForm.svelte";
     import { authStore } from "$lib/stores/authStore.svelte.js";
-    import { LoginSheet, ProfileEditor } from '$lib/components/auth/index.js';
+    import { LoginSheet } from '$lib/components/auth/index.js';
 
     let currentUser = $derived(authStore.currentUser);
 
     let showLoginSheet = $state(false);
-    let showProfileEditor = $state(false);
 
     // Handle form submission from child component
     async function handlePostSubmit(data: { title: string; content: string }) {
@@ -93,9 +92,4 @@
 <LoginSheet
     open={showLoginSheet}
     onClose={() => showLoginSheet = false}
-/>
-
-<ProfileEditor
-    open={showProfileEditor}
-    onClose={() => showProfileEditor = false}
 />

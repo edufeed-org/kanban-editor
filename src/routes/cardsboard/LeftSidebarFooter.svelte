@@ -15,6 +15,8 @@
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
+	import { ProfileEditor } from '$lib/components/auth/index.js';
+
 
 	// Reaktive Werte aus AuthStore
 	let isAuthenticated = $derived(authStore.isAuthenticated);
@@ -22,6 +24,8 @@
 
 	// Dialog State
 	let loginDialogOpen = $state(false);
+
+	let showProfileEditor = $state(true);
 
 	async function handleLogout() {
 		authStore.logout();
@@ -85,7 +89,7 @@
 				<DropdownMenu.Separator />
 
 				<!-- Settings Option -->
-				<DropdownMenu.Item class="gap-2">
+				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2">
 					<SettingsIcon class="h-4 w-4" />
 					<span>Einstellungen</span>
 				</DropdownMenu.Item>
@@ -117,6 +121,11 @@
 
 <!-- Login Dialog -->
 <LoginDialog bind:open={loginDialogOpen} />
+
+<ProfileEditor
+    open={showProfileEditor}
+    onClose={() => showProfileEditor = false}
+/>
 
 <style>
 	/* Verhindere Flex-Shrinking für Avatar */
