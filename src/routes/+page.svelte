@@ -40,10 +40,15 @@
         </div>
 
         <div class="flex items-center gap-4">
-        {#if !authStore.isAuthenticated}
+        {#if authStore.isAuthenticated}
+            <Button variant="default" size="sm" onclick={() => authStore.logout()}>
+                <KeyRoundIcon class="mr-2 h-4 w-4" />
+                Abmelden
+            </Button>
+        {:else}
             <Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
-            <KeyRoundIcon class="mr-2 h-4 w-4" />
-            Sign In
+                <KeyRoundIcon class="mr-2 h-4 w-4" />
+                Anmelden
             </Button>
         {/if}
         </div>
