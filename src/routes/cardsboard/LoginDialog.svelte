@@ -22,7 +22,7 @@
 	let errorMessage = $derived(authStore.errorMessage);
 
 	async function handleNsecLogin() {
-		const success = await authStore.loginWithNsec(nsecInput, 'nsec User');
+		const success = await authStore.loginWithNsec(nsecInput);
 		if (success) {
 			open = false;
 			nsecInput = ''; // Reset
@@ -172,7 +172,7 @@
 							console.error('loginWithNip46 not implemented on authStore');
 							return;
 						}
-						const success = await authStore.loginWithNip46(remoteUrl, pubkey);
+						const success = await authStore.loginWithNip46(remoteUrl);
 						if (success) {
 							open = false;
 							if (form) {

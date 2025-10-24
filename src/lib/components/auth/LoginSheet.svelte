@@ -51,9 +51,9 @@
       error = null;
       isLoading = true;
       
-      await authStore.loginWithNsec(nsecInput);
+      const user = await authStore.loginWithNsec(nsecInput);
       onClose();
-      
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
     } finally {
@@ -66,9 +66,9 @@
       error = null;
       isLoading = true;
       
-      await authStore.loginWithNip46(nip46Input);
+      const user = await authStore.loginWithNip46(nip46Input);
       onClose();
-      
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
     } finally {
@@ -229,7 +229,12 @@
               </Field.Content>
             </Field.Field>
             
-            <Button disabled class="w-full" variant="outline">
+            <Button 
+              disabled 
+              class="w-full" 
+              variant="outline"
+              onclick={handleNip46Login}
+            >
               Connect Wallet (Not Available)
             </Button>
           </div>
