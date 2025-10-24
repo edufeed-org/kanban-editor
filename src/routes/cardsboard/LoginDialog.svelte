@@ -51,17 +51,21 @@
 
 		<Tabs value="nip07" class="w-full">
 			<TabsList class="grid w-full grid-cols-3">
-				<TabsTrigger value="nip07" title="WIP">
+				<TabsTrigger value="nip07" title="NIP07">
 					<LogInIcon class="h-4 w-4 mr-2" />
 					NIP-07
 				</TabsTrigger>
-				<TabsTrigger value="nsec" title="WIP">
+				<TabsTrigger value="nsec" title="NSEC">
 					<KeyRoundIcon class="h-4 w-4 mr-2" />
 					nsec
 				</TabsTrigger>
+				<TabsTrigger value="nip46" disabled title="WIP">
+					<UserIcon class="h-4 w-4 mr-2" />
+					NIP-46
+				</TabsTrigger>
 			</TabsList>
 
-						<!-- NIP-07 LOGIN (WIP) -->
+			<!-- NIP-07 LOGIN -->
 			<TabsContent value="nip07" class="space-y-4">
 				<div class="space-y-2">
 					<p class="text-sm text-muted-foreground">
@@ -90,7 +94,7 @@
 				</Button>
 			</TabsContent>
 
-			<!-- NSEC LOGIN (WIP) -->
+			<!-- NSEC LOGIN -->
 			<TabsContent value="nsec" class="space-y-4">
 				<div class="space-y-2">
 					<Label for="nsec">Private Key (nsec)</Label>
@@ -128,6 +132,67 @@
 				</Button>
 			</TabsContent>
 
+			<!-- NIP-46 LOGIN (WIP)-->
+			<TabsContent value="nip46" class="space-y-4">
+				<div class="space-y-2">
+					<p class="text-sm text-muted-foreground">
+						Remote Signer (NIP-46) verwenden — URL des Signer-Services und optionaler Pubkey des Signers.
+					</p>
+
+					<form class="space-y-2" on:submit|preventDefault>
+						<div>
+							<Label for="nip46-url">Signer URL</Label>
+							<Input id="nip46-url" name="nip46-url" placeholder="https://signer.example.com" type="url" disabled={isLoading} />
+						</div>
+
+						<div>
+							<Label for="nip46-pubkey">Signer Pubkey (optional)</Label>
+							<Input id="nip46-pubkey" name="nip46-pubkey" placeholder="npub1..." type="text" disabled={isLoading} />
+						</div>
+					</form>
+				</div>
+
+				{#if errorMessage}
+					<div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
+						{errorMessage}
+					</div>
+				{/if}
+
+				<p class="text-xs text-amber-600 font-semibold">
+					⚠️ Remote Signing: Vertraue nur Signer, denen du vertraust. Private Keys verbleiben beim Signer.
+				</p>
+
+				<Button
+					onclick={async (e) => {
+						const form = (e.currentTarget as HTMLElement).closest('form');
+						const remoteUrl = (form?.querySelector('input[name="nip46-url"]') as HTMLInputElement)?.value || '';
+						const pubkey = (form?.querySelector('input[name="nip46-pubkey"]') as HTMLInputElement)?.value || '';
+						// guard if method missing
+						if (typeof authStore.loginWithNip46 !== 'function') {
+							console.error('loginWithNip46 not implemented on authStore');
+							return;
+						}
+						const success = await authStore.loginWithNip46(remoteUrl, pubkey);
+						if (success) {
+							open = false;
+							if (form) {
+								(form.querySelector('input[name="nip46-url"]') as HTMLInputElement).value = '';
+								(form.querySelector('input[name="nip46-pubkey"]') as HTMLInputElement).value = '';
+							}
+						}
+					}}
+					disabled={isLoading}
+					variant="outline"
+					class="w-full"
+				>
+					{#if isLoading}
+						Wird geladen...
+					{:else}
+						<UserIcon class="h-4 w-4 mr-2" />
+						Mit NIP-46 anmelden
+					{/if}
+				</Button>
+			</TabsContent>
 
 		</Tabs>
 
