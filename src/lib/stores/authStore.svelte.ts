@@ -2,6 +2,7 @@ import { persisted } from "svelte-persisted-store";
 import { NDKNip07Signer, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
+import { get } from 'svelte/store'
 
 export interface UserSession {
   pubkey: string;
@@ -183,8 +184,7 @@ export class AuthStore {
    * Get stored session
    */
   private getStoredSession(): UserSession | null {
-    // Use get() from svelte-persisted-store
-    const stored = this.sessionStore;
+    const stored = get(this.sessionStore);
     return stored ? JSON.parse(JSON.stringify(stored)) : null;
   }
 

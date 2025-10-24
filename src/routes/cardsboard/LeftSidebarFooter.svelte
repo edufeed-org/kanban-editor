@@ -10,13 +10,11 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
-	import { Separator } from "$lib/components/ui/separator/index.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import LoginDialog from "./LoginDialog.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
-	import UserIcon from "@lucide/svelte/icons/user";
 
 	// Reaktive Werte aus AuthStore
 	let isAuthenticated = $derived(authStore.isAuthenticated);
