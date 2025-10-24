@@ -9,7 +9,7 @@
     import CardTitle from "$lib/components/ui/card/card-title.svelte";
     import Kind1PostCreationForm from "$lib/components/Kind1PostCreationForm.svelte";
     import { authStore } from "$lib/stores/authStore.svelte.js";
-    import { LoginSheet, UserHeader, ProfileEditor } from '$lib/components/auth/index.js';
+    import { LoginSheet, ProfileEditor } from '$lib/components/auth/index.js';
 
     let currentUser = $derived(authStore.currentUser);
 
@@ -40,12 +40,6 @@
         </div>
 
         <div class="flex items-center gap-4">
-        <!-- TODO: re-enable when UserHeader is fixed
-            <UserHeader
-            onOpenProfile={() => showProfileEditor = true}
-            onOpenSettings={() => {/* TODO: Settings */}}
-        /> -->
-
         {#if !authStore.isAuthenticated}
             <Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
             <KeyRoundIcon class="mr-2 h-4 w-4" />
