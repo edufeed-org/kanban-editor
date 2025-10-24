@@ -23,38 +23,6 @@
 	// Dialog State
 	let loginDialogOpen = $state(false);
 
-	/**
-	 * Generiert Avatar-Farbe basierend auf User-Name
-	 * Für konsistente Farbgebung pro Nutzer
-	 */
-	function getAvatarColor(name?: string): string {
-		if (!name) return 'bg-slate-500';
-		const colors = [
-			'bg-red-500',
-			'bg-blue-500',
-			'bg-green-500',
-			'bg-yellow-500',
-			'bg-purple-500',
-			'bg-pink-500',
-			'bg-cyan-500',
-			'bg-orange-500'
-		];
-		const hash = name.charCodeAt(0);
-		return colors[hash % colors.length];
-	}
-
-	/**
-	 * Generiert Initialen aus User-Name
-	 */
-	function getInitials(name?: string): string {
-		if (!name) return '?';
-		const parts = name.split(' ');
-		if (parts.length > 1) {
-			return (parts[0][0] + parts[1][0]).toUpperCase();
-		}
-		return name.substring(0, 2).toUpperCase();
-	}
-
 	async function handleLogout() {
 		authStore.logout();
 		loginDialogOpen = false;
@@ -83,8 +51,8 @@
 					<!-- Avatar mit User-Initialen -->
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={currentUser.profile.name} />
-						<Avatar.Fallback class={`${getAvatarColor(currentUser.profile.name)} text-white text-xs font-semibold`}>
-							{getInitials(currentUser.profile.name)}
+						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile.name)} text-white text-xs font-semibold`}>
+							{Avatar.getInitials(currentUser.profile.name)}
 						</Avatar.Fallback>
 					</Avatar.Root>
 
