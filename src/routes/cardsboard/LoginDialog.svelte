@@ -40,8 +40,8 @@
 		}
 	}
 
-	async function handleNIP07Login() {
-		const success = await authStore.loginWithNIP07();
+	async function handleNip07Login() {
+		const success = await authStore.loginWithNip07();
 		if (success) {
 			open = false;
 		}
@@ -66,11 +66,11 @@
 					<UserIcon class="h-4 w-4 mr-2" />
 					Dummy
 				</TabsTrigger>
-				<TabsTrigger value="nsec" disabled title="WIP">
+				<TabsTrigger value="nsec" title="WIP">
 					<KeyRoundIcon class="h-4 w-4 mr-2" />
 					nsec
 				</TabsTrigger>
-				<TabsTrigger value="nip07" disabled title="WIP">
+				<TabsTrigger value="nip07" title="WIP">
 					<LogInIcon class="h-4 w-4 mr-2" />
 					NIP-07
 				</TabsTrigger>
@@ -165,7 +165,7 @@
 				{/if}
 
 				<Button
-					onclick={handleNIP07Login}
+					onclick={handleNip07Login}
 					disabled={isLoading}
 					variant="outline"
 					class="w-full"
