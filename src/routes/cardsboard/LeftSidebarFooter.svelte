@@ -112,9 +112,6 @@
 					<p class="text-xs text-muted-foreground font-mono">
 						{formatPubkey(currentUser.pubkey)}
 					</p>
-					<p class="text-xs text-muted-foreground mt-1">
-						Signer: <span class="capitalize">{currentUser.signerType}</span>
-					</p>
 				</div>
 
 				<DropdownMenu.Separator />
