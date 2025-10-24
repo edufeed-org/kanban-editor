@@ -1,6 +1,6 @@
 <script lang="ts">
+    import KeyRoundIcon from "@lucide/svelte/icons/key-round";
     import * as Avatar from "$lib/components/ui/avatar/index.js";
-    import { NDKSvelte } from "@nostr-dev-kit/svelte";
     import Button from "$lib/components/ui/button/button.svelte";
     import Card from "$lib/components/ui/card/card.svelte";
     import CardContent from "$lib/components/ui/card/card-content.svelte";
@@ -9,9 +9,12 @@
     import CardTitle from "$lib/components/ui/card/card-title.svelte";
     import Kind1PostCreationForm from "$lib/components/Kind1PostCreationForm.svelte";
     import { authStore } from "$lib/stores/authStore.svelte.js";
-
+    import { LoginSheet, UserHeader, ProfileEditor } from '$lib/components/auth/index.js';
 
     let currentUser = $derived(authStore.currentUser);
+
+    let showLoginSheet = $state(false);
+    let showProfileEditor = $state(false);
 
     // Handle form submission from child component
     async function handlePostSubmit(data: { title: string; content: string }) {
@@ -29,6 +32,29 @@
         console.log("Nostr post created successfully!");
     }
 </script>
+
+<header class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div class="container flex h-14 items-center justify-between">
+        <div class="flex items-center gap-4">
+        <h1 class="text-xl font-semibold">Kanban Board</h1>
+        </div>
+
+        <div class="flex items-center gap-4">
+        <!-- TODO: re-enable when UserHeader is fixed
+            <UserHeader
+            onOpenProfile={() => showProfileEditor = true}
+            onOpenSettings={() => {/* TODO: Settings */}}
+        /> -->
+
+        {#if !authStore.isAuthenticated}
+            <Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
+            <KeyRoundIcon class="mr-2 h-4 w-4" />
+            Sign In
+            </Button>
+        {/if}
+        </div>
+    </div>
+</header>
 
 <div class="container mx-auto p-4 max-w-4xl">
     <div class="grid gap-6 md:grid-cols-2">
@@ -63,3 +89,14 @@
         <Kind1PostCreationForm onPostSubmit={handlePostSubmit} />
     </div>
 </div>
+
+<!-- Auth Modals -->
+<LoginSheet
+    open={showLoginSheet}
+    onClose={() => showLoginSheet = false}
+/>
+
+<ProfileEditor
+    open={showProfileEditor}
+    onClose={() => showProfileEditor = false}
+/>

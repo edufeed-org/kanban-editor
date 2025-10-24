@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import * as Sheet from "$lib/components/ui/sheet/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
@@ -28,9 +29,11 @@
       error = null;
       isLoading = true;
       
-      await authStore.loginWithNip07();
+      const user = await authStore.loginWithNip07();
+
       onClose();
       
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
       
