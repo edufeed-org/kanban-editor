@@ -15,6 +15,7 @@
 	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
+	import { authStore } from "$lib/index.js";
 
 	let {
 		card,
@@ -330,13 +331,15 @@
 								
 								<Separator />
 								
+								{#if authStore.isAuthenticated }
 								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
-								
+
 								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
 									Karte löschen
 								</Button>
+								{/if}
 							</div>
 						</Popover.Content>
 					</Popover.Root>
@@ -408,6 +411,7 @@
 			>
 				<FullscreenIcon />
 			</button>
+			{#if authStore.isAuthenticated }
 			<button 
 				class="edit-button dark:hover:text-white" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
@@ -415,8 +419,9 @@
 				title="Bearbeiten"
 				type="button"
 			>
-				<PencilLineIcon class="h-4 w-4" />
+			<PencilLineIcon class="h-4 w-4" />
 			</button>
+			{/if}
 		</div>
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
