@@ -27,7 +27,8 @@ export class AuthStore {
   public currentUser = $state<NDKUser | null>(null);
   public isAuthenticated = $derived(!!this.currentUser);
   public isLoading = $state(false);
-
+  public errorMessage = $state<string | null>(null);
+  
   constructor(private ndk: NDK) {
     this.restoreSession();
   }
@@ -244,6 +245,39 @@ export class AuthStore {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * 🔑 Get current user's public key (Hex format)
+   */
+  public getPubkey(): string | null {
+    return this.currentUser?.pubkey ?? null;
+  }
+
+  /**
+   * 🔑 Get current user's npub (Bech32 format)
+   */
+  public getNpub(): string | null {
+    return this.currentUser?.npub ?? null;
+  }
+
+  /**
+   * 👤 Get current user's display name
+   */
+  public getUserName(): string | null {
+    return this.currentUser?.profile?.name ?? null;
+  }
+
+  /**
+   * 📊 Get current auth status
+   */
+  public getStatus() {
+    return {
+      isAuthenticated: this.isAuthenticated,
+      isLoading: this.isLoading,
+      user: this.currentUser,
+      error: this.errorMessage
+    };
   }
 
   /**
