@@ -5,7 +5,6 @@
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { Label } from "$lib/components/ui/label/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
@@ -13,8 +12,6 @@
 	import PencilLineIcon from "@lucide/svelte/icons/pencil";
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
-	import TrashIcon from "@lucide/svelte/icons/trash";
-	import UsersIcon from "@lucide/svelte/icons/users";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
