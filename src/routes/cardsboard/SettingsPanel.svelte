@@ -1,5 +1,5 @@
 <script lang="ts">
-import { settingsStore } from '$lib/stores/settingsStore.js';
+import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -8,15 +8,9 @@ import { settingsStore } from '$lib/stores/settingsStore.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 
 	let popoverOpen = $state(false);
-	let settings = $state<any>(null);
 
-	// Subscribe to settings store
-	$effect(() => {
-		const unsubscribe = settingsStore.subscribe((s) => {
-			settings = s;
-		});
-		return unsubscribe;
-	});
+	// Direkt auf settingsStore.settings zugreifen (Svelte 5 Runes)
+	let settings = $derived(settingsStore.settings);
 
 	function handleMaxCardsChange(e: Event) {
 		const value = parseInt((e.target as HTMLInputElement).value);

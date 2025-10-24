@@ -28,8 +28,8 @@ export class BoardStore {
 
 **Betroffene Stores:**
 - ✅ **kanbanStore.svelte.ts** — Bereits konvertiert (BoardStore mit `$state`, `$derived`)
-- 🟡 **settingsStore.svelte.ts** — MUSS konvertiert werden (aktuell: Svelte 4 writable)
-- ⏳ **authStore.svelte.ts** — Noch zu erstellen (Nostr User Management)
+- ✅ **settingsStore.svelte.ts** — Vollständig konvertiert! (Svelte 5 Runes, 20 Settings)
+- ✅ **authStore.svelte.ts** — Vollständig implementiert! (Dummy + NIP-07 Ready)
 - ⏳ **syncManager.svelte.ts** — Noch zu erstellen (Offline-First Queue)
 
 ### ⭐ WICHTIG: Die Reaktivitätskette (triggerUpdate → $derived → $effect)
@@ -720,36 +720,176 @@ export const boardStore = new BoardStore(ndk, authStore);
 
 ---
 
-### 1.2 AuthStore (Authentifizierung)
+### 1.2 AuthStore (Authentifizierung) ✅ PRODUCTION READY
 
-**Datei:** `src/lib/stores/authStore.ts` (siehe `NOSTR-USER.md`)
+**Datei:** `src/lib/stores/authStore.svelte.ts` (Svelte 5 Runes)
+
+**Status:** ✅ Production Ready (Phase 1.4)
+
+**Implementierung:** BASICS Pattern für Development + NIP-07 Vorbereitung
 
 **Verantwortlichkeiten:**
 
-- ✅ Benutzer-Session verwalten
-- ✅ NDK Signer bereitstellen
-- ✅ Authentifizierungsstatus prüfen
-- ✅ Profildaten laden/speichern
+- ✅ Benutzer-Session verwalten ($state reaktiv)
+- ✅ Dummy-User für Development (`loginWithDummy()`)
+- ✅ Private Key Support für Development (`loginWithNsec()`)
+- ⏳ NIP-07 Browser Extensions (TODO: NDK Integration)
+- ✅ Authentifizierungsstatus prüfen ($derived)
+- ✅ localStorage Persistierung (SSR-safe)
+- ✅ Session-Restore bei App-Start
 
-**Abhängigkeit von BoardStore:** BoardStore benötigt den authentifizierten User von AuthStore.
-
-**Integration:**
+**Integration mit BoardStore:**
 
 ```typescript
-// In BoardStore
-constructor(ndk: NDK, authStore: AuthStore) {
-  this.authStore = authStore;
+// In kanbanStore.svelte.ts
+import { authStore } from '$lib/stores/authStore.svelte';
 
-  // Subscribe to auth changes
-  $effect(() => {
-    if (authStore.isAuthenticated) {
-      this.loadFromNostr();
-    } else {
-      // Clear board or load demo data
-    }
-  });
+public createCard(columnId: string, name: string): string {
+    // ✅ Auto-Author vom AuthStore
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    
+    const cardProps: CardProps = {
+        heading: name,
+        author: author  // ← Automatisch gesetzt!
+    };
+    // ...
+}
+
+public createBoard(name: string): string {
+    // ✅ Board-Author auch automatisch
+    const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+    // ...
 }
 ```
+
+**API Methods (alle synchron!):**
+
+```typescript
+// Login Methoden (alle async)
+await authStore.loginWithDummy(name?: string): Promise<boolean>
+await authStore.loginWithNsec(nsec: string, name?: string): Promise<boolean>
+await authStore.loginWithNIP07(): Promise<boolean>  // TODO: Integration
+
+// Getters (synchron)
+authStore.getPubkey(): string | null           // Hex format
+authStore.getNpub(): string | null             // Bech32 format
+authStore.getUserName(): string | null         // Display name
+
+// Session Management
+authStore.logout(): void                        // Clear session
+authStore.getStatus(): AuthStatus              // Full status object
+
+// Reactive State ($state)
+authStore.currentUser = UserSession | null     // Current session
+authStore.isAuthenticated = boolean ($derived) // Auto-computed
+authStore.isLoading = boolean ($state)         // Login in progress
+authStore.errorMessage = string | null ($state) // Error context
+```
+
+**Datentypen:**
+
+```typescript
+export type SignerType = 'development' | 'nip07' | 'nip46';
+
+export interface UserSession {
+  pubkey: string;      // Hex Public Key (64 chars)
+  npub: string;        // Bech32 encoded npub
+  name: string;        // Display Name
+  signerType: SignerType;
+  createdAt: number;   // Timestamp
+}
+```
+
+**localStorage Format:**
+
+```json
+{
+  "kanban-auth-session": {
+    "pubkey": "0000000000000000000000000000000000000000000000000000000000000001",
+    "npub": "npub1dev00000000000000000000000000000000000000000000000000000000",
+    "name": "Dev User",
+    "signerType": "development",
+    "createdAt": 1729691825598
+  }
+}
+```
+
+**Verwendung in Komponenten:**
+
+```svelte
+<script lang="ts">
+  import { authStore } from '$lib/stores/authStore.svelte';
+  
+  // Reactive values
+  let isAuthenticated = $derived(authStore.isAuthenticated);
+  let userName = $derived(authStore.getUserName());
+  let pubkey = $derived(authStore.getPubkey());
+  
+  async function handleLogin() {
+    await authStore.loginWithDummy('Alice');
+    // → currentUser wird gesetzt, localStorage speichert Session
+    // → Alle $derived Werte updaten automatisch!
+  }
+</script>
+
+{#if isAuthenticated}
+  <p>Hallo, {userName}!</p>
+  <button onclick={() => authStore.logout()}>Logout</button>
+{:else}
+  <button onclick={handleLogin}>Login</button>
+{/if}
+```
+
+**⚠️ SSR-Safety (automatisch gehandelt!):**
+
+```typescript
+// AuthStore checkt automatisch typeof window !== 'undefined'
+private restoreSession(): void {
+  if (typeof window === 'undefined') {
+    console.debug('⏭️ Skipping restoreSession on SSR server');
+    return;  // ← Kein localStorage-Zugriff auf Server!
+  }
+  
+  try {
+    const stored = localStorage.getItem(AuthStore.STORAGE_KEY);
+    // ... restore logic
+  } catch (error) { /* ... */ }
+}
+```
+
+**Author-Attribution Pattern (KRITISCH!):**
+
+Der `boardStore` nutzt AuthStore automatisch für Card/Board-Author:
+
+```typescript
+// boardStore.createCard() - Fallback Chain
+const author = 
+  authStore.getUserName()      // 1. Best: Display Name
+  || authStore.getPubkey()     // 2. Fallback: Hex pubkey
+  || 'anonymous';              // 3. Last resort
+
+// Resultat im localStorage
+{
+  "id": "card-123",
+  "heading": "Aufgabe",
+  "author": "Dev User"  // ← Auto gesetzt vom authStore!
+}
+```
+
+**Roadmap:**
+
+| Phase | Feature | Status | Deadline |
+|-------|---------|--------|----------|
+| 1.4 | Dummy Login + Development | ✅ Done | Okt 2025 |
+| 2.1 | NIP-07 Integration | 🟡 TODO | Nov 2025 |
+| 2.2 | NIP-46 Remote Signers | ⏳ Planned | Dez 2025 |
+| 3.1 | Team Management | 📋 Backlog | 2026 |
+
+**Weitere Dokumentation:**
+- **[AUTHSTORE-BASICS.md](../GUIDES/AUTHSTORE-BASICS.md)** — Anfänger-freundliche Erklärung
+- **[AUTHSTORE-INTEGRATION-GUIDE.md](../GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)** — Praktische Integration
+- **[NOSTR-USER.md](./NOSTR-USER.md)** — Vollständige Spezifikation mit NIP-07/46
+- **copilot-instructions.md** — Best Practices für AI-Agenten
 
 ---
 
@@ -1212,11 +1352,26 @@ export class SyncManager {
   - [ ] Export/Import API
   - [ ] Nostr Loading & Subscriptions
 
-- [ ] **AuthStore** implementiert (NOSTR-USER.md)
+- [x] **AuthStore** implementiert ✅ (NOSTR-USER.md)
   
-  - [ ] User-Session Management
-  - [ ] NIP-07 Signer Integration
-  - [ ] isAuthenticated Getter
+  - [x] User-Session Management
+  - [x] Dummy-User für Development
+  - [x] localStorage Persistierung (SSR-safe)
+  - [x] isAuthenticated Getter ($derived)
+  - [ ] NIP-07 Signer Integration (Phase 2.1)
+  - [ ] NIP-46 Remote Signers (Phase 2.2)
+
+- [x] **SettingsStore** implementiert ✅ (SETTINGSSTORE.md + SETTINGSSTORE-IMPLEMENTATION.md)
+  
+  - [x] UI/UX Settings (maxCards, columnWidth, theme)
+  - [x] localStorage Persistierung (SSR-safe)
+  - [x] Nostr Relay Configuration
+  - [x] LLM Model Settings (OpenAI-kompatible APIs)
+  - [x] MCP Server URLs
+  - [x] Board/Card Default States
+  - [x] Sidebar Visibility
+  - [x] $derived für berechnete Werte (isDarkMode, isLlmConfigured)
+  - [x] Batch Operations (Export/Import/Reset)
 
 - [ ] **SyncManager** implementiert (AGENTS.md)
   
