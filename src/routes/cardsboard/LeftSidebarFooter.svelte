@@ -84,16 +84,16 @@
 				>
 					<!-- Avatar mit User-Initialen -->
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Image src="" alt={currentUser.name} />
-						<Avatar.Fallback class={`${getAvatarColor(currentUser.name)} text-white text-xs font-semibold`}>
-							{getInitials(currentUser.name)}
+						<Avatar.Image src="" alt={currentUser.profile.name} />
+						<Avatar.Fallback class={`${getAvatarColor(currentUser.profile.name)} text-white text-xs font-semibold`}>
+							{getInitials(currentUser.profile.name)}
 						</Avatar.Fallback>
 					</Avatar.Root>
 
 					<!-- User Info -->
 					<div class="flex-1 min-w-0 text-left">
 						<div class="text-sm font-medium truncate">
-							{currentUser.name}
+							{currentUser.profile.name}
 						</div>
 						<div
 							class="text-xs text-muted-foreground truncate"
@@ -110,7 +110,7 @@
 			<DropdownMenu.Content align="start" class="w-56">
 				<!-- User Info Header -->
 				<div class="px-3 py-2">
-					<p class="text-sm font-semibold">{currentUser.name}</p>
+					<p class="text-sm font-semibold">{currentUser.profile.name}</p>
 					<p class="text-xs text-muted-foreground font-mono">
 						{formatPubkey(currentUser.pubkey)}
 					</p>
