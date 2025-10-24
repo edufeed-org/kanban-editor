@@ -23,12 +23,12 @@
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 
+  ndk.connect();
+
   const authStore = initializeAuth(ndk);
 
   // Create reactive pool store for Svelte 5
   const pool = createReactivePool(ndk);
-
-  ndk.connect();
 
   setContext('ndk', ndk);
   setContext('authStore', authStore);
