@@ -25,7 +25,7 @@
 	// Dialog State
 	let loginDialogOpen = $state(false);
 
-	let showProfileEditor = $state(true);
+	let showProfileEditor = $state(false);
 
 	async function handleLogout() {
 		authStore.logout();
