@@ -32,13 +32,13 @@
 
 <div class="container mx-auto p-4 max-w-4xl">
     <div class="grid gap-6 md:grid-cols-2">
-        <a href="/cardsboard">
-            <!-- Profile Section -->
-            <Card>
-                <CardHeader>
-                    <CardTitle>Nostr Profile</CardTitle>
-                    <CardDescription>Displaying profile for {currentUser?.profile?.name || 'Jack Dorsey'}</CardDescription>
-                </CardHeader>
+        <!-- Profile Section -->
+        <Card>
+            <CardHeader>
+                <CardTitle>Nostr Profile</CardTitle>
+                <CardDescription>Displaying profile for {currentUser?.profile?.name || 'Jack Dorsey'}</CardDescription>
+            </CardHeader>
+            <a href="/cardsboard">
                 <CardContent>
                     <div class="flex items-center space-x-3">
                         <Avatar.Root class="h-8 w-8 flex-shrink-0">
@@ -56,8 +56,8 @@
                         <Button variant="link" class="mt-4">View on Nostr.com</Button>
                     </a>
                 </CardContent>
+            </a>
             </Card>
-        </a>
 
         <!-- Kind 1 Post Creation Form Component -->
         <Kind1PostCreationForm onPostSubmit={handlePostSubmit} />
