@@ -90,6 +90,111 @@ Diese Anleitung erklärt:
 
 ---
 
+## III. Alle Stores sind Reaktiv! (AuthStore, BoardStore, SettingsStore)
+
+### ⭐ WICHTIG: Unterschied ist NICHT Reaktivität sondern Persistierungs-Strategie
+
+**Alle 3 Stores nutzen `$state` Runes → ALLE reaktiv!**
+
+```typescript
+// Alle 3 Stores speichern zu localStorage via persisted():
+
+// 1. AuthStore - für Session (persisted() wrapper)
+export class AuthStore {
+    private sessionStore = persisted<UserSession | null>(
+        'nostr-user-session',
+        null
+    );
+    
+    public currentUser = $state<NDKUser | null>(null);
+    public isAuthenticated = $derived(!!this.currentUser);
+}
+
+// 2. BoardStore - für Boards (komplexes Modell)
+export class BoardStore {
+    private board = $state(this.loadFromStorage());
+    private _columnOrder = $state<string[]>([...]);
+    private updateTrigger = $state(0);
+    
+    public uiData = $derived.by(() => {
+        this.updateTrigger;  // ← Dependency Tracking
+        // Transform board zu UI-Format
+    });
+    
+    private triggerUpdate() {
+        this.updateTrigger++;
+        this.saveToStorage();  // ← Persistierung
+    }
+}
+
+// 3. SettingsStore - für Config (statisch)
+export class SettingsStore {
+    private settings = $state(this.loadFromStorage());
+    private derived = $derived(computeDefaults(this.settings));
+    
+    public save() {
+        this.saveToStorage();
+    }
+}
+```
+
+### Vergleich: Reaktivität vs Persistierung
+
+| Store | Reaktivität | Persistierung | Größe | Komplexität |
+|-------|-------------|---------------|-------|-------------|
+| **AuthStore** | ✅ $state | persisted() | Klein (Session) | Minimal |
+| **BoardStore** | ✅ $state + $derived | persisted() | Groß (komplexes Modell) | Hoch |
+| **SettingsStore** | ✅ $state | persisted() | Klein (Config) | Minimal |
+
+**Wichtig:** Alle 3 sind REAKTIV! Die Unterschiede sind nur in Use-Case und Komplexität.
+
+---
+
+## IV. Design Pattern für neue Stores
+
+**Wenn neue Stores hinzukommen, folge diesem Pattern:**
+
+```typescript
+export class MyNewStore {
+    // 1. Persistierte State (localStorage via persisted())
+    private persistedValue = persisted<MyType>(
+        'localstorage-key',
+        defaultValue
+    );
+    
+    // 2. Reaktive State ($state Rune)
+    private data = $state(this.loadFromPersisted());
+    
+    // 3. Computed Values ($derived Rune für Read-Only)
+    private derived = $derived(this.computeValue());
+    
+    // 4. Update Methods (mit Persistierung)
+    public update(newValue: Partial<MyType>) {
+        this.data = { ...this.data, ...newValue };  // ← Reassignment!
+        this.saveToPersisted();                     // ← Persistierung
+    }
+    
+    private loadFromPersisted(): MyType {
+        // get() für Lesezugriff
+        return get(this.persistedValue) || defaultValue;
+    }
+    
+    private saveToPersisted() {
+        this.persistedValue.set(this.data);
+    }
+}
+```
+
+**Kritische Punkte:**
+- ✅ Nutze `persisted()` für automatische localStorage-Sync
+- ✅ `$state` für mutable Daten
+- ✅ `$derived` für Read-Only berechnete Werte
+- ✅ Reassignments statt Mutationen (`this.data = {...}`)
+- ✅ `get()` aus `svelte/store` für externe Zugriffe
+
+`
+---
+
 ## II. Aktuelle Implementierung (Phase 1 ✅)
 
 ### BoardStore (kanbanStore.svelte.ts)

@@ -59,6 +59,32 @@ Die Benutzerauthentifizierung ist das **Fundament** für alle Nostr-Operationen.
 
 ---
 
+## I.3 Storage Pattern: persisted() vs direkter localStorage
+
+### AuthStore nutzt `persisted()` von svelte-persisted-store
+
+**Warum persisted() für Session?**
+
+- ✅ Session muss über App-Reload erhalten bleiben
+- ✅ Benötigt automatische Svelte 5 Reaktivität ($state)
+- ✅ Multi-Tab Profile Sync (optional)
+- ✅ Automatische Serialisierung/Deserialisierung
+
+### Andere Stores nutzen direkten localStorage
+
+**BoardStore + SettingsStore:**
+- ✅ Zu komplex für persisted() wrapper (Board hat Multi-Board-Support)
+- ✅ Settings brauchen benutzerdefinierte Defaults
+- ✅ Direkter localStorage reicht für diese Use Cases
+- ✅ Eigene Persistierungs-Logik möglich
+
+**Alle 3 Stores sind aber REAKTIV** (nutzen `$state` Runes):
+- AuthStore: `$state<UserSession | null>` mit `persisted()`
+- BoardStore: `$state` mit direktem localStorage
+- SettingsStore: `$state` mit direktem localStorage
+
+---
+
 ## II. Core Implementation
 
 ### 2.1 AuthStore (Session Management)

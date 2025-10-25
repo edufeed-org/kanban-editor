@@ -2,8 +2,233 @@
 
 **Projekt:** Nostr-basiertes KI-Kanban-Board mit Svelte 5  
 **Repository:** edufeed-org/kanban-editor  
-**Letztes Update:** 20. Oktober 2025  
+**Letztes Update:** 25. Oktober 2025  
 **Status:** Phase 1 (In Entwicklung)
+
+---
+
+## 📚 DOKUMENTATIONS-REGELN (KRITISCH!)
+
+### 🔴 RULE #0: Dokumentation IMMER in `/docs` speichern!
+
+**Keine Ausnahmen! Alle neuen Dokumente gehören in `/docs`.**
+
+```
+❌ FALSCH:  archive/NEUES-FEATURE.md
+❌ FALSCH:  root/FEATURE-GUIDE.md
+❌ FALSCH:  src/docs/something.md
+
+✅ RICHTIG: docs/ARCHITECTURE/FEATURE.md
+✅ RICHTIG: docs/GUIDES/FEATURE.md
+✅ RICHTIG: docs/FEATURE/FEATURE.md
+```
+
+---
+
+### 🔴 RULE #1: EIN THEMA = EIN DOKUMENT (nicht 5!)
+
+**KEINE Fragmentierung! Nicht:**
+
+```
+❌ docs/STORES-QUICKSTART.md
+❌ docs/STORES-SUMMARY.md
+❌ docs/STORES-MAP.md
+❌ docs/STORES-COMPLETED.md
+❌ docs/STORES-IMPLEMENTATION.md
+❌ docs/STORES-DOCS-INDEX.md
+
+✅ docs/ARCHITECTURE/STORES.md
+   (Enthält: Quickstart + Summary + Map + Implementation + alles!)
+```
+
+**Warum?**
+- 🧠 Entwickler finden Infos schneller (eine Datei, nicht 5 durchsuchen)
+- 🔗 Verlinkung ist einfach (`docs/ARCHITECTURE/STORES.md`, nicht `docs/STORES-*/`)
+- 📖 Bessere Dokumentations-Struktur in `/docs/_INDEX.md`
+- 🎯 Zielgerichtet: Alles zum Thema an EINEM Ort
+
+---
+
+### 🔴 RULE #2: Zielgerichtet schreiben
+
+**Struktur für JEDES Dokument:**
+
+```markdown
+# THEMA
+
+## I. Übersicht (Was?)
+- Zweck des Dokuments
+- Wer braucht das?
+- 30-Sekunden-Zusammenfassung
+
+## II. Quick Start (Wie schnell?)
+- 5 min Copy-Paste Beispiel
+- Häufigster Use Case
+- "Hello World" der Funktionalität
+
+## III. Detaillierte Dokumentation (Warum? Wie genau?)
+- Vollständige API Reference
+- Alle Methoden/Konfigurationen
+- Edge Cases & Fehler
+
+## IV. Häufige Fehler (Was kann schiefgehen?)
+- Faq
+- Debugging Guide
+- Lösungen für 80% aller Fehler
+
+## V. Referenzen (Wo sind Details?)
+- Links zu verwandten Docs
+- External Resources
+- Best Practices
+```
+
+**Beispiel: docs/ARCHITECTURE/STORES.md**
+```
+# STORES - State Management mit Svelte 5
+
+## I. Übersicht (30 sec)
+AuthStore, BoardStore, SettingsStore — alle mit $state Runes
+
+## II. Quick Start (5 min)
+```typescript
+import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+boardStore.createCard(columnId, heading);
+```
+
+## III. Detaillierte Dokumentation
+- AuthStore persisted() Pattern
+- BoardStore reaktive Cascade
+- SettingsStore Defaults
+
+## IV. Häufige Fehler
+- triggerUpdate() vergessen?
+- Falsche Property-Pfade?
+
+## V. Referenzen
+Siehe: ARCHITECTURE/REACTIVITY.md für Runes Basics
+```
+
+---
+
+### 🟡 RULE #3: Neue Docs in `/docs/_INDEX.md` verlinken
+
+**Wenn du ein neues Dokument erstellst:**
+
+1. Erstelle die Datei in `/docs/ARCHITECTURE/`, `/docs/GUIDES/` oder `/docs/FEATURE/`
+2. **Öffne `/docs/_INDEX.md`**
+3. Füge einen Link hinzu im passenden Bereich:
+   - Architektur-Docs? → `ARCHITECTURE/`
+   - Wie-mache-ich-X Guides? → `GUIDES/`
+   - Feature-Spezifikation? → `FEATURE/`
+   - Collaborations-Themen? → `COLLABORATION/`
+4. Update die Tabelle (Dateiname, Zweck, Status, Datum)
+
+**Beispiel:**
+
+```markdown
+# docs/_INDEX.md
+
+### ARCHITECTURE/ (12 Dateien)
+
+| Datei | Zweck | Status |
+|-------|-------|--------|
+| [`STORES.md`](./ARCHITECTURE/STORES.md) | State Management | ✅ |
+| [`MY-NEW-TOPIC.md`](./ARCHITECTURE/MY-NEW-TOPIC.md) | NEW TOPIC HERE | ✅ Neu (25.10.) |  ← ADD THIS LINE
+```
+
+---
+
+### 🟢 RULE #4: Struktur der `/docs` Ordner
+
+**Verwende diese Ordner-Struktur IMMER:**
+
+```
+docs/
+├── _INDEX.md                    ← Zentrale Navigation (MUSS aktualisiert werden!)
+│
+├── ARCHITECTURE/                ← Technische Konzepte & Patterns
+│   ├── STORES.md               (State Management)
+│   ├── REACTIVITY.md           (Svelte 5 Runes)
+│   ├── NDK.md                  (Nostr Integration)
+│   └── ... (weitere technische Topics)
+│
+├── GUIDES/                      ← How-to & Schritt-für-Schritt
+│   ├── QUICK-START.md          (5 min Einstieg)
+│   ├── AUTHSTORE-INTEGRATION-GUIDE.md
+│   ├── Kanban-NIP.md          (Event Schema)
+│   └── ... (weitere Guides)
+│
+├── FEATURE/                     ← Feature-spezifische Dokumentation
+│   ├── COMMENTS.md            (Kommentar-System)
+│   └── ... (weitere Features)
+│
+├── COLLABORATION/              ← Organisatorisches & Roadmap
+│   ├── ROADMAP.md             (Phasen & Meilensteine)
+│   ├── CONTRIBUTING.md        (Contribution Richtlinien)
+│   └── ... (weitere Collaboration Topics)
+│
+└── TESTSUITE/                  ← Test-Dokumentation
+    ├── INDEX.md               (Test Navigation)
+    ├── GUIDE.md              (Wie teste ich?)
+    └── ... (weitere Test Docs)
+```
+
+**KEINE neuen Top-Level Ordner ohne gute Begründung!**
+
+---
+
+### 🟢 RULE #5: Dokumentation ist Arbeit am Code!
+
+**Wenn du Code schreibst → schreibe auch Dokumentation!**
+
+```
+Feature hinzugefügt? 
+  → Neue Datei in docs/FEATURE/ oder docs/GUIDES/
+  → Verlink in docs/_INDEX.md
+  → Update CHANGELOG.md
+
+Bug gefixt?
+  → Nicht nur Code fixen, auch docs/ update
+  → Explizite Fehlerursache dokumentieren
+
+Architektur geändert?
+  → Betroffene Docs überprüfen & update
+  → Cross-Reference aktualisieren
+```
+
+---
+
+### 📋 CHECKLIST: Neue Dokumentation hinzufügen
+
+```markdown
+## Neue Doc erstellen?
+
+- [ ] 1. Thema definieren: "Worum geht es?"
+- [ ] 2. Ordner wählen: ARCHITECTURE/ oder GUIDES/ oder FEATURE/?
+- [ ] 3. Dateiname: NUR EINES pro Datei! (nicht 5 Splits)
+- [ ] 4. Struktur: I. Übersicht, II. Quick Start, III. Details, IV. Fehler, V. Referenzen
+- [ ] 5. In docs/_INDEX.md verlinken (Tabelle + Navigation)
+- [ ] 6. Timestamp hinzufügen: "✅ Neu (25.10.)"
+- [ ] 7. Cross-References überprüfen: Andere Docs müssen darauf verlinken?
+- [ ] 8. Test: Kann ein neuer Entwickler diese Datei verstehen?
+- [ ] 9. CI/CD: Funktioniert die Verlinkung? (Link Checker?)
+- [ ] 10. Committed: Mit Message "docs: Add THEME documentation"
+```
+
+---
+
+### 🚫 HÄUFIGE FEHLER
+
+| Fehler | Problem | Lösung |
+|--------|---------|--------|
+| **Docs in root/** | Nicht zentralisiert | Alles nach `/docs/` verschieben |
+| **5 Docs für 1 Thema** | Unübersichtlich | In 1 Datei zusammenfassen |
+| **Nicht in `_INDEX.md`** | Verloren / Unsichtbar | Immer verlinken! |
+| **Keine Struktur** | Schwer zu lesen | I. Übersicht, II. Quick Start, etc. |
+| **Zu ausschweifend** | Entwickler lesen nur 50% | Zielgerichtet: Quick Start first |
+| **Keine Cross-Links** | Fragmente statt System | Immer auf verwandte Docs verlinken |
+
+---
 
 ---
 

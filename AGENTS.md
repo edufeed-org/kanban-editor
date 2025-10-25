@@ -1,5 +1,56 @@
 # Spezifikation für KI-gestütztes Kanban-Board (Svelte 5 / TypeScript)
 
+---
+
+## 📚 DOKUMENTATIONS-GOVERNANCE
+
+**KRITISCHE REGEL für AI Agents und Entwickler:**
+
+```
+🔴 ALLE Dokumentation gehört in /docs/ — KEINE Ausnahmen!
+🔴 EIN THEMA = EIN DOKUMENT — KEINE Fragmentierung in 5 Dateien!
+🔴 ZIELGERICHTET schreiben — Quick Start vor Details!
+🔴 IN docs/_INDEX.md verlinken — sonst verloren!
+```
+
+**Darum?**
+- ✅ Neue Devs finden Infos schneller
+- ✅ Weniger Verwirrung durch Fragment-Chaos
+- ✅ Bessere Wartbarkeit (ein Source of Truth pro Thema)
+- ✅ Zentrale Navigation (`docs/_INDEX.md`) funktioniert
+
+**Beispiel FALSCH:**
+```
+❌ archive/STORES-BASICS.md
+❌ docs/STORES-QUICKSTART.md
+❌ docs/STORES-IMPLEMENTATION.md
+❌ root/STORES-SUMMARY.md
+❌ docs/STORES-API-REFERENCE.md
+(5 Dateien = Chaot!)
+```
+
+**Beispiel RICHTIG:**
+```
+✅ docs/ARCHITECTURE/STORES.md
+   (Alles: Basics + Quickstart + Implementation + API)
+```
+
+**Struktur einer guten Dokumentation:**
+1. **Übersicht** — Was? Wer? 30 Sekunden
+2. **Quick Start** — 5 min Copy-Paste
+3. **Detaillierte Docs** — Vollständige API
+4. **Häufige Fehler** — FAQ & Debugging
+5. **Referenzen** — Cross-Links zu anderen Docs
+
+**Neue Dokumentation?**
+1. Ort wählen: `/docs/ARCHITECTURE/`, `/docs/GUIDES/`, `/docs/FEATURE/`
+2. Dateiname: Nur EIN Thema pro Datei
+3. Verlinken: In `/docs/_INDEX.md` eintragen (Tabelle + Navigation)
+4. Timestamp: "✅ Neu (25.10.)" hinzufügen
+5. Cross-References: Andere Docs updaten wenn nötig
+
+---
+
 ## I. Projektübersicht & Zielsetzung
 
 Das Ziel ist die Neuentwicklung eines KI-unterstützten Kanban-Boards mit Svelte 5 und TypeScript. Die gesamte Zustandsverwaltung soll über streng definierte Klassenmethoden erfolgen, um die einfache Anbindung an dezentrale Speicher- und Übertragungsmechanismen (Nostr Events) zu gewährleisten.

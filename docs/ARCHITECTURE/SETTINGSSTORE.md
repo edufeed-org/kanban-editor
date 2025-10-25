@@ -1,9 +1,9 @@
-# ⚙️ SettingsStore Spezifikation
+# SettingsStore - Konfigurationsverwaltung
 
-**Version:** 1.0  
-**Datum:** 24. Oktober 2025  
-**Framework:** Svelte 5 (Runes), TypeScript  
-**Status:** ✅ PRODUCTION READY (Phase 1.5)
+**Datum:** 25. Oktober 2025  
+**Framework:** Svelte 5 (mit Runes)  
+**Status:** ✅ Production Ready (Phase 1.5)  
+**Ein-Dokument-Prinzip:** ✅ Merged SETTINGSSTORE-OVERVIEW + SETTINGSSTORE.md + SETTINGSSTORE-IMPLEMENTATION
 
 ---
 

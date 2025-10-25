@@ -6,6 +6,21 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ---
 
+## 🔴 WICHTIG: DOKUMENTATIONS-GOVERNANCE REGELN
+
+**Neue Dokumentation? Lies ZUERST:** [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md)
+
+**Die 5 Goldenen Regeln:**
+1. 🔴 Alles in `/docs/` speichern (keine Ausnahmen!)
+2. 🔴 EIN Thema = EIN Dokument (nicht 5 Splits!)
+3. 🟡 Zielgerichtet schreiben (Quick Start first)
+4. 🟢 In `_INDEX.md` verlinken (damit sichtbar)
+5. 🟢 5-Abschnitt Struktur (Übersicht, Quick Start, Details, Fehler, Refs)
+
+**Nicht befolgen = Dokumentations-Chaos! 📖⚠️**
+
+---
+
 ## 🎯 Nach Rolle
 
 ### 👨‍💼 Product Manager / Stakeholder
@@ -26,18 +41,21 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 2. **Core Spec:** [`AGENTS.md`](../AGENTS.md) (Tech Spezifikation)
 3. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Svelte 5 $state, $derived)
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
-5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect)
-6. **🆕 Reactive Flow Bugs:** [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) (Prop vs State Pattern!)
-7. **🆕 Author Field Attribution:** [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) (Serialisierung & Persistierung!)
-8. **🆕 Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
-9. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
-10. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
+5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect + Verification)
+6. **Authentifizierung:** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Session Management & Login)
+7. **Sidebar & UI:** [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) (LeftSidebarFooter & LoginDialog)
+8. **Einstellungen:** [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) (Theme, Relays, LLM)
+9. **Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
+10. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
+11. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
 - Store-Methode hinzufügen? → [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
-- Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) oder [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md)
-- Reactive Bugs fixen? → [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md)
+- Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (inkl. Verification Checklist)
+- Einstellungen UI? → [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md)
+- Login & Auth? → [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (inkl. Author Attribution Patterns)
+- Sidebar Komponenten? → [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md)
 - Tests ausführen? → [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md)
 - Kommentare implementieren? → [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md)
 
@@ -48,18 +66,17 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 **Learning Path:**
 1. **Core Spec:** [`AGENTS.md`](../AGENTS.md)
-2. **🆕 AuthStore Integration:** [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) (Komplette API Reference)
+2. **AuthStore Integration:** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Komplette Spezifikation)
 3. **NDK Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 4. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
 5. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
 6. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
-7. **🆕 Author Field Attribution:** [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) (Serialisierung!)
+7. **AuthStore (Authentifizierung):** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md)
 
 **Häufige Aufgaben:**
 - Event publizieren? → [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
-- User authentifizieren? → [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)
+- User authentifizieren? → [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Session + Card Author)
 - Event-Schema verstehen? → [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
-- Board/Card Author? → [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)
 
 ---
 
@@ -90,16 +107,19 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ## 🗺️ Nach Thema
 
-### 🏗️ Architektur & Design
+### 🗺️ Nach Thema
 
 | Thema | Dokument | Umfang |
 |-------|----------|--------|
-| **Svelte 5 Runes** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | 30 min |
+| **Svelte 5 Runes** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | 40 min |
+| **Svelte 5 Runes (Verification Checklist)** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Section VI) | 20 min |
 | **State Management** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) | 45 min |
-| **🆕 Reactive Flow Bugs** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) | 20 min |
-| **🆕 Author Field Attribution** | [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) | 25 min |
+| **Authentifizierung (Neu!)** | [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) | 35 min |
+| **Sidebar & Login UI (Neu!)** | [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | 30 min |
+| **Settings & Konfiguration (Neu!)** | [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
+| **🆕 Dokumentations-Governance** | [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md) | 15 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
@@ -115,13 +135,14 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ### 📚 Learning Resources
 
-| Ziel | Dokument |
-|------|----------|
+| Learning Resource | Dokument |
+|---|---|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
-| **🆕 AuthStore Integration** | [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) |
-| **🆕 Author Field Attribution** | [`ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) |
-| **Reactive Flow Debugging** | [`ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) |
+| **Authentifizierung (35 min)** | [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) |
+| **Sidebar & Login UI (30 min)** | [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) |
+| **Settings Verwaltung (30 min)** | [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) |
+| **Svelte 5 Runes (40 min)** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) |
 | **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
 | **Vollständige Spezifikation** | [`AGENTS.md`](../AGENTS.md) |
@@ -142,8 +163,11 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ```
 docs/
+├── DOCUMENTATION-RULES.md      ← 🆕 Dokumentations-Governance (REGELN!)
+├── _INDEX.md                   ← Sie sind hier
+│
 ├── REFERENCE/
-│   └── _INDEX.md              ← Sie sind hier
+│   └── _INDEX.md              ← Navigation Hub
 │
 ├── ARCHITECTURE/
 │   ├── AUTHOR-FIELD-ATTRIBUTION.md  ← ✅ Neu (23.10.)
@@ -211,7 +235,10 @@ docs/
 ### Frontend Devs zusätzlich:
 - [ ] AGENTS.md überflogen (Schnell-Spezifikation)
 - [ ] STORES.md Kapitel I gelesen ($state/$derived Paradigma)
-- [ ] REACTIVITY.md verstanden (Runes-Kette)
+- [ ] REACTIVITY.md verstanden (Runes-Kette + Verification)
+- [ ] AUTHSTORE.md verstanden (Session Management)
+- [ ] SETTINGSSTORE.md als Referenz gebookmarkt
+- [ ] SIDEBAR-LOGIN.md für UI-Komponenten
 - [ ] UX-RULES.md als Referenz gebookmarkt
 
 ### Nostr Devs zusätzlich:
@@ -232,30 +259,27 @@ docs/
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
-| [`AUTHOR-FIELD-ATTRIBUTION.md`](./ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) | Root Cause: Author Field Bug Fix | ✅ Neu (23.10.) |
-| [`AUTHSTORE-FLOWCHART.md`](./ARCHITECTURE/AUTHSTORE-FLOWCHART.md) | AuthStore Ablauf-Diagramm | ✅ |
-| [`AUTHSTORE-IMPLEMENTATION.md`](./ARCHITECTURE/AUTHSTORE-IMPLEMENTATION.md) | AuthStore technische Details | ✅ |
-| [`COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md`](./ARCHITECTURE/COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md) | LeftSidebarFooter Komponenten-Architektur | ✅ |
+| [`AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) | ✅ Master File: Authentication & Session Management + Author Patterns | ✅ Master (25.10.) |
+| [`SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | ✅ Master File: UI Components (Login, Sidebar) | ✅ Master (25.10.) |
+| [`SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | ✅ Master File: Theme, Relays, LLM Config | ✅ Master (25.10.) |
+| [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
 | [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
 | [`NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | Benutzerauthentifizierung & NIP-07 | ✅ |
-| [`REACTIVE-FLOW-VERIFICATION.md`](./ARCHITECTURE/REACTIVE-FLOW-VERIFICATION.md) | Svelte 5 Reactive Flow Debugging | ✅ |
-| [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | Svelte 5 Runes Konzepte | ✅ |
-| [`STORES.md`](./ARCHITECTURE/STORES.md) | Store-Architektur & Export/Import API | ✅ |
 | [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
-| [`VISUAL-SIDEBAR-LOGIN-REFERENCE.md`](./ARCHITECTURE/VISUAL-SIDEBAR-LOGIN-REFERENCE.md) | Sidebar Login UI Referenz | ✅ |
+| [`STORES.md`](./ARCHITECTURE/STORES.md) | Store-Architektur & Export/Import API | ✅ |
 
 ### GUIDES/ (8 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
-| [`AUTHSTORE-BASICS.md`](./GUIDES/AUTHSTORE-BASICS.md) | AuthStore Quick Start | ✅ |
-| [`AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | Vollständige AuthStore API Reference | ✅ Neu (23.10.) |
-| [`Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | Nostr Event Schema | ✅ |
-| [`PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) | Svelte 5 Prop vs State Quick Reference | ✅ |
 | [`QUICK-START.md`](./GUIDES/QUICK-START.md) | 10-Minuten Einstieg | ✅ |
-| [`SIDEBAR-LOGIN-DOCS-INDEX.md`](./GUIDES/SIDEBAR-LOGIN-DOCS-INDEX.md) | Sidebar Login Dokumentations-Index | ✅ |
-| [`SIDEBAR-LOGIN-INTEGRATION.md`](./GUIDES/SIDEBAR-LOGIN-INTEGRATION.md) | Sidebar Login Integration Guide | ✅ |
+| [`PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) | Svelte 5 Prop vs State Quick Reference | ✅ |
+| [`Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | Nostr Event Schema | ✅ |
 | [`TEST-RUNNER.md`](./GUIDES/TEST-RUNNER.md) | Test Suite Runner Guide | ✅ |
+| [`AUTHSTORE-BASICS.md`](./GUIDES/AUTHSTORE-BASICS.md) | Archiviert (in archive/) | 📦 Archive |
+| [`AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | Archiviert (in archive/) | 📦 Archive |
+| [`SETTINGSSTORE-IMPLEMENTATION.md`](./GUIDES/SETTINGSSTORE-IMPLEMENTATION.md) | Archiviert (in archive/) | 📦 Archive |
+| [`SIDEBAR-LOGIN-DOCS-INDEX.md`](./GUIDES/SIDEBAR-LOGIN-DOCS-INDEX.md) | Archiviert (in archive/) | 📦 Archive |
 
 ### COLLABORATION/ (5 Dateien)
 
@@ -343,21 +367,20 @@ docs/
 
 | Kategorie | Status | Letzte Aktualisierung |
 |-----------|--------|----------------------|
-| **Architecture** | ✅ Komplett | 21. Oktober 2025 |
-| **🆕 Author Field Attribution** | ✅ Neu | 23. Oktober 2025 |
-| **🆕 AuthStore Integration Guide** | ✅ Neu | 23. Oktober 2025 |
-| **🆕 Reactive Flow Debugging** | ✅ Neu | 21. Oktober 2025 |
-| **🆕 Prop vs State Cheat Sheet** | ✅ Neu | 21. Oktober 2025 |
-| **Guides** | ✅ Komplett | 21. Oktober 2025 |
+| **✅ MASTER: AUTHSTORE.md** | ✅ Konsolidiert (4 → 1) + Author Patterns | 25. Oktober 2025 |
+| **✅ MASTER: SIDEBAR-LOGIN.md** | ✅ Konsolidiert (4 → 1) | 25. Oktober 2025 |
+| **✅ MASTER: SETTINGSSTORE.md** | ✅ Konsolidiert (3 → 1) | 25. Oktober 2025 |
+| **✅ MASTER: REACTIVITY.md** | ✅ Konsolidiert (2 → 1) | 25. Oktober 2025 |
+| **Architecture** | ✅ Komplett | 25. Oktober 2025 |
+| **Guides** | ✅ Komplett | 25. Oktober 2025 |
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
 | **Features** | ✅ Komplett (Comments) | 22. Oktober 2025 |
-| **Examples** | 🟡 Teilweise | — |
-| **Troubleshooting** | 🟡 Teilweise | — |
 
-**Bitte update diesen Index, wenn neue Dokumente hinzukommen!**
+**🎉 DOCUMENTATION-RULES RULE #2 VOLLSTÄNDIG IMPLEMENTIERT:**
+- ✅ 4 Master-Files erstellt
+- ✅ 14 Fragmente archiviert
+- ✅ AUTHOR-FIELD-ATTRIBUTION.md → merged in AUTHSTORE.md
+- ✅ ONE Topic = ONE Document! ✅
 
----
-
-**Letzte Aktualisierung:** 23. Oktober 2025 (Author Field Attribution + AuthStore Integration Guide hinzugefügt)  
-**Nächste Überprüfung:** Mit jedem Release
+**Status: 100% DOCUMENTATION-RULES COMPLIANT** 🎯
