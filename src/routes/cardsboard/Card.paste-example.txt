@@ -1,0 +1,102 @@
+// ============================================================================
+// PASTE-INTEGRATION BEISPIEL für Card.svelte
+// ============================================================================
+//
+// Füge diese Änderungen zu deiner bestehenden Card.svelte hinzu:
+
+// 1. IMPORTS (oben in <script>)
+import { toast } from 'svelte-sonner';
+
+// 2. PASTE HANDLER (in <script>)
+async function handlePaste(event: ClipboardEvent) {
+    // Verhindere Default-Verhalten (Browser würde Text direkt einfügen)
+    event.preventDefault();
+    
+    console.log('📋 Paste in Card:', card.id);
+    
+    try {
+        const result = await boardStore.handleCardPaste(card.id, event.clipboardData);
+        
+        if (result.success) {
+            toast.success(`${result.type} erfolgreich eingefügt`, {
+                description: result.debug || `Content wurde zur Card hinzugefügt`
+            });
+        } else {
+            toast.error('Paste fehlgeschlagen', {
+                description: result.error || 'Unbekannter Fehler'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Paste Error:', error);
+        toast.error('Paste fehlgeschlagen', {
+            description: error instanceof Error ? error.message : String(error)
+        });
+    }
+}
+
+// 3. TEMPLATE ÄNDERUNG
+// Füge onpaste Handler zum Card.Root hinzu:
+
+<Card.Root 
+    class="..."
+    onpaste={handlePaste}  // ← NEU!
+    tabindex="0"           // ← WICHTIG: Macht Card fokussierbar für Paste
+>
+    <!-- Bestehender Card-Inhalt -->
+</Card.Root>
+
+// ============================================================================
+// ALTERNATIVE: Paste-Button in Card-Footer
+// ============================================================================
+
+// Wenn du einen expliziten Button willst statt onpaste Event:
+
+<script>
+import PaperclipIcon from "@lucide/svelte/icons/paperclip";
+
+async function handlePasteClick() {
+    try {
+        // Versuche Clipboard API zu nutzen (moderne Browser)
+        const clipboardData = await navigator.clipboard.read();
+        
+        // Konvertiere ClipboardItems zu DataTransfer-ähnlichem Objekt
+        // TODO: Hier müsste man die Clipboard API Items transformieren
+        // Für jetzt: Zeige Hinweis
+        toast.info('Nutze Strg+V oder klicke und paste', {
+            description: 'Clipboard API Integration folgt in Phase 2'
+        });
+    } catch (error) {
+        toast.info('Nutze Strg+V zum Einfügen');
+    }
+}
+</script>
+
+<Card.Footer>
+    <Button variant="ghost" size="sm" onclick={handlePasteClick}>
+        <PaperclipIcon class="mr-2 h-4 w-4" />
+        Einfügen
+    </Button>
+</Card.Footer>
+
+// ============================================================================
+// BEST PRACTICE: Kombiniere beide Ansätze
+// ============================================================================
+
+// 1. onpaste Event für Power-User (Strg+V)
+// 2. Button für Discovery & Mobile
+
+<Card.Root 
+    class="..."
+    onpaste={handlePaste}
+    tabindex="0"
+>
+    <Card.Header>...</Card.Header>
+    <Card.Content>...</Card.Content>
+    <Card.Footer>
+        <!-- Bestehende Buttons -->
+        <Button variant="ghost" size="sm" onclick={handlePasteClick}>
+            <PaperclipIcon class="mr-2 h-4 w-4" />
+            Einfügen
+        </Button>
+    </Card.Footer>
+</Card.Root>

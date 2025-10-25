@@ -301,11 +301,13 @@ docs/
 | [`INDEX.md`](./TESTSUITE/INDEX.md) | Test Suite Navigation Hub | ✅ |
 | [`STATUS.md`](./TESTSUITE/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (1 Datei)
+### FEATURE/ (3 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
 | [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
+| [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration | ✅ |
+| [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | ✅ Neu (25.10.) Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
 
 ### REFERENCE/ (1 Datei)
 
@@ -321,10 +323,10 @@ docs/
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 5/5 Dateien verlinkt  
 ✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
-✅ **FEATURE/** — 1/1 Dateien verlinkt  
+✅ **FEATURE/** — 3/3 Dateien verlinkt  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 30/30 Dateien in /docs verlinkt und dokumentiert**
+**Total: 32/32 Dateien in /docs verlinkt und dokumentiert**
 
 ---
 

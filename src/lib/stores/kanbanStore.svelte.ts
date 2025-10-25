@@ -882,6 +882,112 @@ export class BoardStore {
     }
 
     // ============================================================================
+    // PASTE-SYSTEM INTEGRATION
+    // ============================================================================
+
+    /**
+     * Verarbeitet Paste-Event für eine bestehende Card
+     * 
+     * @param cardId - ID der Ziel-Card
+     * @param clipboardData - Clipboard-Daten vom Paste-Event
+     * @returns PasteResult mit success/error
+     */
+    public async handleCardPaste(
+        cardId: string,
+        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
+    ): Promise<import('../paste/types.js').PasteResult> {
+        const { pasteHandler } = await import('../paste/PasteHandler.js');
+        
+        const result = await pasteHandler.handlePaste(clipboardData, {
+            target: 'card',
+            cardId,
+            author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'
+        });
+        
+        if (result.success && result.cardUpdates) {
+            // Merge mit existierender Card
+            const existing = this.board.findCardAndColumn(cardId);
+            if (existing) {
+                const merged = this.mergeCardUpdates(existing.card, result.cardUpdates);
+                this.updateCard(cardId, merged);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Verarbeitet Paste-Event für eine Column (erstellt neue Card)
+     * 
+     * @param columnId - ID der Ziel-Column
+     * @param clipboardData - Clipboard-Daten vom Paste-Event
+     * @returns PasteResult mit success/error + neue Card-ID
+     */
+    public async handleColumnPaste(
+        columnId: string,
+        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
+    ): Promise<import('../paste/types.js').PasteResult & { cardId?: string }> {
+        const { pasteHandler } = await import('../paste/PasteHandler.js');
+        
+        const result = await pasteHandler.handlePaste(clipboardData, {
+            target: 'column',
+            columnId,
+            author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'
+        });
+        
+        if (result.success && result.cardUpdates) {
+            // Erstelle neue Card mit Paste-Daten
+            const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+            
+            const cardProps: CardProps = {
+                heading: result.cardUpdates.heading || 'Eingefügter Inhalt',
+                content: result.cardUpdates.content || '',
+                image: result.cardUpdates.image,
+                color: result.cardUpdates.color || 'slate',
+                labels: result.cardUpdates.labels || [],
+                links: result.cardUpdates.links || [],
+                publishState: 'draft',
+                author
+            };
+            
+            const card = this.addCard(columnId, cardProps);
+            return { ...result, cardId: card.id };
+        }
+        
+        return result;
+    }
+
+    /**
+     * Hilfsmethode: Merged Paste-Updates mit existierender Card
+     * Append statt Replace für content
+     */
+    private mergeCardUpdates(
+        existingCard: import('../classes/BoardModel.js').Card,
+        updates: Partial<CardProps>
+    ): Partial<CardProps> {
+        const merged: Partial<CardProps> = { ...updates };
+        
+        // Content: Append statt Replace
+        if (updates.content) {
+            merged.content = (existingCard.content || '') + updates.content;
+        }
+        
+        // Labels: Merge (keine Duplikate)
+        if (updates.labels) {
+            const existingLabels = existingCard.labels || [];
+            merged.labels = [...new Set([...existingLabels, ...updates.labels])];
+        }
+        
+        // Links: Append
+        if (updates.links) {
+            const existingLinks = existingCard.links || [];
+            merged.links = [...existingLinks, ...updates.links];
+        }
+        
+        return merged;
+    }
+
+    // ============================================================================
     // KI-INTEGRATION
     // ============================================================================
 
