@@ -123,6 +123,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
+| **KI-Chatbot Integration** | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | 30 min |
 
 ### 🔧 Integration & Technologie
 
@@ -376,6 +377,7 @@ docs/
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
 | **Features** | ✅ Komplett (Comments) | 22. Oktober 2025 |
+| **KI-Chatbot Integration** | ✅ Komplett | 25. Oktober 2025 |
 
 **🎉 DOCUMENTATION-RULES RULE #2 VOLLSTÄNDIG IMPLEMENTIERT:**
 - ✅ 4 Master-Files erstellt
