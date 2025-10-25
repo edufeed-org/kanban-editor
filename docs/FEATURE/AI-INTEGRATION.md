@@ -876,13 +876,18 @@ fetch('http://localhost:8080/mcp', {
 
 ## XI. FAQ & Troubleshooting
 
-### Q: Kann ich GPT-4 statt Ollama nutzen?
+### Q: Kann ich Mistral oder GPT-5 statt Ollama nutzen?
 
 **A:** Ja! Konfiguriere in Settings:
 ```
-Model: gpt-4-turbo
+Model: mistralai/mistral-medium-3.1
+Base URL: https://openrouter.ai/api/v1
+API Key: sk-or-v1-... (dein OpenRouter Key)
+
+// oder openai
+Model: gpt-5
 Base URL: https://api.openai.com/v1
-API Key: sk-... (dein OpenAI Key)
+API Key: sk-or-v1-... (dein OpenAI Key)
 ```
 
 ⚠️ **Security:** API-Key wird in localStorage gespeichert. Für Production: Verwende Server-Side API Calls!
@@ -966,7 +971,7 @@ else if (name === 'deleteCard') {
 
 | Begriff | Bedeutung |
 |---------|-----------|
-| **LLM** | Large Language Model (z.B. GPT-4, Mistral) |
+| **LLM** | Large Language Model (z.B. GPT-5, Mistral) |
 | **MCP** | Model Context Protocol (standardisierte API für Datenquellen) |
 | **Tool Call** | LLM ruft eine Funktion auf (z.B. `addCard`) |
 | **System-Prompt** | Instruktionen für das LLM (definiert Verhalten) |
