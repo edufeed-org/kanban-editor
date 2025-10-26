@@ -28,8 +28,10 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 1. **Start:** [`README.md`](../README.md) (15 min Überblick)
 2. **Vertiefung:** [`KONZEPT.md`](../KONZEPT.md) (Vision & Use Cases)
-3. **Planung:** [`COLLABORATION/ROADMAP.md`](./COLLABORATION/ROADMAP.md) (Phasen & Meilensteine)
+3. **🔴 KRITISCH:** [`COLLABORATION/ROADMAP.md`](./COLLABORATION/ROADMAP.md) (Phasen, Meilensteine & **31.12.2025 Deadline für Phase 4**)
 4. **Support:** [`COLLABORATION/CONTRIBUTING.md`](./COLLABORATION/CONTRIBUTING.md) (Contribution Policy)
+
+**Wichtig:** Roadmap v2.3 - **50% Zeitersparnis durch Komponenten-Reduktion!** (-53 Tage) Phase 4 muss bis **31. Dezember 2025** fertig sein, damit ab 01.01.2026 getestet werden kann!
 
 ---
 
@@ -117,7 +119,9 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Authentifizierung (Neu!)** | [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) | 35 min |
 | **Sidebar & Login UI (Neu!)** | [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | 30 min |
 | **Settings & Konfiguration (Neu!)** | [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | 30 min |
-| **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 20 min |
+| **🆕 Board Versioning & Snapshots** | [`COLLABORATION/BOARD-VERSIONING.md`](./COLLABORATION/BOARD-VERSIONING.md) | 40 min |
+| **🆕 Conflict Detection & Merge** | [`FEATURE/MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | 50 min |
+| **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **🆕 Dokumentations-Governance** | [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md) | 15 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
@@ -254,7 +258,7 @@ docs/
 
 ---
 
-## � Vollständige Dokumentations-Übersicht (Alle Dateien)
+## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
 ### ARCHITECTURE/ (11 Dateien)
 
@@ -282,7 +286,7 @@ docs/
 | [`SETTINGSSTORE-IMPLEMENTATION.md`](./GUIDES/SETTINGSSTORE-IMPLEMENTATION.md) | Archiviert (in archive/) | 📦 Archive |
 | [`SIDEBAR-LOGIN-DOCS-INDEX.md`](./GUIDES/SIDEBAR-LOGIN-DOCS-INDEX.md) | Archiviert (in archive/) | 📦 Archive |
 
-### COLLABORATION/ (5 Dateien)
+### COLLABORATION/ (6 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -291,6 +295,7 @@ docs/
 | [`ROADMAP.md`](./COLLABORATION/ROADMAP.md) | Entwicklungs-Roadmap (Phase 1-5) | ✅ |
 | [`DOCUMENTATION-AUDIT-SUMMARY.md`](./COLLABORATION/DOCUMENTATION-AUDIT-SUMMARY.md) | Audit Summary Report | ✅ Neu (24.10.) |
 | [`DOCUMENTATION-AUDIT-REPORT.md`](./COLLABORATION/DOCUMENTATION-AUDIT-REPORT.md) | Detailed Audit Report | ✅ Neu (24.10.) |
+| [`BOARD-VERSIONING.md`](./COLLABORATION/BOARD-VERSIONING.md) | ✅ Neu (26.10.) Manual Snapshots + Conflict Resolution | ✅ Neu (26.10.) |
 
 ### TESTSUITE/ (4 Dateien)
 
@@ -301,13 +306,14 @@ docs/
 | [`INDEX.md`](./TESTSUITE/INDEX.md) | Test Suite Navigation Hub | ✅ |
 | [`STATUS.md`](./TESTSUITE/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (3 Dateien)
+### FEATURE/ (4 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
 | [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
 | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration | ✅ |
 | [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | ✅ Neu (25.10.) Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
+| [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | ✅ Neu (26.10.) Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
 
 ### REFERENCE/ (1 Datei)
 
@@ -321,12 +327,12 @@ docs/
 
 ✅ **ARCHITECTURE/** — 11/11 Dateien verlinkt  
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
-✅ **COLLABORATION/** — 5/5 Dateien verlinkt  
+✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
-✅ **FEATURE/** — 3/3 Dateien verlinkt  
+✅ **FEATURE/** — 4/4 Dateien verlinkt  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 32/32 Dateien in /docs verlinkt und dokumentiert**
+**Total: 34/34 Dateien in /docs verlinkt und dokumentiert**
 
 ---
 
@@ -347,7 +353,7 @@ docs/
 
 ---
 
-## � Nächste Schritte
+## 👣 Nächste Schritte
 
 **Nach dem Lesen dieses Index:**
 
@@ -380,6 +386,8 @@ docs/
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
 | **Features** | ✅ Komplett (Comments) | 22. Oktober 2025 |
 | **KI-Chatbot Integration** | ✅ Komplett | 25. Oktober 2025 |
+| **📊 Board Versioning** | ✅ Komplett (26.10.) | 26. Oktober 2025 |
+| **📊 Conflict Resolution / Merge** | ✅ Komplett (26.10.) | 26. Oktober 2025 |
 
 **🎉 DOCUMENTATION-RULES RULE #2 VOLLSTÄNDIG IMPLEMENTIERT:**
 - ✅ 4 Master-Files erstellt

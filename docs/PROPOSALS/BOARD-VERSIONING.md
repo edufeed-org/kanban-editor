@@ -39,28 +39,28 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
 
 ## 🏗️ Architektur
 
-### Drei-Layer Versioning System
+### Two-Layer Snapshot System
 
 ```
 ┌─────────────────────────────────────────────────┐
 │  Kind 30301 (Replaceable)                       │
 │  → Aktueller Board-State (live)                 │
-│  → Mit "v" tag für Version                      │
-│  → Mit "pv" tag für Previous Version            │
+│  → Spalten, Spalten-Reihenfolge, Metadata      │
+│  → Keine Versionstags (kein v/pv)              │
 └─────────────────────────────────────────────────┘
-            ↓ Snapshot bei wichtigen Changes
+
+┌─────────────────────────────────────────────────┐
+│  Kind 30302 (Replaceable)                       │
+│  → Card-Inhalte (heading, content, labels)     │
+│  → Mit author-Tag für Multi-User Attribution   │
+└─────────────────────────────────────────────────┘
+
 ┌─────────────────────────────────────────────────┐
 │  Kind 30303 (Non-Replaceable)                   │
-│  → Snapshots für Versionspunkte                 │
-│  → Rollback-Punkte                              │
-│  → Auto-generierte Commit-Messages              │
-└─────────────────────────────────────────────────┘
-            ↓ Detailliertes Change-Tracking
-┌─────────────────────────────────────────────────┐
-│  Kind 30304 (Change Events)                     │
-│  → Jede Änderung als separates Event            │
-│  → Audit-Trail für Compliance                   │
-│  → Basis für auto-generierte Commit-Messages    │
+│  → Manuelle Snapshots via UI-Button             │
+│  → Komplettes Board-JSON bei User-Click        │
+│  → Mit ["v", "version-label"] Tag               │
+│  → Rollback zu beliebigem Snapshot             │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -68,7 +68,7 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
 
 ## 📊 Event-Struktur
 
-### 1. Board Event (Kind 30301) - mit Versionierung
+### 1. Board Event (Kind 30301) - Struktur & Spalten
 
 ```javascript
 {
@@ -76,25 +76,19 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
     "created_at": 1730000000,
     "tags": [
         ["d", "project-alpha"],              // Board-ID (NIP-33)
-        ["title", "Project Alpha - Sprint 3"],
+        ["title", "Project Alpha"],
         ["description", "Board Description"],
         
-        // === VERSIONIERUNG (NEU!) ===
-        ["v", "42"],                         // ✅ Current Version (PFLICHT)
-        ["pv", "41"],                        // ✅ Previous Version
-        ["b", "main"],                       // ✅ Branch (optional, für Experimente)
-        ["m", "Auto: Added 3 cards, Moved 1 card"], // ✅ Auto-generierte Commit-Message
-        
         // Publishing State
-        ["pub", "draft"],                    // draft|published|archived
+        ["pub", "private"],                    // private|published|archived
         
-        // Columns
+        // Columns (aktuelles Layout)
         ["col", "col1", "Backlog", "0"],
         ["col", "col2", "In Progress", "1"],
         ["col", "col3", "Testing", "2"],
         ["col", "col4", "Done", "3"],
         
-        // Maintainers
+        // Maintainers / Owners
         ["p", "<maintainer-pubkey-1>"],
         ["p", "<maintainer-pubkey-2>"]
     ],
@@ -103,13 +97,14 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
 ```
 
 **Wichtig:**
-- `v` (Version): Bei JEDER Änderung automatisch inkrementiert
-- `pv` (Previous Version): Link zur vorherigen Version (Git-Style)
-- `m` (Message): Auto-generiert aus Change-Events ("Added 3 cards, ...")
+- `d` (d-tag): Board-ID, identifiziert das Board eindeutig
+- `col` tags: Definieren aktuelle Spalten-Struktur & Reihenfolge
+- Replaceable: Bei Änderungen wird das Event einfach neu publiziert (überschreibt alte Version)
+- **Kein v/pv/m Tags** — Versioning nur in 30303 Snapshots!
 
 ---
 
-### 2. Snapshot Event (Kind 30303) - für Rollback
+### 2. Snapshot Event (Kind 30303) - Manuelle Speicherung
 
 ```javascript
 {
@@ -119,17 +114,15 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
         ["a", "30301:<pubkey>:<board-id>"],  // Board Reference
         
         // === SNAPSHOT METADATA ===
-        ["v", "42"],                         // ✅ Version dieses Snapshots
-        ["r", "auto"],                       // ✅ Reason: auto|manual|milestone
-        ["m", "Auto: Added 3 cards, Moved 1 card"], // ✅ Commit-Message
-        ["c", "15"],                         // ✅ Change Count seit letztem Snapshot
+        ["v", "my-snapshot-label"],          // ✅ User-Beschreibung (z.B. "Before Refactor", "Sprint-3 End" oder automativiert generiert)
+        ["r", "manual"],                     // ✅ Grund: manual (User-Click)
         ["t", "1730000000"]                  // ✅ Timestamp (optional)
     ],
-    "content": "{...vollständiger Board-State als JSON...}"
+    "content": "{...komplettes Board-JSON mit Cards...}"
 }
 ```
 
-**Content-Struktur:**
+**Content-Struktur (Komplettes Board mit Cards):**
 ```json
 {
     "id": "project-alpha",
@@ -139,307 +132,134 @@ Dieses Dokument definiert eine **automatische, Nostr-native Versionierungsstrate
         {
             "id": "col1",
             "name": "Backlog",
-            "cards": [...]
+            "cards": [
+                {
+                    "id": "card-1",
+                    "heading": "Task A",
+                    "content": "Description",
+                    "author": "<author-pubkey>",
+                    "createdAt": "2025-10-26T12:00:00Z"
+                }
+            ]
         }
     ],
-    "publishState": "draft",
-    "author": "<pubkey>",
-    "tags": ["project-management", "sprint-3"]
+    "publishState": "private",
+    "author": "<board-creator-pubkey>"
 }
 ```
 
-**Snapshot-Trigger:**
-- ✅ Zeit-basiert: Alle 5 Minuten (konfigurierbar)
-- ✅ Change-basiert: Nach 10 Änderungen (konfigurierbar)
-- ✅ Significant Changes: Spalte hinzufügen/löschen, Board umbenennen
-- ✅ Manuell: User-Trigger via UI-Button
+**Snapshot-Auslöser:**
+- ✅ Manuell: User klickt "Version speichern"-Button in UI
+- ✅ User gibt optional ein Label ein (z.B. "Sprint Planning", "Before Cleanup")
+- ✅ System publiziert komplettes Board-JSON als 30303
+- ✅ Snapshots können jederzeit wiederhergestellt werden (Rollback-Button)
+
 
 ---
 
-### 3. Change Event (Kind 30304) - für Audit Trail
+## 📊 Multi-User Attribution
+
+Bei Mehrbenutzer-Szenarien (Nostr-Pubkeys):
+
+### 30302 Card mit author-Tag
 
 ```javascript
 {
-    "kind": 30304,
-    "created_at": 1730000100,
+    "kind": 30302,
+    "created_at": 1730000000,
     "tags": [
-        ["a", "30301:<pubkey>:<board-id>"],  // Board Reference
-        
-        // === CHANGE METADATA ===
-        ["v", "42"],                         // ✅ Version nach diesem Change
-        ["ct", "card_created"],              // ✅ Change Type
-        ["ca", "<author-pubkey>"],           // ✅ Change Author
-        
-        // === CHANGE-SPEZIFISCHE TAGS ===
-        ["ci", "card-123"],                  // Card ID (wenn relevant)
-        ["cli", "col-2"],                    // Column ID (wenn relevant)
-        ["cn", "Task XYZ"]                   // Card Name (optional, für Readability)
+        ["d", "card-xyz"],                   // Card-ID
+        ["a", "30301:<board-owner>:<board-id>"],  // Board-Referenz
+        ["author", "<creator-pubkey>"],      // ✅ Wer hat die Karte erstellt?
+        ["modified-by", "<modifier-pubkey>"] // Optional: Letzter Editor
     ],
-    "content": "Added card 'Task XYZ' to column 'In Progress'"
+    "content": "{...Card-Inhalte...}"
 }
 ```
 
-**Change Types:**
-- `card_created`, `card_updated`, `card_deleted`, `card_moved`
-- `column_added`, `column_updated`, `column_deleted`, `column_reordered`
-- `board_renamed`, `board_description_updated`
-- `comment_added`, `comment_deleted`
+**Multi-User Workflow:**
+- Alice erstellt Card → author = Alice's pubkey
+- Bob verschiebt Card → 30301/30302 wird aktualisiert (pubkey = Bob)
+- Snapshots erfassen Zustand mit author-Tags
+- Rollback zu Snapshot X stellt auch die author-Attributionen her
 
 ---
 
-## 🏷️ Tag-Referenz (Single-Char optimiert)
+## 🏷️ Tag-Referenz
 
-| Tag | Name | Verwendung | Werte | Event Kinds |
-|-----|------|-----------|-------|-------------|
-| `v` | Version | Aktuelle/Snapshot Version | Integer als String | 30301, 30303, 30304 |
-| `pv` | Previous Version | Link zur vorherigen Version | Integer als String | 30301 |
-| `b` | Branch | Git-ähnlicher Branch | String (default: "main") | 30301 |
-| `m` | Message | Auto-generierte Commit-Message | String | 30301, 30303 |
-| `r` | Reason | Snapshot-Grund | `auto`\|`manual`\|`milestone` | 30303 |
-| `c` | Count | Anzahl Changes seit letztem Snapshot | Integer als String | 30303 |
-| `t` | Timestamp | Zusätzlicher Timestamp | Unix timestamp | 30303 |
-| `ct` | Change Type | Art der Änderung | Siehe Change Types | 30304 |
-| `ca` | Change Author | Wer hat geändert | pubkey | 30304 |
-| `ci` | Card ID | Betroffene Karte | Card d-tag | 30304 |
-| `cli` | Column ID | Betroffene Spalte | Column ID | 30304 |
-| `cn` | Card Name | Kartenname (für Readability) | String | 30304 |
+| Tag | Verwendung | Werte | Event Kinds |
+|-----|-----------|-------|-------------|
+| `d` | Event-ID (Nostr d-tag) | String (z.B. "board-id" oder "card-id") | 30301, 30302 |
+| `a` | Referenz zu anderem Event | Format: "kind:pubkey:d-tag" | 30303 (→ 30301) |
+| `v` | Snapshot-Label | User-Beschreibung (z.B. "Before Refactor") | 30303 |
+| `r` | Snapshot-Grund | `manual` (User-Click) | 30303 |
+| `t` | Timestamp | Unix timestamp | 30303 |
+| `p` | Pubkey (Maintainer/Author) | Nostr pubkey | 30301, 30302, 30303 |
+| `col` | Spalten-Definition | `["col", id, name, order]` | 30301 |
+| `title` | Board-Name | String | 30301 |
+| `description` | Board-Beschreibung | String | 30301 |
+| `pub` | Publish-State | `private` \| `published` \| `archived` | 30301 |
+| `author` | Card-Ersteller | Nostr pubkey | 30302 |
 
-**Warum Single-Char Tags?**
-- ✅ Relay-Indexierung schneller (`Map<"v", Set<events>>` statt `Map<"version", ...>`)
-- ✅ Weniger Bytes pro Event (~50 Bytes Ersparnis pro Event)
-- ✅ Bessere Filter-Performance (#v vs #version)
-- ✅ NIP-konform (etabliertes Muster wie `a`, `e`, `p`, `d`)
+**Warum minimale Tags?**
+- ✅ Schneller, weniger Bytes pro Event
+- ✅ Nur Informationen, die wirklich nötig sind
+- ✅ Snapshots enthalten komplette Daten im JSON → keine Tag-Komplexität
 
 ---
 
-## 🔄 Automatische Versionierung
+## 🎯 Snapshot-Management (Manuell via UI)
 
-### Konzept: "Silent Versioning"
+### Konzept: "Benutzer-kontrollierte Snapshots"
 
-**User sieht NICHTS, System macht alles automatisch:**
+**User klickt "Version speichern"-Button:**
 
-```typescript
-// User-Aktion → System-Reaktion
-createCard()     → Version: 41 → 42 (silent)
-                 → Change Event (30304) erstellt
-                 → triggerUpdate() → localStorage
-                 → Snapshot-Check
+```
+User: Klickt "Version speichern"
+  ↓
+Dialog: "Snapshot-Beschreibung eingeben?"
+  ↓ User: "Sprint-3 Planung abgeschlossen"
+  ↓
+System: Erstellt 30303 Event
+  - Tag ["v", "Sprint-3 Planung abgeschlossen"]
+  - Content: komplettes Board-JSON
+  - Publiziert zu Nostr
+  ↓
+UI: "✅ Snapshot gespeichert"
 ```
 
-### Konfiguration (SettingsStore)
-
-```typescript
-export class SettingsStore {
-    public versioningSettings = $state({
-        // Auto-Versioning aktiviert?
-        enabled: true,
-        
-        // Snapshot-Intervall (Minuten)
-        snapshotInterval: 5,
-        
-        // Änderungs-Threshold für Snapshot
-        changesThreshold: 10,
-        
-        // Notifications zeigen?
-        showSnapshotNotifications: false,
-        
-        // Wie viele Snapshots lokal behalten?
-        maxLocalSnapshots: 50,
-        
-        // Significant Changes Detection
-        significantChanges: {
-            columnAdded: true,
-            columnDeleted: true,
-            boardRenamed: true,
-            bulkCardMoves: true  // > 10 Karten auf einmal
-        }
-    });
-}
-```
+**Das ist es.** Keine Auto-Snapshots, keine Versionskommandos — einfach ein Button.
 
 ---
 
 ## 💻 Implementierung
 
-### BoardStore Integration
+### BoardStore - Snapshot-Methoden
 
 ```typescript
 export class BoardStore {
-    // === AUTO-VERSIONING STATE ===
-    private changesSinceLastSnapshot = $state(0);
-    private lastSnapshotTime = $state(Date.now());
-    private pendingChanges = $state<Change[]>([]);
-    
-    // === ZENTRALE CHANGE-RECORDING METHODE ===
-    private recordChange(change: Change): void {
-        // 1. Version automatisch hochzählen
-        const currentVersion = parseInt(this.board.version || "0");
-        this.board.version = (currentVersion + 1).toString();
-        
-        // 2. Change zur Liste hinzufügen
-        this.pendingChanges.push({
-            ...change,
-            timestamp: Date.now(),
-            version: this.board.version,
-            author: authStore.getPubkey() || 'anonymous'
-        });
-        
-        this.changesSinceLastSnapshot++;
-        
-        // 3. Normale Persistierung
-        this.triggerUpdate();
-        
-        // 4. Change Event publizieren
-        this.publishChangeEvent(change);
-        
-        // 5. Snapshot-Check
-        this.checkSnapshotTriggers();
-    }
-    
-    // === WRAPPER FÜR ALLE BOARD-AKTIONEN ===
-    public createCard(columnId: string, heading: string): string {
-        const cardId = this._createCard(columnId, heading);
-        
-        this.recordChange({
-            type: 'card_created',
-            cardId,
-            columnId,
-            heading
-        });
-        
-        return cardId;
-    }
-    
-    public moveCard(cardId: string, fromColId: string, toColId: string): void {
-        this._moveCard(cardId, fromColId, toColId);
-        
-        this.recordChange({
-            type: 'card_moved',
-            cardId,
-            from: fromColId,
-            to: toColId
-        });
-    }
-    
-    // === SNAPSHOT-LOGIK ===
-    private checkSnapshotTriggers(): void {
-        const settings = settingsStore.versioningSettings;
-        if (!settings.enabled) return;
-        
-        const now = Date.now();
-        const timeSinceSnapshot = now - this.lastSnapshotTime;
-        
-        const shouldSnapshot = 
-            // Zeit-basiert
-            timeSinceSnapshot >= settings.snapshotInterval * 60 * 1000 ||
-            // Change-Count-basiert
-            this.changesSinceLastSnapshot >= settings.changesThreshold ||
-            // Significant Change erkannt
-            this.hasSignificantChanges(this.pendingChanges);
-        
-        if (shouldSnapshot) {
-            this.createAutoSnapshot();
-        }
-    }
-    
-    private async createAutoSnapshot(): Promise<void> {
-        const version = parseInt(this.board.version || "0");
-        const commitMessage = this.generateCommitMessage(this.pendingChanges);
-        
-        console.log(`📸 Creating auto-snapshot v${version}: ${commitMessage}`);
-        
+    // === MANUELLE SNAPSHOT-ERSTELLUNG ===
+    public async createManualSnapshot(label: string): Promise<void> {
         const snapshotEvent = new NDKEvent(this.ndk);
         snapshotEvent.kind = 30303;
         snapshotEvent.tags = [
             ["a", `30301:${this.board.author}:${this.board.id}`],
-            ["v", version.toString()],
-            ["r", "auto"],
-            ["m", commitMessage],
-            ["c", this.changesSinceLastSnapshot.toString()],
-            ["t", Date.now().toString()]
+            ["v", label],  // User-Beschreibung (z.B. "Sprint-3 Planning")
+            ["r", "manual"],
+            ["t", Math.floor(Date.now() / 1000).toString()]  // Unix timestamp
         ];
         
+        // Snapshot-Content: Komplettes Board mit Cards
         snapshotEvent.content = JSON.stringify(
-            this.board.getContextData(true)
+            this.board.getContextData(true)  // true = include all cards
         );
         
         await this.syncManager.publishOrQueue(snapshotEvent, 'snapshot');
         
-        // Reset
-        this.changesSinceLastSnapshot = 0;
-        this.lastSnapshotTime = Date.now();
-        this.pendingChanges = [];
+        console.log(`✅ Snapshot gespeichert: "${label}"`);
     }
     
-    // === AUTO-GENERIERTE COMMIT-MESSAGES ===
-    private generateCommitMessage(changes: Change[]): string {
-        if (changes.length === 0) return "Auto-save";
-        
-        const grouped = this.groupChangesByType(changes);
-        const messages: string[] = [];
-        
-        if (grouped.card_created > 0) {
-            messages.push(`Added ${grouped.card_created} card(s)`);
-        }
-        if (grouped.card_moved > 0) {
-            messages.push(`Moved ${grouped.card_moved} card(s)`);
-        }
-        if (grouped.column_added > 0) {
-            messages.push(`Added ${grouped.column_added} column(s)`);
-        }
-        if (grouped.column_updated > 0) {
-            messages.push(`Updated ${grouped.column_updated} column(s)`);
-        }
-        if (grouped.card_deleted > 0) {
-            messages.push(`Deleted ${grouped.card_deleted} card(s)`);
-        }
-        
-        return messages.join(', ') || 'Auto-save';
-    }
-    
-    private groupChangesByType(changes: Change[]): Record<string, number> {
-        return changes.reduce((acc, change) => {
-            acc[change.type] = (acc[change.type] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-    }
-    
-    // === SIGNIFICANT CHANGES DETECTION ===
-    private hasSignificantChanges(changes: Change[]): boolean {
-        const settings = settingsStore.versioningSettings.significantChanges;
-        
-        return changes.some(change => {
-            switch (change.type) {
-                case 'column_added':
-                    return settings.columnAdded;
-                case 'column_deleted':
-                    return settings.columnDeleted;
-                case 'board_renamed':
-                    return settings.boardRenamed;
-                case 'card_moved':
-                    // Bulk-Moves (> 10 Karten)
-                    return settings.bulkCardMoves && 
-                           this.countChangesOfType(changes, 'card_moved') >= 10;
-                default:
-                    return false;
-            }
-        });
-    }
-    
-    private countChangesOfType(changes: Change[], type: string): number {
-        return changes.filter(c => c.type === type).length;
-    }
-}
-```
-
----
-
-## 📖 Version History
-
-### Snapshots laden
-
-```typescript
-export class BoardStore {
+    // === SNAPSHOTS LADEN ===
     public async loadSnapshots(): Promise<Snapshot[]> {
         const snapshots = await this.ndk.fetchEvents({
             kinds: [30303],
@@ -448,15 +268,35 @@ export class BoardStore {
         
         return Array.from(snapshots)
             .map(event => ({
-                version: parseInt(this.getTagValue(event, "v") || "0"),
-                reason: this.getTagValue(event, "r") || "auto",
-                message: this.getTagValue(event, "m") || "No message",
-                changeCount: parseInt(this.getTagValue(event, "c") || "0"),
+                label: this.getTagValue(event, "v") || "Unnamed",
                 timestamp: event.created_at!,
                 author: event.pubkey,
                 content: event.content
             }))
-            .sort((a, b) => b.version - a.version); // Neueste zuerst
+            .sort((a, b) => b.timestamp - a.timestamp);
+    }
+    
+    // === ROLLBACK ZU SNAPSHOT ===
+    public async rollbackToSnapshot(snapshotLabel: string): Promise<void> {
+        const snapshots = await this.ndk.fetchEvents({
+            kinds: [30303],
+            "#a": [`30301:${this.board.author}:${this.board.id}`],
+            "#v": [snapshotLabel]
+        });
+        
+        const snapshot = Array.from(snapshots)[0];
+        if (!snapshot) {
+            throw new Error(`Snapshot "${snapshotLabel}" not found`);
+        }
+        
+        // Board aus Snapshot wiederherstellen
+        const boardData = JSON.parse(snapshot.content);
+        this.board = this.reconstructBoard(boardData);
+        
+        // Lokal persistieren
+        this.triggerUpdate();
+        
+        console.log(`✅ Restored from snapshot: "${snapshotLabel}"`);
     }
     
     private getTagValue(event: NDKEvent, tagName: string): string | undefined {
@@ -465,50 +305,34 @@ export class BoardStore {
 }
 ```
 
-### Rollback zu Version
+---
+
+## 📖 Snapshots verwalten
+
+### Snapshot-Timeline laden
 
 ```typescript
-export class BoardStore {
-    public async rollbackToVersion(targetVersion: number): Promise<void> {
-        // 1. Snapshot für diese Version suchen
-        const snapshots = await this.ndk.fetchEvents({
-            kinds: [30303],
-            "#a": [`30301:${this.board.author}:${this.board.id}`],
-            "#v": [targetVersion.toString()]
-        });
-        
-        const snapshot = Array.from(snapshots)[0];
-        
-        if (!snapshot) {
-            throw new Error(`Snapshot for version ${targetVersion} not found`);
-        }
-        
-        // 2. Board-State aus Snapshot wiederherstellen
-        const boardData = JSON.parse(snapshot.content);
-        this.board = this.reconstructBoard(boardData);
-        
-        // 3. Als neue Version publizieren (nicht targetVersion überschreiben!)
-        const currentVersion = parseInt(this.board.version || "0");
-        const newVersion = currentVersion + 1;
-        
-        await this.publishBoardWithVersion(
-            currentVersion,
-            newVersion,
-            `Rollback to version ${targetVersion}`
-        );
-        
-        this.triggerUpdate();
-        
-        console.log(`✅ Rolled back to version ${targetVersion} (as v${newVersion})`);
-    }
-}
+// boardStore.loadSnapshots() gibt sortierte Liste zurück:
+[
+  { label: "Sprint-3 Planung", timestamp: 1730000000, author: "alice..." },
+  { label: "Before Cleanup", timestamp: 1729999999, author: "bob..." },
+  { label: "Initial Setup", timestamp: 1729999000, author: "alice..." }
+]
+```
+
+### Rollback durchführen
+
+```typescript
+// User klickt "Restore" bei einem Snapshot
+await boardStore.rollbackToSnapshot("Sprint-3 Planung");
+// ✅ Board wird zu diesem Snapshot wiederhergestellt
 ```
 
 ---
 
 ## 🎨 UI-Integration
 
-### Version History Component
+### Version History Dialog
 
 ```svelte
 <!-- VersionHistory.svelte -->
@@ -520,8 +344,9 @@ export class BoardStore {
     import HistoryIcon from "@lucide/svelte/icons/history";
     import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
     
-    let snapshots = $state<Snapshot[]>([]);
+    let snapshots = $state([]);
     let loading = $state(false);
+    let open = $state(false);
     
     async function loadHistory() {
         loading = true;
@@ -529,23 +354,12 @@ export class BoardStore {
         loading = false;
     }
     
-    async function restore(version: number) {
-        if (confirm(`Restore board to version ${version}?`)) {
-            await boardStore.rollbackToVersion(version);
+    async function restore(label) {
+        if (confirm(`Restore to snapshot "${label}"?`)) {
+            await boardStore.rollbackToSnapshot(label);
             open = false;
         }
     }
-    
-    function formatRelativeTime(timestamp: number): string {
-        const seconds = Math.floor((Date.now() / 1000 - timestamp));
-        
-        if (seconds < 60) return 'just now';
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        return `${Math.floor(seconds / 86400)}d ago`;
-    }
-    
-    let open = $state(false);
     
     $effect(() => {
         if (open) loadHistory();
@@ -556,48 +370,35 @@ export class BoardStore {
     <Dialog.Trigger asChild let:builder>
         <Button builders={[builder]} variant="ghost" size="sm">
             <HistoryIcon class="mr-2 h-4 w-4" />
-            Version History
+            Snapshots
         </Button>
     </Dialog.Trigger>
     
     <Dialog.Content class="max-w-2xl max-h-[80vh] overflow-y-auto">
         <Dialog.Header>
-            <Dialog.Title>Version History</Dialog.Title>
-            <Dialog.Description>
-                {snapshots.length} snapshot(s) available
-            </Dialog.Description>
+            <Dialog.Title>Saved Snapshots</Dialog.Title>
         </Dialog.Header>
         
         {#if loading}
             <div class="text-center py-8">Loading...</div>
+        {:else if snapshots.length === 0}
+            <div class="text-center py-8 text-muted-foreground">
+                No snapshots yet. Click "Save Version" to create one.
+            </div>
         {:else}
             <div class="space-y-2">
-                {#each snapshots as snapshot}
-                    <div class="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline">v{snapshot.version}</Badge>
-                                    <Badge variant={snapshot.reason === 'manual' ? 'default' : 'secondary'}>
-                                        {snapshot.reason}
-                                    </Badge>
-                                </div>
-                                <p class="text-sm font-medium">{snapshot.message}</p>
-                                <p class="text-xs text-muted-foreground mt-1">
-                                    {formatRelativeTime(snapshot.timestamp)} · 
-                                    {snapshot.changeCount} change{snapshot.changeCount !== 1 ? 's' : ''}
-                                </p>
-                            </div>
-                            
-                            <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onclick={() => restore(snapshot.version)}
-                            >
-                                <RotateCcwIcon class="mr-2 h-4 w-4" />
-                                Restore
-                            </Button>
+                {#each snapshots as snap}
+                    <div class="border rounded-lg p-3 hover:bg-muted/50 transition-colors flex items-center justify-between">
+                        <div>
+                            <p class="font-medium">{snap.label}</p>
+                            <p class="text-xs text-muted-foreground">
+                                {new Date(snap.timestamp * 1000).toLocaleString()}
+                            </p>
                         </div>
+                        <Button variant="ghost" size="sm" onclick={() => restore(snap.label)}>
+                            <RotateCcwIcon class="mr-2 h-4 w-4" />
+                            Restore
+                        </Button>
                     </div>
                 {/each}
             </div>
@@ -606,56 +407,304 @@ export class BoardStore {
 </Dialog.Root>
 ```
 
-### Manual Snapshot Button
+### Save Version Button
 
 ```svelte
 <!-- In BoardTopbar.svelte -->
 <script lang="ts">
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { toast } from 'svelte-sonner';
-    import CameraIcon from "@lucide/svelte/icons/camera";
+    import { Button } from "$lib/components/ui/button";
+    import SaveIcon from "@lucide/svelte/icons/save";
     
-    async function createManualSnapshot() {
-        const message = prompt('Snapshot description (optional):');
-        
-        await boardStore.createManualSnapshot(
-            message || 'Manual snapshot'
-        );
-        
-        toast.success('Snapshot created ✅');
+    async function saveSnapshot() {
+        const label = prompt('Snapshot description (e.g., "Sprint-3 Planning"):');
+        if (label) {
+            await boardStore.createManualSnapshot(label);
+            // Toast notification (optional)
+        }
     }
 </script>
 
-<DropdownMenu.Root>
-    <DropdownMenu.Content>
-        <DropdownMenu.Item onclick={createManualSnapshot}>
-            <CameraIcon class="mr-2 h-4 w-4" />
-            Create Snapshot
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => showVersionHistory = true}>
-            <HistoryIcon class="mr-2 h-4 w-4" />
-            Version History
-        </DropdownMenu.Item>
-    </DropdownMenu.Content>
-</DropdownMenu.Root>
+<Button onclick={saveSnapshot} class="gap-2">
+    <SaveIcon class="h-4 w-4" />
+    Save Version
+</Button>
 ```
 
 ---
 
-## 🔍 Relay-Queries
+## ⚔ Conflict Detection & Merge (Phase 2)
 
-### 1. Aktuelles Board laden (neueste Version)
+### Problem: Konkurrierende Edits
+
+Wenn zwei Clients **gleichzeitig** eine Karte bearbeiten (Anna & Paul), kann das zu Datenverlust führen (Last-Write-Wins überschreibt Annas Arbeit).
+
+**Lösung:** Git-ähnliches Merge-System auf Client-Seite.
+
+### 1️⃣ Ausgangsversion merken
+
+Wenn Anna eine Karte öffnet, speichert ihr Client:
+
+```typescript
+interface EditingSession {
+  cardId: string;
+  baseVersion: NDKEvent;      // Die Version, mit der Anna anfing
+  baseTimestamp: number;      // created_at des base Events
+  editStartTime: number;      // Wann Anna anfing zu editieren
+}
+```
+
+### 2️⃣ Vor dem Speichern: Conflict Check
+
+Bevor Anna ihre Änderungen publiziert (30302 Event), führt ihr Client diese Routine aus:
+
+```typescript
+async function checkForConflict(cardId: string): Promise<ConflictStatus> {
+  // 1. Abfrage: Aktuellste Version vom Relay
+  const latestEvent = await ndk.fetchEvent({
+    kinds: [30302],
+    '#d': [cardId],
+    limit: 1
+  });
+  
+  // 2. Vergleich
+  if (!latestEvent || latestEvent.created_at === editingSession.baseTimestamp) {
+    return { status: 'NO_CONFLICT' };  // Fall A: Niemand hat ändern derweil was geändert
+  }
+  
+  if (latestEvent.created_at > editingSession.baseTimestamp) {
+    return {
+      status: 'CONFLICT_DETECTED',
+      conflictingEvent: latestEvent,  // Pauls Version
+      userVersion: annasDraft         // Annas Version
+    };
+  }
+}
+```
+
+### 3️⃣ Automatisches Merge (wenn möglich)
+
+```typescript
+interface MergeResult {
+  merged: boolean;
+  conflicts: ConflictingField[];
+  mergedContent: string;
+}
+
+async function attemptAutoMerge(
+  base: CardContent,
+  anna: CardContent,
+  paul: CardContent
+): Promise<MergeResult> {
+  const conflicts: ConflictingField[] = [];
+  const merged = { ...base };
+  
+  // Pro Feld: Prüfe ob beide ändern oder nur einer
+  
+  // Feld: heading
+  if (anna.heading !== base.heading && paul.heading !== base.heading) {
+    // KONFLIKT: Beide haben heading geändert
+    conflicts.push({
+      field: 'heading',
+      baseVersion: base.heading,
+      annaVersion: anna.heading,
+      paulVersion: paul.heading
+    });
+  } else if (anna.heading !== base.heading) {
+    // OK: Nur Anna geändert
+    merged.heading = anna.heading;
+  } else if (paul.heading !== base.heading) {
+    // OK: Nur Paul geändert
+    merged.heading = paul.heading;
+  }
+  
+  // Feld: content (längerer Text)
+  if (anna.content !== base.content && paul.content !== base.content) {
+    // KONFLIKT: Beide haben content geändert
+    // Versuche 3-way diff/merge (z.B. mit library wie 'diff-match-patch')
+    const mergedContent = threeWayMerge(base.content, anna.content, paul.content);
+    
+    if (mergedContent.conflicts.length === 0) {
+      // Auto-merge erfolgreich!
+      merged.content = mergedContent.result;
+    } else {
+      // Konflikte bleiben bestehen
+      conflicts.push({
+        field: 'content',
+        baseVersion: base.content,
+        annaVersion: anna.content,
+        paulVersion: paul.content,
+        mergeResult: mergedContent
+      });
+    }
+  } else if (anna.content !== base.content) {
+    merged.content = anna.content;
+  } else if (paul.content !== base.content) {
+    merged.content = paul.content;
+  }
+  
+  return {
+    merged: conflicts.length === 0,
+    conflicts,
+    mergedContent: merged
+  };
+}
+```
+
+### 4️⃣ Manuelle Konfliktlösung (wenn Auto-Merge fehlschlägt)
+
+Wenn automatisches Merge nicht funktioniert, zeigt der Client ein **Merge-Dialog**:
+
+```svelte
+<!-- MergeConflictDialog.svelte -->
+<script lang="ts">
+  import * as Dialog from "$lib/components/ui/dialog";
+  import { Button } from "$lib/components/ui/button";
+  import * as Tabs from "$lib/components/ui/tabs";
+  
+  export let conflicts: ConflictingField[];
+  export let onResolve: (resolution: MergeResolution) => void;
+  
+  let selectedResolutions: Record<string, 'anna' | 'paul' | 'merged'> = {};
+</script>
+
+<Dialog.Root open={true}>
+  <Dialog.Content class="max-w-2xl">
+    <Dialog.Header>
+      <Dialog.Title>⚠️ Merge-Konflikt erkannt</Dialog.Title>
+      <Dialog.Description>
+        Paul hat diese Karte in der Zwischenzeit auch bearbeitet.
+        Bitte wähle, welche Version du behalten möchtest.
+      </Dialog.Description>
+    </Dialog.Header>
+    
+    <Tabs.Root>
+      {#each conflicts as conflict (conflict.field)}
+        <Tabs.Trigger value={conflict.field}>
+          {conflict.field}
+        </Tabs.Trigger>
+      {/each}
+    </Tabs.Root>
+    
+    {#each conflicts as conflict (conflict.field)}
+      <Tabs.Content value={conflict.field}>
+        
+        <!-- Basis-Version -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <h4 class="font-semibold text-sm mb-2">Original (Basis)</h4>
+            <div class="bg-slate-100 p-3 rounded text-sm font-mono whitespace-pre-wrap">
+              {conflict.baseVersion}
+            </div>
+          </div>
+          
+          <!-- Anna's Version -->
+          <div>
+            <h4 class="font-semibold text-sm mb-2">🔵 Deine Änderung</h4>
+            <div class="bg-blue-50 p-3 rounded text-sm font-mono whitespace-pre-wrap border-2 border-blue-200">
+              {conflict.annaVersion}
+            </div>
+            <Button
+              variant={selectedResolutions[conflict.field] === 'anna' ? 'default' : 'outline'}
+              class="mt-2 w-full"
+              onclick={() => selectedResolutions[conflict.field] = 'anna'}
+            >
+              ✓ Deine Version verwenden
+            </Button>
+          </div>
+        </div>
+        
+        <!-- Paul's Version -->
+        <div class="mb-4">
+          <h4 class="font-semibold text-sm mb-2">🟢 Pauls Änderung</h4>
+          <div class="bg-green-50 p-3 rounded text-sm font-mono whitespace-pre-wrap border-2 border-green-200">
+            {conflict.paulVersion}
+          </div>
+          <Button
+            variant={selectedResolutions[conflict.field] === 'paul' ? 'default' : 'outline'}
+            class="mt-2 w-full"
+            onclick={() => selectedResolutions[conflict.field] = 'paul'}
+          >
+            ✓ Pauls Version verwenden
+          </Button>
+        </div>
+        
+        <!-- Automatisches Merge-Resultat (wenn verfügbar) -->
+        {#if conflict.mergeResult?.result}
+          <div class="mb-4">
+            <h4 class="font-semibold text-sm mb-2">🟣 Auto-Merged Vorschlag</h4>
+            <div class="bg-purple-50 p-3 rounded text-sm font-mono whitespace-pre-wrap border-2 border-purple-200">
+              {conflict.mergeResult.result}
+            </div>
+            <Button
+              variant={selectedResolutions[conflict.field] === 'merged' ? 'default' : 'outline'}
+              class="mt-2 w-full"
+              onclick={() => selectedResolutions[conflict.field] = 'merged'}
+            >
+              ✓ Merged Version verwenden
+            </Button>
+          </div>
+        {/if}
+        
+      </Tabs.Content>
+    {/each}
+    
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => {}}>Abbrechen (nicht speichern)</Button>
+      <Button onclick={() => onResolve(selectedResolutions)}>
+        Speichern mit diesen Lösungen
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### 5️⃣ Soft Lock: Ephemeral "Now Editing" Event (Optional)
+
+Um zu vermeiden, dass Paul überhaupt die Karte öffnet, kann Annas Client ein **Ephemeral Event** senden:
+
+```typescript
+// Kind 20000-29999: Ephemeral, nicht persistiert
+const editingEvent = new NDKEvent(ndk);
+editingEvent.kind = 20001;  // "Now Editing" Signal
+editingEvent.tags = [
+  ["a", `30302:${cardAuthor}:${cardId}`],  // Referenz zur Card
+  ["d", `editing-${cardId}`],
+  ["expires", String(Math.floor(Date.now() / 1000) + 300)]  // 5 Min TTL
+];
+editingEvent.content = JSON.stringify({
+  user: authStore.getUserName(),
+  startedAt: new Date().toISOString(),
+  clientId: nanoid()  // Eindeutige Client-ID
+});
+
+await editingEvent.publish();
+```
+
+**Effect:** Wenn Paul dieselbe Karte öffnet, sieht sein Client dieses Ephemeral Event und zeigt:
+
+```
+⚠️ Warnung
+Anna bearbeitet diese Karte gerade (gestartet vor 2 Min).
+Du kannst trotzdem weiterarbeiten, aber möglicherweise entsteht ein Merge-Konflikt!
+```
+
+---
+
+## �🔍 Relay-Queries
+
+### 1. Aktuelles Board laden
 
 ```javascript
 {
     "kinds": [30301],
     "authors": ["<pubkey>"],
     "#d": ["project-alpha"],
-    "limit": 1  // Nur neueste
+    "limit": 1
 }
 ```
 
-### 2. Alle Snapshots eines Boards
+### 2. Alle Snapshots eines Boards laden
 
 ```javascript
 {
@@ -664,23 +713,12 @@ export class BoardStore {
 }
 ```
 
-### 3. Changes seit Version X
+### 3. Cards eines Boards laden
 
 ```javascript
 {
-    "kinds": [30304],
-    "#a": ["30301:<pubkey>:project-alpha"],
-    "#v": ["42", "43", "44"]  // Versionen 42-44
-}
-```
-
-### 4. Significant Changes filtern
-
-```javascript
-{
-    "kinds": [30304],
-    "#a": ["30301:<pubkey>:project-alpha"],
-    "#ct": ["column_added", "column_deleted", "board_renamed"]
+    "kinds": [30302],
+    "#a": ["30301:<pubkey>:project-alpha"]
 }
 ```
 
@@ -688,134 +726,89 @@ export class BoardStore {
 
 ## 📊 Praktisches Beispiel: User-Flow
 
-### Szenario: Normale Arbeitssitzung
+### Szenario: Sprint-Planung mit Snapshots
 
 ```
 Zeit    | User-Aktion                | System-Reaktion
 --------|----------------------------|----------------------------------
-09:00   | Karte "Task A" erstellt    | v1 → v2 (silent)
-09:05   | Karte "Task B" erstellt    | v2 → v3 (silent)
-09:10   | Karte "Task A" verschoben  | v3 → v4 (silent)
-09:15   | ... 6 weitere Änderungen   | v4 → v10 (silent)
-09:20   | 5 Min vergangen            | 📸 Auto-Snapshot v10
-        |                            | Message: "Added 2 cards, Moved 1 card, ..."
-09:25   | Spalte "Testing" hinzufügen| v10 → v11 (silent)
-        |                            | ⚠️ Significant Change!
-        |                            | 📸 Auto-Snapshot v11
-        |                            | Message: "Added column 'Testing'"
+09:00   | Erstelle Board "Sprint-3"  | 30301 Event publiziert
+09:15   | Füge 20 Karten hinzu       | 20× 30302 Events publiziert
+09:30   | Klickt "Save Version"      | Dialog: "Snapshot-Name?"
+        | Gibt ein: "Initial Tasks"  | 30303 (komplettes Board) publiziert
+09:45   | Bearbeite Spalten-Struktur | 30301 aktualisiert
+10:00   | Klickt "Save Version"      | Dialog: "Snapshot-Name?"
+        | Gibt ein: "After Cleanup"  | 30303 (neuer Snapshot) publiziert
+10:15   | Bemerkt: "Das war falsch!" | Klickt "Snapshots" Dialog
+        | Klickt "Restore" → "Initial Tasks" | Board zurückgesetzt zu 09:30
 ```
 
-**User sieht:**
-- Optional: Small notification "Board snapshot created" (wenn aktiviert)
-- Ansonsten: Nichts!
+**User Experience:**
+- ✅ Snapshots nur wenn User will
+- ✅ Keine Auto-Prozesse, keine Overhead
+- ✅ Einfach: Button drücken, beschreibung eingeben, done
 
 ---
 
-## 🔒 Konfliktauflösung
 
-### Bei gleichzeitigen Edits von mehreren Maintainern
-
-```typescript
-export class BoardStore {
-    public async detectConflicts(): Promise<BoardConflict[]> {
-        const conflicts: BoardConflict[] = [];
-        
-        // Alle Board-Events seit letztem Sync
-        const events = await this.ndk.fetchEvents({
-            kinds: [30301],
-            "#d": [this.board.id],
-            since: this.lastSyncTimestamp
-        });
-        
-        // Events nach Version sortieren
-        const sortedEvents = Array.from(events).sort((a, b) => {
-            const vA = parseInt(this.getTagValue(a, "v") || "0");
-            const vB = parseInt(this.getTagValue(b, "v") || "0");
-            return vB - vA;
-        });
-        
-        // Wenn mehrere Events mit gleicher Version existieren
-        const versionGroups = this.groupByVersion(sortedEvents);
-        
-        for (const [version, eventsInGroup] of versionGroups) {
-            if (eventsInGroup.length > 1) {
-                // Konflikt! Mehrere Maintainers haben zur gleichen Version publiziert
-                const winner = this.resolveConflict(eventsInGroup); // Last-Write-Wins
-                
-                conflicts.push({
-                    version: parseInt(version),
-                    events: eventsInGroup,
-                    winner: winner,
-                    resolution: 'last-write-wins'
-                });
-            }
-        }
-        
-        return conflicts;
-    }
-    
-    private resolveConflict(events: NDKEvent[]): NDKEvent {
-        // Last-Write-Wins basierend auf created_at
-        return events.sort((a, b) => b.created_at! - a.created_at!)[0];
-    }
-}
-```
-
----
 
 ## 🎯 Zusammenfassung
 
-### Was macht das System?
+### Das System ist simpel
 
-| Feature | Beschreibung | User Experience |
+| Feature | Beschreibung | Implementierung |
 |---------|--------------|-----------------|
-| **Auto-Increment** | Version +1 bei jeder Änderung | ✅ Unsichtbar |
-| **Smart Snapshots** | Alle 5 Min ODER 10 Changes ODER Significant Change | ✅ Optional notification |
-| **Auto-Commits** | "Added 3 cards, Moved 1 card, ..." | ✅ Informativ & lesbar |
-| **Rollback** | Restore zu beliebiger Version | ✅ Ein Klick |
-| **History** | Timeline aller Snapshots | ✅ Klar & verständlich |
-| **Audit Trail** | Wer hat wann was geändert | ✅ Compliance-ready |
+| **30301** | Board-Meta (Spalten, Struktur) | Replaceable Event, kein Versioning |
+| **30302** | Card-Inhalte | Replaceable Event, mit author-Tag |
+| **30303** | Snapshots (manuell) | Non-replaceable, komplettes JSON, via Button |
+| **Rollback** | Snapshot wiederherstellen | Ein-Klick, Snapshot-Dialog |
+| **Multi-User** | Attribution via Pubkeys | author-Tags in 30302 + Snapshots |
 
 ### Vorteile
 
-- ✅ **Keine manuelle Arbeit**: User muss nichts tun
-- ✅ **Vollständige Historie**: Jede Änderung wird getrackt
-- ✅ **Rollback-fähig**: Kompletter Board-State wiederherstellbar
-- ✅ **Relay-effizient**: Single-char tags, nur Snapshots bei Bedarf
-- ✅ **Offline-first**: Funktioniert auch ohne Verbindung
-- ✅ **NIP-kompatibel**: Nutzt etablierte Patterns
+- ✅ **Extrem simpel:** Keine Auto-Logik, nur UI-Button
+- ✅ **Benutzer-kontrolliert:** Snapshots nur wenn gewollen
+- ✅ **Performant:** Keine Event-Flut (30304 raus!)
+- ✅ **Dezentral:** Vollständige Snapshots = Nostr-native
+- ✅ **Multi-User:** author-Tags für Attribution
+- ✅ **Offline-first:** localStorage + Nostr sync
 
 ### Performance
 
 **Pro Board pro Tag (normale Nutzung):**
-- Board Events (30301): ~50 (Version-Updates)
-- Snapshots (30303): ~96 (alle 5 Min bei 8h Arbeit = 12/h)
-- Change Events (30304): ~50 (detailliertes Tracking)
+- Board Events (30301): ~20 (Spalten-Changes)
+- Card Events (30302): ~100 (Card-Edits)
+- Snapshots (30303): ~5-10 (User-manuell)
 
-**Total:** ~200 Events/Tag/Board
-
-**Optimierungen:**
-- Snapshots nur bei tatsächlichen Changes (nicht bei Inaktivität)
-- Change Events optional (können deaktiviert werden für weniger Overhead)
-- Alte Snapshots können von Relays gelöscht werden (nur letzte 50 behalten)
+**Total:** ~125-130 Events/Tag/Board ✅ (vs. ~200+ mit Auto-Versioning)
 
 ---
 
 ## 📋 Implementation Roadmap
 
-### Phase 1: Basic Versioning ✅
-- [x] `v` tag in Board Events (30301)
-- [x] Auto-increment bei Änderungen
-- [x] Version in localStorage persistieren
+### Phase 1: Foundation (Aktuell) ✅
+- [x] Board State Management (BoardModel + Store)
+- [x] localStorage Persistence
+- [x] Nostr Integration (NDK)
+- [ ] **Phase 1.5: Manual Snapshots**
+  - [ ] 30303 Event Publishing
+  - [ ] "Save Version" Button + Dialog
+  - [ ] Snapshot Restore Flow
+  - [ ] VersionHistory Component
 
-### Phase 2: Snapshots (Meilenstein 2.1)
-- [ ] Snapshot Event Kind (30303) definieren
-- [ ] Auto-Snapshot bei Zeit/Change-Triggern
-- [ ] Manual Snapshot Button in UI
-- [ ] Snapshot-Settings in SettingsStore
+### Phase 2: Multi-User Collaboration & Conflict Resolution
+- [ ] Conflict Detection: Base-Version Check vor Publish
+- [ ] Auto-Merge: 3-way Diff für kompatible Changes
+- [ ] Manual Merge UI: MergeConflictDialog.svelte (Tabs für Konflikte)
+- [ ] Soft Lock: Ephemeral Events (Kind 20001) für "Now Editing"
+- [ ] author-Tag Flow (30302 Cards)
+- [ ] Snapshot author-Tag
+- [ ] User Attribution UI
 
-### Phase 3: History & Rollback (Meilenstein 2.2)
-- [ ] Version History Component
+### Phase 3+: Advanced Features (Future)
+- [ ] Merge/Rebase Snapshots
+- [ ] Branch Workflows
+- [ ] Advanced History Visualization
+- [ ] Compliance/Audit Reporting
 - [ ] Snapshots laden & anzeigen
 - [ ] Rollback-Funktion implementieren
 - [ ] Conflict Detection
@@ -833,9 +826,14 @@ export class BoardStore {
 - **Kanban-NIP**: `docs/GUIDES/Kanban-NIP.md`
 - **BoardStore**: `docs/ARCHITECTURE/STORES.md`
 - **NDK Integration**: `docs/ARCHITECTURE/NDK.md`
+- **Conflict Resolution**: NIP-22 (Channel Messages), Kind 20001 (Ephemeral Events)
 - **ROADMAP**: `docs/COLLABORATION/ROADMAP.md`
 
 ---
 
-**Status:** Draft → Review erforderlich  
-**Next Steps:** Community-Feedback einholen, NIP formalisieren, Implementation starten
+**Status:** Complete (Snapshots + Merge-System definiert)  
+**Architecture:** Two-Layer Snapshots + Git-like Merge  
+**Next Steps:**
+1. **Phase 1.5**: Implementiere "Save Version" Button + Snapshot Publishing
+2. **Phase 2**: Conflict Detection + Auto-Merge + Manual Resolution UI
+3. **Phase 2.5**: Ephemeral "Now Editing" Events für Soft Locks

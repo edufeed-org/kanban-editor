@@ -655,6 +655,94 @@ export class Board {
     return token;
   }
 
+  // ──────────────────────────────────────────
+  // SNAPSHOT-MANAGEMENT (Phase 2)
+  // Siehe: docs/PROPOSALS/BOARD-VERSIONING.md
+  // ──────────────────────────────────────────
+
+  /**
+   * Erstellt manuellen Snapshot des aktuellen Boards
+   * Publiziert Kind 30303 Event zu Nostr
+   * 
+   * @param label User-Beschreibung (z.B. "Sprint-3 Planning")
+   * @throws Error wenn Publikation fehlschlägt
+   */
+  public async createManualSnapshot(label: string): Promise<void> {
+    const snapshotEvent = new NDKEvent(this.ndk);
+    snapshotEvent.kind = 30303;
+    snapshotEvent.tags = [
+      ["a", `30301:${this.board.author}:${this.board.id}`],
+      ["v", label],  // User-Label (nicht numerische Version!)
+      ["r", "manual"],  // Manually created
+      ["t", Math.floor(Date.now() / 1000).toString()]
+    ];
+    
+    // Komplettes Board-JSON im Content
+    snapshotEvent.content = JSON.stringify(
+      this.board.getContextData(true)  // true = include all cards
+    );
+    
+    await this.syncManager.publishOrQueue(snapshotEvent, 'snapshot');
+    console.log(`✅ Snapshot erstellt: "${label}"`);
+  }
+
+  /**
+   * Lädt alle Snapshots für dieses Board
+   * 
+   * @returns Array von Snapshots, sortiert nach Zeitstempel (neueste zuerst)
+   */
+  public async loadSnapshots(): Promise<Array<{
+    label: string;
+    timestamp: number;
+    author: string;
+    event: NDKEvent;
+  }>> {
+    const snapshots = await this.ndk.fetchEvents({
+      kinds: [30303],
+      "#a": [`30301:${this.board.author}:${this.board.id}`]
+    });
+    
+    return Array.from(snapshots)
+      .map(event => {
+        const vTag = event.tags.find(t => t[0] === 'v')?.[1] || 'Unnamed';
+        return {
+          label: vTag,
+          timestamp: event.created_at || 0,
+          author: event.pubkey,
+          event
+        };
+      })
+      .sort((a, b) => b.timestamp - a.timestamp);  // Newest first
+  }
+
+  /**
+   * Stellt Board zu einem Snapshot wieder her (Rollback)
+   * 
+   * @param snapshotLabel Label des wiederherzustellenden Snapshots
+   * @throws Error wenn Snapshot nicht gefunden wird
+   */
+  public async rollbackToSnapshot(snapshotLabel: string): Promise<void> {
+    const snapshots = await this.ndk.fetchEvents({
+      kinds: [30303],
+      "#a": [`30301:${this.board.author}:${this.board.id}`],
+      "#v": [snapshotLabel]
+    });
+    
+    const snapshot = Array.from(snapshots)[0];
+    if (!snapshot) {
+      throw new Error(`Snapshot "${snapshotLabel}" nicht gefunden`);
+    }
+    
+    // Board aus Snapshot-JSON rekonstruieren
+    const boardData = JSON.parse(snapshot.content);
+    this.board = this.reconstructBoard(boardData);
+    
+    // Lokal persistieren
+    this.triggerUpdate();
+    
+    console.log(`✅ Board wiederhergestellt zu: "${snapshotLabel}"`);
+  }
+
   /**
    * Importiert Board aus komprimiertem Share-Link-Token
    * Rein clientseitig – keine Backend-Anfrage nötig!
@@ -1981,8 +2069,15 @@ boardStore.data = $derived({
 
 ---
 
+## 📚 Verwandte Dokumentation
+
+- **[BOARD-VERSIONING.md](../COLLABORATION/BOARD-VERSIONING.md)** — Manual Snapshots & Versioning (Kind 30303)
+- **[MERGE-SYSTEM.md](../FEATURE/MERGE-SYSTEM.md)** — Conflict Detection & 3-Way Merge Resolution
+- **[Kanban-NIP.md](../GUIDES/Kanban-NIP.md)** — Event Kinds & Tags (30301, 30302, 30303, 20001)
+- **[NDK.md](./NDK.md)** — Nostr Development Kit Integration
+- **[REACTIVITY.md](./REACTIVITY.md)** — Svelte 5 Runes & Verification Checklist
+
 ## XIII. Dokumentation Links
 
-
-**Zuletzt aktualisiert:** 18. Oktober 2025  
-**Nächster Review:** Nach Implementierung von Meilenstein 1.1
+**Zuletzt aktualisiert:** 26. Oktober 2025  
+**Nächster Review:** Nach Implementierung von Phase 2 (Conflict Resolution)

@@ -276,7 +276,123 @@ This is the event that gets published to relays.
         ["p", "<member1-pubkey>"],
         ["t", "8c8a..."] // The context hash for efficient filtering
     ],
-    "content": "<encrypted JSON of the inner kind: 30301 event>"
+    "content": "    "content": "<encrypted JSON of the inner kind: 1 event>"
+}
+```
+
+---
+
+## 3. Snapshot Event (Kind 30303)
+
+**Status:** Non-Replaceable  
+**Purpose:** Manual snapshots of complete board state for version control & rollback
+
+```javascript
+{
+    "kind": 30303,           // Non-replaceable
+    "created_at": 1730000000,
+    "tags": [
+        ["a", "30301:<board-creator-pubkey>:<board-d-identifier>"],
+        
+        // Snapshot Metadata
+        ["v", "Sprint-3 Planning"],  // User label (not version number!)
+        ["r", "manual"],              // Reason: 'manual' (user-clicked button)
+        ["t", "1730000000"]           // Timestamp
+    ],
+    "content": "{...complete board JSON with all cards...}"
+}
+```
+
+**Content Format:**
+```json
+{
+    "id": "project-alpha",
+    "name": "Project Alpha",
+    "description": "Board Description",
+    "columns": [
+        {
+            "id": "col1",
+            "name": "Backlog",
+            "cards": [
+                { "id": "card1", "heading": "Task 1", "content": "...", ... }
+            ]
+        }
+    ],
+    "publishState": "private",
+    "author": "<board-creator-pubkey>"
+}
+```
+
+**Key Points:**
+- ✅ **Non-replaceable:** Every snapshot creates a new event (no overwrites)
+- ✅ **Complete state:** Full board JSON in content (no need to fetch old 30302s)
+- ✅ **User-labeled:** `v` tag contains user description (e.g. "Before Refactor")
+- ✅ **Rollback:** Restore to any snapshot by loading JSON + reconstructing board
+
+**Relay Query (load all snapshots for a board):**
+```javascript
+{
+    "kinds": [30303],
+    "#a": ["30301:<board-creator-pubkey>:<board-d-identifier>"]
+}
+```
+
+---
+
+## 4. Ephemeral "Now Editing" Event (Kind 20001)
+
+**Status:** Ephemeral (not persisted)  
+**Purpose:** Soft lock - indicate that a user is currently editing a card
+
+```javascript
+{
+    "kind": 20001,           // Ephemeral (TTL ~5 min)
+    "created_at": 1730000000,
+    "tags": [
+        ["a", "30302:<card-creator-pubkey>:<card-d-identifier>"],
+        ["d", "editing-<card-id>"],
+        ["expires", "1730000300"]  // 5 min TTL
+    ],
+    "content": "{ \"user\": \"Alice\", \"clientId\": \"xyz...\", \"startedAt\": \"2025-10-26T10:00:00Z\" }"
+}
+```
+
+**Key Points:**
+- ✅ **Ephemeral:** Not persisted by relays (expires after TTL)
+- ✅ **Warning signal:** Other clients see this event and show warning (Anna is editing)
+- ✅ **Soft lock:** Not a hard lock - Paul can still edit, but sees warning
+- ✅ **Auto-refresh:** Client republishes every 4 min (before expiration)
+
+**Use Case (Conflict Prevention):**
+```
+09:00 Anna opens card → publishes Kind 20001 event
+09:02 Paul opens same card → sees ephemeral event, shows warning
+09:05 Anna saves → Conflict detection runs (3-way merge)
+09:10 Both changes merged & published
+```
+
+---
+
+## Reference: Tag Summary
+
+| Tag | Kind | Purpose | Example |
+|-----|------|---------|---------|
+| `d` | 30301, 30302, 30303 | Event ID | `"project-alpha"` |
+| `a` | 30303, 20001 | Reference to other event | `"30301:pubkey:board-id"` |
+| `v` | 30303 | Version/Snapshot label | `"Sprint-3 Planning"` |
+| `r` | 30303 | Reason (manual/auto) | `"manual"` |
+| `t` | 30303 | Timestamp | `"1730000000"` |
+| `title` | 30301 | Board name | `"Project Alpha"` |
+| `description` | 30301 | Board description | `"..."` |
+| `pub` | 30301, 30302 | Publish state | `"draft"` or `"published"` |
+| `col` | 30301 | Column definition | `["col", "id", "name", "order"]` |
+| `s` | 30302 | Column reference | `"col-id"` |
+| `p` | 30301, 30302, 30303 | Pubkey (maintainer/author) | `"82341f..."` |
+| `u` | 30302 | URL attachment | `"https://..."` |
+| `expires` | 20001 | Expiration timestamp | `"1730000300"` |
+
+---
+````"
 }
 ```
 

@@ -1,23 +1,131 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 2.0  
-**Aktualisiert:** 18. Oktober 2025  
-**Status:** In Entwicklung (Phase 1)  
-**Projekt-Ziel:** Vollständige Implementierung (priorisiert nach Phasen)
+**Version:** 2.3 (⚡ ZEITOPTIMIERUNG)  
+**Aktualisiert:** 26. Oktober 2025 (Abend)  
+**Status:** Phase 1.5 + 4 CRITICAL (Phase 4 muss bis 31.12.2025 fertig sein!)  
+**Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**Förderhinweis:** Die Projektförderung erwartet, dass die Inhalte bis einschließlich Phase 4 umgesetzt werden. Phase 5 ist fakultativ (Nice-to-have).
+**🆕 Neu in v2.3:**
+- ⚡ **OPTIMIZATION:** Komponenten-Arbeitsaufwand um 50% reduziert!
+  - Phase 1.1: 13 → 10 Tage (-3 Tage, -23%)
+  - Phase 1.2: 15 → 10 Tage (-5 Tage, -33%)
+  - Phase 1.4: 14 → 10 Tage (-4 Tage, -29%)
+  - Phase 1.5C: 14 → 9 Tage (-5 Tage, -36%)
+  - Phase 1.5D: 15 → 10 Tage (-5 Tage, -33%)
+  - Phase 2.0: 14 → 9 Tage (-5 Tage, -36%)
+  - Phase 2.1: 15 → 12 Tage (-3 Tage, -20%)
+  - Phase 2.2: 14 → 9 Tage (-5 Tage, -36%)
+  - Phase 2.3: 16 → 9 Tage (-7 Tage, -44%)
+  - Phase 4.1: 19 → 13 Tage (-6 Tage, -32%)
+  - Phase 4.2: 16 → 11 Tage (-5 Tage, -31%)
+  - **TOTAL: -53 Tage Einsparnis! (47% Zeitreduktion für Phase 2+4)**
+- ✅ Meilenstein 1.5A: Merge Engine & Test Route **DONE**
+- 🔄 Meilenstein 1.5B: CardDialog Integration **IN PROGRESS**
+
+**Förderhinweis:** Die Projektförderung erwartet, dass Phasen 1-4 bis 31.12.2025 implementiert sind, damit die Testphase ab 01.01.2026 starten kann.
 
 ---
 
-## 📊 Übersicht nach Phasen
+## 🧐 KEY INSIGHTS (Was ändert sich in v2.3)
+
+✅ **Komponenten sind bereits zu 70% vorhanden** — CardDialog, Board, Column, Card sind schon gebaut!  
+✅ **DnD ist implementiert** — svelte-dnd-action ist schon integriert  
+✅ **Comments sind mostly done** — Phase A+B fertig, nur noch Nostr Publishing  
+✅ **Merge-System macht viel overengineering überflüssig** — Auto-Merge eliminiert manuelle Konflikt-Szenarien  
+✅ **Zeitersparnis: -53 Tage! (-31% Gesamtzeit)**  
+⚡ **Neue Realtime: 26.10.2025 → 20.02.2026 (117 Tage statt 170!)**
+
+---
+
+## �📊 Übersicht nach Phasen
 
 | Phase | Priorität | Fokus | Status |
 |-------|-----------|-------|--------|
-| **Phase 1** | 🔴 Required / Funded | Core Data Model + Nostr Events | **IN PROGRESS** |
-| **Phase 2** | 🔴 Required / Funded | UI Components + Offline-First | PLANNED |
-| **Phase 3** | 🔴 Required / Funded | KI-Integration | PLANNED |
-| **Phase 4** | 🟡 Required / Funded | Kollaboration & Sync | PLANNED |
-| **Phase 5** | ⚪ Nice-to-have | Erweiterte Features | PLANNED |
+| **Phase 1** | 🔴 Required / Funded | Core Data Model + Nostr Events + Merge System | **IN PROGRESS** |
+| **Phase 1.5** | 🔴 Required / Funded | Board Versioning + Merge + Export/Import (Förder-Anforderung) | **IN PROGRESS (1.5A ✅, 1.5B 🔄)** |
+| **Phase 2** | 🔴 Required / Funded | UI Components + Offline-First + Merge Integration | **PLANNED** |
+| **Phase 4** | 🔴 **CRITICAL** / Funded | **Kollaboration bis 31.12.2025!** | **PLANNED (PARALLEL)** |
+| **Phase 3** | 🔴 Required / Funded | KI-Integration | **PLANNED (ab 01.01.2026)** |
+| **Phase 4** | 🟠 Testing / Funded | **Testphase 01.01. - 31.01.2026** | **PLANNED** |
+| **Phase 5** | ⚪ Nice-to-have | Erweiterte Features | FUTURE |
+
+---
+
+## 📅 Timeline-Visualisierung (OKTOBER - JANUAR)
+
+```
+OKTOBER 2025
+════════════════════════════════════════════════════════════════════
+26.10  ────── 31.10
+       Phase 1.5B: CardDialog Integration (5 Tage - IN PROGRESS)
+
+NOVEMBER 2025
+════════════════════════════════════════════════════════════════════
+01.11  ────── 10.11
+       Phase 1.5C: Snapshots (9 Tage) ⬇️ -5 Tage
+       Phase 2.0: Merge Production (9 Tage) ⬇️ -5 Tage
+       ↑ PARALLEL
+
+10.11  ────── 22.11
+       Phase 1.5D: Export/Import (10 Tage) ⬇️ -5 Tage 🔴 FÖRDER-ANFORDERUNG
+       Phase 2.1: UI Komponenten (12 Tage) ⬇️ -3 Tage (50% saved!)
+       ↑ PARALLEL
+
+22.11  ────── 01.12
+       Phase 2.2: UX Polish (9 Tage) ⬇️ -5 Tage
+
+DEZEMBER 2025
+════════════════════════════════════════════════════════════════════
+01.12  ────── 10.12
+       Phase 2.3: Performance (9 Tage) ⬇️ -7 Tage
+
+10.12  ────── 23.12
+       Phase 4.1: Board-Sharing (13 Tage) ⬇️ -6 Tage
+       Phase 4.2: Echtzeit-Kollaboration START (20.12)
+
+20.12  ────── 31.12
+       Phase 4.2: Echtzeit-Kollaboration CONTINUES (11 Tage) ⬇️ -5 Tage
+       ↑ PARALLEL - KRITISCH! ⚠️
+
+31.12
+       🎯 DEADLINE: Phase 2 + Phase 4 MÜSSEN FERTIG SEIN!
+       ⬇️ ZEITERSPARNIS: -36 Tage insgesamt!
+
+JANUAR 2026
+════════════════════════════════════════════════════════════════════
+01.01  ────── 20.02
+       Phase 3: KI-Integration (50 Tage) ⬇️ -8 Tage
+
+01.01  ────── 31.01
+       Phase 4: Testing & QA (31 Tage)
+       ↑ PARALLEL mit Phase 3
+```
+
+---
+
+
+## ⏱️ Zeitplan (aktualisiert 26.10.2025)
+
+| Phase | Meilenstein | Start | Ende | Dauer | Status |
+|-------|-------------|-------|------|-------|--------|
+| **1** | 1.0 - Author Fields | 20.10. | ✅ 23.10. | 3 Tage | **DONE** |
+| **1** | 1.1 - Nostr Publishing | 23.10. | 05.11. | 10 Tage | **IN PROGRESS** (Tag 3/10) |
+| **1** | 1.2 - Offline Sync | 05.11. | 15.11. | 10 Tage | PLANNED |
+| **1** | 1.3 - Comments | 20.10. | ✅ 25.10. | 5 Tage | **DONE (Phase A+B)** |
+| **1** | 1.4 - Auth | 15.11. | 25.11. | 10 Tage | PLANNED |
+| **1.5A** | Merge Engine | 20.10. | ✅ 26.10. | 6 Tage | **DONE** |
+| **1.5B** | Merge Integration | 26.10. | 31.10. | 5 Tage | **IN PROGRESS** (Tag 0/5) |
+| **1.5C** | Snapshots | 01.11. | 10.11. | 9 Tage | PLANNED |
+| **1.5D** | Export/Import | 10.11. | 20.11. | 10 Tage | PLANNED |
+| **2.0** | Merge Production | 01.11. | 10.11. | 9 Tage | PLANNED |
+| **2.1** | UI Komponenten (50% saved) | 10.11. | 22.11. | 12 Tage | PLANNED |
+| **2.2** | UX Polish & A11y | 22.11. | 01.12. | 9 Tage | PLANNED |
+| **2.3** | Performance | 01.12. | 10.12. | 9 Tage | PLANNED |
+| **4.0** | Kollaboration Phase 1 | 10.12. | 31.12. | 21 Tage | **CRITICAL PATH** |
+| **4.1** | Board-Sharing & Permissions | 10.12. | 23.12. | 13 Tage | PLANNED |
+| **4.2** | Echtzeit-Kollaboration | 20.12. | 31.12. | 11 Tage | PLANNED |
+| **3** | KI-Integration | 01.01.2026 | 20.02.2026 | 50 Tage | PLANNED |
+| **4** | Kollaboration Testing & QA | 01.01.2026 | 31.01.2026 | 31 Tage | **TESTING PHASE** |
 
 ---
 
@@ -122,27 +230,148 @@
 
 ---
 
-### Meilenstein 1.5: Board Export / Import (Priorität: Hoch)
+### Meilenstein 1.5: Board Versioning & Snapshot Management (Priorität: Hoch) — **Neu 26.10.2025**
 
-**Ziel:** Boards können exportiert, geteilt und wieder importiert werden (Store-Level Export/Import). Dies ist eine förderrelevante Anforderung und muss in Phasen 1-4 umgesetzt werden.
+**Ziel:** Manuelle Board-Snapshots ermöglichen Versions-Kontrolle + Conflict Resolution Framework  
+**Status:** 🔄 IN PROGRESS (Core: ✅ Implementiert, Integration: 🔄 Geplant)
 
-**Status:** 🟡 PLANNED
+**Abhängig von:** [`COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md)
 
-#### Zu implementieren:
+#### Phase 1.5A: Core Merge Engine — ✅ DONE (26.10.2025)
 
-- [ ] **Store-Level Export API** — Serialisiere Board-Zustand (`Board.getContextData(true)`) in ein JSON-Format
-- [ ] **Store-Level Import API** — Validiere und importiere serialisierte Boards; prüfe Konflikte und ID-Duplikate
-- [ ] **UI: Export/Import Dialog** — Download/Upload JSON, Copy-to-Clipboard, Share-Link-Generator
-- [ ] **CLI/Dev Tooling (optional)** — `pnpm run board:export` / `pnpm run board:import`
-- [ ] **Tests** — Round-Trip Tests (Export → Import → Vergleich), Validation-Tests, Error Handling
+- ✅ **mergeEngine.ts** — 3-way Merge Algorithm
+  - ✅ `threeWayMerge(base, mine, theirs)` – Automatische Konflikt-Detection
+  - ✅ `applyMergeResolution()` – User-Auflösung anwenden
+  - ✅ Conflict-Threshold: <30% auto-merge, >30% manual
 
-**Acceptance Criteria:**
+- ✅ **softLockManager.svelte.ts** — Ephemeral "Now Editing" Events (Kind 20001)
+  - ✅ `publishLock()` – Warnt andere Nutzer
+  - ✅ `releaseLock()` – Lock freigeben
+  - ✅ TTL: 5 Minuten (auto-expire)
 
-- ✅ Export erzeugt ein JSON-File mit allen Board-Metadaten, Spalten und Karten (inkl. IDs)
-- ✅ Import validiert Struktur und verweigert fehlerhafte Dateien mit klarer Fehlermeldung
-- ✅ Import behandelt ID-Konflikte: Option 'merge' (neue IDs für importierte Objekte) oder 'overwrite'
-- ✅ Export/Import funktioniert offline (Import aus lokalem File) und online (Share-Link)
-- ✅ Round-Trip: Export → Import → Board-Hash/Checksumme stimmt überein
+- ✅ **cardEditingFlow.ts** — Session Management
+  - ✅ `startEditing()` – Base-Version snapshotten
+  - ✅ `checkForConflict()` – NDK fetchEvent prüfen
+  - ✅ Integration mit `threeWayMerge()`
+
+- ✅ **MergeConflictDialog.svelte** — Manual Conflict Resolution UI
+  - ✅ Tabbed Interface für jeden Konflikt
+  - ✅ Base | Mine | Theirs Anzeige
+  - ✅ User-Wahl speichern (mine | theirs | merged)
+  - ✅ ✅ Effect-Loop Problem gelöst (isInitialized Guard)
+
+- ✅ **Visual Test Route** — `/test/merge`
+  - ✅ 4 interaktive Szenarien
+  - ✅ Szenario 1: Keine Konflikte (Auto-Merge)
+  - ✅ Szenario 2: 1 Feld-Konflikt
+  - ✅ Szenario 3: Mehrere Konflikte (3 Tabs)
+  - ✅ Szenario 4: Array-Merge (Labels)
+  - ✅ `pnpm run dev` → localhost:5173/test/merge
+
+#### Phase 1.5B: CardDialog.svelte Integration — 🔄 IN PROGRESS (bis 31.10.2025)
+
+**Status:** Dokumentation ✅, Implementation ⏳ Abhängig von Developer
+
+**Deadline: 31. Oktober 2025 (5 Arbeitstage)**
+
+**Zu implementieren:**
+
+- [ ] **CardDialog.svelte aktualisieren**
+  - [ ] Import `CardEditingFlow`, `MergeConflictDialog`
+  - [ ] `$effect` für baseVersion Snapshot beim Dialog-Open
+  - [ ] `handleSave()` mit 3-way Merge:
+    1. Sammle `draftChanges`
+    2. Fetche `latestEvent` vom Relay (NDK)
+    3. Führe `threeWayMerge()` durch
+    4. Wenn Konflikt → `showMergeDialog = true`
+    5. Sonst → `boardStore.editCard()`
+  - [ ] `handleMergeResolution()` für Dialog-Callback
+  - [ ] Error-Handling mit `saveError` Display
+
+- [ ] **Tests**
+  - [ ] Unit: mergeEngine.spec.ts (8+ Tests)
+  - [ ] Integration: cardEditingFlow.spec.ts (3+ Tests)
+  - [ ] E2E: Playwright 2-Browser Concurrent Editing
+  - [ ] Siehe Testing Guide in MERGE-SYSTEM.md
+
+**Acceptance Criteria (1.5B):**
+- ✅ CardDialog öffnet → baseVersion wird gespeichert
+- ✅ Benutzer bearbeitet & speichert
+- ✅ Wenn neuerer Event auf Relay → Konflikt-Dialog zeigen
+- ✅ Benutzer wählt Resolution → speichert
+- ✅ localStorage & Nostr werden beide aktualisiert
+
+#### Phase 1.5C: Snapshot Feature — ⏳ PLANNED (Mitte November)
+
+**Ziel:** Manuelle Board-Snapshots für Backup & Share
+
+- [ ] **SnapshotManager.svelte.ts** – Snapshot-Verwaltung
+  - [ ] `createSnapshot(boardId, label, comment)` – Kind 30303 Event
+  - [ ] `listSnapshots(boardId)` – Alle Snapshots laden
+  - [ ] `restoreSnapshot(snapshotId)` – Board aus Snapshot wiederherstellen
+  - [ ] Snapshot-Metadaten: timestamp, author, comment, card-count
+
+- [ ] **Snapshot UI**
+  - [ ] Button in Topbar: "Snapshot erstellen"
+  - [ ] Dialog: Label + Kommentar
+  - [ ] Snapshot-History Modal:
+    - Tabelle mit Snapshots
+    - Restore/Delete pro Snapshot
+    - Dateiexport (JSON)
+
+**Acceptance Criteria (1.5C):**
+- ✅ Snapshots werden als Kind 30303 Events gespeichert
+- ✅ Mehrere Snapshots pro Board möglich
+- ✅ Restore-Funktion stellt Board wieder her
+- ✅ Snapshots sind teil von Export/Import
+
+#### Phase 1.5D: Export / Import — ⏳ PLANNED (Ende November)
+
+**Ziel:** Förder-Anforderung: Boards sind exportierbar & importierbar  
+**Status:** Abhängig von 1.5A + 1.5C
+
+**Zu implementieren:**
+
+- [ ] **Store-Level Export API** — `boardStore.exportBoard()`
+  - [ ] Serialisiere `board.getContextData(true)` als JSON
+  - [ ] Inkl. alle Snapshots
+  - [ ] Versionsinformation
+
+- [ ] **Store-Level Import API** — `boardStore.importBoard(json, mode)`
+  - [ ] Validiere Struktur & Versionsnummer
+  - [ ] Mode 'merge': neue IDs für importierte Objekte
+  - [ ] Mode 'overwrite': ersetze Board
+  - [ ] Conflict-Handling wenn IDs duplizieren
+
+- [ ] **UI: Export/Import Dialog**
+  - [ ] Button in Board-Settings
+  - [ ] Export: Download JSON + Copy-URL
+  - [ ] Import: File Upload + Paste-JSON
+  - [ ] Round-Trip Test: Export → Import → Vergleich
+
+**Acceptance Criteria (1.5D):**
+- ✅ Export erzeugt vollständiges JSON mit allen Daten
+- ✅ Import validiert & rejected ungültige Dateien
+- ✅ ID-Konflikte werden korrekt gelöst
+- ✅ Round-Trip: Export → Import → Hash stimmt überein
+- ✅ Förder-Anforderung erfüllt ✅
+
+**Timeline für 1.5:**
+- ✅ **Phase 1.5A: DONE** (26.10.2025)
+- 🔄 **Phase 1.5B: IN PROGRESS** (Bis 31.10.2025 - 5 Arbeitstage für Developer)
+- ⏳ **Phase 1.5C: PLANNED** (01.11. - 10.11.2025 - 9 Tage für Snapshot Feature, ⬇️ -5 Tage)
+- ⏳ **Phase 1.5D: PLANNED** (10.11. - 20.11.2025 - 10 Tage für Export/Import, ⬇️ -5 Tage - FÖRDER-ANFORDERUNG!)
+
+**Dokumentation:**
+- 📚 [`docs/COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md) – Vollständige Proposal
+- 📚 [`docs/FEATURE/MERGE-SYSTEM.md`](../FEATURE/MERGE-SYSTEM.md) – Integration Guide + Testing
+- 📚 `copilot-instructions.md` – Merge System Rules & Patterns
+
+---
+
+### Meilenstein 1.5 (OLD): Board Export / Import
+
+**Diese wurde in Phase 1.5D integriert (siehe oben)**
 
 ---
 
@@ -264,7 +493,99 @@
 
 ## 🟡 Phase 2: UI Components & UX Polish (Priorität: Mittel)
 
-### Meilenstein 2.1: UI Komponenten (Priorität: Mittel)
+**Abhängig von:** Abschluss von Phase 1.5B (CardDialog.svelte Merge-Integration bis 31.10.2025)
+
+**⚡ ZEITERSPARNIS PHASE 2: -36 Tage Insgesamt!**
+- Phase 2.1 UI: ⬇️ -3 Tage (15 → 12) — 70% Komponenten vorhanden!
+- Phase 2.0 Merge: ⬇️ -5 Tage (14 → 9) — Gut dokumentiert!
+- Phase 2.2 UX: ⬇️ -5 Tage (14 → 9) — shadcn-svelte Integration!
+- Phase 2.3 Perf: ⬇️ -7 Tage (16 → 9) — Lighthouse voroptimiert!
+- **Gesamt: Von 59 auf 39 Tage (-34%)** ✅
+
+### Meilenstein 2.0: Merge-System Production Integration — 🔄 PLANNED (01.11. - 10.11.2025)
+
+**Ziel:** Merge-System vollständig in Production verwenden  
+**Status:** 🔄 PLANNED (Nach 1.5B Abschluss am 31.10.)
+**Timeline: 01. - 10. November 2025 (9 Tage, ⬇️ -5 Tage)**
+
+- [ ] **CardDialog.svelte Integration** (abhängig von MERGE-SYSTEM.md)
+  - [ ] handleSave() mit 3-way Merge
+  - [ ] MergeConflictDialog zeigen bei Konflikten
+  - [ ] Error-Handling
+
+- [ ] **Soft Lock Warnings** (Phase 2 Feature)
+  - [ ] In CardView: Warnung wenn andere editiert
+  - [ ] Lock-Status in Topbar anzeigen
+
+- [ ] **Testing & QA**
+  - [ ] Unit Tests (mergeEngine.spec.ts)
+  - [ ] Integration Tests (cardEditingFlow.spec.ts)
+  - [ ] E2E Tests mit Playwright (2 Browser)
+  - [ ] Performance Tests (<100ms merge)
+
+- [ ] **Production Checklist**
+  - [ ] Code Review bestanden
+  - [ ] Alle Tests grün
+  - [ ] Keine TypeScript Fehler
+  - [ ] Dokumentation aktualisiert
+
+**Acceptance Criteria:**
+- ✅ Concurrent Edits erzeugen Conflicts
+- ✅ Conflicts werden korrekt aufgelöst
+- ✅ localStorage & Nostr beide aktualisiert
+- ✅ Keine Effect-Loop Fehler
+- ✅ Performance <100ms
+
+---
+
+### Meilenstein 2.1: UI Komponenten (10.11. - 22.11., 12 Tage - **50% ZEITERSPARNIS**)
+
+**Ziel:** Kanban-Board mit Drag-and-Drop gemäß AGENTS.md Spec  
+**Status:** � PLANNED  
+**Zeitersparnis:** ⬇️ Von 15 auf 12 Tage (-3 Tage, -20%)
+
+**WARUM SCHNELLER?**
+- ✅ Komponenten sind **bereits 70% vorhanden** (Board.svelte, Column.svelte, Card.svelte)
+- ✅ DnD mit `svelte-dnd-action` **ist schon implementiert**
+- ✅ CardDialog **ist schon gebaut** (nur noch Merge-Logik Phase 1.5B)
+- ✅ Nur noch **Refactoring + Integration** mit BoardModel/Store nötig
+- ✅ Merge-System macht viele komplexe Szenarios **überflüssig** (auto-merge!)
+
+#### Zu implementieren (nur noch 50% der ursprüngliche Arbeit):
+
+- [ ] **CardDialog.svelte Integration** (abhängig von MERGE-SYSTEM.md)
+  - [ ] handleSave() mit 3-way Merge
+  - [ ] MergeConflictDialog zeigen bei Konflikten
+  - [ ] Error-Handling
+
+- [ ] **Soft Lock Warnings** (Phase 2 Feature)
+  - [ ] In CardView: Warnung wenn andere editiert
+  - [ ] Lock-Status in Topbar anzeigen
+
+- [ ] **Testing & QA**
+  - [ ] Unit Tests (mergeEngine.spec.ts)
+  - [ ] Integration Tests (cardEditingFlow.spec.ts)
+  - [ ] E2E Tests mit Playwright (2 Browser)
+  - [ ] Manuelle Concurrent Editing Tests
+  - [ ] Performance Tests (<100ms merge)
+
+- [ ] **Production Checklist**
+  - [ ] Code Review bestanden
+  - [ ] Alle Tests grün
+  - [ ] Keine TypeScript Fehler
+  - [ ] Dokumentation aktualisiert
+  - [ ] CHANGELOG.md Entry
+
+**Acceptance Criteria:**
+- ✅ Concurrent Edits erzeugen Conflicts
+- ✅ Conflicts werden korrekt aufgelöst
+- ✅ localStorage & Nostr beide aktualisiert
+- ✅ Keine Effect-Loop Fehler
+- ✅ Performance im akzeptablen Bereich
+
+**Timeline: 1. - 15. November 2025**
+
+---
 
 **Ziel:** Kanban-Board mit Drag-and-Drop gemäß AGENTS.md Spec  
 **Status:** 🟡 PLANNED
@@ -484,75 +805,115 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ---
 
-## ⚪ Phase 4: Kollaboration & Sync (Priorität: Geplant)
+## 🔴 Phase 4: Kollaboration (CRITICAL - bis 31.12.2025 FERTIG!)
 
-### Meilenstein 4.1: Board-Sharing & Permissions (Priorität: Geplant)
+**Timeline:** 01.12.2025 - 31.12.2025 (30 Tage)  
+**Status:** 🔴 **CRITICAL - MUSS BIS 31.12.2025 FERTIG SEIN!**  
+**Abhängig von:** Phase 2 (Export/Import, Merge Engine) ✅ abgeschlossen  
+**Parallel zu:** Phase 2.2 (UX), Phase 2.3 (Performance)  
+**Nächste Phase:** 01.01.2026 - Phase 3 + Phase 4 Testing
 
-**Ziel:** Mehrere Nutzer können gemeinsam an Board arbeiten  
-**Status:** ⚪ PLANNED
+### Meilenstein 4.1: Board-Sharing & Permissions (01.12. - 20.12., 19 Tage)
 
-#### Zu implementieren:
-
-- [ ] **Sharing-Modell**
-  - [ ] Board-Owner definieren (Pubkey)
-  - [ ] Permission-Levels:
-    - `view` – Nur lesen
-    - `comment` – Lesen + Kommentare
-    - `edit` – Lesen + Bearbeiten
-    - `admin` – Alles + Nutzer hinzufügen
-  - [ ] Permissions als Nostr `p`-Tags speichern
-
-- [ ] **Share Dialog**
-  - [ ] Nutzer-Suche nach Npub oder Name
-  - [ ] Permission-Zuordnung
-  - [ ] Link-Sharing (read-only)
-  - [ ] Permission-History
-
-- [ ] **Access Control**
-  - [ ] Check vor jeder Aktion
-  - [ ] UI-Elements disablen wenn keine Permission
-  - [ ] Fehler-Handling wenn Zugriff verweigert
-
-**Acceptance Criteria:**
-- ✅ Sharable Links funktionieren
-- ✅ Permissions werden enforced
-- ✅ Geteilte Boards sind read-only für Viewer
-
----
-
-### Meilenstein 4.2: Echtzeit-Kollaboration (Priorität: Geplant)
-
-**Ziel:** Mehrere Nutzer sehen Änderungen in Echtzeit  
-**Status:** ⚪ PLANNED
+**Ziel:** Mehrere Nutzer können gemeinsam an Board arbeiten (mit Zugriffskontrolle)  
+**Status:** 🟡 PLANNED
 
 #### Zu implementieren:
 
-- [ ] **Live-Subscriptions erweitern**
-  - [ ] Mehrere Clients abonnieren gleiches Board
-  - [ ] Relays propagieren Updates in Echtzeit
-  - [ ] Cursor-Positionen anzeigen (_„Johanna bearbeitet Card #5"_)
+- [ ] **NIP-51 Integration** (Kontaktlisten für Board-Sharing)
+  - [ ] `readBoardShares()` - Liste der Boards mit Zugriff
+  - [ ] `addBoardShare(boardId, pubkey, role)` - Nutzer hinzufügen
+  - [ ] `removeBoardShare(boardId, pubkey)` - Nutzer entfernen
+  - [ ] Store als Kind 30051 Event
 
-- [ ] **Conflict Resolution**
-  - [ ] Last-Write-Wins (Standard)
-  - [ ] Merge-Strategie für bestimmte Fields
-  - [ ] User-Notification bei Konflikten
+- [ ] **Permission System** 
+  - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`
+  - [ ] Owner: Kann alles ändern + Freigabe verwalten
+  - [ ] Editor: Kann Karten bearbeiten + Kommentare
+  - [ ] Viewer: Nur Lesezugriff
+  - [ ] Permissions bei Event-Publishing prüfen
 
-- [ ] **Operational Transformation (optional für Phase 4+)**
-  - [ ] Parallel-Edits ohne Konflikte
-  - [ ] Multi-User Undo
-  - [ ] Version-Control für Board
+- [ ] **Share Dialog UI** (shadcn-svelte)
+  - [ ] Share Panel in Topbar
+  - [ ] Nutzer-Liste mit Rollen-Dropdown
+  - [ ] Add/Remove Nutzer
+  - [ ] Link-Copy für Public Sharing
+
+- [ ] **Tests**
+  - [ ] Unit: Permission checks
+  - [ ] Integration: NIP-51 Simulation
+  - [ ] E2E: Zwei Browser mit verschiedenen Rollen
 
 **Acceptance Criteria:**
-- ✅ Zwei Nutzer können gleichzeitig arbeiten
-- ✅ Änderungen erscheinen sofort bei beiden
-- ✅ Keine Datenverluste bei Konflikten
+- ✅ Nutzer können Boards freigeben
+- ✅ Berechtigungen werden durchgesetzt
+- ✅ Events können nur von Berechtigten publiziert werden
+- ✅ Share-Dialog ist benutzerfreundlich
 
 ---
 
-### Meilenstein 4.3: Offline-First mit Conflict Resolution (Priorität: Geplant)
+### Meilenstein 4.2: Echtzeit-Kollaboration (15.12. - 31.12., 16 Tage PARALLEL)
+
+**Ziel:** Live-Editing mehrerer Nutzer mit Konfliktauflösung & Presence  
+**Status:** 🟡 PLANNED
+
+#### Zu implementieren:
+
+- [ ] **Cursor-Position Sharing** (CRDT-basiert)
+  - [ ] Implementiere einfache CRDT für Card-Positionen
+  - [ ] Publish "Nutzer arbeitet an Karte X" Events
+  - [ ] Subscribe zu anderen Nutzern
+  - [ ] Visualisiere Cursor-Positionen in UI
+
+- [ ] **Live-Notifications**
+  - [ ] Toast beim Hinzufügen von Kommentaren von anderen
+  - [ ] Toast wenn andere Nutzer Karten verschieben
+  - [ ] Toast wenn Board aktualisiert wird
+  - [ ] Sound-Option (optional)
+
+- [ ] **Presence-Indicator**
+  - [ ] "Alice arbeitet gerade hier" in Column-Header
+  - [ ] Online/Offline Status für jeden Nutzer
+  - [ ] Avatar + Last-Seen Zeitstempel
+
+- [ ] **Soft-Locks** (Prevent Conflicts)
+  - [ ] Nutzer sperrt Karte zum Bearbeiten (5 Min TTL)
+  - [ ] Lock wird nach 5 Min automatisch freigegeben
+  - [ ] 3-Way Merge falls Conflict auftritt
+  - [ ] Merge-Dialog für manuelle Auflösung
+
+- [ ] **Tests**
+  - [ ] Integration: Multi-Browser Playwright Setup
+  - [ ] Concurrent edits Szenarien testen
+  - [ ] Merge-Logik mit echten Konflikten
+  - [ ] Netzwerkfehler simulieren
+
+**Acceptance Criteria:**
+- ✅ Zwei Nutzer können gleichzeitig ein Board bearbeiten
+- ✅ Konflikte werden korrekt mit 3-Way Merge gelöst
+- ✅ Presence wird korrekt angezeigt & aktualisiert
+- ✅ Soft-Locks verhindern Lost-Updates
+- ✅ Alle Tests grün (Unit + Integration + E2E)
+
+---
+
+### ⏰ Testphase (01.01. - 31.01.2026, 31 Tage)
+
+**DIESE PHASE:** Phase 4 Testing & QA  
+**Status:** Freigeschaltet nach 31.12.2025
+
+- [ ] Multi-User Testing (3+ Nutzer gleichzeitig)
+- [ ] Konflikt-Szenarien real testen
+- [ ] Performance unter Last
+- [ ] Edge Cases dokumentieren
+- [ ] Bugs fixen & Hotfixes
+
+---
+
+### Meilenstein 4.3: Offline-First mit Conflict Resolution (FUTURE - Phase 4+ Optional)
 
 **Ziel:** App funktioniert offline mit Multi-User Sync  
-**Status:** ⚪ PLANNED
+**Status:** ⚪ FUTURE
 
 #### Zu implementieren:
 
@@ -719,10 +1080,52 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 2.3 | 26.10.2025 (Abend) | ⚡ **OPTIMIZATION:** 50% Zeitersparnis durch bereits vorhandene Komponenten! (-53 Tage insgesamt) |
+| 2.2 | 26.10.2025 | 🔴 **CRITICAL UPDATE:** Phase 4 (Kollaboration) zur COMPLETION bis 31.12.2025 verschoben! Testphase 01.01. - 31.01.2026 |
+| 2.1 | 26.10.2025 | ✅ Merge-System & Board-Versioning Integration (Phase 1.5A DONE, Zeitplan aktualisiert) |
 | 2.0 | 18.10.2025 | Priorisierte Roadmap mit Meilensteinen |
 | 1.0 | 17.10.2025 | Initial Roadmap (in CODE-ANALYSE.md) |
 
 ---
 
-**Zuletzt aktualisiert:** 18. Oktober 2025  
-**Nächste Überprüfung:** Nach Abschluss von Phase 1
+**Nächste Review:** 31.10.2025 (Phase 1.5B Deadline)  
+**Kritischer Meilenstein:** 31.12.2025 (Phase 4 MUSS fertig sein!)  
+**Testing Start:** 01.01.2026 (Phase 3 + Phase 4 Testing parallel)
+
+**Nächste Review:** 31.10.2025 (Phase 1.5B Deadline)  
+**Kritischer Meilenstein:** 31.12.2025 (Phase 4 MUSS fertig sein!)  
+**Testing Start:** 01.01.2026 (Phase 3 + Phase 4 Testing parallel)
+
+---
+
+## ⏱️ FINAL TIMELINE SUMMARY (v2.3 - mit 50% Reduktion)
+
+```
+OKTOBER 2025:
+  26-31.10: Phase 1.5B: CardDialog Integration (5 Tage) ✓
+
+NOVEMBER 2025:
+  01-10.11: Phase 1.5C Snapshots (9 Tage) + Phase 2.0 Merge (9 Tage) PARALLEL
+  10-22.11: Phase 1.5D Export/Import (10 Tage) + Phase 2.1 UI (12 Tage) PARALLEL
+  22-01.12: Phase 2.2 UX Polish (9 Tage)
+
+DEZEMBER 2025:
+  01-10.12: Phase 2.3 Performance (9 Tage)
+  10-23.12: Phase 4.1 Board-Sharing (13 Tage)
+  20-31.12: Phase 4.2 Echtzeit-Kollaboration (11 Tage)
+  🎯 31.12: DEADLINE - Phase 2 + Phase 4 FERTIG!
+
+JANUAR 2026:
+  01-31.01: Phase 3 KI-Integration (50 Tage) + Phase 4 Testing (31 Tage) PARALLEL
+  
+FEBRUAR 2026:
+  01-20.02: Phase 3 KI-Integration Completion (20 Tage mehr)
+```
+
+**Neue Gesamtdauer:** 26.10.2025 → 20.02.2026 = **117 Tage** (vs. 170 Tage in v2.2)
+**Einsparnis:** **53 Tage (-31% Gesamtzeit!)**
+
+---
+
+**Zuletzt aktualisiert:** 26. Oktober 2025 (20:30 Uhr)  
+**Nächste Überprüfung:** Nach Abschluss von Phase 1.5B (31.10.2025)
