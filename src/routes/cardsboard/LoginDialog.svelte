@@ -32,6 +32,8 @@
 		const success = await authStore.loginWithNip07();
 		if (success) {
 			open = false;
+			// Make a refresh is better because the user profile comes too late
+			location.reload()
 		}
 	}
 </script>

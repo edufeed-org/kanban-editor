@@ -54,16 +54,16 @@
 				>
 					<!-- Avatar mit User-Initialen -->
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Image src="" alt={currentUser.profile.name || ''} />
-						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile.name) || ''} text-white text-xs font-semibold`}>
-							{Avatar.getInitials(currentUser.profile.name) || ''}
+						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
+						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
+							{Avatar.getInitials(currentUser.profile?.name) || ''}
 						</Avatar.Fallback>
 					</Avatar.Root>
 
 					<!-- User Info -->
 					<div class="flex-1 min-w-0 text-left">
 						<div class="text-sm font-medium truncate">
-							{currentUser.profile.name || ''}
+							{currentUser.profile?.name || ''}
 						</div>
 						<div
 							class="text-xs text-muted-foreground truncate"
