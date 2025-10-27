@@ -1,206 +1,249 @@
-/**
- * BASICS AuthStore für Development
- * 
- * 🎯 Zweck: Einfache Dummy-User-Verwaltung für lokale Tests
- * Später wird dies durch echte NIP-07 / NIP-46 Authentifizierung ersetzt
- * 
- * Features:
- * - Mock nsec/npub User
- * - Session-Persistierung in localStorage
- * - Reactive $state für Svelte 5
- * - Ready für echte NDK-Integration
- */
-
-export type SignerType = 'development' | 'nip07' | 'nip46';
+import { persisted } from "svelte-persisted-store";
+import { NDKNip07Signer, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
+import type NDK from "@nostr-dev-kit/ndk";
+import type { NDKUser } from "@nostr-dev-kit/ndk";
+import { get } from 'svelte/store'
 
 export interface UserSession {
-  pubkey: string; // Hex Public Key
-  npub: string; // Bech32 encoded npub (für UI)
-  name: string; // Display Name
-  signerType: SignerType;
-  createdAt: number;
+  pubkey: string;
+  npub: string;
+  profile: {
+    name?: string;
+    about?: string;
+    picture?: string;
+    nip05?: string;
+    lud16?: string;
+  };
+  signerType: "nip07" | "nsec" | "nip46";
+  lastLogin: number;
+  expires: number;
 }
 
-/**
- * BASICS Auth Store - nur für Entwicklung!
- * 
- * ⚠️ WICHTIG: Diese Dummy-Implementierung wird später ersetzt durch:
- * - NIP-07 Browser Extensions (Alby, nos2x)
- * - NIP-46 Remote Signers
- * - Proper session management
- */
 export class AuthStore {
-  private static readonly STORAGE_KEY = 'kanban-auth-session';
-  private static readonly DEFAULT_DUMMY_PUBKEY = '0000000000000000000000000000000000000000000000000000000000000001';
-  private static readonly DEFAULT_DUMMY_NPUB = 'npub1dev00000000000000000000000000000000000000000000000000000000';
+  private sessionStore = persisted<UserSession | null>(
+    "nostr-user-session",
+    null
+  );
 
-  // Reaktiver State (Svelte 5 Runes)
-  public currentUser = $state<UserSession | null>(null);
+  public currentUser = $state<NDKUser | null>(null);
   public isAuthenticated = $derived(!!this.currentUser);
   public isLoading = $state(false);
   public errorMessage = $state<string | null>(null);
-
-  constructor() {
-    // Restore session from localStorage on init
+  
+  constructor(private ndk: NDK) {
     this.restoreSession();
   }
 
   /**
-   * 🔐 Login mit Dummy-User (Development)
-   * 
-   * Später wird dies durch NIP-07 ersetzt:
-   * const signer = new NDKNip07Signer();
-   * const user = await signer.user();
+   * NIP-07 Browser Extension Login
    */
-  public async loginWithDummy(name: string = 'Dev User'): Promise<boolean> {
+  public async loginWithNip07(): Promise<NDKUser> {
     try {
       this.isLoading = true;
-      this.errorMessage = null;
 
-      const session: UserSession = {
-        pubkey: AuthStore.DEFAULT_DUMMY_PUBKEY,
-        npub: AuthStore.DEFAULT_DUMMY_NPUB,
-        name,
-        signerType: 'development',
-        createdAt: Date.now()
-      };
-
-      this.currentUser = session;
-      this.saveSession();
-
-      console.log('✅ Dummy user logged in:', { name, pubkey: session.pubkey.slice(0, 8) + '...' });
-      return true;
-    } catch (error) {
-      this.errorMessage = `Login failed: ${error}`;
-      console.error('❌ Login error:', error);
-      return false;
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  /**
-   * 🔐 Login mit Custom nsec (Development only!)
-   * 
-   * ⚠️ SECURITY: Nur für Development! In Production NIEMALS Private Keys akzeptieren!
-   */
-  public async loginWithNsec(nsec: string, name: string = 'nsec User'): Promise<boolean> {
-    try {
-      this.isLoading = true;
-      this.errorMessage = null;
-
-      // Validiere nsec format (starts with 'nsec1')
-      if (!nsec.startsWith('nsec1')) {
-        throw new Error('Invalid nsec format. Must start with "nsec1"');
+      if (!window.nostr) {
+        throw new Error("Nostr extension not found. Install Alby or nos2x.");
       }
 
-      // TODO: Decode nsec zu pubkey (Später mit @nostr-dev-kit/ndk)
-      // const decoded = nip19.decode(nsec);
-      // const pubkey = decoded.data;
+      const signer = new NDKNip07Signer();
+      this.ndk.signer = signer;
 
-      const session: UserSession = {
-        pubkey: 'nsec-derived-pubkey', // Placeholder
-        npub: 'npub-derived-from-nsec', // Placeholder
-        name,
-        signerType: 'development',
-        createdAt: Date.now()
-      };
+      const user = await signer.user();
 
-      this.currentUser = session;
-      this.saveSession();
+      this.currentUser = user;
+      this.currentUser.profile = await user.fetchProfile() || undefined
 
-      console.log('✅ nsec user logged in:', { name, nsec: nsec.slice(0, 15) + '...' });
-      return true;
+      await this.saveSession(user, "nip07");
+
+      return user;
     } catch (error) {
-      this.errorMessage = `nsec login failed: ${error}`;
-      console.error('❌ nsec login error:', error);
-      return false;
+      console.error("NIP-07 login failed:", error);
+      throw error;
     } finally {
       this.isLoading = false;
     }
   }
 
   /**
-   * 🔐 Login mit NIP-07 (Browser Extension)
-   * 
-   * ✅ PRODUCTION: Dies ist die empfohlene Methode!
-   * Benötigt: Alby, nos2x oder andere NIP-07 Extensionen
+   * Private Key (nsec) Login - DEVELOPMENT ONLY!
    */
-  public async loginWithNIP07(): Promise<boolean> {
+  public async loginWithNsec(nsec: string): Promise<NDKUser> {
     try {
+      // TODO: Check if in development environment and throw error if not
+
       this.isLoading = true;
-      this.errorMessage = null;
 
-      // TODO: Integration mit NDKNip07Signer
-      // const signer = new NDKNip07Signer();
-      // const user = await signer.user();
-      // const pubkey = user.pubkey;
+      if (!nsec.startsWith("nsec1") || nsec.length !== 63) {
+        throw new Error("Invalid nsec format");
+      }
 
-      throw new Error('NIP-07 not yet implemented. Use loginWithDummy() for now.');
+      const signer = new NDKPrivateKeySigner(nsec);
+      this.ndk.signer = signer;
+
+      const user = await signer.user();
+      await user.fetchProfile();
+
+      this.currentUser = user;
+
+      await this.saveSession(user, "nsec");
+
+      return user;
     } catch (error) {
-      this.errorMessage = `NIP-07 login failed: ${error}`;
-      console.error('❌ NIP-07 login error:', error);
-      return false;
+      console.error("nsec login failed:", error);
+      throw error;
     } finally {
       this.isLoading = false;
     }
   }
 
   /**
-   * 🚪 Logout - Clear session and currentUser
-   * ⚠️ WICHTIG: Nur im Browser, nicht auf SSR Server!
+   * NIP-46 Remote Signing - FUTURE
    */
-  public logout(): void {
+  public async loginWithNip46(connectionString: string): Promise<NDKUser> {
+    // TODO: Implement NIP-46
+    throw new Error("NIP-46 not yet implemented");
+  }
+
+  /**
+   * Logout
+   */
+  public async logout(): Promise<void> {
     this.currentUser = null;
-    this.errorMessage = null;
-    
-    // Nur im Browser localStorage clearen
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(AuthStore.STORAGE_KEY);
-    }
-    
-    console.log('✅ User logged out');
+    this.ndk.signer = undefined;
+
+    this.sessionStore.set(null);
+
+    console.log("🚪 User logged out");
   }
 
   /**
-   * 💾 Save session to localStorage
-   * ⚠️ WICHTIG: Nur im Browser, nicht auf SSR Server!
+   * Save Session (ohne Private Keys!)
    */
-  private saveSession(): void {
-    // Checke ob wir im Browser sind
-    if (typeof window === 'undefined') {
-      console.debug('⏭️ Skipping saveSession on SSR server');
-      return;
-    }
+  private async saveSession(
+    user: NDKUser,
+    signerType: "nip07" | "nsec" | "nip46"
+  ): Promise<void> {
+    const session: UserSession = {
+      pubkey: user.pubkey,
+      npub: user.npub,
+      profile: {
+        name: user.profile?.name,
+        about: user.profile?.about,
+        picture: user.profile?.picture || user.profile?.image,
+        nip05: user.profile?.nip05,
+        lud16: user.profile?.lud16,
+      },
+      signerType,
+      lastLogin: Date.now(),
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 Tage
+    };
 
-    if (this.currentUser) {
-      localStorage.setItem(AuthStore.STORAGE_KEY, JSON.stringify(this.currentUser));
+    this.sessionStore.set(session);
+    console.log(`💾 Session saved for ${user.profile?.name || "Anonymous"}`);
+  }
+
+  /**
+   * Restore Session
+   */
+  private async restoreSession(): Promise<void> {
+    try {
+      const session = this.getStoredSession();
+
+      if (!session || Object.keys(session).length === 0) return;
+
+      if (Date.now() > session.expires) {
+        console.log("⏰ Session expired");
+        this.sessionStore.set(null);
+        return;
+      }
+
+      const user = await this.ndk.fetchUser(session.pubkey);
+      
+      if (!user) return;
+
+      user.profile = session.profile;
+
+      this.currentUser = user;
+
+      console.log(
+        `🔄 Session restored for ${session.profile.name || "Anonymous"}`
+      );
+
+      // Try to restore signer (only for NIP-07)
+      if (session.signerType === "nip07" && window.nostr) {
+        const signer = new NDKNip07Signer();
+        this.ndk.signer = signer;
+      }
+    } catch (error) {
+      console.error("Failed to restore session:", error);
+      this.sessionStore.set(null);
     }
   }
 
   /**
-   * 📂 Restore session from localStorage on app startup
-   * ⚠️ WICHTIG: Nur im Browser, nicht auf SSR Server!
+   * Get stored session
    */
-  private restoreSession(): void {
-    // Checke ob wir im Browser sind (typeof window !== 'undefined')
-    if (typeof window === 'undefined') {
-      console.debug('⏭️ Skipping restoreSession on SSR server');
-      return;
+  private getStoredSession(): UserSession | null {
+    const stored = get(this.sessionStore);
+    return stored ? JSON.parse(JSON.stringify(stored)) : null;
+  }
+
+  /**
+   * Update Profile (Kind 0)
+   */
+  public async updateProfile(profileData: {
+    name?: string;
+    about?: string;
+    picture?: string;
+    nip05?: string;
+    lud16?: string;
+  }): Promise<void> {
+    if (!this.currentUser || !this.ndk.signer) {
+      throw new Error("User not authenticated");
     }
 
     try {
-      const stored = localStorage.getItem(AuthStore.STORAGE_KEY);
-      if (stored) {
-        const session = JSON.parse(stored) as UserSession;
-        this.currentUser = session;
-        console.log('✅ Session restored:', { name: session.name, pubkey: session.pubkey.slice(0, 8) + '...' });
+      if (!this.currentUser.profile) {
+        this.currentUser.profile = {};
       }
+
+      Object.assign(this.currentUser.profile, profileData);
+
+      await this.currentUser.publish();
+
+      const session = this.getStoredSession();
+      if (session) {
+        session.profile = { ...session.profile, ...profileData };
+        this.sessionStore.set(session);
+      }
+
+      console.log("✅ Profile updated");
     } catch (error) {
-      console.error('❌ Failed to restore session:', error);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(AuthStore.STORAGE_KEY);
-      }
+      console.error("Failed to update profile:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify NIP-05
+   */
+  public async verifyNip05(identifier: string): Promise<boolean> {
+    if (!this.currentUser) return false;
+
+    try {
+      const [user, domain] = identifier.split("@");
+
+      const response = await fetch(
+        `https://${domain}/.well-known/nostr.json?name=${user}`
+      );
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+
+      return data.names[user] === this.currentUser.pubkey;
+    } catch {
+      return false;
     }
   }
 
@@ -222,7 +265,7 @@ export class AuthStore {
    * 👤 Get current user's display name
    */
   public getUserName(): string | null {
-    return this.currentUser?.name ?? null;
+    return this.currentUser?.profile?.name ?? null;
   }
 
   /**
@@ -236,27 +279,23 @@ export class AuthStore {
       error: this.errorMessage
     };
   }
+
+  /**
+   * Get session info for debugging
+   */
+  public getSessionInfo() {
+    return {
+      isAuthenticated: this.isAuthenticated,
+      user: this.currentUser?.profile,
+      session: this.getStoredSession(),
+    };
+  }
 }
 
-/**
- * ============================================================================
- * GLOBAL SINGLETON INSTANCE
- * ============================================================================
- * 
- * Verwendung in Komponenten:
- * 
- * import { authStore } from '$lib/stores/authStore.svelte';
- * 
- * // In Komponente:
- * let { isAuthenticated, currentUser } = $derived({
- *   isAuthenticated: authStore.isAuthenticated,
- *   currentUser: authStore.currentUser
- * });
- * 
- * // Login:
- * await authStore.loginWithDummy('Mein Name');
- * 
- * // Logout:
- * authStore.logout();
- */
-export const authStore = new AuthStore();
+export let authStore: AuthStore;
+
+// Initialize function (call from +layout.svelte)
+export function initializeAuth(ndk: NDK): AuthStore {
+  authStore = new AuthStore(ndk);
+  return authStore;
+}

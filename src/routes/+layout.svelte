@@ -2,9 +2,12 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
+  import { setContext } from 'svelte';
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
+  import { initializeAuth } from '$lib/stores/authStore.svelte';
+
 
   interface Props {
     children?: any;
@@ -14,16 +17,21 @@
 
   const ndk = new NDKSvelte({
     explicitRelayUrls: [
-      "ws://localhost:4869",
       "wss://relay-rpi.edufeed.org/",
+      "wss://relay.damus.io/",
     ],
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 
-  // Create reactive pool store for Svelte 5
-  const pool = createReactivePool(ndk);
-
   ndk.connect();
+
+  const authStore = initializeAuth(ndk);
+
+  // Create reactive pool store for Svelte 5
+  createReactivePool(ndk);
+
+  setContext('ndk', ndk);
+  setContext('authStore', authStore);
 </script>
 
 <div class="container viewport w-full h-full max-w-full mx-auto p-0">

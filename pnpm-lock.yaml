@@ -24,6 +24,9 @@ importers:
       svelte-dnd-action:
         specifier: ^0.9.65
         version: 0.9.65(svelte@5.39.11)
+      svelte-persisted-store:
+        specifier: ^0.12.0
+        version: 0.12.0(svelte@5.39.11)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -2623,6 +2626,12 @@ packages:
     peerDependenciesMeta:
       svelte:
         optional: true
+
+  svelte-persisted-store@0.12.0:
+    resolution: {integrity: sha512-BdBQr2SGSJ+rDWH8/aEV5GthBJDapVP0GP3fuUCA7TjYG5ctcB+O9Mj9ZC0+Jo1oJMfZUd1y9H68NFRR5MyIJA==}
+    engines: {node: '>=0.14'}
+    peerDependencies:
+      svelte: ^3.48.0 || ^4 || ^5
 
   svelte-sonner@1.0.5:
     resolution: {integrity: sha512-9dpGPFqKb/QWudYqGnEz93vuY+NgCEvyNvxoCLMVGw6sDN/3oVeKV1xiEirW2E1N3vJEyj5imSBNOGltQHA7mg==}
@@ -5640,6 +5649,10 @@ snapshots:
       postcss-scss: 4.0.9(postcss@8.5.6)
       postcss-selector-parser: 7.1.0
     optionalDependencies:
+      svelte: 5.39.11
+
+  svelte-persisted-store@0.12.0(svelte@5.39.11):
+    dependencies:
       svelte: 5.39.11
 
   svelte-sonner@1.0.5(svelte@5.39.11):
