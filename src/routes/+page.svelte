@@ -63,7 +63,7 @@
                 <CardTitle>Nostr Profile</CardTitle>
                 <CardDescription>Displaying profile for {currentUser?.profile?.name || 'Jack Dorsey'}</CardDescription>
             </CardHeader>
-            <a href={resolve('/cardsboard')}>
+            <a href={resolve('/cardsboard', {})}>
                 <CardContent>
                     <div class="flex items-center space-x-3">
                         <Avatar.Root class="h-8 w-8 flex-shrink-0">
