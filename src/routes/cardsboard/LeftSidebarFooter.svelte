@@ -80,7 +80,7 @@
 			<DropdownMenu.Content align="start" class="w-56">
 				<!-- User Info Header -->
 				<div class="px-3 py-2">
-					<p class="text-sm font-semibold">{currentUser.profile.name}</p>
+					<p class="text-sm font-semibold">{currentUser.profile?.name}</p>
 					<p class="text-xs text-muted-foreground font-mono">
 						{formatPubkey(currentUser.pubkey)}
 					</p>
