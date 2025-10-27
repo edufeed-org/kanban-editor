@@ -5,7 +5,6 @@
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { Label } from "$lib/components/ui/label/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
@@ -13,11 +12,10 @@
 	import PencilLineIcon from "@lucide/svelte/icons/pencil";
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
-	import TrashIcon from "@lucide/svelte/icons/trash";
-	import UsersIcon from "@lucide/svelte/icons/users";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
+	import { authStore } from "$lib/index.js";
 
 	let {
 		card,
@@ -333,13 +331,15 @@
 								
 								<Separator />
 								
+								{#if authStore.isAuthenticated }
 								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
-								
+
 								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
 									Karte löschen
 								</Button>
+								{/if}
 							</div>
 						</Popover.Content>
 					</Popover.Root>
@@ -411,6 +411,7 @@
 			>
 				<FullscreenIcon />
 			</button>
+			{#if authStore.isAuthenticated }
 			<button 
 				class="edit-button dark:hover:text-white" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
@@ -418,8 +419,9 @@
 				title="Bearbeiten"
 				type="button"
 			>
-				<PencilLineIcon class="h-4 w-4" />
+			<PencilLineIcon class="h-4 w-4" />
 			</button>
+			{/if}
 		</div>
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->

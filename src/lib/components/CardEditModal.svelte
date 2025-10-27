@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CardProps, PublishState } from '../classes/BoardModel.js';
+    import type { CardProps } from '../classes/BoardModel.js';
 
     interface Props {
         card: CardProps | null;

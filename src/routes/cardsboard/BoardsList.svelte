@@ -2,7 +2,6 @@
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
-    import { Badge } from '$lib/components/ui/badge/index.js';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
