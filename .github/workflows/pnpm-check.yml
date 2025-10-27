@@ -2,7 +2,7 @@ name: pnpm check
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ cardsboard ]
   pull_request:
 
 jobs:
