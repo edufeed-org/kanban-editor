@@ -138,7 +138,7 @@
 						Remote Signer (NIP-46) verwenden — URL des Signer-Services und optionaler Pubkey des Signers.
 					</p>
 
-					<form class="space-y-2" on:submit|preventDefault>
+					<form class="space-y-2">
 						<div>
 							<Label for="nip46-url">Signer URL</Label>
 							<Input id="nip46-url" name="nip46-url" placeholder="https://signer.example.com" type="url" disabled={isLoading} />

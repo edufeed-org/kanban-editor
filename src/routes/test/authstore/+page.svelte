@@ -47,7 +47,7 @@
 					const success = await authStore.loginWithDummy('Test User');
 					if (!success) throw new Error('Login failed');
 					if (!authStore.isAuthenticated) throw new Error('Not authenticated after login');
-					if (authStore.currentUser?.name !== 'Test User') throw new Error('Name mismatch');
+					if (authStore.currentUser?.profile?.name !== 'Test User') throw new Error('Name mismatch');
 					return true;
 				}
 			},

@@ -89,7 +89,7 @@
     const result = profileSchema.safeParse(formData);
     if (!result.success) {
       errors = {};
-      result.error.errors.forEach(err => {
+      result.error.issues.forEach((err) => {
         if (err.path[0]) {
           errors[err.path[0] as string] = err.message;
         }
