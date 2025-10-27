@@ -67,6 +67,7 @@
     "eslint-plugin-svelte": "^3.12.4",
     "formsnap": "^2.0.1",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
     "mdsvex": "^0.12.6",
     "mode-watcher": "^1.1.0",
     "paneforge": "^1.0.2",

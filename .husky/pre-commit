@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# stille Ausführung, damit Logs sauber bleiben
+pnpm -s check || {
+  echo "pnpm check failed — commit aborted"
+  exit 1
+}
