@@ -502,8 +502,8 @@ export class BoardStore {
     public deleteBoard(boardId?: string): boolean {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Boards löschen!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         const targetId = boardId || this.board.id;
@@ -572,8 +572,8 @@ export class BoardStore {
     }): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Board-Metadaten aktualisieren!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         this.board.update(updates); // ✅ Nutze board.update() damit updatedAt gesetzt wird!
@@ -593,8 +593,8 @@ export class BoardStore {
     public setPublishState(state: PublishState): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen publishState ändern!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         this.board.setPublishState(state);
@@ -604,8 +604,8 @@ export class BoardStore {
     public addColumn(props: ColumnProps) {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten hinzufügen!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         const column = this.board.addColumn(props);
@@ -619,8 +619,8 @@ export class BoardStore {
     public deleteColumn(columnId: string): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten löschen!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         this.board.deleteColumn(columnId);
@@ -647,8 +647,8 @@ export class BoardStore {
     public addCard(columnId: string, props: CardProps) {
         // ✅ NEU: Authorization Check - nur Maintainers können Karten hinzufügen
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            const error = `❌ Nicht autorisiert: du bist nicht Maintainer dieses Boards (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
             console.error(error);
             throw new Error(error);
         }
@@ -685,8 +685,8 @@ export class BoardStore {
         if (!existingCard) {
             // Neue Karte: Check Berechtigung
             const signerPubkey = authStore.getPubkey();
-            if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-                const error = `❌ Nicht autorisiert: du kannst keine Karten zu diesem Board hinzufügen (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+                const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
                 console.error(error);
                 throw new Error(error);
             }
@@ -756,8 +756,8 @@ export class BoardStore {
     public updateColumn(columnId: string, updates: { name?: string; color?: string }): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten bearbeiten!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         const column = this.board.findColumn(columnId);
@@ -773,8 +773,8 @@ export class BoardStore {
     public deleteColumnWithCards(columnId: string): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten mit Karten löschen!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         this.board.deleteColumn(columnId);
@@ -882,8 +882,8 @@ export class BoardStore {
     public syncBoardState(uiColumns: UIColumn[]): void {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten/Karten verschieben!
         const signerPubkey = authStore.getPubkey();
-        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
-            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
         console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
