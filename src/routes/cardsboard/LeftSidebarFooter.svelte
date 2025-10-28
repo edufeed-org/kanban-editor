@@ -116,6 +116,14 @@
 		<p class="text-xs text-muted-foreground mt-3 text-center">
 			Melde dich an um Karten zu erstellen
 		</p>
+		<Button
+			onclick={() => (loginDialogOpen = true)}
+			variant="link"
+			class="w-full mt-2"
+			size="sm"
+		>
+			Demo
+		</Button>
 	{/if}
 </div>
 

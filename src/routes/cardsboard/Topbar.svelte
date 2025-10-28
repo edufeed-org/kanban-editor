@@ -213,8 +213,10 @@
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>
-                <Dialog.Trigger class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
-                    <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+                <Dialog.Trigger>
+                    <button class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="Board-Einstellungen">
+                        <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+                    </button>
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
@@ -294,8 +296,10 @@
 
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
-                <Drawer.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
-                    <SquareSigmaIcon class="h-4 w-4" />
+                <Drawer.Trigger>
+                    <button class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" title="KI-Zusammenfassung">
+                        <SquareSigmaIcon class="h-4 w-4" />
+                    </button>
                 </Drawer.Trigger>
                 <Drawer.Content>
                     <Drawer.Header>
@@ -319,8 +323,10 @@
 
             <!-- AI Settings Sheet -->
             <Sheet.Root>
-                <Sheet.Trigger class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
-                    <BotIcon class="h-4 w-4"/>
+                <Sheet.Trigger>
+                    <button class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+                        <BotIcon class="h-4 w-4"/>
+                    </button>
                 </Sheet.Trigger>
                 <Sheet.Content>
                     <Sheet.Header>
