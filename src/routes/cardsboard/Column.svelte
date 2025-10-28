@@ -12,6 +12,7 @@
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { authStore } from "$lib/index.js";
 	
 
  	const flipDurationMs = 150;
@@ -376,6 +377,7 @@
 			
 			<!-- Header Toolbar: Add Card + Menu -->
 			<div class="flex items-center gap-1">
+				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
 					variant="ghost" 
@@ -403,14 +405,16 @@
 				>
 					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
-
+				{/if}
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
+					{#if authStore.isAuthenticated }
 					<Popover.Trigger 
 						class="popover-trigger-ignore inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group"
 					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
 					</Popover.Trigger>
+					{/if}
 					<Popover.Content align="end" class="w-64">
 						<div class="space-y-4">
 							<div class="space-y-2">

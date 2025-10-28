@@ -423,9 +423,9 @@ export class BoardStore {
             author: author, // ✅ Pubkey für Nostr Events & Authorisierung
             maintainers: [author], // ✅ NEU: Ich bin der einzige Maintainer
             columns: [
-                { name: 'MaterialIdeen', color: 'muted' },
-                { name: 'Auswahl', color: 'chart-1' },
-                { name: 'Einstieg', color: 'chart-2' }
+                { name: 'Material', color: 'slate' },
+                { name: 'Auswahl', color: 'green' },
+                { name: 'Einstieg', color: 'orange' }
                 
             ]
         });

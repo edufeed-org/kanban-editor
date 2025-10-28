@@ -24,6 +24,7 @@
     import TrashIcon from "@lucide/svelte/icons/trash";
     import SettingsPanel from './SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { authStore } from '$lib/index.js';
     
 
     // Props für Sidebar-Toggle, Title und Board-Meta
@@ -213,12 +214,14 @@
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>
+                {#if authStore.isAuthenticated }
                 <Dialog.Trigger 
                     class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" 
                     title="Board-Einstellungen"
                 >
                     <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
                 </Dialog.Trigger>
+                {/if}
                 <Dialog.Content class="max-w-md">
                     <Dialog.Header>
                         <Dialog.Title>Board-Einstellungen</Dialog.Title>

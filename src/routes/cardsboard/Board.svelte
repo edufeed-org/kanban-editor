@@ -5,6 +5,7 @@
 	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+	import { authStore } from '$lib/index.js';
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -269,7 +270,7 @@
  					/>
  			</div>
      {/each}
-
+	{#if authStore.isAuthenticated }
 	<!-- Add Column Button - ähnlich wie Column Footer -->
 	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
 		<button 
@@ -285,4 +286,5 @@
 			<span class="sr-only">Spalte hinzufügen</span>
 		</button>
 	</div>
+	{/if}
 </section>
