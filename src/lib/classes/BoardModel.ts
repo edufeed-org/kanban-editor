@@ -35,7 +35,8 @@ export interface CardProps {
     links?: Link[];
     attendees?: string[];
     publishState?: PublishState;
-    author?: string; // Nostr Public Key (npub) - Ersteller der Karte
+    author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
+    authorName?: string; // ← NEU: Lesbar Display Name für UI (z.B. "Johan Amos Comenius")
 }
 
 export interface ColumnProps {
@@ -78,7 +79,8 @@ export class Card {
     public links: Link[] = [];
     public attendees: string[] = [];
     public publishState: PublishState = 'draft';
-    public author?: string; // Nostr Public Key (npub) - Ersteller der Karte
+    public author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
+    public authorName?: string; // ← NEU: Lesbar Display Name für UI
     public createdAt: string;
     public updatedAt: string;
 
@@ -94,6 +96,7 @@ export class Card {
         this.attendees = props.attendees || [];
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
+        this.authorName = props.authorName; // ← NEU: authorName laden
         this.createdAt = generateTimestamp();
         this.updatedAt = this.createdAt;
     }
@@ -108,6 +111,7 @@ export class Card {
         if (props.attendees !== undefined) this.attendees = props.attendees;
         if (props.publishState !== undefined) this.publishState = props.publishState;
         if (props.author !== undefined) this.author = props.author;
+        if (props.authorName !== undefined) this.authorName = props.authorName; // ← NEU
 
         this.updatedAt = generateTimestamp();
     }
@@ -145,6 +149,7 @@ export class Card {
             labels: this.labels,
             publishState: this.publishState,
             author: this.author, // ← ✅ FIXED: author hinzugefügt!
+            authorName: this.authorName, // ← NEU: authorName serialisieren!
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
             links: this.links.map(l => ({ url: l.url, title: l.title }))
         };

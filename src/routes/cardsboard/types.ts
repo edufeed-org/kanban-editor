@@ -19,6 +19,7 @@ export interface CardItem {
 	color?: string;
 	publishState?: PublishState;
 	author?: string;
+	authorName?: string; // Display name (readable), author = pubkey (Nostr)
 	image?: string;
 	link?: string;
 	// Metadaten für Nachverfolgung der Kartenhierarchie

@@ -15,6 +15,7 @@ export type CardItem = {
     color?: string;
     publishState?: PublishState;
     author?: string;
+    authorName?: string; // Display name (readable), author = pubkey (Nostr)
     image?: string;
     link?: string;
     columnId?: string;
@@ -122,6 +123,7 @@ export class BoardStore {
                             color: card.color,
                             publishState: card.publishState,
                             author: card.author || card.attendees?.[0], // author oder erster Attendee
+                            authorName: card.authorName, // ← NEUE ZEILE: Display name für UI
                             columnId: column.id,
                             boardId: this.board.id
                         }))
@@ -252,13 +254,23 @@ export class BoardStore {
     }
 
     private reconstructBoard(data: any): Board {
+        // ✅ MIGRATION: Wenn author kein Pubkey-Format hat, ignoriere es
+        // (Es ist wahrscheinlich ein alter Display-Name)
+        let author = data.author;
+        if (author && !author.match(/^[0-9a-f]{64}$/)) {
+            // Ist kein Hex-Pubkey → Wahrscheinlich alter Display-Name
+            console.warn(`⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze auf 'anonymous'`);
+            author = 'anonymous'; // ← Setze auf anonymous statt alte Name zu nutzen
+        }
+        
         // Erstelle Board-Instanz mit rekonstruierten Columns/Cards
         const boardProps = {
             id: data.id,
             name: data.name,
             description: data.description,
             publishState: data.publishState,
-            author: data.author,
+            author: author, // ← Migrierte/bereinigte author
+            maintainers: data.maintainers || [], // ← NEU: maintainers laden
             tags: data.tags || [], // ← NEU: Tags laden
             ccLicense: data.ccLicense || 'cc-by-4.0', // ← NEU: License laden
             columns: data.columns?.map((colData: any) => ({
@@ -272,6 +284,7 @@ export class BoardStore {
                     image: cardData.image, // ← image MUSS hier sein!
                     color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                     author: cardData.author, // ← ✅ FIXED: author hinzugefügt!
+                    authorName: cardData.authorName, // ← NEU: authorName laden
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
                     links: cardData.links || [],
@@ -289,11 +302,11 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'Backlog', color: 'slate' },
-                { name: 'To Do', color: 'blue' },
-                { name: 'In Progress', color: 'orange' },
-                { name: 'Done', color: 'green' },
-                { name: 'Archive', color: 'red' }
+                { name: 'Spalte 1' },
+                // { name: 'To Do', color: 'blue' },
+                // { name: 'In Progress', color: 'orange' },
+                // { name: 'Done', color: 'green' },
+                // { name: 'Archive', color: 'red' }
             ]
         });
     }
@@ -400,13 +413,14 @@ export class BoardStore {
      * Erstellt ein neues Board mit Default-Spalten und speichert es
      */
     public createBoard(name: string = 'Neues Board'): string {
-        // ✅ Nutze getUserName() für lesbare author (statt pubkey!)
-        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        // ✅ KRITISCH: author MUSS der Pubkey sein für Nostr-Kompatibilität & Authorisierung!
+        // Display-Name ist nur für UI-Anzeige relevant, nicht für Vergleiche
+        const author = authStore.getPubkey() || 'anonymous';
         
         const newBoard = new Board({
             name,
             description: '',
-            author: author, // ✅ Nutze den Namen für bessere UX!
+            author: author, // ✅ Pubkey für Nostr Events & Authorisierung
             columns: [
                 { name: 'Backlog', color: 'muted' },
                 { name: 'To Do', color: 'chart-1' },
@@ -739,19 +753,21 @@ export class BoardStore {
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
         console.log('🆕 createCard aufgerufen:', { columnId, name, description });
         
-        // ✅ WICHTIG: Nutze getUserName() für lesbare author (statt pubkey!)
-        // Fallback: pubkey, dann 'anonymous'
-        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        // ✅ KRITISCH: author MUSS der Pubkey sein (wie bei Board)!
+        // Das ist notwendig für Nostr-Kompatibilität und Vergleiche
+        const author = authStore.getPubkey() || 'anonymous';
+        const authorName = authStore.getUserName() || author; // ← NEU: Lesbar Name für UI
         
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
             publishState: 'draft',
-            author: author // ✅ Nutze den Namen für bessere UX!
+            author: author, // ✅ Pubkey für Konsistenz & Nostr Events
+            authorName: authorName // ← NEU: Lesbar Name speichern
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'authorName:', authorName, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;
