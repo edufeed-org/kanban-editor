@@ -195,7 +195,8 @@ export interface BoardProps {
     description?: string;
     columns?: ColumnProps[];
     publishState?: PublishState; 
-    author?: string; // npub-Key
+    author?: string; // npub-Key (Creator, kann nie entfernt werden)
+    maintainers?: string[]; // ← NEU (Phase 1): Nostr pubkeys mit Co-Edit Berechtigung (Nostr p-tags)
     tags?: string[]; // Array von Tags für Board-Kategorisierung, Komma-getrennt in Topbar
     ccLicense?: string; // CC Lizenz-Typ (z.B. 'cc-by-4.0', 'cc-by-nc-4.0'), Default: 'cc-by-4.0'
 }

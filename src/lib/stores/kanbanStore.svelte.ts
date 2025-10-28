@@ -598,6 +598,14 @@ export class BoardStore {
     }
 
     public addCard(columnId: string, props: CardProps) {
+        // ✅ NEU: Authorization Check - nur Maintainers können Karten hinzufügen
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            const error = `❌ Nicht autorisiert: du bist nicht Maintainer dieses Boards (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+            console.error(error);
+            throw new Error(error);
+        }
+        
         const column = this.board.findColumn(columnId);
         if (column) {
             const card = column.addCard(props);
@@ -622,6 +630,19 @@ export class BoardStore {
     public upsertCard(targetColumnId: string, props: CardProps) {
         if (!props.id) {
             throw new Error('upsertCard requires props.id to be set (from Nostr d-tag)');
+        }
+
+        // ✅ NEU: Authorization Check (nur bei INSERT neuer Karten)
+        // UPDATE: Keine Authorisierung nötig (Existierende Karten können von author aktualisiert werden)
+        const existingCard = this.board.findCardById(props.id!);
+        if (!existingCard) {
+            // Neue Karte: Check Berechtigung
+            const signerPubkey = authStore.getPubkey();
+            if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+                const error = `❌ Nicht autorisiert: du kannst keine Karten zu diesem Board hinzufügen (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+                console.error(error);
+                throw new Error(error);
+            }
         }
 
         const card = this.board.upsertCard(targetColumnId, props);
@@ -1009,6 +1030,9 @@ export class BoardStore {
     // ============================================================================
 
     private publishToNostr(): void {
+        // ✅ AUTHORIZATION CHECK: Bereits in addCard() und upsertCard() durchgeführt!
+        // Diese Methode wird nur aufgerufen wenn Validierung erfolgreich war
+        
         // Hier würde die tatsächliche Nostr-Publikation erfolgen
         // z.B. über eine WebSocket-Verbindung oder HTTP-API
         console.log('Publishing board state to Nostr...', this.board.getContextData(true));

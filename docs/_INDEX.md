@@ -73,12 +73,14 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 4. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
 5. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
 6. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
-7. **AuthStore (Authentifizierung):** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md)
+7. **🔴 KRITISCH - Board Authorization:** [`ARCHITECTURE/BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) (Maintainers, Co-Editors, Permissions)
+8. **AuthStore (Authentifizierung):** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md)
 
 **Häufige Aufgaben:**
 - Event publizieren? → [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 - User authentifizieren? → [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Session + Card Author)
 - Event-Schema verstehen? → [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
+- Co-Editors & Permissions? → [`ARCHITECTURE/BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) (🔴 KRITISCH!)
 
 ---
 
@@ -260,7 +262,7 @@ docs/
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (11 Dateien)
+### ARCHITECTURE/ (14 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -268,6 +270,10 @@ docs/
 | [`SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | ✅ Master File: UI Components (Login, Sidebar) | ✅ Master (25.10.) |
 | [`SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | ✅ Master File: Theme, Relays, LLM Config | ✅ Master (25.10.) |
 | [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
+| [`BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) | 🔴 **KRITISCH**: Maintainers, Co-Editors, Permissions | ✅ Neu (27.10.) |
+| [`AUTHORIZATION-EXECUTIVE-SUMMARY.md`](./ARCHITECTURE/AUTHORIZATION-EXECUTIVE-SUMMARY.md) | Executive Summary für AI-Agenten & Code Review | ✅ Neu (27.10.) |
+| [`AUTHORIZATION-PROBLEM.md`](./ARCHITECTURE/AUTHORIZATION-PROBLEM.md) | Problem-Analyse: p-tags vs BoardProps Inkonsistenz | ✅ Neu (27.10.) |
+| [`AUTHORIZATION-VISUAL.md`](./ARCHITECTURE/AUTHORIZATION-VISUAL.md) | Visual Guide: Permission Matrix & Szenarien | ✅ Neu (27.10.) |
 | [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
 | [`NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | Benutzerauthentifizierung & NIP-07 | ✅ |
 | [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
@@ -325,14 +331,14 @@ docs/
 
 ## 🔗 Alle Dokumentationen verlinkt?
 
-✅ **ARCHITECTURE/** — 11/11 Dateien verlinkt  
+✅ **ARCHITECTURE/** — 14/14 Dateien verlinkt  
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
 ✅ **FEATURE/** — 4/4 Dateien verlinkt  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 34/34 Dateien in /docs verlinkt und dokumentiert**
+**Total: 37/37 Dateien in /docs verlinkt und dokumentiert**
 
 ---
 

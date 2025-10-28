@@ -52,6 +52,7 @@ export interface BoardProps {
     columns?: ColumnProps[];
     publishState?: PublishState;
     author?: string;
+    maintainers?: string[]; // ← NEU: Nostr pubkeys mit Edit-Berechtigung
     createdAt?: number;
     tags?: string[];
     ccLicense?: string;
@@ -236,6 +237,7 @@ export class Board {
     public columns: Column[] = [];
     public publishState: PublishState = 'draft';
     public author?: string;
+    public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
     public tags: string[] = [];
@@ -248,6 +250,7 @@ export class Board {
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
+        this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
         this.createdAt = generateTimestamp();
@@ -265,6 +268,33 @@ export class Board {
         if (props.tags !== undefined) this.tags = props.tags;
         if (props.ccLicense !== undefined) this.ccLicense = props.ccLicense;
         this.updatedAt = generateTimestamp();
+    }
+
+    /**
+     * Überprüft, ob ein Pubkey ein Maintainer (Co-Editor) des Boards ist.
+     * @param pubkey - Nostr pubkey (hex format)
+     * @returns true wenn pubkey === author ODER in maintainers array enthalten
+     */
+    isMaintainer(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        return pubkey === this.author || (this.maintainers || []).includes(pubkey);
+    }
+
+    /**
+     * Überprüft, ob ein Pubkey berechtigt ist, Karten zu diesem Board hinzuzufügen.
+     * - Wenn maintainers leer: nur author kann hinzufügen
+     * - Wenn maintainers gesetzt: author oder any maintainer kann hinzufügen
+     * @param pubkey - Nostr pubkey (hex format)
+     * @returns true wenn berechtigt, false sonst
+     */
+    canAddCard(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        if ((this.maintainers || []).length === 0) {
+            // Nur author wenn keine maintainers definiert
+            return pubkey === this.author;
+        }
+        // author oder any maintainer
+        return this.isMaintainer(pubkey);
     }
 
     addColumn(props: ColumnProps): Column {
@@ -359,7 +389,8 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
-        author?: string, // ← ✅ FIXED: author zur Return Type hinzugefügt!
+        author?: string,
+        maintainers?: string[], // ← NEU: maintainers zur Return Type hinzugefügt!
         columns: any[]
     } {
         return {
@@ -371,7 +402,8 @@ export class Board {
             publishState: this.publishState,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            author: this.author, // ← ✅ FIXED: author hinzugefügt!
+            author: this.author,
+            maintainers: this.maintainers, // ← NEU: maintainers serialisieren!
             columns: this.columns.map(col => col.getContextData(full))
         };
     }

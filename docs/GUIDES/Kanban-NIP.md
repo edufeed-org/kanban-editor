@@ -47,6 +47,9 @@ Kanban boards are a popular project management tool that enables visual organiza
 }
 ```
 
+**⚠️ CRITICAL:** Board `p` tags grant **edit permission** (maintainers), NOT just notification/assignment.
+Only the Board creator and designated maintainers can publish new Card events under this Board's d-tag.
+
 In case there are no `p` tags to designate maintainers, the owner of the board is the only person who can publish cards on the boards.
 
 Editing the board event is possible only by the creator of the board. 
@@ -71,7 +74,7 @@ Editing the board event is possible only by the creator of the board.
         ["u","https://attachment1"],
         ["u","https://attachment2"],
 
-        // add assignees using 'p' tag
+        // add assignees using 'p' tag (METADATA ONLY - NOT EDIT PERMISSION)
         [ "p", "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2"],
         [ "p", "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52"],  
         [ "p", "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"], 
@@ -83,6 +86,11 @@ Editing the board event is possible only by the creator of the board.
     // other fields...
 }
 ```
+
+**⚠️ CRITICAL:** Card `p` tags are for **assignees only** (metadata), NOT edit permission!
+- Only Board p-tags (from the 30301 event) grant write permission
+- To publish a Card, signer MUST be: Card author OR Board creator OR Board maintainer
+- Card assignees have NO special permissions (it's just metadata for UI)
 
 When editing a card, the maintainers can copy the card event with the `d` tag intact and publish a new event. 
 
