@@ -121,6 +121,10 @@ export class SettingsStore {
   constructor() {
     // Auto-save on changes
     this.setupAutoSave();
+    
+    // Config wird NICHT hier geladen (zu früh!)
+    // Config wird in +layout.ts geladen via load() function
+    // und dann gecacht in localStorage
   }
 
   /**
@@ -516,6 +520,79 @@ export class SettingsStore {
 
   /**
    * ────────────────────────────────────────────
+   * Config File Handling (config.json)
+   * ────────────────────────────────────────────
+   */
+
+  /**
+   * Lade externe config.json SYNCHRON und cache sie
+   * Wird beim App-Start von +layout.svelte aufgerufen BEVOR AuthStore initialisiert wird
+   * 
+   * Diese Funktion returned ein Promise aber arbeitet auch synchron mit fetch
+   */
+  public async loadAndCacheConfig(): Promise<any> {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      // 1. Prüfe ob bereits gecacht
+      const cached = localStorage.getItem(SettingsStore.CONFIG_KEY);
+      if (cached) {
+        console.log('✅ Config loaded from cache');
+        return JSON.parse(cached);
+      }
+
+      // 2. Lade config.json (fetch wartet auf Response)
+      const response = await fetch('/config.json');
+      if (!response.ok) {
+        console.warn('⚠️ config.json not found, using defaults');
+        return null;
+      }
+
+      const config = await response.json();
+
+      // 3. Cache sofort in localStorage
+      localStorage.setItem(SettingsStore.CONFIG_KEY, JSON.stringify(config));
+      console.log('✅ Config loaded and cached from /config.json');
+      console.log('   allow_demo_session:', config?.allow_demo_session?.enabled);
+
+      return config;
+    } catch (error) {
+      console.error('Failed to load config.json:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Lade externe config.json SYNCHRON (blockierend)
+   * Diese Version ist synchron und wird beim App-Start aufgerufen
+   * Sie prüft zuerst localStorage, dann lädt sie synchron aus IndexedDB wenn möglich
+   * 
+   * Falls config.json noch nicht in localStorage ist, wird sie hier NICHT geladen
+   * (das passiert asynchron später via loadAndCacheConfig)
+   */
+  public loadConfigSync(): any {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      // Prüfe localStorage (wird von loadAndCacheConfig() gefüllt)
+      const cached = localStorage.getItem(SettingsStore.CONFIG_KEY);
+      if (cached) {
+        const config = JSON.parse(cached);
+        console.log('✅ Config loaded from localStorage (sync)');
+        return config;
+      }
+
+      // Fallback: Nicht vorhanden
+      console.log('ℹ️  Config not yet in localStorage (will be loaded async)');
+      return null;
+    } catch (error) {
+      console.error('Failed to load config sync:', error);
+      return null;
+    }
+  }
+
+  /**
+   * ────────────────────────────────────────────
    * Debugging
    * ────────────────────────────────────────────
    */
@@ -527,6 +604,7 @@ export class SettingsStore {
     console.log('isLlmConfigured:', this.isLlmConfigured);
     console.log('isMcpEnabled:', this.isMcpEnabled);
     console.log('Stored in localStorage:', localStorage.getItem(SettingsStore.STORAGE_KEY));
+    console.log('Cached Config:', localStorage.getItem(SettingsStore.CONFIG_KEY));
     console.groupEnd();
   }
 }

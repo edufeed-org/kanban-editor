@@ -4,6 +4,7 @@
  * 
  * 🎯 Integriert LoginDialog unten in der linken Sidebar
  * Zeigt aktuellen User mit Avatar oder Login-Button
+ * Mit Demo-Session-Unterstützung (optional, config-gesteuert)
  */
 
 
@@ -15,6 +16,7 @@
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
+	import PlayIcon from "@lucide/svelte/icons/play";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -22,14 +24,33 @@
 	let isAuthenticated = $derived(authStore.isAuthenticated);
 	let currentUser = $derived(authStore.currentUser);
 
+	// Check ob Demo-Sessions erlaubt sind
+	// WICHTIG: Dies wird dynamisch neu berechnet, nicht nur beim Initialize
+	let isDemoAllowed = $derived(authStore.isDemoSessionAllowed());
+
 	// Dialog State
 	let loginDialogOpen = $state(false);
 
 	let showProfileEditor = $state(false);
 
+	// Demo-Error Message
+	let demoErrorMessage = $state<string | null>(null);
+
 	async function handleLogout() {
 		authStore.logout();
 		loginDialogOpen = false;
+	}
+
+	async function handleDemoSession() {
+		try {
+			demoErrorMessage = null;
+			authStore.createDemoSession();
+			console.log('✅ Demo-Session gestartet');
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			demoErrorMessage = errorMsg;
+			console.error('❌ Demo-Session konnte nicht gestartet werden:', error);
+		}
 	}
 
 	/**
@@ -48,42 +69,30 @@
 		<!-- User ist angemeldet -->
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
-				<Button
-					variant="ghost"
-					class="w-full justify-start gap-3 px-2 h-auto py-2 hover:bg-muted"
-				>
-					<!-- Avatar mit User-Initialen -->
+				<!-- Avatar mit User-Initialen -->
+				<Avatar.Root class="h-8 w-8 flex-shrink-0">
+					<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
+					<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
+						{Avatar.getInitials(currentUser.profile?.name) || ''}
+					</Avatar.Fallback>
+				</Avatar.Root>
+			</DropdownMenu.Trigger>
+
+			<DropdownMenu.Content align="start" class="w-56">
+				<!-- User Info Header mit Avatar -->
+				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
 						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
 							{Avatar.getInitials(currentUser.profile?.name) || ''}
 						</Avatar.Fallback>
 					</Avatar.Root>
-
-					<!-- User Info -->
-					<div class="flex-1 min-w-0 text-left">
-						<div class="text-sm font-medium truncate">
-							{currentUser.profile?.name || ''}
-						</div>
-						<div
-							class="text-xs text-muted-foreground truncate"
-							title={currentUser.pubkey}
-						>
+					<div>
+						<p class="text-sm font-semibold">{currentUser.profile?.name}</p>
+						<p class="text-xs text-muted-foreground font-mono">
 							{formatPubkey(currentUser.pubkey)}
-						</div>
+						</p>
 					</div>
-
-					<!-- Dropdown Indicator (wird automatisch hinzugefügt) -->
-				</Button>
-			</DropdownMenu.Trigger>
-
-			<DropdownMenu.Content align="start" class="w-56">
-				<!-- User Info Header -->
-				<div class="px-3 py-2">
-					<p class="text-sm font-semibold">{currentUser.profile?.name}</p>
-					<p class="text-xs text-muted-foreground font-mono">
-						{formatPubkey(currentUser.pubkey)}
-					</p>
 				</div>
 
 				<DropdownMenu.Separator />
@@ -102,7 +111,7 @@
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	{:else}
-		<!-- User ist nicht angemeldet - Login Button -->
+		<!-- User ist nicht angemeldet - Login Button + Demo Option -->
 		<Button
 			onclick={() => (loginDialogOpen = true)}
 			variant="outline"
@@ -116,14 +125,29 @@
 		<p class="text-xs text-muted-foreground mt-3 text-center">
 			Melde dich an um Karten zu erstellen
 		</p>
-		<Button
-			onclick={() => (loginDialogOpen = true)}
-			variant="link"
-			class="w-full mt-2"
-			size="sm"
-		>
-			Demo
-		</Button>
+
+		<!-- Demo-Button (nur wenn erlaubt) -->
+		{#if isDemoAllowed}
+			<Button
+				onclick={handleDemoSession}
+				variant="link"
+				class="w-full mt-2"
+				size="sm"
+			>
+				<PlayIcon class="h-4 w-4 mr-1" />
+				Demo starten
+			</Button>
+			
+			{#if demoErrorMessage}
+				<div class="bg-red-50 border border-red-200 text-red-800 px-2 py-1 rounded text-xs mt-2">
+					{demoErrorMessage}
+				</div>
+			{/if}
+		{:else}
+			<div class="text-xs text-muted-foreground mt-3 text-center italic">
+				Demo-Sessions sind deaktiviert
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -141,3 +165,4 @@
 		flex-shrink: 0;
 	}
 </style>
+

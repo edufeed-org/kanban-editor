@@ -143,10 +143,11 @@ export class AuthStore {
   }
 
   /**
-   * Restore Session or create Demo Session
-   * 🎯 OPTION 2: Einheitliche Regel für alle User
+   * Restore Session or stay logged out
+   * 🎯 NEUES VERHALTEN:
    * - Existierende Session? → Restore
-   * - Keine Session? → Auto-Demo-Session erstellen
+   * - Keine Session? → Bleibe ausgeloggt (User kann explizit Demo starten)
+   * - Demo nur wenn config.allow_demo_session.enabled = true
    */
   private async restoreSessionOrCreateDemo(): Promise<void> {
     try {
@@ -157,15 +158,28 @@ export class AuthStore {
         if (Date.now() > stored.expires) {
           console.log("⏰ Session expired");
           this.sessionStore.set(null);
-          this.createDemoSession(); // → Demo-Session als Fallback
+          this.currentUser = null;
           return;
         }
 
+        // Für Demo-Sessions: Nicht neu laden, einfach direkt set
+        if (stored.signerType === "demo") {
+          this.currentUser = {
+            pubkey: stored.pubkey,
+            npub: stored.npub,
+            profile: stored.profile
+          } as any;
+          console.log(`✅ Demo-Session wiederhergestellt: ${stored.profile.name}`);
+          return;
+        }
+
+        // Für echte Nostr-Sessions: Versuch zu fetchen
         const user = await this.ndk.fetchUser(stored.pubkey);
         
         if (!user) {
-          // Fetch fehlgeschlagen → Demo-Session
-          this.createDemoSession();
+          console.log("⚠️  Failed to fetch user from NDK - staying logged out");
+          this.sessionStore.set(null);
+          this.currentUser = null;
           return;
         }
 
@@ -184,23 +198,31 @@ export class AuthStore {
         return;
       }
 
-      // Fall 2: Keine Session → Demo-Session erstellen
-      console.log("👤 Keine Session gefunden → Demo-Session erstellen");
-      this.createDemoSession();
+      // Fall 2: Keine Session vorhanden → User bleibt ausgeloggt
+      console.log("👤 Keine Session gefunden → User ist ausgeloggt");
+      this.currentUser = null;
 
     } catch (error) {
       console.error("Failed to restore session:", error);
       this.sessionStore.set(null);
-      this.createDemoSession(); // Fallback auf Demo
+      this.currentUser = null; // Ausgeloggt bei Error
     }
   }
 
   /**
-   * 🎯 Erstelle Demo-Session für Anonymous User
+   * PUBLIC: Erstelle Demo-Session für Anonymous User
+   * 🎯 Wird vom User explizit ausgelöst (Button in Sidebar)
    * Gibt dem User eine lokale Identity (demo-xxxx)
-   * Später: Wenn Login → echte Session, gleiche Validierungslogik
+   * 
+   * @throws Error wenn config.allow_demo_session.enabled = false
    */
-  private createDemoSession(): void {
+  public createDemoSession(): void {
+    // 🔐 CHECK: Ist Demo in Config aktiviert?
+    const isDemoAllowed = this.isDemoSessionAllowed();
+    if (!isDemoAllowed) {
+      throw new Error("Demo sessions are disabled in configuration");
+    }
+
     const demoId = `demo-${Math.random().toString(36).slice(2, 10)}`;
     const demoSession: UserSession = {
       pubkey: demoId,
@@ -226,6 +248,45 @@ export class AuthStore {
     console.log(`✅ Demo-Session erstellt: ${demoId}`);
     console.log(`   User kann lokal Boards anlegen und bearbeiten`);
     console.log(`   Nach Login → echte Nostr-Session mit gleicher Validierung`);
+  }
+
+  /**
+   * Check ob Demo-Sessions in der Config aktiviert sind
+   * Liest aus config.json: allow_demo_session.enabled
+   * 
+   * IMPORTANT: Diese Funktion macht einen synchronen Check auf localStorage.
+   * Bei erstem Call wird Config möglicherweise noch nicht geladen sein.
+   * Bei Button-Click ist sie aber garantiert geladen.
+   */
+  public isDemoSessionAllowed(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      // Versuche aus gecachter Config zu lesen (von SettingsStore)
+      // localStorage Schlüssel: 'kanban-config'
+      const cachedConfig = localStorage.getItem('kanban-config');
+      if (cachedConfig) {
+        try {
+          const config = JSON.parse(cachedConfig);
+          const demoAllowed = config?.allow_demo_session?.enabled;
+          
+          if (typeof demoAllowed === 'boolean') {
+            console.log(`ℹ️  Demo sessions: ${demoAllowed ? 'enabled ✅' : 'disabled ❌'}`);
+            return demoAllowed;
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse cached config:", parseErr);
+        }
+      }
+
+      // Fallback: Wenn keine Config vorhanden: Default auf false (sicherer)
+      // DEBUG: Zeige dass wir nachschlagen müssen
+      console.log('ℹ️  Demo sessions: config not yet in localStorage (being loaded async)');
+      return false;
+    } catch (error) {
+      console.error("Error checking demo session config:", error);
+      return false;
+    }
   }
 
   /**
