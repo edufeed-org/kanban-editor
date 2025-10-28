@@ -40,6 +40,6 @@
     "showRight": true
   },
   "allow_demo_session": {
-    "enabled": true
+    "enabled": false
   }
 }

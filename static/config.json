@@ -1,0 +1,45 @@
+{
+  "$comment": "Kanban Board Configuration - Diese Werte werden in SettingsStore geladen. Siehe ./config.schema.json für Validierung.",
+
+  "ui": {
+    "maxCardsBeforeScroll": 20,
+    "alignColumnsToMaxHeight": true,
+    "columnWidth": 350,
+    "theme": "auto"
+  },
+
+  "nostr": {
+    "relaysPublic": [
+      "wss://relay-rpi.edufeed.org",
+      "wss://relay.primal.net",
+      "wss://nos.lol"
+    ],
+    "relaysPrivate": []
+  },
+
+  "llm": {
+    "model": "ollama/mistral",
+    "baseUrl": "http://localhost:11434",
+    "apiKey": "",
+    "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
+    "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben."
+  },
+
+  "mcp": {
+    "urls": []
+  },
+
+  "defaults": {
+    "columns": ["To Do", "In Progress", "Done"],
+    "boardPublishState": "draft",
+    "cardPublishState": "draft"
+  },
+
+  "sidebar": {
+    "showLeft": true,
+    "showRight": true
+  },
+  "allow_demo_session": {
+    "enabled": false
+  }
+}

@@ -119,12 +119,19 @@ export class SettingsStore {
   public isMcpEnabled = $derived(this.settings.mcpUrls.length > 0);
 
   constructor() {
-    // Auto-save on changes
-    this.setupAutoSave();
+    // 1. Lade Settings aus localStorage (passiert bereits in this.settings = $state(...))
     
-    // Config wird NICHT hier geladen (zu früh!)
-    // Config wird in +layout.ts geladen via load() function
-    // und dann gecacht in localStorage
+    // 2. Config wird NICHT im Constructor geladen (läuft auch bei SSR!)
+    // Stattdessen: wird beim ersten Browser-Zugriff via getter lazy-loaded
+    // ODER: explizit via initializeConfig() aufgerufen (z.B. in +layout.svelte onMount)
+    
+    // 3. Auto-save wird durch manuelle saveToStorage() Aufrufe nach Updates gemacht
+    // (Svelte 5 $effect funktioniert nicht in Store-Klassen, nur in Components)
+    
+    // 4. Wenn im Browser: lade config.json asynchron
+    if (typeof window !== 'undefined') {
+      this.initializeConfig();
+    }
   }
 
   /**
@@ -164,12 +171,172 @@ export class SettingsStore {
   }
 
   /**
-   * 🔄 Auto-Save bei Änderungen
-   * Mit $effect können wir auf State-Änderungen reagieren
+   * 🔄 Lade und merge config.json in Settings
+   * Wird beim Constructor aufgerufen (async, wartet NICHT auf Completion)
+   * Kann auch manuell aufgerufen werden zum Force-Reload
    */
-  private setupAutoSave(): void {
-    // Hinweis: $effect wird in Komponenten verwendet, nicht im Store
-    // Stattdessen: manuelle saveToStorage() Aufrufe nach Updates
+  public async initializeConfig(forceOverwrite: boolean = false): Promise<void> {
+    // Versuch 1: Synchron aus localStorage (wenn bereits gecacht)
+    const cachedConfig = this.loadConfigSync();
+    if (cachedConfig) {
+      console.log('📦 Config aus localStorage geladen');
+      this.mergeConfigIntoSettings(cachedConfig, forceOverwrite);
+      return;
+    }
+
+    // Versuch 2: Asynchron laden (beim ersten App-Start)
+    try {
+      const config = await this.loadAndCacheConfig();
+      if (config) {
+        console.log('🌐 Config von /config.json geladen');
+        this.mergeConfigIntoSettings(config, forceOverwrite);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load config.json:', error);
+    }
+  }
+
+  /**
+   * Merge config.json Werte in Settings (ohne User-Änderungen zu überschreiben)
+   * 
+   * Smart-Merge Strategie:
+   * - Falls localStorage leer: config.json als Defaults nutzen
+   * - Falls localStorage existiert: Nur NEUE Felder aus config.json hinzufügen
+   * - Falls forceOverwrite=true: config.json überschreibt ALLE Werte
+   */
+  private mergeConfigIntoSettings(config: any, forceOverwrite: boolean = false): void {
+    if (!config) return;
+
+    // Prüfe ob User bereits Settings gespeichert hat
+    const hasUserSettings = typeof window !== 'undefined' 
+      && localStorage.getItem(SettingsStore.STORAGE_KEY) !== null;
+
+    if (hasUserSettings && !forceOverwrite) {
+      console.log('✅ User-Settings vorhanden → config.json wird NICHT gemerged (User-Präferenzen haben Vorrang)');
+      console.log('   💡 Tipp: Verwende initializeConfig(true) zum Force-Overwrite');
+      // Nur neue Felder hinzufügen die User noch nicht hat
+      // (für zukünftige Settings-Erweiterungen)
+      return;
+    }
+
+    if (forceOverwrite) {
+      console.log('⚠️  Force-Overwrite aktiviert → config.json überschreibt User-Settings!');
+    } else {
+      console.log('🔄 Erste Installation → Merge config.json als Defaults...');
+    }
+
+    // UI Settings
+    if (config.ui) {
+      const partial: Partial<SettingsState> = {};
+      
+      if (config.ui.maxCardsBeforeScroll !== undefined) {
+        partial.maxCardsBeforeScroll = config.ui.maxCardsBeforeScroll;
+      }
+      if (config.ui.alignColumnsToMaxHeight !== undefined) {
+        partial.alignColumnsToMaxHeight = config.ui.alignColumnsToMaxHeight;
+      }
+      if (config.ui.columnWidth !== undefined) {
+        partial.columnWidth = config.ui.columnWidth;
+      }
+      if (config.ui.theme !== undefined) {
+        partial.theme = config.ui.theme;
+      }
+
+      // Merge UI settings
+      if (Object.keys(partial).length > 0) {
+        this.settings = { ...this.settings, ...partial };
+      }
+    }
+
+    // Nostr Relays
+    if (config.nostr) {
+      if (config.nostr.relaysPublic) {
+        this.settings = {
+          ...this.settings,
+          relaysPublic: config.nostr.relaysPublic
+        };
+      }
+      if (config.nostr.relaysPrivate) {
+        this.settings = {
+          ...this.settings,
+          relaysPrivate: config.nostr.relaysPrivate
+        };
+      }
+    }
+
+    // LLM Settings
+    if (config.llm) {
+      const llmPartial: Partial<SettingsState> = {};
+      
+      if (config.llm.model !== undefined) {
+        llmPartial.llmModel = config.llm.model;
+      }
+      if (config.llm.baseUrl !== undefined) {
+        llmPartial.llmBaseUrl = config.llm.baseUrl;
+      }
+      if (config.llm.apiKey !== undefined) {
+        llmPartial.llmApiKey = config.llm.apiKey;
+      }
+      if (config.llm.systemPrompt !== undefined) {
+        llmPartial.llmSystemPrompt = config.llm.systemPrompt;
+      }
+
+      if (Object.keys(llmPartial).length > 0) {
+        this.settings = { ...this.settings, ...llmPartial };
+      }
+    }
+
+    // MCP URLs
+    if (config.mcp?.urls) {
+      this.settings = {
+        ...this.settings,
+        mcpUrls: config.mcp.urls
+      };
+    }
+
+    // Defaults
+    if (config.defaults) {
+      const defaultsPartial: Partial<SettingsState> = {};
+      
+      if (config.defaults.columns) {
+        defaultsPartial.defaultColumns = config.defaults.columns;
+      }
+      if (config.defaults.boardPublishState) {
+        defaultsPartial.defaultBoardPublishState = config.defaults.boardPublishState;
+      }
+      if (config.defaults.cardPublishState) {
+        defaultsPartial.defaultCardPublishState = config.defaults.cardPublishState;
+      }
+
+      if (Object.keys(defaultsPartial).length > 0) {
+        this.settings = { ...this.settings, ...defaultsPartial };
+      }
+    }
+
+    // Sidebar
+    if (config.sidebar) {
+      const sidebarPartial: Partial<SettingsState> = {};
+      
+      if (config.sidebar.showLeft !== undefined) {
+        sidebarPartial.showLeftSidebar = config.sidebar.showLeft;
+      }
+      if (config.sidebar.showRight !== undefined) {
+        sidebarPartial.showRightSidebar = config.sidebar.showRight;
+      }
+
+      if (Object.keys(sidebarPartial).length > 0) {
+        this.settings = { ...this.settings, ...sidebarPartial };
+      }
+    }
+
+    // Speichere die gemergten Settings
+    this.saveToStorage();
+    
+    // Update Theme im DOM
+    this.updateTheme(this.settings.theme);
+
+    console.log('✅ Config merged successfully');
+    console.log('   Current settings:', this.settings);
   }
 
   /**
@@ -541,10 +708,12 @@ export class SettingsStore {
         return JSON.parse(cached);
       }
 
-      // 2. Lade config.json (fetch wartet auf Response)
+      // 2. Lade config.json via fetch
+      //    In Development: Vite serviert automatisch aus /public/
+      //    In Production: static/ Ordner wird in /build/ kopiert
       const response = await fetch('/config.json');
       if (!response.ok) {
-        console.warn('⚠️ config.json not found, using defaults');
+        console.warn(`⚠️ config.json not found (${response.status}), using defaults`);
         return null;
       }
 

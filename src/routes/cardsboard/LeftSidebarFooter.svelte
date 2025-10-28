@@ -69,21 +69,11 @@
 		<!-- User ist angemeldet -->
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
-				<!-- Avatar mit User-Initialen -->
-				<Avatar.Root class="h-8 w-8 flex-shrink-0">
-					<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
-					<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
-						{Avatar.getInitials(currentUser.profile?.name) || ''}
-					</Avatar.Fallback>
-				</Avatar.Root>
-			</DropdownMenu.Trigger>
-
-			<DropdownMenu.Content align="start" class="w-56">
-				<!-- User Info Header mit Avatar -->
 				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
 						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
+							<!-- Avatar mit User-Initialen -->
 							{Avatar.getInitials(currentUser.profile?.name) || ''}
 						</Avatar.Fallback>
 					</Avatar.Root>
@@ -94,9 +84,11 @@
 						</p>
 					</div>
 				</div>
+				
+			</DropdownMenu.Trigger>
 
-				<DropdownMenu.Separator />
-
+			<DropdownMenu.Content align="start" class="w-56">
+				
 				<!-- Settings Option -->
 				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2">
 					<SettingsIcon class="h-4 w-4" />
@@ -145,7 +137,7 @@
 			{/if}
 		{:else}
 			<div class="text-xs text-muted-foreground mt-3 text-center italic">
-				Demo-Sessions sind deaktiviert
+				<!-- Demo-Sessions sind deaktiviert -->
 			</div>
 		{/if}
 	{/if}
