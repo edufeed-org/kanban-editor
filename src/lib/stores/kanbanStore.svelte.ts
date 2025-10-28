@@ -302,7 +302,7 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'Spalte 1' },
+                // { name: 'Spalte 1' },
                 // { name: 'To Do', color: 'blue' },
                 // { name: 'In Progress', color: 'orange' },
                 // { name: 'Done', color: 'green' },
@@ -421,12 +421,12 @@ export class BoardStore {
             name,
             description: '',
             author: author, // ✅ Pubkey für Nostr Events & Authorisierung
+            maintainers: [author], // ✅ NEU: Ich bin der einzige Maintainer
             columns: [
-                { name: 'Backlog', color: 'muted' },
-                { name: 'To Do', color: 'chart-1' },
-                { name: 'In Progress', color: 'chart-2' },
-                { name: 'Done', color: 'chart-3' },
-                { name: 'Archive', color: 'muted' }
+                { name: 'MaterialIdeen', color: 'muted' },
+                { name: 'Auswahl', color: 'chart-1' },
+                { name: 'Einstieg', color: 'chart-2' }
+                
             ]
         });
         
@@ -500,6 +500,12 @@ export class BoardStore {
      * Löscht ein Board mit der gegebenen ID
      */
     public deleteBoard(boardId?: string): boolean {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Boards löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         const targetId = boardId || this.board.id;
         
         if (typeof window === 'undefined') return false;
@@ -564,6 +570,12 @@ export class BoardStore {
         tags?: string[]
         ccLicense?: string
     }): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Board-Metadaten aktualisieren!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         this.board.update(updates); // ✅ Nutze board.update() damit updatedAt gesetzt wird!
         this.triggerUpdate(); // 🔥 speichert zu localStorage und triggert $derived Neuberechnung
         console.log('✅ Board-Metadaten aktualisiert:', { 
@@ -579,21 +591,42 @@ export class BoardStore {
     // ============================================================================
 
     public setPublishState(state: PublishState): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen publishState ändern!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         this.board.setPublishState(state);
+        this.triggerUpdate();
     }
 
     public addColumn(props: ColumnProps) {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten hinzufügen!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         const column = this.board.addColumn(props);
         // WICHTIG: _columnOrder muss aktualisiert werden!
         // Sonst wird die neue Spalte von uiData nicht berücksichtigt (weil $derived.by nach _columnOrder filtert)
         this._columnOrder = [...this._columnOrder, column.id];
+        this.triggerUpdate();
         return column;
     }
 
     public deleteColumn(columnId: string): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         this.board.deleteColumn(columnId);
         // WICHTIG: _columnOrder muss aktualisiert werden!
         this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+        this.triggerUpdate();
     }
 
     public findColumn(columnId: string) {
@@ -721,6 +754,12 @@ export class BoardStore {
     }
 
     public updateColumn(columnId: string, updates: { name?: string; color?: string }): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten bearbeiten!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         const column = this.board.findColumn(columnId);
         if (column) {
             column.update(updates);
@@ -732,6 +771,12 @@ export class BoardStore {
     }
 
     public deleteColumnWithCards(columnId: string): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten mit Karten löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         this.board.deleteColumn(columnId);
         
         // Entferne auch aus _columnOrder
@@ -835,6 +880,12 @@ export class BoardStore {
      * @param uiColumns - Komplettes Update mit neuer Spalten- und Karten-Reihenfolge
      */
     public syncBoardState(uiColumns: UIColumn[]): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten/Karten verschieben!
+        const signerPubkey = authStore.getPubkey();
+        if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+            throw new Error(`❌ Keine Berechtigung: Sie sind nicht Maintainer dieses Boards`);
+        }
+
         console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
         console.log('  UI-Spalten:', uiColumns.length);
         
