@@ -9,6 +9,7 @@ import { Button } from "$lib/components/ui/button/index.js";
 import { Separator } from "$lib/components/ui/separator/index.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { toast } from "svelte-sonner";
 
 	// Suppress passive event listener warnings for dnd-action
 	onMount(() => {
@@ -39,10 +40,28 @@ import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	// Damit Svelte erkennt, dass sich der Titel geändert hat
 	let boardTitle = $derived(boardStore.getCurrentBoardMeta().name);
 
+	// Debounce-State für Toast-Benachrichtigungen
+	let lastToastTime = 0;
+	const TOAST_DEBOUNCE_MS = 1000; // 1 Sekunde
+
 	function handleBoardUpdated(newColumnsData: Column[]) {
 		// Synchronisiere kompletten Board-State: Spalten UND Karten-Positionen
 		console.log('📋 handleBoardUpdated - Synchronisiere Board-State');
-		boardStore.syncBoardState(newColumnsData);
+		const success = boardStore.syncBoardState(newColumnsData);
+		
+		// Wenn keine Berechtigung: Zeige Toast-Warnung (mit Debounce)
+		if (!success) {
+			const now = Date.now();
+			// Zeige Toast nur, wenn letzter Toast > 1 Sekunde her ist
+			if (now - lastToastTime > TOAST_DEBOUNCE_MS) {
+				toast.error('Keine Berechtigung', {
+					description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Änderungen durchzuführen.'
+				});
+				lastToastTime = now;
+			} else {
+				console.log('⏭️ Toast übersprungen (Debounce)');
+			}
+		}
 	}
 
 	// State für Selection

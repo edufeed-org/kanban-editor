@@ -841,20 +841,37 @@ export class BoardStore {
 
     /**
      * Wird von DnD-Handlern aufgerufen: Karte zwischen Spalten verschieben
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): void {
+    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): boolean {
         // Nur bewegen wenn sich die Spalte tatsächlich geändert hat
         if (fromColumnId !== toColumnId) {
+            // 🔐 AUTORISIERUNG: Prüfen vor dem Verschieben
+            const signerPubkey = authStore.getPubkey();
+            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+                console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+                return false;
+            }
+            
             this.moveCard(cardId, fromColumnId, toColumnId);
         }
+        return true;
     }
 
     /**
      * Wird von Board.svelte aufgerufen: Spalten reordern (DnD)
      * @param reorderedColumns - Die neu angeordneten Spalten aus der UI
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public reorderColumns(reorderedColumns: UIColumn[]): void {
+    public reorderColumns(reorderedColumns: UIColumn[]): boolean {
         console.log('🔄 reorderColumns aufgerufen mit', reorderedColumns.length, 'Spalten');
+        
+        // 🔐 AUTORISIERUNG: Prüfen vor dem Reordern
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+            return false;
+        }
         
         // Aktualisiere die interne Reihenfolge der Spalten
         // Die reorderedColumns enthalten die UIColumn-Struktur mit allen Karten
@@ -873,17 +890,21 @@ export class BoardStore {
         // Trigger Reaktivität und speichern
         this.triggerUpdate();
         this.publishToNostr();
+        
+        return true;
     }
 
     /**
      * Vollständige Synchronisierung: Spalten-Reihenfolge UND Karten-Positionen
      * @param uiColumns - Komplettes Update mit neuer Spalten- und Karten-Reihenfolge
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public syncBoardState(uiColumns: UIColumn[]): void {
+    public syncBoardState(uiColumns: UIColumn[]): boolean {
         // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten/Karten verschieben!
         const signerPubkey = authStore.getPubkey();
         if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+            return false; // ← Gibt false zurück statt Error zu werfen
         }
 
         console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
@@ -946,6 +967,8 @@ export class BoardStore {
         
         this.triggerUpdate();
         this.publishToNostr();
+        
+        return true; // ← Erfolgreiche Synchronisierung
     }
 
     /**

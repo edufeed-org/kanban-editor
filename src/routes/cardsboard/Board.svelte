@@ -6,6 +6,7 @@
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
 	import { authStore } from '$lib/index.js';
+	import { toast } from "svelte-sonner";
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -279,7 +280,14 @@
 			aria-label="Neue Spalte hinzufügen"
 			onclick={() => {
 				console.log('➕ Adding new column...');
-				boardStore.createColumn('Neue Spalte');
+				try {
+					boardStore.createColumn('Neue Spalte');
+				} catch (error) {
+					console.error('❌ Fehler beim Erstellen der Spalte:', error);
+					toast.error('Keine Berechtigung', {
+						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
+					});
+				}
 			}}
 		>
 			<SquarePlusIcon class="h-5 w-5" />
