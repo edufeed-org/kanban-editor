@@ -41,23 +41,22 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Learning Path:**
 1. **Einführung:** [`README.md`](../README.md)
 2. **Core Spec:** [`AGENTS.md`](../AGENTS.md) (Tech Spezifikation)
-3. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Svelte 5 $state, $derived)
+3. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) (Store-Übersicht)
 4. **UI Guidelines:** [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) (shadcn-svelte Patterns)
 5. **Reaktivität verstehen:** [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Svelte 5 Runes + $effect + Verification)
-6. **Authentifizierung:** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Session Management & Login)
-7. **Sidebar & UI:** [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) (LeftSidebarFooter & LoginDialog)
-8. **Einstellungen:** [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) (Theme, Relays, LLM)
+6. **Authentifizierung:** [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) (Session Management & Login)
+7. **Auth UI-Komponenten:** [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) (LoginDialog, LeftSidebarFooter, ProfileEditor)
+8. **Einstellungen:** [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) (Theme, Relays, LLM)
 9. **Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
 10. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
 11. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
-- Store-Methode hinzufügen? → [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
+- Store-Methode hinzufügen? → [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
 - Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (inkl. Verification Checklist)
-- Einstellungen UI? → [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md)
-- Login & Auth? → [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (inkl. Author Attribution Patterns)
-- Sidebar Komponenten? → [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md)
+- Einstellungen UI? → [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md)
+- Login & Auth? → [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) + [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md)
 - Tests ausführen? → [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md)
 - Kommentare implementieren? → [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md)
 
@@ -68,19 +67,16 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 **Learning Path:**
 1. **Core Spec:** [`AGENTS.md`](../AGENTS.md)
-2. **AuthStore Integration:** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Komplette Spezifikation)
+2. **AuthStore Integration:** [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) (Komplette Spezifikation)
 3. **NDK Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 4. **Event Schema:** [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
-5. **Benutzer & Signing:** [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md)
-6. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
-7. **🔴 KRITISCH - Board Authorization:** [`ARCHITECTURE/BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) (Maintainers, Co-Editors, Permissions)
-8. **AuthStore (Authentifizierung):** [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md)
+5. **Auth UI-Komponenten:** [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) (LoginDialog, LeftSidebarFooter)
+6. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
 
 **Häufige Aufgaben:**
 - Event publizieren? → [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
-- User authentifizieren? → [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) (Session + Card Author)
+- User authentifizieren? → [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) + [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md)
 - Event-Schema verstehen? → [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md)
-- Co-Editors & Permissions? → [`ARCHITECTURE/BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) (🔴 KRITISCH!)
 
 ---
 
@@ -117,19 +113,18 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |-------|----------|--------|
 | **Svelte 5 Runes** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | 40 min |
 | **Svelte 5 Runes (Verification Checklist)** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (Section VI) | 20 min |
-| **State Management** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) | 45 min |
-| **Authentifizierung (Neu!)** | [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) | 35 min |
-| **Sidebar & Login UI (Neu!)** | [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | 30 min |
-| **Settings & Konfiguration (Neu!)** | [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | 30 min |
-| **🆕 Board Versioning & Snapshots** | [`COLLABORATION/BOARD-VERSIONING.md`](./COLLABORATION/BOARD-VERSIONING.md) | 40 min |
-| **🆕 Conflict Detection & Merge** | [`FEATURE/MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | 50 min |
+| **State Management (Store-Übersicht)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) | 30 min |
+| **BoardStore (Multi-Board Management)** | [`ARCHITECTURE/STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | 45 min |
+| **Authentifizierung (Store)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | 35 min |
+| **Auth UI-Komponenten** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) | 30 min |
+| **Settings & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **🆕 Dokumentations-Governance** | [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md) | 15 min |
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
-| **KI-Chatbot Integration** | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | 30 min |
+| **KI-Chatbot Integration (Spec)** | [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | 30 min |
 
 ### 🔧 Integration & Technologie
 
@@ -146,9 +141,10 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |---|---|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
-| **Authentifizierung (35 min)** | [`ARCHITECTURE/AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) |
-| **Sidebar & Login UI (30 min)** | [`ARCHITECTURE/SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) |
-| **Settings Verwaltung (30 min)** | [`ARCHITECTURE/SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) |
+| **Store-Übersicht (30 min)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) |
+| **Authentifizierung Store (35 min)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) |
+| **Auth UI-Komponenten (30 min)** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) |
+| **Settings Verwaltung (30 min)** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) |
 | **Svelte 5 Runes (40 min)** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) |
 | **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
@@ -177,17 +173,17 @@ docs/
 │   └── _INDEX.md              ← Navigation Hub
 │
 ├── ARCHITECTURE/
-│   ├── AUTHOR-FIELD-ATTRIBUTION.md  ← ✅ Neu (23.10.)
-│   ├── AUTHSTORE-FLOWCHART.md
-│   ├── AUTHSTORE-IMPLEMENTATION.md
-│   ├── COMPONENT-ARCHITECTURE-LEFT-SIDEBAR-FOOTER.md
+│   ├── AUTH-UI-COMPONENTS.md        ← ✅ Neu (29.10.) - Login, Sidebar, ProfileEditor
 │   ├── NDK.md
-│   ├── NOSTR-USER.md
-│   ├── REACTIVE-FLOW-VERIFICATION.md
 │   ├── REACTIVITY.md
-│   ├── STORES.md
 │   ├── UX-RULES.md
-│   └── VISUAL-SIDEBAR-LOGIN-REFERENCE.md
+│   └── STORES/
+│       ├── README.md                ← Store-Übersicht & Navigation
+│       ├── AUTHSTORE.md             ← Authentication & Session
+│       ├── BOARDSTORE.md            ← Multi-Board Management
+│       ├── CHATBOTSTORE.md          ← KI-Integration (TODO)
+│       ├── SETTINGSSTORE.md         ← Theme, Relays, LLM
+│       └── SYNCMANAGER.md           ← Offline-Sync (TODO)
 │
 ├── GUIDES/
 │   ├── AUTHSTORE-BASICS.md
@@ -241,43 +237,43 @@ docs/
 
 ### Frontend Devs zusätzlich:
 - [ ] AGENTS.md überflogen (Schnell-Spezifikation)
-- [ ] STORES.md Kapitel I gelesen ($state/$derived Paradigma)
+- [ ] STORES/README.md Kapitel I gelesen (Store-Übersicht)
 - [ ] REACTIVITY.md verstanden (Runes-Kette + Verification)
-- [ ] AUTHSTORE.md verstanden (Session Management)
-- [ ] SETTINGSSTORE.md als Referenz gebookmarkt
-- [ ] SIDEBAR-LOGIN.md für UI-Komponenten
+- [ ] STORES/AUTHSTORE.md verstanden (Session Management)
+- [ ] AUTH-UI-COMPONENTS.md für UI-Komponenten
+- [ ] STORES/SETTINGSSTORE.md als Referenz gebookmarkt
 - [ ] UX-RULES.md als Referenz gebookmarkt
 
 ### Nostr Devs zusätzlich:
 - [ ] NDK.md gelesen
 - [ ] Kanban-NIP.md verstanden
-- [ ] NOSTR-USER.md Kapitel I-III gelesen
+- [ ] STORES/AUTHSTORE.md + AUTH-UI-COMPONENTS.md gelesen
 
 ### KI Devs zusätzlich:
 - [ ] AGENTS.md Kapitel III gelesen (Chat-Klasse)
 - [ ] getContextData() Patterns verstanden
-- [ ] STORES.md State-Flow verstanden
+- [ ] STORES/README.md State-Flow verstanden
+- [ ] STORES/CHATBOTSTORE.md als Referenz
 
 ---
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (14 Dateien)
+### ARCHITECTURE/ (10 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
-| [`AUTHSTORE.md`](./ARCHITECTURE/AUTHSTORE.md) | ✅ Master File: Authentication & Session Management + Author Patterns | ✅ Master (25.10.) |
-| [`SIDEBAR-LOGIN.md`](./ARCHITECTURE/SIDEBAR-LOGIN.md) | ✅ Master File: UI Components (Login, Sidebar) | ✅ Master (25.10.) |
-| [`SETTINGSSTORE.md`](./ARCHITECTURE/SETTINGSSTORE.md) | ✅ Master File: Theme, Relays, LLM Config | ✅ Master (25.10.) |
-| [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
-| [`BOARD-AUTHORIZATION.md`](./ARCHITECTURE/BOARD-AUTHORIZATION.md) | 🔴 **KRITISCH**: Maintainers, Co-Editors, Permissions | ✅ Neu (27.10.) |
-| [`AUTHORIZATION-EXECUTIVE-SUMMARY.md`](./ARCHITECTURE/AUTHORIZATION-EXECUTIVE-SUMMARY.md) | Executive Summary für AI-Agenten & Code Review | ✅ Neu (27.10.) |
-| [`AUTHORIZATION-PROBLEM.md`](./ARCHITECTURE/AUTHORIZATION-PROBLEM.md) | Problem-Analyse: p-tags vs BoardProps Inkonsistenz | ✅ Neu (27.10.) |
-| [`AUTHORIZATION-VISUAL.md`](./ARCHITECTURE/AUTHORIZATION-VISUAL.md) | Visual Guide: Permission Matrix & Szenarien | ✅ Neu (27.10.) |
+| [`AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) | ✅ **NEU (29.10.)**: Auth UI-Komponenten (LoginDialog, LeftSidebarFooter, ProfileEditor) | ✅ Neu (29.10.) |
 | [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
-| [`NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | Benutzerauthentifizierung & NIP-07 | ✅ |
+| [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
 | [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
-| [`STORES.md`](./ARCHITECTURE/STORES.md) | Store-Architektur & Export/Import API | ✅ |
+| **STORES/** | **Store-Architektur (6 Dateien)** | |
+| [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (29.10.) |
+| [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (29.10.) |
+| [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (29.10.) |
+| [`STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | KI-Chatbot Integration (TODO Phase 3) | ✅ Neu (29.10.) |
+| [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (29.10.) |
+| [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
 
 ### GUIDES/ (8 Dateien)
 
@@ -331,14 +327,14 @@ docs/
 
 ## 🔗 Alle Dokumentationen verlinkt?
 
-✅ **ARCHITECTURE/** — 14/14 Dateien verlinkt  
+✅ **ARCHITECTURE/** — 10/10 Dateien verlinkt (4 root + 6 STORES/)  
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
 ✅ **FEATURE/** — 4/4 Dateien verlinkt  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 37/37 Dateien in /docs verlinkt und dokumentiert**
+**Total: 41/41 Dateien in /docs verlinkt und dokumentiert**
 
 ---
 
@@ -382,23 +378,20 @@ docs/
 
 | Kategorie | Status | Letzte Aktualisierung |
 |-----------|--------|----------------------|
-| **✅ MASTER: AUTHSTORE.md** | ✅ Konsolidiert (4 → 1) + Author Patterns | 25. Oktober 2025 |
-| **✅ MASTER: SIDEBAR-LOGIN.md** | ✅ Konsolidiert (4 → 1) | 25. Oktober 2025 |
-| **✅ MASTER: SETTINGSSTORE.md** | ✅ Konsolidiert (3 → 1) | 25. Oktober 2025 |
+| **✅ MASTER: STORES/** | ✅ Neu strukturiert (1 → 6 Dateien) | 29. Oktober 2025 |
+| **✅ MASTER: AUTH-UI-COMPONENTS.md** | ✅ Neu (SIDEBAR-LOGIN.md ersetzt) | 29. Oktober 2025 |
 | **✅ MASTER: REACTIVITY.md** | ✅ Konsolidiert (2 → 1) | 25. Oktober 2025 |
-| **Architecture** | ✅ Komplett | 25. Oktober 2025 |
+| **Architecture** | ✅ Komplett (neu strukturiert) | 29. Oktober 2025 |
 | **Guides** | ✅ Komplett | 25. Oktober 2025 |
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
 | **Features** | ✅ Komplett (Comments) | 22. Oktober 2025 |
-| **KI-Chatbot Integration** | ✅ Komplett | 25. Oktober 2025 |
-| **📊 Board Versioning** | ✅ Komplett (26.10.) | 26. Oktober 2025 |
-| **📊 Conflict Resolution / Merge** | ✅ Komplett (26.10.) | 26. Oktober 2025 |
+| **KI-Chatbot Integration** | ✅ Komplett (Spec in CHATBOTSTORE.md) | 29. Oktober 2025 |
 
 **🎉 DOCUMENTATION-RULES RULE #2 VOLLSTÄNDIG IMPLEMENTIERT:**
-- ✅ 4 Master-Files erstellt
-- ✅ 14 Fragmente archiviert
-- ✅ AUTHOR-FIELD-ATTRIBUTION.md → merged in AUTHSTORE.md
+- ✅ 6 STORES-Files erstellt (BOARDSTORE, AUTHSTORE, SETTINGSSTORE, CHATBOTSTORE, SYNCMANAGER, README)
+- ✅ AUTH-UI-COMPONENTS.md erstellt (ersetzt SIDEBAR-LOGIN.md)
+- ✅ SIDEBAR-LOGIN.md archiviert
 - ✅ ONE Topic = ONE Document! ✅
 
 **Status: 100% DOCUMENTATION-RULES COMPLIANT** 🎯

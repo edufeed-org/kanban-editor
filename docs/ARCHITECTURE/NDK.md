@@ -215,84 +215,17 @@ const cardsSubscription = ndk.storeSubscribe(
 let cards = $derived($cardsSubscription);
 ```
 
-## Offline-First Strategie
+## Offline-First Synchronisation
 
-### Konzept
+Für die vollständige Implementation der Offline-Sync-Logik siehe:
 
-1. **Lokaler Cache:** Alle Board-/Card-Daten werden im `BoardStore` gehalten
-2. **IndexedDB Persistenz:** Nutzung von `svelte-persisted-store` oder NDK Cache
-3. **Event Queue:** Nicht synchronisierte Änderungen werden in einer Queue gespeichert
-4. **Synchronisation:** Bei Verbindung werden Events automatisch publiziert
+**→ [STORES/SYNCMANAGER.md](./STORES/SYNCMANAGER.md)**
 
-### Implementierung
-
-```typescript
-// src/lib/stores/kanbanStore.svelte.ts
-
-import { persisted } from 'svelte-persisted-store';
-import type NDK from '@nostr-dev-kit/ndk';
-
-export class BoardStore {
-  private board = $state(/* ... */);
-  private eventQueue = persisted<NDKEvent[]>('nostr-event-queue', []);
-  private isOnline = $state(navigator.onLine);
-  
-  constructor(private ndk: NDK) {
-    // Listen for online/offline events
-    window.addEventListener('online', () => {
-      this.isOnline = true;
-      this.syncQueue();
-    });
-    
-    window.addEventListener('offline', () => {
-      this.isOnline = false;
-    });
-  }
-  
-  public moveCard(cardId: string, fromColId: string, toColId: string) {
-    // 1. Lokale Änderung (sofort sichtbar)
-    this.board.moveCard(cardId, fromColId, toColId);
-    
-    // 2. Event erstellen
-    const event = this.createMoveCardEvent(cardId, fromColId, toColId);
-    
-    // 3. Publish oder Queue
-    if (this.isOnline) {
-      this.publishEvent(event);
-    } else {
-      this.queueEvent(event);
-    }
-  }
-  
-  private async publishEvent(event: NDKEvent) {
-    try {
-      await event.publish();
-    } catch (error) {
-      console.error('Failed to publish:', error);
-      this.queueEvent(event); // Fallback to queue
-    }
-  }
-  
-  private queueEvent(event: NDKEvent) {
-    this.eventQueue.update(queue => [...queue, event]);
-  }
-  
-  private async syncQueue() {
-    const queue = get(this.eventQueue);
-    
-    for (const event of queue) {
-      try {
-        await event.publish();
-        // Remove from queue on success
-        this.eventQueue.update(q => q.filter(e => e.id !== event.id));
-      } catch (error) {
-        console.error('Sync failed for event:', event.id);
-        break; // Stop on first failure
-      }
-    }
-  }
-}
-```
+Diese Sektion behandelt nur NDK-spezifische Konzepte. Der SyncManager implementiert:
+- ✅ Event-Queue mit IndexedDB (Dexie)
+- ✅ Retry-Logik mit exponentiellem Backoff
+- ✅ Online/Offline Detection
+- ✅ Dead-Letter Queue (nach 3 Fehlversuchen)
 
 ### NDK Built-in Caching
 
@@ -345,53 +278,32 @@ Bei Offline-First können Konflikte entstehen. Strategie:
 
 **WICHTIG:** Ohne authentifizierten Benutzer können keine Events signiert werden!
 
-### NIP-07 Browser Extension (Empfohlen)
+### Signer-Typen
 
 ```typescript
-import { NDKNip07Signer } from '@nostr-dev-kit/ndk';
+import { NDKNip07Signer, NDKPrivateKeySigner, NDKNip46Signer } from '@nostr-dev-kit/ndk';
 
-// Browser Extension Signer
+// NIP-07 Browser Extension (Production)
 const signer = new NDKNip07Signer();
 ndk.signer = signer;
 
-// Get authenticated user
-const user = await signer.user();
-await user.fetchProfile();
-```
-
-### nsec Private Key (Development/Testing)
-
-```typescript
-import { NDKPrivateKeySigner } from '@nostr-dev-kit/ndk';
-
-// ⚠️ ONLY for development! Never in production!
+// nsec Private Key (Development ONLY!)
 const signer = new NDKPrivateKeySigner(nsecString);
 ndk.signer = signer;
 
-const user = await signer.user();
-```
-
-### NIP-46 Remote Signing (Wallets)
-
-```typescript
-import { NDKNip46Signer } from '@nostr-dev-kit/ndk';
-
-// Remote wallet connection
+// NIP-46 Remote Signing (Future)
 const signer = new NDKNip46Signer(ndk, remotePubkey, relayUrl);
 ndk.signer = signer;
 ```
 
-### Session Management & Security
+### Authentifizierungs-Dokumentationen
 
-Für vollständige Authentifizierungs-Implementation siehe **[NOSTR-USER.md](./NOSTR-USER.md)**, welches folgende kritische Komponenten spezifiziert:
+Für vollständige Authentifizierungs-Implementation siehe:
 
-- **AuthStore:** Session-Verwaltung mit Svelte 5 Runes
-- **LoginSheet:** Multi-Method Authentication UI
-- **UserHeader:** Benutzer-Anzeige und -Menü  
-- **ProfileEditor:** Kind 0 Event Management
-- **Security:** Private Key Schutz, Session Expiration
+- **[STORES/AUTHSTORE.md](./STORES/AUTHSTORE.md)** — Store-Logik, Session-Management, API
+- **[AUTH-UI-COMPONENTS.md](./AUTH-UI-COMPONENTS.md)** — LoginSheet, UserHeader, ProfileEditor
 
-**Ohne diese Komponenten ist das Kanban-Board nicht funktionsfähig!**
+Diese Komponenten sind **essentiell** für das Kanban-Board!
 
 ## Komponenten-Beispiele
 

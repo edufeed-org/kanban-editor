@@ -1906,11 +1906,9 @@ if (result.success) {
 </script>
 
 <Dialog.Root>
-  <Dialog.Trigger asChild let:builder>
-    <Button builders={[builder]} variant="outline">
+  <Dialog.Trigger>
       <DownloadIcon class="mr-2 h-4 w-4" />
       Export / Share
-    </Button>
   </Dialog.Trigger>
 
   <Dialog.Content>
@@ -1969,7 +1967,7 @@ if (result.success) {
     </div>
 
     <Dialog.Footer>
-      <Dialog.Close asChild let:builder>
+      <Dialog.Close>
         <Button builders={[builder]} variant="outline">Schließen</Button>
       </Dialog.Close>
     </Dialog.Footer>
