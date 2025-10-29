@@ -158,20 +158,19 @@
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-		<!-- Header: Title + PublishToggle + Settings Popover -->
+		<!-- Header: Title + Settings Popover (PublishToggle rechts wie auf Card) -->
 		<div class="px-6 py-4 border-b bg-background">
 			<div class="flex items-start justify-between gap-4 mb-2">
-				<!-- Left: PublishToggle + Title -->
-				<div class="flex items-center gap-2">
-					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
-					<h2 class="text-xl font-semibold">{card.name}</h2>
-				</div>
+				<!-- Left: Title -->
+				<h2 class="text-xl font-semibold flex-1">{card.name}</h2>
 				
-				<!-- Right: Settings Popover -->
-				<Popover.Root>
-					<Popover.Trigger class="h-8 w-8 p-0 hover:bg-accent rounded flex items-center justify-center">
-						<EllipsisVerticalIcon class="h-4 w-4" />
-					</Popover.Trigger>
+				<!-- Right: PublishToggle + Settings Popover (wie Card.svelte) -->
+				<div class="flex items-center gap-2 flex-shrink-0">
+					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
+					<Popover.Root>
+						<Popover.Trigger class="h-8 w-8 p-0 hover:bg-accent rounded flex items-center justify-center">
+							<EllipsisVerticalIcon class="h-4 w-4" />
+						</Popover.Trigger>
 					<Popover.Content align="end" side="bottom" class="w-72">
 						<div class="space-y-4">
 							<!-- Author Info -->
@@ -211,6 +210,7 @@
 						</div>
 					</Popover.Content>
 				</Popover.Root>
+				</div>
 			</div>
 
 			<!-- Badges -->
