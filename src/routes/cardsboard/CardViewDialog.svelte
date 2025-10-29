@@ -1,14 +1,17 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as Tabs from '$lib/components/ui/tabs/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
+	import AvatarStack from './AvatarStack.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
+	import EditIcon from '@lucide/svelte/icons/edit';
+	import MoreVerticalIcon from '@lucide/svelte/icons/more-vertical';
 	import type { CardItem } from './types.js';
 
 	interface Props {
@@ -18,14 +21,12 @@
 
 	let { cardId, open = $bindable() }: Props = $props();
 
-	let activeTab = $state('content');
 	let commentText = $state('');
 	let isSubmitting = $state(false);
 
 	/**
-	 * 🔥 KRITISCH: Lese die Karte DIREKT aus boardStore.uiData
-	 * Das stellt sicher, dass Änderungen (z.B. neue Kommentare) sofort sichtbar sind!
-	 * NICHT: vom card-Prop abhängen (wird von Parent nie aktualisiert)
+	 * 🔥 Lese die Karte DIREKT aus boardStore.uiData
+	 * Änderungen (z.B. neue Kommentare) sind sofort sichtbar!
 	 */
 	let currentCard = $derived.by(() => {
 		for (const col of boardStore.uiData) {
@@ -35,11 +36,11 @@
 		return null;
 	});
 
-	// Abgeleitete Werte - werden automatisch aktualisiert wenn currentCard ändert
+	// Abgeleitete Werte
 	let displayComments = $derived(currentCard?.comments || []);
-	let card = $derived(currentCard || { 
+	let card = $derived(currentCard || {
 		id: cardId,
-		name: 'Unbekannte Karte', 
+		name: 'Unbekannte Karte',
 		description: '',
 		comments: [],
 		attendees: [],
@@ -50,36 +51,24 @@
 		authorName: ''
 	});
 
-	/**
-	 * 🆕 VERHALT: Card Status bleibt ALWAYS selected solange Dialog offen!
-	 * Unabhängig vom User-Click - Dialog wird von Parent kontrolliert
-	 * Da cardId sich nicht ändert während Dialog offen, bleibt die Karte "selected"
-	 */
-	const isSelected = $derived(open);
+	const attendees = $derived(
+		card.attendees && card.attendees.length > 0
+			? card.attendees
+			: card.author
+				? [card.author]
+				: []
+	);
 
 	/**
 	 * Handles comment submission
-	 * Phase A (UI-Formular Implementation)
 	 */
 	async function handleAddComment() {
 		if (!commentText.trim()) return;
 
 		try {
 			isSubmitting = true;
-			console.log('🔍 handleAddComment aufgerufen');
-			console.log('📍 card.id:', card.id);
-			console.log('📝 commentText:', commentText);
-			console.log('🏪 boardStore vorhanden:', !!boardStore);
-			
-			// ✅ FIXED: Nutze authStore.getUserName() für schönere Anzeige!
-			// Fallback auf pubkey wenn kein Name vorhanden, final fallback auf 'anonymous'
 			const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
-
-			console.log('➡️ Rufe boardStore.addComment() auf mit author:', author);
 			boardStore.addComment(card.id as string, commentText.trim(), author);
-
-			// UI Update - Kommentar sollte sofort sichtbar sein via $effect
-			console.log('✅ Kommentar hinzugefügt und gespeichert');
 			commentText = '';
 		} catch (error) {
 			console.error('❌ Fehler beim Hinzufügen des Kommentars:', error);
@@ -90,137 +79,177 @@
 
 	/**
 	 * Handles comment deletion
-	 * Phase A (UI-Formular Implementation)
 	 */
 	function handleDeleteComment(commentId: string) {
 		try {
 			boardStore.deleteComment(card.id as string, commentId);
-			console.log('✅ Kommentar gelöscht');
 		} catch (error) {
 			console.error('❌ Fehler beim Löschen des Kommentars:', error);
 		}
 	}
 
-	// Ensure minimum 1 attendee (author should always be included)
-	const attendees = $derived(
-		card.attendees && card.attendees.length > 0
-			? card.attendees
-			: card.author
-				? [card.author]
-				: []
-	);
+	/**
+	 * Generate consistent color for avatar (based on pubkey hash)
+	 */
+	function getAvatarColor(pubkey: string): string {
+		const colors = [
+			'#3b82f6',
+			'#10b981',
+			'#ef4444',
+			'#eab308',
+			'#a855f7',
+			'#ec4899',
+			'#6366f1',
+			'#06b6d4'
+		];
+		const hash = pubkey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+		return colors[hash % colors.length];
+	}
+
+	/**
+	 * Get initials from pubkey (first 2 chars)
+	 */
+	function getInitials(pubkey: string): string {
+		return pubkey.slice(0, 2).toUpperCase();
+	}
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-		<Dialog.Header>
-			<Dialog.Title>{card.name}</Dialog.Title>
-		</Dialog.Header>
+	<Dialog.Content class="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+		<!-- Header: Wie Card, aber ohne Edit Button -->
+		<div class="px-6 py-4 border-b bg-background">
+			<div class="flex items-start justify-between gap-4">
+				<div class="flex-1">
+					<h2 class="text-xl font-semibold mb-2">{card.name}</h2>
 
-		<div class="w-full">
-			<Tabs.Root bind:value={activeTab}>
-				<Tabs.List class="bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-lg p-[3px] w-full">
-					<Tabs.Trigger value="content">Inhalt</Tabs.Trigger>
-					<Tabs.Trigger value="comments">Kommentare ({(displayComments || []).length})</Tabs.Trigger>
-				</Tabs.List>			<!-- Content Tab -->
-		<Tabs.Content value="content" class="space-y-4 w-full">
+					{#if card.labels && card.labels.length > 0}
+						<div class="flex flex-wrap gap-1.5">
+							{#each card.labels.slice(0, 3) as label}
+								<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+									{label}
+								</Badge>
+							{/each}
+							{#if card.labels.length > 3}
+								<Badge variant="outline" class="text-xs px-1.5 py-0.5">
+									+{card.labels.length - 3}
+								</Badge>
+							{/if}
+						</div>
+					{/if}
+				</div>
+
+				<!-- Author Menu (nur MoreVertical Icon) -->
+				<div class="flex items-center gap-2">
+					<Popover.Root>
+						<Popover.Trigger>
+							<Button variant="ghost" size="sm">
+								<MoreVerticalIcon class="h-4 w-4" />
+							</Button>
+						</Popover.Trigger>
+						<Popover.Content side="bottom" align="end" class="w-48">
+							<div class="space-y-2">
+								<div class="text-sm font-semibold px-2 py-1">
+									{card.authorName || card.author || 'Ersteller unbekannt'}
+								</div>
+								{#if card.author && card.authorName !== card.author}
+									<div class="text-xs text-muted-foreground px-2 font-mono truncate">
+										{card.author}
+									</div>
+								{/if}
+							</div>
+						</Popover.Content>
+					</Popover.Root>
+				</div>
+			</div>
+		</div>
+
+		<!-- Main Content: Scrollable -->
+		<div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+			<!-- Image Section -->
 			{#if card.image}
-				<div class="space-y-2 w-full">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="text-sm font-medium">Kartenbild</label>
-					<div class="rounded-md overflow-hidden max-h-64 bg-muted">
-						<img
-							src={card.image}
-							alt="Kartenbild"
-							class="w-full h-full object-cover"
-							onerror={(e) => {
-								(e.target as HTMLImageElement).style.display = 'none';
-							}}
-						/>
-					</div>
+				<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
+					<img
+						src={card.image}
+						alt="Kartenbild"
+						class="w-full h-full object-cover"
+						onerror={(e) => {
+							(e.target as HTMLImageElement).style.display = 'none';
+						}}
+					/>
 				</div>
 			{/if}
 
+			<!-- Full Description (NICHT 2-line clamp wie in Card!) -->
 			{#if card.description}
-				<div class="space-y-2 w-full">
-					<!-- svelte-ignore a11y_label_has_associated_control -->
-					<label class="text-sm font-medium">Beschreibung</label>
-					<div class="p-3 bg-muted rounded-md text-sm break-words whitespace-pre-wrap">
+				<div class="space-y-2">
+					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
+					<div class="p-3 bg-muted/50 rounded-md text-sm whitespace-pre-wrap break-words border">
 						{card.description}
 					</div>
 				</div>
 			{/if}
 
-				{#if card.labels && card.labels.length > 0}
-					<div class="space-y-2">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
-						<label class="text-sm font-medium">Labels</label>
-						<div class="flex flex-wrap gap-2">
-							{#each card.labels as label (label)}
-								<Badge variant="outline">{label}</Badge>
-							{/each}
-						</div>
+			<!-- Attendees / AvatarStack -->
+			{#if attendees.length > 0}
+				<div class="space-y-2">
+					<h3 class="text-sm font-semibold text-muted-foreground">Teilnehmer</h3>
+					<div class="flex items-center gap-3">
+						<AvatarStack {attendees} maxVisible={5} />
+						<span class="text-xs text-muted-foreground">
+							{attendees.length} {attendees.length === 1 ? 'Person' : 'Personen'}
+						</span>
 					</div>
-				{/if}
+				</div>
+			{/if}
 
-				{#if card.link}
-					<div class="space-y-2">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
-						<label class="text-sm font-medium">Link</label>
-						<Button
-							variant="outline"
-							class="w-full justify-start text-left"
-							onclick={() => window.open(card.link, '_blank', 'noopener,noreferrer')}
-						>
-							<span class="icon-[material-symbols--link] mr-2"></span>
-							{card.link}
-						</Button>
-					</div>
-				{/if}
+			<!-- Divider -->
+			<div class="my-2 border-t"></div>
 
-				{#if attendees.length > 0}
-					<div class="space-y-2">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
-						<label class="text-sm font-medium">Teilnehmer ({attendees.length})</label>
-						<div class="flex flex-wrap gap-2">
-							{#each attendees as attendee (attendee)}
-								<Badge variant="secondary">{attendee}</Badge>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</Tabs.Content>
+			<!-- Comments Section Header -->
+			<h3 class="text-sm font-semibold text-muted-foreground">
+				Kommentare ({displayComments.length})
+			</h3>
 
-		<!-- Comments Tab -->
-		<Tabs.Content value="comments" class="space-y-4 min-w-full">
 			<!-- Existing Comments List -->
-			{#if (displayComments || []).length > 0}
-				<div class="space-y-3 max-h-40 overflow-y-auto min-w-full">
+			{#if displayComments.length > 0}
+				<div class="space-y-3">
 					{#each displayComments as comment, index (comment.id || `comment-${index}`)}
-						<div class="p-3 bg-muted rounded-md space-y-2">
-							<div class="flex justify-between items-start gap-2">
-								<div class="flex-1">
-									<div class="font-medium text-sm">{comment.author}</div>
-									<div class="text-xs text-muted-foreground">
-										{new Date(comment.createdAt).toLocaleDateString('de-DE', {
-											year: 'numeric',
-											month: '2-digit',
-											day: '2-digit',
-											hour: '2-digit',
-											minute: '2-digit'
-										})}
-									</div>
-								</div>
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
-									class="text-destructive hover:bg-destructive/10"
-								>
-									<TrashIcon class="h-3 w-3" />
-								</Button>
+						<div class="flex gap-3">
+							<!-- Avatar Links vom Kommentar -->
+							<div class="avatar w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border border-border flex-shrink-0" 
+								style="background-color: {getAvatarColor(comment.author)}"
+								title={comment.author}>
+								{getInitials(comment.author)}
 							</div>
-							<p class="text-sm text-foreground whitespace-pre-wrap break-words">{comment.text}</p>
+
+							<!-- Kommentar-Inhalt -->
+							<div class="flex-1 min-w-0 space-y-2">
+								<div class="flex justify-between items-start gap-2">
+									<div class="flex-1 min-w-0">
+										<div class="font-medium text-sm">{comment.author}</div>
+										<div class="text-xs text-muted-foreground">
+											{new Date(comment.createdAt).toLocaleDateString('de-DE', {
+												year: 'numeric',
+												month: '2-digit',
+												day: '2-digit',
+												hour: '2-digit',
+												minute: '2-digit'
+											})}
+										</div>
+									</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
+										class="text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
+									>
+										<TrashIcon class="h-3 w-3" />
+									</Button>
+								</div>
+								<p class="text-sm text-foreground whitespace-pre-wrap break-words">
+									{comment.text}
+								</p>
+							</div>
 						</div>
 					{/each}
 				</div>
@@ -228,53 +257,52 @@
 				<p class="text-sm text-muted-foreground text-center py-4">Keine Kommentare vorhanden</p>
 			{/if}
 
-			<!-- Comment Input Form (Phase A: UI-Formular) -->
-			<div class="pt-4 border-t space-y-3">
-				<label for="comment-textarea" class="text-sm font-medium">Neuer Kommentar</label>
+			<!-- Comment Input Form -->
+			<div class="space-y-3">
 				<Textarea
-					id="comment-textarea"
 					placeholder="Schreibe einen Kommentar..."
 					bind:value={commentText}
 					disabled={isSubmitting}
-					class="min-h-24 resize-none"
+					class="min-h-20 resize-none"
 				/>
 				<div class="flex justify-end gap-2">
 					<Button
 						variant="outline"
+						size="sm"
 						onclick={() => (commentText = '')}
 						disabled={isSubmitting || !commentText.trim()}
 					>
 						Abbrechen
 					</Button>
 					<Button
-						variant="outline"
+						size="sm"
 						onclick={handleAddComment}
 						disabled={isSubmitting || !commentText.trim()}
-						class="group"
+						class="gap-2"
 					>
 						{#if isSubmitting}
-							<LoaderIcon class="mr-2 h-4 w-4 animate-spin" />
-							Wird gesendet...
+							<LoaderIcon class="h-4 w-4 animate-spin" />
+							<span>Wird gesendet...</span>
 						{:else}
-							<SendIcon class="mr-2 h-4 w-4" />
-							Kommentar absenden
+							<SendIcon class="h-4 w-4" />
+							<span>Absenden</span>
 						{/if}
 					</Button>
 				</div>
 			</div>
-		</Tabs.Content>
-		</Tabs.Root>
 		</div>
 
-		<Dialog.Footer>
-			<Button variant="outline" onclick={() => open = false}>Schließen</Button>
-		</Dialog.Footer>
+		<!-- Footer: Edit Button (statt Schließen, da Dialog selbst Close hat) -->
+		<div class="px-6 py-4 border-t bg-muted/20 flex gap-2">
+			<Button 
+				variant="outline" 
+				size="sm"
+				class="gap-2"
+				onclick={() => console.log('Edit Card:', card.id)}
+			>
+				<EditIcon class="h-4 w-4" />
+				<span>Bearbeiten</span>
+			</Button>
+		</div>
 	</Dialog.Content>
 </Dialog.Root>
-
-<style>
-	/* Nur Tabs.Content (nicht Tabs.Trigger!) sollen bei inaktiv versteckt werden */
-	/* :global([role='tabpanel'][data-state='inactive']) {
-		display: none;
-	} */
-</style>
