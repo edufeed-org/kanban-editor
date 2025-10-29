@@ -522,13 +522,15 @@
 
 		
 		.edit-button:hover {
-			background-color: var(--primary);
-			color: var(--secondary-foreground);
+			background-color: rgb(var(--accent-rgb) / 0.1);
+			color: rgb(var(--accent-rgb) / 0.8);
+			box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.3);
 		}
 
-		.edit-button:focus {
-			outline: 2px solid #007bff;
+		.edit-button:focus-visible {
+			outline: 2px solid transparent;
 			outline-offset: 2px;
+			box-shadow: 0 0 0 3px rgb(var(--ring-rgb) / 0.2);
 		}
 		
 	/* Ensure buttons and interactive elements can't interfere with drag */

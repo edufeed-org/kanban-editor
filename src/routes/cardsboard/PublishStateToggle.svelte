@@ -38,9 +38,9 @@
 		height: 2rem;
 		border-radius: 0.375rem;
 		padding: 0.25rem;
-		border: 1px solid hsl(var(--border));
-		background: hsl(var(--background));
-		color: hsl(var(--foreground));
+		border: 1px solid rgb(var(--border-rgb) / 0.5);
+		background: rgb(var(--background-rgb));
+		color: var(--foreground);
 		cursor: pointer;
 		transition: all 0.2s ease-in-out;
 		display: flex;
@@ -49,14 +49,15 @@
 	}
 
 	.publish-toggle:hover {
-		background-color: hsl(var(--accent));
-		border-color: hsl(var(--ring));
+		background-color: rgb(var(--accent-rgb) / 0.1);
+		border-color: rgb(var(--ring-rgb) / 0.5);
+		box-shadow: 0 0 0 2px rgb(var(--ring-rgb) / 0.2);
 	}
 
 	.publish-toggle.draft .publish-indicator {
 		width: 0.5rem;
 		height: 0.5rem;
-		background-color: hsl(var(--muted-foreground));
+		background-color: rgb(var(--muted-foreground-rgb));
 		border-radius: 50%;
 	}
 
@@ -88,6 +89,6 @@
 	.publish-toggle:focus {
 		outline: 2px solid transparent;
 		outline-offset: 2px;
-		box-shadow: 0 0 0 3px hsl(var(--ring));
+		box-shadow: 0 0 0 3px rgb(var(--ring-rgb) / 0.3);
 	}
 </style>
