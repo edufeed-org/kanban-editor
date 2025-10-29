@@ -4,14 +4,18 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Separator from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
-	import AvatarStack from './AvatarStack.svelte';
+	import ColorSelector from './ColorSelector.svelte';
+	import PublishStateToggle from './PublishStateToggle.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import EditIcon from '@lucide/svelte/icons/edit';
-	import MoreVerticalIcon from '@lucide/svelte/icons/more-vertical';
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import UserIcon from '@lucide/svelte/icons/user';
 	import type { CardItem } from './types.js';
 
 	interface Props {
@@ -23,6 +27,10 @@
 
 	let commentText = $state('');
 	let isSubmitting = $state(false);
+	let selectedAuthorPopover = $state<string | null>(null);
+	let editName = $state('');
+	let selectedColor = $state('slate');
+	let localPublishState = $state<'draft' | 'published' | 'archived'>('draft');
 
 	/**
 	 * 🔥 Lese die Karte DIREKT aus boardStore.uiData
@@ -51,11 +59,18 @@
 		authorName: ''
 	});
 
+	// Sync localPublishState und editName mit Card
+	$effect(() => {
+		editName = card.name;
+		selectedColor = card.color || 'slate';
+		localPublishState = (card.publishState || 'draft') as 'draft' | 'published' | 'archived';
+	});
+
 	const attendees = $derived(
 		card.attendees && card.attendees.length > 0
 			? card.attendees
-			: card.author
-				? [card.author]
+			: card.authorName
+				? [card.authorName]
 				: []
 	);
 
@@ -112,55 +127,107 @@
 	function getInitials(pubkey: string): string {
 		return pubkey.slice(0, 2).toUpperCase();
 	}
+
+	/**
+	 * Toggle publish state: draft → published → archived → draft
+	 */
+	function handlePublishToggle() {
+		const states: ('draft' | 'published' | 'archived')[] = ['draft', 'published', 'archived'];
+		const currentIndex = states.indexOf(localPublishState);
+		const nextIndex = (currentIndex + 1) % states.length;
+		localPublishState = states[nextIndex];
+		boardStore.updateCard(card.id as string, { publishState: localPublishState });
+	}
+
+	/**
+	 * Handle card rename
+	 */
+	function handleRenameChange() {
+		if (editName.trim() && editName !== card.name) {
+			boardStore.updateCard(card.id as string, { heading: editName });
+		}
+	}
+
+	/**
+	 * Handle color change
+	 */
+	function handleColorChange(colorValue: string) {
+		boardStore.updateCard(card.id as string, { color: colorValue });
+	}
 </script>
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-		<!-- Header: Wie Card, aber ohne Edit Button -->
+		<!-- Header: Title + PublishToggle + Settings Popover -->
 		<div class="px-6 py-4 border-b bg-background">
-			<div class="flex items-start justify-between gap-4">
-				<div class="flex-1">
-					<h2 class="text-xl font-semibold mb-2">{card.name}</h2>
-
-					{#if card.labels && card.labels.length > 0}
-						<div class="flex flex-wrap gap-1.5">
-							{#each card.labels.slice(0, 3) as label}
-								<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
-									{label}
-								</Badge>
-							{/each}
-							{#if card.labels.length > 3}
-								<Badge variant="outline" class="text-xs px-1.5 py-0.5">
-									+{card.labels.length - 3}
-								</Badge>
+			<div class="flex items-start justify-between gap-4 mb-2">
+				<!-- Left: PublishToggle + Title -->
+				<div class="flex items-center gap-2">
+					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
+					<h2 class="text-xl font-semibold">{card.name}</h2>
+				</div>
+				
+				<!-- Right: Settings Popover -->
+				<Popover.Root>
+					<Popover.Trigger class="h-8 w-8 p-0 hover:bg-accent rounded flex items-center justify-center">
+						<EllipsisVerticalIcon class="h-4 w-4" />
+					</Popover.Trigger>
+					<Popover.Content align="end" side="bottom" class="w-72">
+						<div class="space-y-4">
+							<!-- Author Info -->
+							{#if card.author && card.authorName}
+								<div class="space-y-2">
+									<h4 class="font-medium text-sm">Erstellt von</h4>
+									<div class="flex items-center gap-2 p-2 bg-muted rounded">
+										<UserIcon class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium truncate">{card.authorName}</p>
+											<code class="text-xs text-muted-foreground font-mono">{card.author.slice(0, 8)}…</code>
+										</div>
+									</div>
+								</div>
+								<Separator.Root class="my-3" />
 							{/if}
+							
+							<!-- Card Rename -->
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Karte umbenennen</h4>
+								<Input 
+									bind:value={editName} 
+									placeholder="Kartenname"
+									onchange={handleRenameChange}
+									onblur={handleRenameChange}
+									class="text-sm"
+								/>
+							</div>
+							
+							<Separator.Root class="my-3" />
+							
+							<!-- Color Selector -->
+							<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
+								selectedColor = colorValue;
+								handleColorChange(colorValue);
+							}} />
 						</div>
+					</Popover.Content>
+				</Popover.Root>
+			</div>
+
+			<!-- Badges -->
+			{#if card.labels && card.labels.length > 0}
+				<div class="flex flex-wrap gap-1.5">
+					{#each card.labels.slice(0, 3) as label}
+						<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+							{label}
+						</Badge>
+					{/each}
+					{#if card.labels.length > 3}
+						<Badge variant="outline" class="text-xs px-1.5 py-0.5">
+							+{card.labels.length - 3}
+						</Badge>
 					{/if}
 				</div>
-
-				<!-- Author Menu (nur MoreVertical Icon) -->
-				<div class="flex items-center gap-2">
-					<Popover.Root>
-						<Popover.Trigger>
-							<Button variant="ghost" size="sm">
-								<MoreVerticalIcon class="h-4 w-4" />
-							</Button>
-						</Popover.Trigger>
-						<Popover.Content side="bottom" align="end" class="w-48">
-							<div class="space-y-2">
-								<div class="text-sm font-semibold px-2 py-1">
-									{card.authorName || card.author || 'Ersteller unbekannt'}
-								</div>
-								{#if card.author && card.authorName !== card.author}
-									<div class="text-xs text-muted-foreground px-2 font-mono truncate">
-										{card.author}
-									</div>
-								{/if}
-							</div>
-						</Popover.Content>
-					</Popover.Root>
-				</div>
-			</div>
+			{/if}
 		</div>
 
 		<!-- Main Content: Scrollable -->
@@ -189,12 +256,37 @@
 				</div>
 			{/if}
 
-			<!-- Attendees / AvatarStack -->
+			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
 			{#if attendees.length > 0}
 				<div class="space-y-2">
 					<h3 class="text-sm font-semibold text-muted-foreground">Teilnehmer</h3>
 					<div class="flex items-center gap-3">
-						<AvatarStack {attendees} maxVisible={5} />
+						<!-- Clickable Avatars mit Popover -->
+						<div class="flex -space-x-3">
+							{#each attendees.slice(0, 5) as author, index}
+								<Popover.Root>
+									<Popover.Trigger
+										class="avatar w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-background cursor-pointer hover:z-50 transition-transform hover:scale-110"
+										style="background-color: {getAvatarColor(author)}"
+										title={author}
+										type="button"
+									>
+										{getInitials(author)}
+									</Popover.Trigger>
+									<Popover.Content side="top" align="center" class="w-48">
+										<div class="space-y-2">
+											<div class="text-sm font-semibold px-2 py-1">
+												{card.authorName || 'Teilnehmer'}
+											</div>
+											<div class="text-xs text-muted-foreground px-2 font-mono break-all">
+												{author}
+											</div>
+										</div>
+									</Popover.Content>
+								</Popover.Root>
+							{/each}
+						</div>
+
 						<span class="text-xs text-muted-foreground">
 							{attendees.length} {attendees.length === 1 ? 'Person' : 'Personen'}
 						</span>
@@ -215,12 +307,27 @@
 				<div class="space-y-3">
 					{#each displayComments as comment, index (comment.id || `comment-${index}`)}
 						<div class="flex gap-3">
-							<!-- Avatar Links vom Kommentar -->
-							<div class="avatar w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border border-border flex-shrink-0" 
-								style="background-color: {getAvatarColor(comment.author)}"
-								title={comment.author}>
-								{getInitials(comment.author)}
-							</div>
+							<!-- Avatar Links - mit Popover -->
+							<Popover.Root>
+								<Popover.Trigger
+									class="avatar w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border border-border flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
+									style="background-color: {getAvatarColor(comment.author)}"
+									title={comment.author}
+									type="button"
+								>
+									{getInitials(comment.author)}
+								</Popover.Trigger>
+								<Popover.Content side="top" align="start" class="w-48">
+									<div class="space-y-2">
+										<div class="text-sm font-semibold px-2 py-1">
+											{comment.author}
+										</div>
+										<div class="text-xs text-muted-foreground px-2 font-mono break-all">
+											{comment.author}
+										</div>
+									</div>
+								</Popover.Content>
+							</Popover.Root>
 
 							<!-- Kommentar-Inhalt -->
 							<div class="flex-1 min-w-0 space-y-2">

@@ -11,6 +11,8 @@
 	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 	import AvatarStack from "./AvatarStack.svelte";
+	import ColorSelector from "./ColorSelector.svelte";
+	import PublishStateToggle from "./PublishStateToggle.svelte";
 	import PencilLineIcon from "@lucide/svelte/icons/pencil";
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -59,15 +61,6 @@
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
-
-	const colorOptions = [
-		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
-		{ value: 'blue', label: 'Blau', cssVar: '--color-blue' },
-		{ value: 'green', label: 'Grün', cssVar: '--color-green' },
-		{ value: 'orange', label: 'Orange', cssVar: '--color-orange' },
-		{ value: 'red', label: 'Rot', cssVar: '--color-red' },
-		{ value: 'purple', label: 'Lila', cssVar: '--color-purple' }
-	];
 
 	// Ensure minimum 1 attendee (author should always be included)
 	const attendees = $derived(card.attendees && card.attendees.length > 0
@@ -272,22 +265,7 @@
 			
 			<div class="header-actions">
 				{#if showPublishToggle}
-					<button
-						class="publish-toggle"
-						class:draft={localPublishState === 'draft'}
-						class:published={localPublishState === 'published'}
-						class:archived={localPublishState === 'archived'}
-						onclick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							handlePublishToggle();
-						}}
-						aria-label="Toggle publish state"
-						title="Toggle publish state"
-						type="button"
-					>
-						<span class="publish-indicator"></span>
-					</button>
+					<PublishStateToggle value={localPublishState || 'draft'} onToggle={handlePublishToggle} />
 				{/if}
 
 				{#if showMenu}
@@ -332,33 +310,10 @@
 								
 								<Separator />
 								
-								<div class="space-y-2">
-									<h4 class="font-medium text-sm">Farbe wählen</h4>
-									<div class="flex flex-wrap gap-3">
-										{#each colorOptions as option}
-											<button
-												class="color-circle"
-												class:selected={selectedColor === option.value}
-												style="background-color: var({option.cssVar})"
-												onclick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													selectedColor = option.value;
-													// 🎯 DIREKT SPEICHERN ohne auf Button zu warten!
-													boardStore.editCard(String(card.id), { color: option.value });
-												}}
-												title={option.label}
-												aria-label={option.label}
-											>
-												{#if selectedColor === option.value}
-													<svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
-														<polyline points="20 6 9 17 4 12"></polyline>
-													</svg>
-												{/if}
-											</button>
-										{/each}
-									</div>
-								</div>
+								<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
+									selectedColor = colorValue;
+									boardStore.editCard(String(card.id), { color: colorValue });
+								}} />
 								
 								<Separator />
 								
@@ -495,63 +450,6 @@
 			gap: 0.5em;
 			flex-shrink: 0;
 		}
-
-		/* Status indicator styling */
-		.publish-toggle {
-			width: 16px;
-			height: 16px;
-			border-radius: 50%;
-			border: 2px solid var(--muted-foreground);
-			background: unset;
-			cursor: pointer;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			transition: all 0.2s ease;
-			position: relative;
-			opacity: 0.4;
-		}
-
-		.publish-toggle:hover {
-			border-color: var(--chart-1);
-			background-color: var(--chart-2);
-			transform: scale(1.1);
-			opacity: 1;
-		}
-
-		.publish-toggle.draft {
-			opacity: 0.1;
-		}
-
-		.publish-toggle.published {
-			border-color: var(--chart-1);
-			background-color: var(--chart-2);
-		}
-
-		.publish-toggle.archived {
-			border-color: var(--border);
-			background-color: black;
-			opacity: 1;
-		}
-
-		.publish-indicator {
-			width: 8px;
-			height: 8px;
-			border-radius: 50%;
-			transition: background-color 0.2s ease;
-		}
-
-		.publish-toggle.draft .publish-indicator {
-			background-color: var(--muted-foreground);
-		}
-
-		.publish-toggle.published .publish-indicator {
-			background-color: var(--chart-2);
-		}
-
-		.publish-toggle.archived .publish-indicator {
-			background-color: var(--color-fuchsia-950);
-		}
 		
 		.card-image-container {
 			width: 100%;
@@ -636,37 +534,6 @@
 	/* Ensure buttons and interactive elements can't interfere with drag */
 	button {
 		pointer-events: auto;
-	}
-
-	/* Color Circle Picker Styles */
-	.color-circle {
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 50%;
-		border: 2px solid transparent;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		position: relative;
-		flex-shrink: 0;
-	}
-
-	.color-circle:hover {
-		transform: scale(1.1);
-		box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
-	}
-
-	.color-circle.selected {
-		border-color: white;
-		box-shadow: 0 0 0 3px var(--accent), 0 0 12px rgba(0, 0, 0, 0.3);
-	}
-
-	.color-circle .checkmark {
-		width: 1.25rem;
-		height: 1.25rem;
-		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 	}
 
 	</style>
