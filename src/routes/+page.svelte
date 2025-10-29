@@ -12,7 +12,7 @@
     import { authStore } from "$lib/stores/authStore.svelte.js";
     import { LoginSheet } from '$lib/components/auth/index.js';
 
-    let currentUser = $derived(authStore?.currentUser ?? null);
+    let currentUser = $derived(authStore.currentUser ?? null);
 
     let showLoginSheet = $state(false);
 
@@ -40,8 +40,8 @@
         </div>
 
         <div class="flex items-center gap-4">
-        {#if authStore && authStore.isAuthenticated}
-            <Button variant="default" size="sm" onclick={() => authStore?.logout()}>
+        {#if authStore.isAuthenticated}
+            <Button variant="default" size="sm" onclick={() => authStore.logout()}>
                 <KeyRoundIcon class="mr-2 h-4 w-4" />
                 Abmelden
             </Button>
@@ -94,3 +94,4 @@
     open={showLoginSheet}
     onClose={() => showLoginSheet = false}
 />
+

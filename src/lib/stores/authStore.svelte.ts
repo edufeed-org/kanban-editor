@@ -444,11 +444,108 @@ export class AuthStore {
   }
 }
 
-// Globale AuthStore-Instanz - wird in initializeAuth gesetzt
-export let authStore: AuthStore | undefined = undefined;
+/**
+ * ✅ Singleton Pattern mit Init-Guard
+ * authStore ist IMMER definiert, wird aber erst bei initializeAuth() vollständig initialisiert
+ */
+class AuthStoreWrapper {
+  private static instance: AuthStore | null = null;
+  private static initialized = false;
 
-// Initialize function (call from +layout.svelte)
+  static getInstance(): AuthStore {
+    if (!this.instance) {
+      throw new Error(
+        '❌ authStore not initialized! Call initializeAuth(ndk) from +layout.svelte first.'
+      );
+    }
+    return this.instance;
+  }
+
+  static initialize(ndk: NDK): AuthStore {
+    if (!this.instance) {
+      this.instance = new AuthStore(ndk);
+    }
+    this.initialized = true;
+    return this.instance;
+  }
+
+  static isInitialized(): boolean {
+    return this.initialized;
+  }
+}
+
+/**
+ * Globale authStore Singleton - wird durch Proxy geschützt
+ * Falls nicht initialisiert: Werft Error mit klarer Meldung
+ */
+class AuthStoreProxy {
+  get isAuthenticated(): boolean {
+    return AuthStoreWrapper.getInstance().isAuthenticated;
+  }
+  get currentUser() {
+    return AuthStoreWrapper.getInstance().currentUser;
+  }
+  get isLoading() {
+    return AuthStoreWrapper.getInstance().isLoading;
+  }
+  get errorMessage() {
+    return AuthStoreWrapper.getInstance().errorMessage;
+  }
+
+  // Delegiere alle Methoden
+  loginWithNip07() {
+    return AuthStoreWrapper.getInstance().loginWithNip07();
+  }
+  loginWithNsec(nsec: string) {
+    return AuthStoreWrapper.getInstance().loginWithNsec(nsec);
+  }
+  loginWithNip46(relayUrl: string) {
+    return AuthStoreWrapper.getInstance().loginWithNip46(relayUrl);
+  }
+  logout() {
+    return AuthStoreWrapper.getInstance().logout();
+  }
+  createDemoSession() {
+    return AuthStoreWrapper.getInstance().createDemoSession();
+  }
+  isDemoSessionAllowed() {
+    return AuthStoreWrapper.getInstance().isDemoSessionAllowed();
+  }
+  getPubkey() {
+    return AuthStoreWrapper.getInstance().getPubkey();
+  }
+  getNpub() {
+    return AuthStoreWrapper.getInstance().getNpub();
+  }
+  getUserName() {
+    return AuthStoreWrapper.getInstance().getUserName();
+  }
+  updateProfile(profile: Partial<UserSession['profile']>) {
+    return AuthStoreWrapper.getInstance().updateProfile(profile);
+  }
+  verifyNip05(nip05: string) {
+    return AuthStoreWrapper.getInstance().verifyNip05(nip05);
+  }
+  getStatus() {
+    return AuthStoreWrapper.getInstance().getStatus();
+  }
+  getSessionInfo() {
+    return AuthStoreWrapper.getInstance().getSessionInfo();
+  }
+}
+
+// ✅ Exportiere Proxy - nicht die echte Instanz
+export const authStore = new AuthStoreProxy();
+
+/**
+ * Initialize function (MUSS aus +layout.svelte aufgerufen werden!)
+ * 
+ * @example
+ * // In src/routes/+layout.svelte:
+ * import { initializeAuth } from '$lib/stores/authStore.svelte.ts';
+ * 
+ * initializeAuth(ndk);  // ✅ Muss VOR Komponenten-Render aufgerufen werden!
+ */
 export function initializeAuth(ndk: NDK): AuthStore {
-  authStore = new AuthStore(ndk);
-  return authStore;
+  return AuthStoreWrapper.initialize(ndk);
 }
