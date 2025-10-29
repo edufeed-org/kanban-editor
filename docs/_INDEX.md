@@ -6,18 +6,22 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ---
 
-## 🔴 WICHTIG: DOKUMENTATIONS-GOVERNANCE REGELN
+## 🔴 WICHTIG: DOKUMENTATIONS-GOVERNANCE v3.0
 
-**Neue Dokumentation? Lies ZUERST:** [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md)
+**Neue Dokumentation? Lies ZUERST:** [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md)
 
-**Die 5 Goldenen Regeln:**
+**Die 7 Goldenen Regeln (v3.0):**
 1. 🔴 Alles in `/docs/` speichern (keine Ausnahmen!)
 2. 🔴 EIN Thema = EIN Dokument (nicht 5 Splits!)
-3. 🟡 Zielgerichtet schreiben (Quick Start first)
+3. 🟡 5-Abschnitt Struktur (Übersicht, Quick Start, Details, Fehler, Refs)
 4. 🟢 In `_INDEX.md` verlinken (damit sichtbar)
-5. 🟢 5-Abschnitt Struktur (Übersicht, Quick Start, Details, Fehler, Refs)
+5. 🟢 Ordner-Struktur einhalten (ARCHITECTURE/, GUIDES/, etc.)
+6. 🔴 **NEU:** Code → Docs Sync (11-Punkt DoD bei Code-Änderungen)
+7. 🔴 **NEU:** Docs → Code Sync (Audit bei Docs-Updates)
 
-**Nicht befolgen = Dokumentations-Chaos! 📖⚠️**
+**Migration:** [`archive/DOCUMENTATION-RULES-v2.md`](./archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+
+**Nicht befolgen = PR REJECTED! 📖⚠️**
 
 ---
 
@@ -120,7 +124,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Settings & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
-| **🆕 Dokumentations-Governance** | [`DOCUMENTATION-RULES.md`](./DOCUMENTATION-RULES.md) | 15 min |
+| **🆕 Dokumentations-Governance v3.0** | [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md) | 20 min | ✅ Neu (29.10.)
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
@@ -166,7 +170,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ```
 docs/
-├── DOCUMENTATION-RULES.md      ← 🆕 Dokumentations-Governance (REGELN!)
+├── DOCUMENTATION-RULES-v3.md   ← 🆕 Dokumentations-Governance v3.0 (REGELN!)
 ├── _INDEX.md                   ← Sie sind hier
 │
 ├── REFERENCE/
@@ -334,7 +338,7 @@ docs/
 ✅ **FEATURE/** — 4/4 Dateien verlinkt  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 41/41 Dateien in /docs verlinkt und dokumentiert**
+**Total: 42/42 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md)
 
 ---
 

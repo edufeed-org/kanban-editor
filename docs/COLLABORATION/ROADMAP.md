@@ -231,7 +231,7 @@ JANUAR 2026
 - **Cross-References:** Alle 12 Links zwischen STORES docs aktualisiert
 
 **Governance-Compliance:**
-- ✅ ONE Topic = ONE Document (DOCUMENTATION-RULES.md)
+- ✅ ONE Topic = ONE Document (DOCUMENTATION-RULES-v3.md)
 - ✅ Alle neuen Docs in `/docs/` (keine Root-Level Docs)
 - ✅ Alle Docs in `_INDEX.md` verlinkt mit Navigation
 - ✅ Timestamps & Version-Tags hinzugefügt
@@ -298,7 +298,7 @@ JANUAR 2026
 
 **Dokumentation:**
 - 📚 [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - Vollständige v3.0 Regeln
-- 📚 [`docs/DOCUMENTATION-RULES.md`](../DOCUMENTATION-RULES.md) - Migration-Notice (deprecated)
+- 📚 [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration-Notice (v2.0 deprecated)
 - 📚 `ROADMAP.md` Section - Diese Sektion dokumentiert v3.0 Completion
 
 **Key Metrics:**
@@ -1245,7 +1245,8 @@ Jeder Meilenstein ist **nur dann done**, wenn:
   - 📚 [`docs/_INDEX.md`](../docs/_INDEX.md) - Zentrale Navigation (41 Docs)
   - 📚 [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Übersicht
   - 📚 [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten
-  - 📚 [`docs/DOCUMENTATION-RULES.md`](../DOCUMENTATION-RULES.md) - Governance-Regeln
+  - 📚 [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - Governance-Regeln v3.0
+  - 📚 [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration Guide (v2.0)
 
 ---
 
