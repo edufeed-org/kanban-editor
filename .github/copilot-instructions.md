@@ -2,8 +2,37 @@
 
 **Projekt:** Nostr-basiertes KI-Kanban-Board mit Svelte 5  
 **Repository:** edufeed-org/kanban-editor  
-**Letztes Update:** 20. Oktober 2025  
-**Status:** Phase 1 (In Entwicklung)
+**Letztes Update:** 29. Oktober 2025  
+**Status:** Phase 1 (In Entwicklung)  
+**Governance:** 🔴 v3.0 ACTIVE - Code ↔ Docs Sync MANDATORY
+
+---
+
+## 📚 DOKUMENTATIONS-GOVERNANCE v3.0
+
+**KRITISCHE REGEL für AI Agents:**
+
+```
+🔴 Code-Änderung OHNE Dokumentations-Update → KEIN Merge!
+🔴 Siehe: docs/DOCUMENTATION-RULES-v3.md für vollständige Regeln
+🔴 DoD Checklist (11 Punkte) MUSS erfüllt sein bei Code-Änderungen
+```
+
+**Schnell-Referenz:**
+- **Vollständige Regeln:** [`docs/DOCUMENTATION-RULES-v3.md`](../docs/DOCUMENTATION-RULES-v3.md)
+- **Migration:** [`docs/DOCUMENTATION-RULES.md`](../docs/DOCUMENTATION-RULES.md) (v2.0 → v3.0 Guide)
+- **ROADMAP:** [`docs/COLLABORATION/ROADMAP.md`](../docs/COLLABORATION/ROADMAP.md) v2.5
+
+**Bei jeder Code-Änderung:**
+1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
+2. ✅ TESTSUITE/STATUS.md aktualisieren (wenn Tests betroffen)
+3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar)
+4. ✅ Feature-Dokumentation aktualisieren (wenn API ändert)
+5. ✅ ARCHITECTURE/ Docs aktualisieren (wenn Pattern ändert)
+6. ✅ _INDEX.md aktualisieren (wenn neue Datei)
+7. ✅ Alte Docs archivieren (mit Migration-Notice)
+
+**Enforcement:** PR wird REJECTED wenn DoD nicht erfüllt ist!
 
 ---
 
