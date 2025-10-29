@@ -444,7 +444,8 @@ export class AuthStore {
   }
 }
 
-export let authStore: AuthStore;
+// Globale AuthStore-Instanz - wird in initializeAuth gesetzt
+export let authStore: AuthStore | undefined = undefined;
 
 // Initialize function (call from +layout.svelte)
 export function initializeAuth(ndk: NDK): AuthStore {
