@@ -13,11 +13,10 @@
 
 	interface Props {
 		cardId: string | number;
-		isOpen: boolean;
-		onClose: () => void;
+		open: boolean;
 	}
 
-	const { cardId, isOpen, onClose }: Props = $props();
+	let { cardId, open = $bindable() }: Props = $props();
 
 	let activeTab = $state('content');
 	let commentText = $state('');
@@ -46,8 +45,17 @@
 		attendees: [],
 		labels: [],
 		color: 'slate',
-		publishState: 'draft' as const
+		publishState: 'draft' as const,
+		author: '',
+		authorName: ''
 	});
+
+	/**
+	 * 🆕 VERHALT: Card Status bleibt ALWAYS selected solange Dialog offen!
+	 * Unabhängig vom User-Click - Dialog wird von Parent kontrolliert
+	 * Da cardId sich nicht ändert während Dialog offen, bleibt die Karte "selected"
+	 */
+	const isSelected = $derived(open);
 
 	/**
 	 * Handles comment submission
@@ -103,11 +111,7 @@
 	);
 </script>
 
-<Dialog.Root open={isOpen} onOpenChange={(open) => {
-	if (!open) {
-		onClose();
-	}
-}}>
+<Dialog.Root bind:open>
 	<Dialog.Content class="w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
 		<Dialog.Header>
 			<Dialog.Title>{card.name}</Dialog.Title>
@@ -263,7 +267,7 @@
 		</div>
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={onClose}>Schließen</Button>
+			<Button variant="outline" onclick={() => open = false}>Schließen</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

@@ -6,6 +6,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
+	import { Badge } from "$lib/components/ui/badge/index.js";
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
@@ -34,13 +35,16 @@
 	} = $props();
 
 	let showModal = $state(false);
-	let showViewModal = $state(false);
 	let showSidebar = $state(false);
 	
 	// 🔥 WICHTIG: showPublishToggle hängt vom Board-publishState ab!
 	let boardPublishState = $derived(boardStore.data?.publishState || 'draft');
 	let showPublishToggle = $derived(boardPublishState === 'published');
 	let showMenu = $state(true);
+	
+	// 🆕 VERHALT: CardViewDialog bleibt IMMER selected solange offen
+	// Der Dialog wird von Card.svelte gesteuert, nicht vom User-Click
+	let isDialogOpen = $state(false);
 	
 	// Card local state (nicht die Prop direkt mutieren!)
 	let localName = $state(card.name);
@@ -244,21 +248,28 @@
 		onSelect?.();
 	}}
 >
-	<Card.Header class="px-1">
-		<div class="card-header-content">
-			<Card.Title>{card.name}</Card.Title>
-			<div class="header-actions">
-				{#if card.author && card.authorName }
-					<div class="author-info" title={card.author}>
-						<span class="author-label">von</span>
-						<span class="author-name">
-							{card.authorName || card.author.slice(0, 8) + '...'} 
-							{#if card.authorName}
-								<code class="author-pubkey" title="Pubkey: {card.author}">{card.author.slice(0, 6)}…</code>
-							{/if}
-						</span>
+	<Card.Header class="px-1 py-1">
+		<div class="card-header-content gap-0">
+			<div class="flex flex-col gap-0 flex-1">
+				<Card.Title class="text-sm">{card.name}</Card.Title>
+				
+				{#if card.labels && card.labels.length > 0}
+					<div class="flex flex-wrap gap-1 mt-0 mb-0">
+						{#each card.labels.slice(0, 2) as label}
+							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+								{label}
+							</Badge>
+						{/each}
+						{#if card.labels.length > 2}
+							<Badge variant="outline" class="text-xs px-1.5 py-0.5">
+								+{card.labels.length - 2}
+							</Badge>
+						{/if}
 					</div>
 				{/if}
+			</div>
+			
+			<div class="header-actions">
 				{#if showPublishToggle}
 					<button
 						class="publish-toggle"
@@ -294,6 +305,20 @@
 							e.stopPropagation();
 						}}>
 							<div class="space-y-4">
+								{#if card.author && card.authorName}
+									<div class="space-y-2">
+										<h4 class="font-medium text-sm">Erstellt von</h4>
+										<div class="flex items-center gap-2 p-2 bg-muted rounded">
+											<UserIcon class="h-4 w-4 text-muted-foreground" />
+											<div class="flex-1 min-w-0">
+												<p class="text-sm font-medium truncate">{card.authorName}</p>
+												<code class="text-xs text-muted-foreground">{card.author.slice(0, 8)}…</code>
+											</div>
+										</div>
+									</div>
+									<Separator />
+								{/if}
+								
 								<div class="space-y-2">
 									<h4 class="font-medium text-sm">Karte umbenennen</h4>
 									<Input 
@@ -353,16 +378,7 @@
 		</div>
 	</Card.Header>
 
-	<Card.Content class="px-1">
-		<!-- Labels Section -->
-		{#if card.labels && card.labels.length > 0}
-			<div class="card-labels">
-				{#each card.labels as label}
-					<span class="label">{label}</span>
-				{/each}
-			</div>
-		{/if}
-
+	<Card.Content class="px-1 py-1">
 		<!-- Image Section -->
 		{#if localImage}
 			<div class="card-image-container">
@@ -394,8 +410,8 @@
 		<div class="footer-content">
 			<div class="comments-count group">
 				<button 
-				class="view-button group" 
-				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				class="view-button group whitespace-nowrap" 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }} 
 				aria-label="Anzeigen" 
 				title="Anzeigen"
 				type="button"
@@ -409,7 +425,7 @@
 			</div>
 			<button 
 				class="view-button group" 
-				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showViewModal = true; }} 
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }} 
 				aria-label="Anzeigen" 
 				title="Anzeigen"
 				type="button"
@@ -430,10 +446,10 @@
 		</div>
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
+	<!-- CardViewDialog mit bind:open für automatisches Selection -->
 	<CardViewDialog
 		cardId={card.id}
-		isOpen={showViewModal}
-		onClose={() => (showViewModal = false)}
+		bind:open={isDialogOpen}
 	/>
 	
 	<!-- Card Dialog (View & Edit with Tabs) -->
@@ -477,36 +493,6 @@
 			align-items: center;
 			gap: 0.5em;
 			flex-shrink: 0;
-		}
-
-		/* Author info styling */
-		.author-info {
-			display: flex;
-			align-items: center;
-			gap: 0.35em;
-			font-size: 0.7em;
-			color: var(--muted-foreground);
-			background-color: var(--muted);
-			padding: 0.25em 0.4em;
-			border-radius: 3px;
-		}
-
-		.author-label {
-			font-weight: 500;
-		}
-
-		.author-name {
-			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-			font-size: 0.9em;
-		}
-
-		.author-pubkey {
-			font-family: monospace;
-			font-size: 0.75em;
-			color: var(--muted-foreground);
-			opacity: 0.7;
 		}
 
 		/* Status indicator styling */
@@ -566,27 +552,6 @@
 			background-color: var(--color-fuchsia-950);
 		}
 		
-		/* Card content styling */
-		.card-labels {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.25em;
-			margin-bottom: 0.5em;
-		}
-
-		.label {
-			background-color: var(--input);
-			color: var(--foreground);
-			padding: 0.2em 0.5em;
-			border-radius: 12px;
-			font-size: 0.75em;
-			font-weight: 500;
-			max-width: 120px;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-
 		.card-image-container {
 			width: 100%;
 			display: flex;
@@ -595,7 +560,7 @@
 
 		.card-image {
 			max-width: 100%;
-			max-height: 200px;
+			max-height: 80px;
 			border-radius: 6px;
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 			transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -617,6 +582,12 @@
 			color: var(--foreground);
 			line-height: 1.4;
 			flex: 1;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			line-clamp: 2;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 		
 		/* Footer styling */
