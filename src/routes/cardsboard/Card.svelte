@@ -10,6 +10,7 @@
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
+	import AvatarStack from "./AvatarStack.svelte";
 	import PencilLineIcon from "@lucide/svelte/icons/pencil";
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -420,9 +421,9 @@
 				</button>
 		
 			</div>
-			<div class="attendees-count group">
-				<UserIcon /> {#if attendees.length > 0}{attendees}{/if}
-			</div>
+			{#if attendees.length > 0}
+				<AvatarStack {attendees} maxVisible={3} />
+			{/if}
 			<button 
 				class="view-button group" 
 				onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }} 
@@ -599,7 +600,7 @@
 			flex-grow: 1;
 		}
 		
-		.comments-count, .attendees-count {
+		.comments-count {
 			font-size: 0.8em;
 			color: var(--muted-foreground);
 			display: flex;
