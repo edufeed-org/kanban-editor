@@ -98,6 +98,9 @@
 
 /* Define color utilities using CSS variables */
 @layer utilities {
+  .bg-destructive {
+    background-color: var(--destructive);
+  } 
   .bg-popover {
     background-color: var(--popover);
   }
@@ -143,12 +146,18 @@ button:hover {
   transition: background-color 0.2s ease, color 0.2s ease;
   
 }
-button.btn{
+button.btn, .menu-item{
   background: var(--background);  
   color: var(--foreground);
   border-radius: var(--radius-md);
   
 }
+.menu-item:hover{
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+  border-color: var(--accent) !important;
+}
+
 button.btn:hover{
   border: 2px solid var(--border);
   border-color: var(--ring);
@@ -183,13 +192,6 @@ button.bg-destructive:hover {
   background-color: var(--destructive) !important;
   color: var(--destructive-foreground) !important;
 }
-
-/* Icon Hover Effects
-.group:hover svg {
-  color: var(--accent);
-  transform: scale(1.1);
-  transition: all 0.2s ease;
-} */
 
 .text-destructive-foreground {
   color: var(--destructive-foreground);

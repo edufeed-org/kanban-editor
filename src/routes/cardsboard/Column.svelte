@@ -14,6 +14,7 @@
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { authStore } from "$lib/index.js";
 	import { toast } from "svelte-sonner";
+	import TrashIcon from '@lucide/svelte/icons/trash';
 	
 
  	const flipDurationMs = 150;
@@ -486,7 +487,8 @@
 							
 							<Separator />
 							
-							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
+							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full btn">
+								<TrashIcon class="h-4 w-4"  />
 								Spalte löschen
 							</Button>
 						</div>

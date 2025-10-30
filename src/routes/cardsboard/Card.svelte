@@ -20,6 +20,7 @@
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 	import { authStore } from "$lib/index.js";
+    import TrashIcon from "@lucide/svelte/icons/trash";
 
 	let {
 		card,
@@ -322,7 +323,8 @@
 									Karte bearbeiten
 								</Button>
 
-								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
+								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full btn">
+									<TrashIcon class="h-4 w-4" />
 									Karte löschen
 								</Button>
 								{/if}

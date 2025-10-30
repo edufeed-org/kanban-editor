@@ -1,5 +1,173 @@
 # Changelog
 
+## Version 3.4 - Theme Buttons Documentation & UI Component Standardization
+
+**Datum:** 30. Oktober 2025
+**Branch:** `theme-buttons`
+**Status:** ✅ **UI CONSISTENCY COMPLETE**
+
+### 🎯 Zusammenfassung
+
+**Vollständige Standardisierung aller UI-Buttons auf shadcn-svelte Komponenten:**
+- ✅ Card Footer Buttons (Card.svelte) - Kommentare, Bearbeiten, Anzeigen
+- ✅ Column Header Buttons (Column.svelte) - Karte hinzufügen, Spalte löschen
+- ✅ Board Add Column Button (Board.svelte) - Neue Spalte hinzufügen
+- ✅ Theme Buttons Dokumentation erstellt - Vollständiges Referenzhandbuch
+
+**Impact:** 100% konsistente Button-Nutzung im gesamten Projekt ⚡
+**Documentation:** Vollständiges Theme-System mit CSS-Variablen und Hover-Effekten ✅
+
+---
+
+### ✨ Implementierte Features
+
+#### 1. Button Standardisierung (Alle Komponenten)
+
+**Card.svelte - Footer Buttons:**
+```svelte
+<!-- Kommentare Button -->
+<Button variant="ghost" size="sm">
+  <MessageSquareIcon class="mr-2 h-4 w-4" />
+  {localComments.length}
+</Button>
+
+<!-- Bearbeiten Button -->
+<Button variant="default" size="sm">
+  <EditIcon class="mr-2 h-4 w-4" />
+  Bearbeiten
+</Button>
+```
+
+**Column.svelte - Header Buttons:**
+```svelte
+<!-- Add Card Button -->
+<Button variant="default" size="sm">
+  <SquarePlusIcon class="h-4 w-4" />
+</Button>
+
+<!-- Delete Column Button -->
+<Button variant="destructive" size="sm">
+  Spalte löschen
+</Button>
+```
+
+**Board.svelte - Add Column Button:**
+```svelte
+<!-- Neue Spalte hinzufügen -->
+<Button variant="outline" size="lg">
+  <SquarePlusIcon class="mr-2 h-5 w-5" />
+  Neue Spalte hinzufügen
+</Button>
+```
+
+#### 2. Theme Buttons Dokumentation (GUIDES/THEME-BUTTONS.md)
+
+**Inhalt (~244 Zeilen):**
+- **CSS-Variablen:** Vollständige Liste aus `src/app.css` (Light + Dark Mode)
+- **Hover-Effekte:** Alle Button-Varianten mit exakten CSS-Regeln
+- **shadcn-svelte Integration:** Korrekte Import-Syntax und Verwendung
+- **Praktische Beispiele:** Alle Button-Varianten mit Code-Snippets
+- **Best Practices:** Icon-Positionierung, Accessibility, Responsive Design
+- **Troubleshooting:** Häufige Probleme und Lösungen
+
+#### 3. CSS-Variablen Dokumentation
+
+**Light Mode Variablen:**
+```css
+:root {
+  --primary: oklch(0.606 0.25 292.717);
+  --primary-foreground: oklch(0.969 0.016 293.756);
+  --secondary: oklch(0.967 0.001 286.375);
+  --accent: oklch(57.646% 0.26532 315.837);
+  --destructive: oklch(0.577 0.245 27.325);
+  /* ... weitere Variablen */
+}
+```
+
+**Dark Mode Variablen:**
+```css
+.dark {
+  --primary: oklch(0.541 0.281 293.009);
+  --accent: oklch(57.646% 0.26532 315.837);
+  --destructive: oklch(0.704 0.191 22.216);
+  /* ... weitere Variablen */
+}
+```
+
+#### 4. Hover-Effekte Dokumentation
+
+**Alle Button-Varianten:**
+- **Primary Button:** `background-color: var(--primary) !important`
+- **Secondary Button:** `background-color: var(--secondary) !important`
+- **Outline Button:** `background-color: var(--accent) !important`
+- **Ghost Button:** `background-color: var(--accent) !important`
+- **Destructive Button:** `background-color: var(--destructive) !important`
+
+#### 5. Icon Import Standardisierung
+
+**Korrekte Lucide Import-Syntax:**
+```typescript
+// ✅ RICHTIG
+import MessageSquareIcon from "@lucide/svelte/icons/message-square";
+import EditIcon from "@lucide/svelte/icons/edit";
+import SquarePlusIcon from "@lucide/svelte/icons/square-plus";
+
+// ❌ FALSCH
+import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
+```
+
+---
+
+### 📝 Documentation Updates
+
+#### THEME-BUTTONS.md (NEU - 244 Zeilen)
+
+**Erstellt:** 30. Oktober 2025
+**Status:** ✅ ACTIVE - Vollständiges Theme-Referenzhandbuch
+
+**Sektionen:**
+1. **CSS-Variablen:** Light + Dark Mode + Card Colors
+2. **Hover-Effekte:** Alle Button-Varianten mit CSS-Regeln
+3. **shadcn-svelte Verwendung:** Import-Syntax + Varianten + Best Practices
+4. **Praktische Beispiele:** Card, Column, Board Buttons
+5. **Farbanpassung:** Light/Dark Mode Konfiguration
+6. **Troubleshooting:** Häufige Probleme + Lösungen
+
+#### _INDEX.md Updates
+
+**Neue Einträge:**
+- **Nach Thema:** "🆕 Theme Buttons & UI Guidelines" (25 min)
+- **GUIDES Struktur:** THEME-BUTTONS.md hinzugefügt
+- **Learning Resources:** Theme Buttons Guide verlinkt
+
+**File Count Update:** 42 → 43 Dateien (+1 THEME-BUTTONS.md)
+
+---
+
+### ✅ DoD Checklist (DOCUMENTATION-RULES-v3.md Compliance)
+
+- ✅ Code-Änderungen implementiert (3 Button-Komponenten)
+- ✅ THEME-BUTTONS.md Dokumentation erstellt (244 Zeilen)
+- ✅ _INDEX.md aktualisiert (2 neue Einträge)
+- ✅ CHANGELOG.md Eintrag hinzugefügt (dieser Eintrag)
+- ✅ CSS-Variablen dokumentiert (aus src/app.css)
+- ✅ Hover-Effekte dokumentiert (alle Varianten)
+- ✅ Icon Import-Syntax standardisiert
+- ✅ shadcn-svelte Patterns konsolidiert
+
+---
+
+### 📊 Statistik
+
+- **Button-Komponenten:** 3 Dateien aktualisiert
+- **Neue Dokumentation:** 1 Datei (244 Zeilen)
+- **Index Updates:** 2 Sektionen erweitert
+- **CSS-Variablen:** 20+ Variablen dokumentiert
+- **Hover-Effekte:** 5 Button-Varianten dokumentiert
+- **Icon Patterns:** Korrekte Import-Syntax etabliert
+
+---
+
 ## Version 3.3 - Phase 1 Card UI Redesign Complete + CSS Cleanup
 
 **Datum:** 29. Oktober 2025 (Final Cleanup)  

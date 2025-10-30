@@ -90,13 +90,13 @@
 			<DropdownMenu.Content align="start" class="w-56">
 				
 				<!-- Settings Option -->
-				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2">
+				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2 menu-item">
 					<SettingsIcon class="h-4 w-4" />
 					<span>Einstellungen</span>
 				</DropdownMenu.Item>
 
 				<!-- Logout -->
-				<DropdownMenu.Item onclick={handleLogout} class="gap-2 text-destructive">
+				<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
 					<LogOutIcon class="h-4 w-4" />
 					<span>Abmelden</span>
 				</DropdownMenu.Item>

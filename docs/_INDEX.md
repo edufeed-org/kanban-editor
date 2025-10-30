@@ -145,6 +145,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |---|---|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
+| **🆕 Theme Buttons & UI Guidelines (25 min)** | [`GUIDES/THEME-BUTTONS.md`](./GUIDES/THEME-BUTTONS.md) |
 | **Store-Übersicht (30 min)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) |
 | **Authentifizierung Store (35 min)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) |
 | **Auth UI-Komponenten (30 min)** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) |
@@ -197,7 +198,8 @@ docs/
 │   ├── QUICK-START.md
 │   ├── SIDEBAR-LOGIN-DOCS-INDEX.md
 │   ├── SIDEBAR-LOGIN-INTEGRATION.md
-│   └── TEST-RUNNER.md
+│   ├── TEST-RUNNER.md
+│   └── THEME-BUTTONS.md  ← ✅ Neu (30.10.)
 │
 ├── COLLABORATION/
 │   ├── CONSOLIDATION-SUMMARY.md

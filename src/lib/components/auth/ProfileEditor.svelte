@@ -254,10 +254,10 @@
       
       <!-- Buttons -->
       <Dialog.Footer>
-        <Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting}>
+        <Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting} class="bg-secondary border">
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting || Object.keys(errors).length > 0}>
+        <Button type="submit" disabled={isSubmitting || Object.keys(errors).length > 0} class="bg-primary border">
           {#if isSubmitting}
             <LoaderIcon class="mr-2 h-4 w-4 animate-spin" />
           {/if}
