@@ -7,47 +7,26 @@
 **KRITISCHE REGEL für AI Agents und Entwickler:**
 
 ```
-🔴 ALLE Dokumentation gehört in /docs/ — KEINE Ausnahmen!
-🔴 EIN THEMA = EIN DOKUMENT — KEINE Fragmentierung in 5 Dateien!
-🔴 ZIELGERICHTET schreiben — Quick Start vor Details!
-🔴 IN docs/_INDEX.md verlinken — sonst verloren!
+🔴 Code-Änderung OHNE Dokumentations-Update → KEIN Merge!
+🔴 Siehe: docs/DOCUMENTATION-RULES-v3.md für vollständige Regeln
+🔴 DoD Checklist (11 Punkte) MUSS erfüllt sein bei Code-Änderungen
 ```
 
-**Darum?**
-- ✅ Neue Devs finden Infos schneller
-- ✅ Weniger Verwirrung durch Fragment-Chaos
-- ✅ Bessere Wartbarkeit (ein Source of Truth pro Thema)
-- ✅ Zentrale Navigation (`docs/_INDEX.md`) funktioniert
+**Schnell-Referenz:**
+- **Vollständige Regeln:** [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md)
+- **Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+- **ROADMAP:** [`docs/COLLABORATION/ROADMAP.md`](./docs/COLLABORATION/ROADMAP.md) v2.5
 
-**Beispiel FALSCH:**
-```
-❌ archive/STORES-BASICS.md
-❌ docs/STORES-QUICKSTART.md
-❌ docs/STORES-IMPLEMENTATION.md
-❌ root/STORES-SUMMARY.md
-❌ docs/STORES-API-REFERENCE.md
-(5 Dateien = Chaot!)
-```
+**Bei jeder Code-Änderung:**
+1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
+2. ✅ TESTSUITE/STATUS.md aktualisieren (wenn Tests betroffen)
+3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar)
+4. ✅ Feature-Dokumentation aktualisieren (wenn API ändert)
+5. ✅ ARCHITECTURE/ Docs aktualisieren (wenn Pattern ändert)
+6. ✅ _INDEX.md aktualisieren (wenn neue Datei)
+7. ✅ Alte Docs archivieren (mit Migration-Notice)
 
-**Beispiel RICHTIG:**
-```
-✅ docs/ARCHITECTURE/STORES.md
-   (Alles: Basics + Quickstart + Implementation + API)
-```
-
-**Struktur einer guten Dokumentation:**
-1. **Übersicht** — Was? Wer? 30 Sekunden
-2. **Quick Start** — 5 min Copy-Paste
-3. **Detaillierte Docs** — Vollständige API
-4. **Häufige Fehler** — FAQ & Debugging
-5. **Referenzen** — Cross-Links zu anderen Docs
-
-**Neue Dokumentation?**
-1. Ort wählen: `/docs/ARCHITECTURE/`, `/docs/GUIDES/`, `/docs/FEATURE/`
-2. Dateiname: Nur EIN Thema pro Datei
-3. Verlinken: In `/docs/_INDEX.md` eintragen (Tabelle + Navigation)
-4. Timestamp: "✅ Neu (25.10.)" hinzufügen
-5. Cross-References: Andere Docs updaten wenn nötig
+**Enforcement:** PR wird REJECTED wenn DoD nicht erfüllt ist!
 
 ---
 
@@ -195,7 +174,8 @@ export interface BoardProps {
     description?: string;
     columns?: ColumnProps[];
     publishState?: PublishState; 
-    author?: string; // npub-Key
+    author?: string; // npub-Key (Creator, kann nie entfernt werden)
+    maintainers?: string[]; // ← NEU (Phase 1): Nostr pubkeys mit Co-Edit Berechtigung (Nostr p-tags)
     tags?: string[]; // Array von Tags für Board-Kategorisierung, Komma-getrennt in Topbar
     ccLicense?: string; // CC Lizenz-Typ (z.B. 'cc-by-4.0', 'cc-by-nc-4.0'), Default: 'cc-by-4.0'
 }

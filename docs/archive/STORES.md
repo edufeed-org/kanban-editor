@@ -1678,6 +1678,123 @@ private queueEvent(event: NDKEvent, type: 'board' | 'card' | 'comment'): void {
 
 ---
 
+## V. Authorization & Security (Nostr Board Co-Editing)
+
+### 5.1 Maintainers Field in BoardProps
+
+**Problem:** Standardmäßig kann nur der Board-Creator Karten hinzufügen. Mit `maintainers` können mehrere Pubkeys Co-Editoren sein.
+
+**Lösung:** `Board.maintainers` Array mit Validierungsmethoden:
+
+```typescript
+// src/lib/classes/BoardModel.ts
+
+export interface BoardProps {
+    id?: string;
+    name: string;
+    author?: string;                      // Creator (kann nie entfernt werden)
+    maintainers?: string[];               // Co-editors (Nostr pubkeys)
+    // ... other props
+}
+
+export class Board {
+    public maintainers: string[] = [];    // Pubkeys der Co-Editor
+    
+    /**
+     * Überprüft ob ein Pubkey ein Maintainer ist
+     * @returns true wenn pubkey === author ODER in maintainers[]
+     */
+    isMaintainer(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        return pubkey === this.author || this.maintainers.includes(pubkey);
+    }
+    
+    /**
+     * Überprüft ob ein Pubkey berechtigt ist, Karten hinzuzufügen
+     * - Wenn maintainers leer: nur author
+     * - Wenn maintainers gesetzt: author ODER any maintainer
+     */
+    canAddCard(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        if (this.maintainers.length === 0) {
+            return pubkey === this.author;
+        }
+        return this.isMaintainer(pubkey);
+    }
+}
+```
+
+### 5.2 Store-Level Authorization Checks
+
+**Ort: `kanbanStore.svelte.ts` - `addCard()` und `upsertCard()` Methoden**
+
+```typescript
+public addCard(columnId: string, props: CardProps) {
+    // ✅ AUTHORIZATION CHECK
+    const signerPubkey = authStore.getPubkey();
+    if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+        throw new Error(
+            `❌ Nicht autorisiert: du bist nicht Maintainer dieses Boards`
+        );
+    }
+    
+    // ✅ Karte nur hinzufügen, wenn Autorisierung erfolgreich
+    const column = this.board.findColumn(columnId);
+    if (column) {
+        const card = column.addCard(props);
+        this.triggerUpdate();
+        this.publishToNostr();
+        return card;
+    }
+    throw new Error(`Column ${columnId} not found`);
+}
+```
+
+**Wichtig:** Diese Checks müssen VOR `triggerUpdate()` erfolgen!
+
+### 5.3 Nostr Event Publishing (Phase 2)
+
+**In `nostrEvents.ts` - Noch zu implementieren:**
+
+```typescript
+// Pseudo-code (wird in Phase 2 implementiert)
+
+function boardToNostrEvent(board: Board, ndk: NDK): NDKEvent {
+    const event = new NDKEvent(ndk);
+    event.kind = 30301;
+    
+    // ✅ Maintainers als p-tags
+    event.tags = [
+        ["d", board.id],
+        ["title", board.name],
+        // ... andere tags
+        ...board.maintainers.map(pk => ["p", pk]),  // ← CRITICAL!
+    ];
+    
+    return event;
+}
+
+function cardToNostrEvent(card: Card, board: Board, signerPubkey: string, ndk: NDK): NDKEvent {
+    // ✅ Validierung: Signer muss Maintainer sein
+    if (!board.canAddCard(signerPubkey)) {
+        throw new Error('Not authorized to publish card');
+    }
+    
+    const event = new NDKEvent(ndk);
+    event.kind = 30302;
+    
+    // ... rest of event creation
+    return event;
+}
+```
+
+**Relay-Side Validation (Defensive Layer):**
+- Relay kann Board-Event laden (Kind 30301)
+- Relay prüft ob Card-Signer in Board p-tags
+- Relay lehnt unauthorisierte Cards ab
+
+---
+
 ## IX. Performance Optimization
 
 ### Store Subscription Limits
@@ -1789,11 +1906,9 @@ if (result.success) {
 </script>
 
 <Dialog.Root>
-  <Dialog.Trigger asChild let:builder>
-    <Button builders={[builder]} variant="outline">
+  <Dialog.Trigger>
       <DownloadIcon class="mr-2 h-4 w-4" />
       Export / Share
-    </Button>
   </Dialog.Trigger>
 
   <Dialog.Content>
@@ -1852,7 +1967,7 @@ if (result.success) {
     </div>
 
     <Dialog.Footer>
-      <Dialog.Close asChild let:builder>
+      <Dialog.Close>
         <Button builders={[builder]} variant="outline">Schließen</Button>
       </Dialog.Close>
     </Dialog.Footer>

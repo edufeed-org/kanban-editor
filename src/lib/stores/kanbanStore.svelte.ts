@@ -15,6 +15,7 @@ export type CardItem = {
     color?: string;
     publishState?: PublishState;
     author?: string;
+    authorName?: string; // Display name (readable), author = pubkey (Nostr)
     image?: string;
     link?: string;
     columnId?: string;
@@ -122,6 +123,7 @@ export class BoardStore {
                             color: card.color,
                             publishState: card.publishState,
                             author: card.author || card.attendees?.[0], // author oder erster Attendee
+                            authorName: card.authorName, // ← NEUE ZEILE: Display name für UI
                             columnId: column.id,
                             boardId: this.board.id
                         }))
@@ -252,13 +254,23 @@ export class BoardStore {
     }
 
     private reconstructBoard(data: any): Board {
+        // ✅ MIGRATION: Wenn author kein Pubkey-Format hat, ignoriere es
+        // (Es ist wahrscheinlich ein alter Display-Name)
+        let author = data.author;
+        if (author && !author.match(/^[0-9a-f]{64}$/)) {
+            // Ist kein Hex-Pubkey → Wahrscheinlich alter Display-Name
+            console.warn(`⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze auf 'anonymous'`);
+            author = 'anonymous'; // ← Setze auf anonymous statt alte Name zu nutzen
+        }
+        
         // Erstelle Board-Instanz mit rekonstruierten Columns/Cards
         const boardProps = {
             id: data.id,
             name: data.name,
             description: data.description,
             publishState: data.publishState,
-            author: data.author,
+            author: author, // ← Migrierte/bereinigte author
+            maintainers: data.maintainers || [], // ← NEU: maintainers laden
             tags: data.tags || [], // ← NEU: Tags laden
             ccLicense: data.ccLicense || 'cc-by-4.0', // ← NEU: License laden
             columns: data.columns?.map((colData: any) => ({
@@ -272,6 +284,7 @@ export class BoardStore {
                     image: cardData.image, // ← image MUSS hier sein!
                     color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
                     author: cardData.author, // ← ✅ FIXED: author hinzugefügt!
+                    authorName: cardData.authorName, // ← NEU: authorName laden
                     comments: cardData.comments || [],
                     labels: cardData.labels || [],
                     links: cardData.links || [],
@@ -289,11 +302,11 @@ export class BoardStore {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             columns: [
-                { name: 'Backlog', color: 'slate' },
-                { name: 'To Do', color: 'blue' },
-                { name: 'In Progress', color: 'orange' },
-                { name: 'Done', color: 'green' },
-                { name: 'Archive', color: 'red' }
+                // { name: 'Spalte 1' },
+                // { name: 'To Do', color: 'blue' },
+                // { name: 'In Progress', color: 'orange' },
+                // { name: 'Done', color: 'green' },
+                // { name: 'Archive', color: 'red' }
             ]
         });
     }
@@ -400,19 +413,20 @@ export class BoardStore {
      * Erstellt ein neues Board mit Default-Spalten und speichert es
      */
     public createBoard(name: string = 'Neues Board'): string {
-        // ✅ Nutze getUserName() für lesbare author (statt pubkey!)
-        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        // ✅ KRITISCH: author MUSS der Pubkey sein für Nostr-Kompatibilität & Authorisierung!
+        // Display-Name ist nur für UI-Anzeige relevant, nicht für Vergleiche
+        const author = authStore.getPubkey() || 'anonymous';
         
         const newBoard = new Board({
             name,
             description: '',
-            author: author, // ✅ Nutze den Namen für bessere UX!
+            author: author, // ✅ Pubkey für Nostr Events & Authorisierung
+            maintainers: [author], // ✅ NEU: Ich bin der einzige Maintainer
             columns: [
-                { name: 'Backlog', color: 'muted' },
-                { name: 'To Do', color: 'chart-1' },
-                { name: 'In Progress', color: 'chart-2' },
-                { name: 'Done', color: 'chart-3' },
-                { name: 'Archive', color: 'muted' }
+                { name: 'Material', color: 'slate' },
+                { name: 'Auswahl', color: 'green' },
+                { name: 'Einstieg', color: 'orange' }
+                
             ]
         });
         
@@ -486,6 +500,12 @@ export class BoardStore {
      * Löscht ein Board mit der gegebenen ID
      */
     public deleteBoard(boardId?: string): boolean {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Boards löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         const targetId = boardId || this.board.id;
         
         if (typeof window === 'undefined') return false;
@@ -550,6 +570,12 @@ export class BoardStore {
         tags?: string[]
         ccLicense?: string
     }): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Board-Metadaten aktualisieren!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         this.board.update(updates); // ✅ Nutze board.update() damit updatedAt gesetzt wird!
         this.triggerUpdate(); // 🔥 speichert zu localStorage und triggert $derived Neuberechnung
         console.log('✅ Board-Metadaten aktualisiert:', { 
@@ -565,21 +591,42 @@ export class BoardStore {
     // ============================================================================
 
     public setPublishState(state: PublishState): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen publishState ändern!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         this.board.setPublishState(state);
+        this.triggerUpdate();
     }
 
     public addColumn(props: ColumnProps) {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten hinzufügen!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         const column = this.board.addColumn(props);
         // WICHTIG: _columnOrder muss aktualisiert werden!
         // Sonst wird die neue Spalte von uiData nicht berücksichtigt (weil $derived.by nach _columnOrder filtert)
         this._columnOrder = [...this._columnOrder, column.id];
+        this.triggerUpdate();
         return column;
     }
 
     public deleteColumn(columnId: string): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         this.board.deleteColumn(columnId);
         // WICHTIG: _columnOrder muss aktualisiert werden!
         this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+        this.triggerUpdate();
     }
 
     public findColumn(columnId: string) {
@@ -598,6 +645,14 @@ export class BoardStore {
     }
 
     public addCard(columnId: string, props: CardProps) {
+        // ✅ NEU: Authorization Check - nur Maintainers können Karten hinzufügen
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+            console.error(error);
+            throw new Error(error);
+        }
+        
         const column = this.board.findColumn(columnId);
         if (column) {
             const card = column.addCard(props);
@@ -622,6 +677,19 @@ export class BoardStore {
     public upsertCard(targetColumnId: string, props: CardProps) {
         if (!props.id) {
             throw new Error('upsertCard requires props.id to be set (from Nostr d-tag)');
+        }
+
+        // ✅ NEU: Authorization Check (nur bei INSERT neuer Karten)
+        // UPDATE: Keine Authorisierung nötig (Existierende Karten können von author aktualisiert werden)
+        const existingCard = this.board.findCardById(props.id!);
+        if (!existingCard) {
+            // Neue Karte: Check Berechtigung
+            const signerPubkey = authStore.getPubkey();
+            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+                const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
+                console.error(error);
+                throw new Error(error);
+            }
         }
 
         const card = this.board.upsertCard(targetColumnId, props);
@@ -686,6 +754,12 @@ export class BoardStore {
     }
 
     public updateColumn(columnId: string, updates: { name?: string; color?: string }): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten bearbeiten!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         const column = this.board.findColumn(columnId);
         if (column) {
             column.update(updates);
@@ -697,6 +771,12 @@ export class BoardStore {
     }
 
     public deleteColumnWithCards(columnId: string): void {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten mit Karten löschen!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
+        }
+
         this.board.deleteColumn(columnId);
         
         // Entferne auch aus _columnOrder
@@ -718,19 +798,21 @@ export class BoardStore {
     public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
         console.log('🆕 createCard aufgerufen:', { columnId, name, description });
         
-        // ✅ WICHTIG: Nutze getUserName() für lesbare author (statt pubkey!)
-        // Fallback: pubkey, dann 'anonymous'
-        const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+        // ✅ KRITISCH: author MUSS der Pubkey sein (wie bei Board)!
+        // Das ist notwendig für Nostr-Kompatibilität und Vergleiche
+        const author = authStore.getPubkey() || 'anonymous';
+        const authorName = authStore.getUserName() || author; // ← NEU: Lesbar Name für UI
         
         const cardProps: CardProps = {
             heading: name,
             content: description || 'Bitte bearbeiten...',
             publishState: 'draft',
-            author: author // ✅ Nutze den Namen für bessere UX!
+            author: author, // ✅ Pubkey für Konsistenz & Nostr Events
+            authorName: authorName // ← NEU: Lesbar Name speichern
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
+        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'authorName:', authorName, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
         
         // publishToNostr() wird bereits in addCard() aufgerufen
         return card.id;
@@ -759,20 +841,37 @@ export class BoardStore {
 
     /**
      * Wird von DnD-Handlern aufgerufen: Karte zwischen Spalten verschieben
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): void {
+    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): boolean {
         // Nur bewegen wenn sich die Spalte tatsächlich geändert hat
         if (fromColumnId !== toColumnId) {
+            // 🔐 AUTORISIERUNG: Prüfen vor dem Verschieben
+            const signerPubkey = authStore.getPubkey();
+            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+                console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+                return false;
+            }
+            
             this.moveCard(cardId, fromColumnId, toColumnId);
         }
+        return true;
     }
 
     /**
      * Wird von Board.svelte aufgerufen: Spalten reordern (DnD)
      * @param reorderedColumns - Die neu angeordneten Spalten aus der UI
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public reorderColumns(reorderedColumns: UIColumn[]): void {
+    public reorderColumns(reorderedColumns: UIColumn[]): boolean {
         console.log('🔄 reorderColumns aufgerufen mit', reorderedColumns.length, 'Spalten');
+        
+        // 🔐 AUTORISIERUNG: Prüfen vor dem Reordern
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+            return false;
+        }
         
         // Aktualisiere die interne Reihenfolge der Spalten
         // Die reorderedColumns enthalten die UIColumn-Struktur mit allen Karten
@@ -791,13 +890,23 @@ export class BoardStore {
         // Trigger Reaktivität und speichern
         this.triggerUpdate();
         this.publishToNostr();
+        
+        return true;
     }
 
     /**
      * Vollständige Synchronisierung: Spalten-Reihenfolge UND Karten-Positionen
      * @param uiColumns - Komplettes Update mit neuer Spalten- und Karten-Reihenfolge
+     * @returns true bei Erfolg, false bei fehlender Autorisierung
      */
-    public syncBoardState(uiColumns: UIColumn[]): void {
+    public syncBoardState(uiColumns: UIColumn[]): boolean {
+        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten/Karten verschieben!
+        const signerPubkey = authStore.getPubkey();
+        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
+            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
+            return false; // ← Gibt false zurück statt Error zu werfen
+        }
+
         console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
         console.log('  UI-Spalten:', uiColumns.length);
         
@@ -858,6 +967,8 @@ export class BoardStore {
         
         this.triggerUpdate();
         this.publishToNostr();
+        
+        return true; // ← Erfolgreiche Synchronisierung
     }
 
     /**
@@ -1009,6 +1120,9 @@ export class BoardStore {
     // ============================================================================
 
     private publishToNostr(): void {
+        // ✅ AUTHORIZATION CHECK: Bereits in addCard() und upsertCard() durchgeführt!
+        // Diese Methode wird nur aufgerufen wenn Validierung erfolgreich war
+        
         // Hier würde die tatsächliche Nostr-Publikation erfolgen
         // z.B. über eine WebSocket-Verbindung oder HTTP-API
         console.log('Publishing board state to Nostr...', this.board.getContextData(true));

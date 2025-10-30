@@ -14,7 +14,7 @@ export interface UserSession {
     nip05?: string;
     lud16?: string;
   };
-  signerType: "nip07" | "nsec" | "nip46";
+  signerType: "nip07" | "nsec" | "nip46" | "demo";
   lastLogin: number;
   expires: number;
 }
@@ -31,7 +31,7 @@ export class AuthStore {
   public errorMessage = $state<string | null>(null);
   
   constructor(private ndk: NDK) {
-    this.restoreSession();
+    this.restoreSessionOrCreateDemo();
   }
 
   /**
@@ -143,6 +143,153 @@ export class AuthStore {
   }
 
   /**
+   * Restore Session or stay logged out
+   * 🎯 NEUES VERHALTEN:
+   * - Existierende Session? → Restore
+   * - Keine Session? → Bleibe ausgeloggt (User kann explizit Demo starten)
+   * - Demo nur wenn config.allow_demo_session.enabled = true
+   */
+  private async restoreSessionOrCreateDemo(): Promise<void> {
+    try {
+      const stored = this.getStoredSession();
+
+      // Fall 1: Session vorhanden
+      if (stored && Object.keys(stored).length > 0) {
+        if (Date.now() > stored.expires) {
+          console.log("⏰ Session expired");
+          this.sessionStore.set(null);
+          this.currentUser = null;
+          return;
+        }
+
+        // Für Demo-Sessions: Nicht neu laden, einfach direkt set
+        if (stored.signerType === "demo") {
+          this.currentUser = {
+            pubkey: stored.pubkey,
+            npub: stored.npub,
+            profile: stored.profile
+          } as any;
+          console.log(`✅ Demo-Session wiederhergestellt: ${stored.profile.name}`);
+          return;
+        }
+
+        // Für echte Nostr-Sessions: Versuch zu fetchen
+        const user = await this.ndk.fetchUser(stored.pubkey);
+        
+        if (!user) {
+          console.log("⚠️  Failed to fetch user from NDK - staying logged out");
+          this.sessionStore.set(null);
+          this.currentUser = null;
+          return;
+        }
+
+        user.profile = stored.profile;
+        this.currentUser = user;
+
+        console.log(
+          `🔄 Session restored for ${stored.profile.name || "Anonymous"}`
+        );
+
+        // Try to restore signer (only for NIP-07)
+        if (stored.signerType === "nip07" && window.nostr) {
+          const signer = new NDKNip07Signer();
+          this.ndk.signer = signer;
+        }
+        return;
+      }
+
+      // Fall 2: Keine Session vorhanden → User bleibt ausgeloggt
+      console.log("👤 Keine Session gefunden → User ist ausgeloggt");
+      this.currentUser = null;
+
+    } catch (error) {
+      console.error("Failed to restore session:", error);
+      this.sessionStore.set(null);
+      this.currentUser = null; // Ausgeloggt bei Error
+    }
+  }
+
+  /**
+   * PUBLIC: Erstelle Demo-Session für Anonymous User
+   * 🎯 Wird vom User explizit ausgelöst (Button in Sidebar)
+   * Gibt dem User eine lokale Identity (demo-xxxx)
+   * 
+   * @throws Error wenn config.allow_demo_session.enabled = false
+   */
+  public createDemoSession(): void {
+    // 🔐 CHECK: Ist Demo in Config aktiviert?
+    const isDemoAllowed = this.isDemoSessionAllowed();
+    if (!isDemoAllowed) {
+      throw new Error("Demo sessions are disabled in configuration");
+    }
+
+    const demoId = `demo-${Math.random().toString(36).slice(2, 10)}`;
+    const demoSession: UserSession = {
+      pubkey: demoId,
+      npub: `npub_demo_${demoId.slice(5)}`,
+      profile: {
+        name: "Demo User",
+        about: "Local demo session"
+      },
+      signerType: "demo",
+      lastLogin: Date.now(),
+      expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 Tage Demo
+    };
+
+    this.sessionStore.set(demoSession);
+    
+    // Erstelle einfaches User-Mock für Demo (kompatibel mit NDKUser API)
+    this.currentUser = {
+      pubkey: demoId,
+      npub: demoSession.npub,
+      profile: demoSession.profile
+    } as any;
+
+    console.log(`✅ Demo-Session erstellt: ${demoId}`);
+    console.log(`   User kann lokal Boards anlegen und bearbeiten`);
+    console.log(`   Nach Login → echte Nostr-Session mit gleicher Validierung`);
+  }
+
+  /**
+   * Check ob Demo-Sessions in der Config aktiviert sind
+   * Liest aus config.json: allow_demo_session.enabled
+   * 
+   * IMPORTANT: Diese Funktion macht einen synchronen Check auf localStorage.
+   * Bei erstem Call wird Config möglicherweise noch nicht geladen sein.
+   * Bei Button-Click ist sie aber garantiert geladen.
+   */
+  public isDemoSessionAllowed(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      // Versuche aus gecachter Config zu lesen (von SettingsStore)
+      // localStorage Schlüssel: 'kanban-config'
+      const cachedConfig = localStorage.getItem('kanban-config');
+      if (cachedConfig) {
+        try {
+          const config = JSON.parse(cachedConfig);
+          const demoAllowed = config?.allow_demo_session?.enabled;
+          
+          if (typeof demoAllowed === 'boolean') {
+            console.log(`ℹ️  Demo sessions: ${demoAllowed ? 'enabled ✅' : 'disabled ❌'}`);
+            return demoAllowed;
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse cached config:", parseErr);
+        }
+      }
+
+      // Fallback: Wenn keine Config vorhanden: Default auf false (sicherer)
+      // DEBUG: Zeige dass wir nachschlagen müssen
+      console.log('ℹ️  Demo sessions: config not yet in localStorage (being loaded async)');
+      return false;
+    } catch (error) {
+      console.error("Error checking demo session config:", error);
+      return false;
+    }
+  }
+
+  /**
    * Restore Session
    */
   private async restoreSession(): Promise<void> {
@@ -190,6 +337,7 @@ export class AuthStore {
 
   /**
    * Update Profile (Kind 0)
+   * 🎯 Für Demo-User: Lokal updaten, für Nostr-User: auf Relay publizieren
    */
   public async updateProfile(profileData: {
     name?: string;
@@ -198,8 +346,8 @@ export class AuthStore {
     nip05?: string;
     lud16?: string;
   }): Promise<void> {
-    if (!this.currentUser || !this.ndk.signer) {
-      throw new Error("User not authenticated");
+    if (!this.currentUser) {
+      throw new Error("No user session");
     }
 
     try {
@@ -209,12 +357,16 @@ export class AuthStore {
 
       Object.assign(this.currentUser.profile, profileData);
 
-      await this.currentUser.publish();
-
+      // Nur für echte Nostr-User publizieren (nicht für Demo)
       const session = this.getStoredSession();
-      if (session) {
-        session.profile = { ...session.profile, ...profileData };
-        this.sessionStore.set(session);
+      if (session?.signerType !== "demo" && this.ndk.signer) {
+        await this.currentUser.publish();
+      }
+
+      const session2 = this.getStoredSession();
+      if (session2) {
+        session2.profile = { ...session2.profile, ...profileData };
+        this.sessionStore.set(session2);
       }
 
       console.log("✅ Profile updated");

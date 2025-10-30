@@ -1039,6 +1039,85 @@ export function initializeAuth(ndk: NDK): AuthStore {
 
 ---
 
+## II.2 Signer Pubkey Passing for Authorization (Nostr Board Co-Editing)
+
+### Problem: Wie validieren wir, ob ein Nutzer berechtigt ist, Karten zu einem Board hinzuzufügen?
+
+**Lösung:** AuthStore bietet `getPubkey()`, das der `BoardStore` für Validierungs-Checks nutzt.
+
+### AuthStore API für Authorization
+
+```typescript
+// src/lib/stores/authStore.svelte.ts
+
+export class AuthStore {
+  /**
+   * Returns current signer's public key (hex format)
+   * @returns hex pubkey oder null wenn nicht authentifiziert
+   */
+  public getPubkey(): string | null {
+    return this.currentUser?.pubkey || null;
+  }
+  
+  /**
+   * Returns human-readable name (falls vorhanden)
+   * @returns name oder null
+   */
+  public getUserName(): string | null {
+    return this.currentUser?.profile?.name || null;
+  }
+}
+```
+
+### BoardStore Authorization Pattern
+
+```typescript
+// src/lib/stores/kanbanStore.svelte.ts
+
+import { authStore } from './authStore.svelte.js';
+
+export class BoardStore {
+  public addCard(columnId: string, props: CardProps) {
+    // ✅ CRITICAL: Get signer pubkey and validate
+    const signerPubkey = authStore.getPubkey();
+    
+    if (signerPubkey && !this.board.canAddCard(signerPubkey)) {
+      // ❌ User ist nicht berechtigt!
+      throw new Error(
+        `❌ Nicht autorisiert: du bist nicht Maintainer dieses Boards`
+      );
+    }
+    
+    // ✅ Validierung erfolgreich → Karte hinzufügen
+    const column = this.board.findColumn(columnId);
+    if (column) {
+      const card = column.addCard(props);
+      this.triggerUpdate();
+      this.publishToNostr();
+      return card;
+    }
+  }
+}
+```
+
+### Fallback Pattern (Offline/Anonymous)
+
+```typescript
+// AuthStore gibt null zurück wenn nicht authentifiziert
+// BoardStore sollte graceful mit anonymous users umgehen:
+
+if (!signerPubkey) {
+  // User ist nicht eingeloggt
+  // Option 1: Block operation (sicher)
+  throw new Error('Bitte logge dich ein um Karten zu erstellen');
+  
+  // Option 2: Allow but mark as 'anonymous' (für read-only Zugriff)
+  // const card = column.addCard({...props, author: 'anonymous'});
+}
+```
+
+---
+
 ## III. Integration in Layout
 
 ### 3.1 Erweiterte Layout-Datei

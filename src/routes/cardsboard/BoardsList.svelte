@@ -3,6 +3,8 @@
     import { Input } from '$lib/components/ui/input/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { authStore } from '$lib/index.js';
+
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
@@ -105,6 +107,7 @@
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden">
+    {#if authStore.isAuthenticated }
     <!-- Neues Board Button -->
     <Button
         onclick={handleCreateBoard}
@@ -121,6 +124,7 @@
     </Button>
 
     <Separator />
+    {/if}
 
     <!-- Suchfeld -->
     <div class="flex-shrink-0">

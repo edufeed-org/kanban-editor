@@ -33,18 +33,40 @@ pnpm run dev
 
 ## 📚 Dokumentation
 
+### 🔴 Dokumentations-Governance v3.0 AKTIV
+
+**KRITISCH:** Code ohne Docs-Update → PR wird REJECTED!
+
+- **[📚 DOCUMENTATION-RULES-v3.md](./docs/DOCUMENTATION-RULES-v3.md)** - 🔴 **v3.0 MANDATORY** - DoD Checklist (11 Punkte), Enforcement-Rules
+- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (42 Dateien)
+
+**Bei jeder Code-Änderung:**
+1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
+2. ✅ TESTSUITE/STATUS.md aktualisieren (wenn Tests betroffen)
+3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar)
+4. ✅ Feature-Dokumentation aktualisieren (wenn API ändert)
+5. ✅ ARCHITECTURE/ Docs aktualisieren (wenn Pattern ändert)
+6. ✅ _INDEX.md aktualisieren (wenn neue Datei)
+7. ✅ Alte Docs archivieren (mit Migration-Notice)
+
+**Siehe:** [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md) für vollständige Regeln  
+**Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+
+---
+
+### 📖 Kern-Dokumentation
+
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
-- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap (Phase 1-5)
+- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap v2.5 (Phase 1-5)
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
-- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema
 - **[STORES.md](./docs/ARCHITECTURE/STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
-- **[🆕 AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)** - Serialisierung & Persistierung Pattern
-- **[🆕 AUTHSTORE-INTEGRATION-GUIDE.md](./docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)** - AuthStore API Reference
+- **[AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)** - Serialisierung & Persistierung Pattern
+- **[AUTHSTORE-INTEGRATION-GUIDE.md](./docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)** - AuthStore API Reference
 - **[NDK.md](./docs/ARCHITECTURE/NDK.md)** - NDK Integration & Nostr-Event Publishing
 - **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
 - **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
 - **[UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)** - shadcn-svelte UI Guidelines
-- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie
+- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (Version 3.2 - Governance v3.0)
 
 ### 🗺️ Documentation Map (für Entwickler)
 

@@ -12,6 +12,8 @@
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { authStore } from "$lib/index.js";
+	import { toast } from "svelte-sonner";
 	
 
  	const flipDurationMs = 150;
@@ -196,7 +198,16 @@
 		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
 		if (editName !== name && columnId) {
 			console.log('📝 Column name changed:', { old: name, new: editName });
-			boardStore.updateColumn(columnId, { name: editName });
+			try {
+				boardStore.updateColumn(columnId, { name: editName });
+			} catch (error) {
+				console.error('❌ Fehler beim Umbenennen:', error);
+				toast.error('Keine Berechtigung', {
+					description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten umzubenennen.'
+				});
+				// Setze den Namen zurück
+				editName = name;
+			}
 		}
 	}
 
@@ -204,7 +215,14 @@
 		if (confirm(`Spalte "${name}" und alle ${items.length} Karten wirklich löschen?`)) {
 			if (columnId) {
 				console.log('🗑️ Deleting column:', { columnId, name, cardsCount: items.length });
-				boardStore.deleteColumnWithCards(columnId);
+				try {
+					boardStore.deleteColumnWithCards(columnId);
+				} catch (error) {
+					console.error('❌ Fehler beim Löschen:', error);
+					toast.error('Keine Berechtigung', {
+						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu löschen.'
+					});
+				}
 			}
 		}
 		popoverOpen = false;
@@ -376,6 +394,7 @@
 			
 			<!-- Header Toolbar: Add Card + Menu -->
 			<div class="flex items-center gap-1">
+				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
 					variant="ghost" 
@@ -385,30 +404,41 @@
 					onclick={(e) => {
 						e.stopPropagation();
 						if (columnId) {
-							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
-							const newCard: CardItem = {
-								id: newCardId,
-								name: 'Neue Karte',
-								description: 'Bitte bearbeiten...',
-							};
-							// Neue Karte AM ANFANG einfügen
-							onDrop([newCard, ...items]);
-							// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
-							setTimeout(() => {
-								onSelectCard?.(String(newCardId));
-								console.log('✨ Neue Karte selektiert:', newCardId);
-							}, 0);
+							try {
+								const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+								const newCard: CardItem = {
+									id: newCardId,
+									name: 'Neue Karte',
+									description: 'Bitte bearbeiten...',
+								};
+								// Neue Karte AM ANFANG einfügen
+								onDrop([newCard, ...items]);
+								// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
+								setTimeout(() => {
+									onSelectCard?.(String(newCardId));
+									console.log('✨ Neue Karte selektiert:', newCardId);
+								}, 0);
+							} catch (error) {
+								console.error('❌ Fehler beim Erstellen der Karte:', error);
+								toast.error('Keine Berechtigung', {
+									description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Karten zu erstellen.'
+								});
+							}
 						}
 					}}
 				>
 					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
-
+				{/if}
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
-					<Popover.Trigger class="popover-trigger-ignore inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group">
+					{#if authStore.isAuthenticated }
+					<Popover.Trigger 
+						class="popover-trigger-ignore inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group"
+					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
 					</Popover.Trigger>
+					{/if}
 					<Popover.Content align="end" class="w-64">
 						<div class="space-y-4">
 							<div class="space-y-2">

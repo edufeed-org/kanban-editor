@@ -67,7 +67,7 @@
 	// Ensure minimum 1 attendee (author should always be included)
 	const attendees = $derived(card.attendees && card.attendees.length > 0
 		? card.attendees
-		: (card.author ? [card.author] : []));
+		: (card.authorName ? [card.authorName] : []));
 
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components
@@ -248,10 +248,15 @@
 		<div class="card-header-content">
 			<Card.Title>{card.name}</Card.Title>
 			<div class="header-actions">
-				{#if card.author}
+				{#if card.author && card.authorName }
 					<div class="author-info" title={card.author}>
 						<span class="author-label">von</span>
-						<code class="author-npub">{card.author.slice(0, 8)}...</code>
+						<span class="author-name">
+							{card.authorName || card.author.slice(0, 8) + '...'} 
+							{#if card.authorName}
+								<code class="author-pubkey" title="Pubkey: {card.author}">{card.author.slice(0, 6)}…</code>
+							{/if}
+						</span>
 					</div>
 				{/if}
 				{#if showPublishToggle}
@@ -400,7 +405,7 @@
 		
 			</div>
 			<div class="attendees-count group">
-				<UserIcon /> {#if authors.length > 0}{authors[0]}{/if}
+				<UserIcon /> {#if attendees.length > 0}{attendees}{/if}
 			</div>
 			<button 
 				class="view-button group" 
@@ -490,10 +495,18 @@
 			font-weight: 500;
 		}
 
-		.author-npub {
+		.author-name {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.9em;
+		}
+
+		.author-pubkey {
 			font-family: monospace;
-			font-size: 0.85em;
-			color: var(--foreground);
+			font-size: 0.75em;
+			color: var(--muted-foreground);
+			opacity: 0.7;
 		}
 
 		/* Status indicator styling */

@@ -1,13 +1,136 @@
-# 📚 Dokumentations-Regeln (GOVERNANCE)
+# 📚 Dokumentations-Governance (BIDIREKTIONAL)
 
-**Letztes Update:** 25. Oktober 2025  
-**Status:** AKTIVE REGELN - KEINE Ausnahmen!
+**Version:** 3.0  
+**Letztes Update:** 29. Oktober 2025  
+**Status:** 🔴 **MANDATORY** - Code ↔ Docs Sync ERFORDERLICH!
 
 ---
 
-## Die 5 Goldenen Regeln
+## 🎯 Kernprinzip: Code ↔ Docs Bidirektionale Synchronisation
 
-### 🔴 RULE #1: `/docs/` ist die SOURCE OF TRUTH
+**NEUE REGEL (v3.0):** Dokumentation ist nicht optional, sondern **Akzeptanzkriterium**!
+
+```
+CODE-ÄNDERUNG → Dokumentation MUSS aktualisiert werden
+                 ↓
+          DoD Checklist MUSS erfüllt sein
+                 ↓
+          Ohne Docs-Update → KEIN Merge!
+
+DOKUMENTATIONS-UPDATE → Code MUSS aktualisiert werden
+                         ↓
+                   Veraltete Patterns identifizieren
+                         ↓
+                   Refactoring oder Archivierung
+```
+
+**Impact:**
+- ✅ Dokumentation ist immer aktuell (keine veralteten Docs mehr)
+- ✅ Code-Änderungen sind nachvollziehbar (ROADMAP, CHANGELOG, TESTSUITE/STATUS)
+- ✅ Archiv-Prozess ist automatisch (alte Docs werden nicht vergessen)
+- ✅ Neue Features haben Specs BEVOR Code geschrieben wird
+
+---
+
+## Die 7 Goldenen Regeln (erweitert von 5 → 7)
+
+# 📚 Dokumentations-Regeln (GOVERNANCE)
+
+**Letztes Update:** 29. Oktober 2025  
+**Status:** 🔴 **MIGRIERT ZU v3.0** - Siehe DOCUMENTATION-RULES-v3.md!
+
+---
+
+## ⚠️ WICHTIGER HINWEIS: Migration zu v3.0
+
+Diese Datei wurde durch **DOCUMENTATION-RULES-v3.md** ersetzt!
+
+**Neue Version:** [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md)
+
+### Was ist neu in v3.0?
+
+1. **🔴 RULE #6: Code → Docs Synchronisation (NEU)**
+   - Bidirektionale Sync: Code-Änderungen MÜSSEN Docs updaten
+   - Definition of Done (DoD) Checklist mit 11 Punkten
+   - Pre-Commit Hooks für automatische Prüfung
+   - Beispiel: Feature-Implementation mit vollständigem Docs-Sync
+
+2. **🔴 RULE #7: Docs → Code Synchronisation (NEU)**
+   - Dokumentations-Audit bei jedem Docs-Update
+   - Archivierungs-Prozess mit Migration-Notices
+   - Quartalsweise Dokumentations-Reviews
+   - Code-Konsistenz-Checks
+
+3. **📊 Metriken & KPIs**
+   - Dokumentations-Sync-Rate (Ziel: >95%)
+   - Veraltete Dokumentation (Ziel: 0)
+   - Archivierungs-Lag (Ziel: <7 Tage)
+   - Dead Links (Ziel: 0)
+
+4. **🚨 Enforcement & Compliance**
+   - Compliance-Levels (CRITICAL, HIGH, MEDIUM)
+   - Violations-Konsequenzen
+   - Pre-Merge Checklist für Reviewer
+
+### Migration-Guide
+
+**Für Entwickler:**
+
+```bash
+# 1. Alte Regeln lesen (diese Datei) → DEPRECATED
+# 2. Neue Regeln lesen
+cat docs/DOCUMENTATION-RULES-v3.md
+
+# 3. DoD Checklist bookmarken
+# → Section 6.1 in DOCUMENTATION-RULES-v3.md
+
+# 4. Pre-Commit Hook installieren (optional)
+# → Section 6.3 in DOCUMENTATION-RULES-v3.md
+```
+
+**Für AI Agents:**
+
+- ✅ Nutze DOCUMENTATION-RULES-v3.md für alle Dokumentations-Aufgaben
+- ✅ Befolge DoD Checklist (Section 6.1) bei Code-Änderungen
+- ✅ Archiviere veraltete Docs mit Migration-Notice (Section 7.2)
+- ✅ Update ROADMAP.md + TESTSUITE/STATUS.md IMMER bei Code-Änderungen
+
+---
+
+## Die 5 Goldenen Regeln (v2.0 - DEPRECATED)
+
+**⚠️ Diese Regeln gelten weiterhin, sind aber jetzt Teil von v3.0!**
+
+Siehe: [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md) für die vollständigen Regeln #1-7
+
+### Kurzzusammenfassung (weiterhin gültig):
+
+1. **`/docs/` ist die SOURCE OF TRUTH** - Alle Docs in `/docs/`
+2. **EIN THEMA = EIN DOKUMENT** - Keine Fragmentierung
+3. **5-Abschnitt-Struktur** - Übersicht, Quick Start, Details, Fehler, Referenzen
+4. **In `_INDEX.md` verlinken** - Alle neuen Docs in Navigation
+5. **Ordner-Struktur einhalten** - ARCHITECTURE/, GUIDES/, FEATURE/, COLLABORATION/, TESTSUITE/
+
+**⚠️ NEU in v3.0:**
+
+6. **Code → Docs Sync** - Jede Code-Änderung MUSS Docs updaten
+7. **Docs → Code Sync** - Jedes Docs-Update MUSS Code-Konsistenz prüfen
+
+---
+
+## 🔗 Vollständige Dokumentation
+
+**Bitte verwende ab sofort:**
+
+📄 **[DOCUMENTATION-RULES-v3.md](./DOCUMENTATION-RULES-v3.md)** - Vollständige v3.0 Regeln
+
+**Diese Datei bleibt als Referenz, wird aber nicht mehr aktualisiert!**
+
+---
+
+**Archiviert:** 29. Oktober 2025  
+**Ersetzt durch:** DOCUMENTATION-RULES-v3.md  
+**Status:** DEPRECATED (aber Regeln #1-5 weiterhin gültig)
 
 **ALLE Dokumentation gehört in `/docs/` — KEINE Ausnahmen!**
 
@@ -98,6 +221,10 @@
 
 ---
 
+### 🔴 RULE #6: Code → Docs Synchronisation (NEU v3.0)
+
+**Bei JEDER Code-Änderung MUSS die Dokumentation aktualisiert werden!**
+
 ### 🟢 RULE #4: Neue Docs in `/docs/_INDEX.md` verlinken
 
 **Wenn du ein neues Dokument erstellst:**
@@ -154,7 +281,9 @@ docs/
 ├── _INDEX.md                    ← Zentrale Navigation (MUSS aktualisiert werden!)
 │
 ├── ARCHITECTURE/                ← Technische Konzepte & Patterns
-│   ├── STORES.md               
+│   ├── STORES
+│   │   ├── AUTHSTORE.md
+│   │   └── ... (weitere Store-Themen)
 │   ├── REACTIVITY.md           
 │   ├── NDK.md                  
 │   └── ... (weitere technische Topics)
