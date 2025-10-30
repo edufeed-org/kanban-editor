@@ -131,8 +131,8 @@ describe('threeWayMerge scenarios from merge test page', () => {
       if (s.expectedConflicts === 0) {
         // no conflicts: result should be defined and contain a merged payload
         expect(result).toBeDefined();
-        expect((result as any).result).toBeTruthy();
-        expect((result as any).result?.id).toBe(s.base.id);
+        expect((result as any).merged).toBeTruthy();
+        expect((result as any).merged.id).toBe(s.base.id);
       } else {
         // conflicts exist: ensure each conflict references a field name
         for (const c of conflicts) {
