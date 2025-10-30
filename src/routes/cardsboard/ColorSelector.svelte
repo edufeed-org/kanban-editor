@@ -59,15 +59,15 @@
 
 	.color-circle:hover {
 		transform: scale(1.1);
-		box-shadow: 0 0 0 2px rgb(var(--background-rgb)), 
-		           0 0 8px 0 rgb(var(--accent-rgb) / 0.4);
-		border-color: rgb(var(--accent-rgb) / 0.7);
+		box-shadow: 0 0 0 2px var(--background),
+		           0 0 8px 0 var(--accent);
+		border-color: var(--accent);
 	}
 
 	.color-circle.selected {
-		box-shadow: 0 0 0 3px rgb(var(--background-rgb)), 
-		           0 0 0 5px rgb(var(--accent-rgb) / 0.8);
-		border-color: rgb(var(--accent-rgb) / 0.8);
+		box-shadow: 0 0 0 3px var(--background),
+		           0 0 0 5px var(--accent);
+		border-color: var(--accent);
 	}
 
 	.checkmark {

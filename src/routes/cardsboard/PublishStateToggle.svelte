@@ -34,12 +34,12 @@
 <style>
 	.publish-toggle {
 		position: relative;
-		width: 2rem;
-		height: 2rem;
+		width: 1.5rem;
+		height: 1.5rem;
 		border-radius: 0.375rem;
 		padding: 0.25rem;
-		border: 1px solid rgb(var(--border-rgb) / 0.5);
-		background: rgb(var(--background-rgb));
+		border: 1px solid var(--border);
+		background: var(--background);
 		color: var(--foreground);
 		cursor: pointer;
 		transition: all 0.2s ease-in-out;
@@ -49,15 +49,15 @@
 	}
 
 	.publish-toggle:hover {
-		background-color: rgb(var(--accent-rgb) / 0.1);
-		border-color: rgb(var(--ring-rgb) / 0.5);
-		box-shadow: 0 0 0 2px rgb(var(--ring-rgb) / 0.2);
+		background-color: var(--accent);
+		border-color: var(--ring);
+		box-shadow: 0 0 0 2px var(--ring);
 	}
 
 	.publish-toggle.draft .publish-indicator {
 		width: 0.5rem;
 		height: 0.5rem;
-		background-color: rgb(var(--muted-foreground-rgb));
+		background-color: var(--muted-foreground);
 		border-radius: 50%;
 	}
 
@@ -89,6 +89,6 @@
 	.publish-toggle:focus {
 		outline: 2px solid transparent;
 		outline-offset: 2px;
-		box-shadow: 0 0 0 3px rgb(var(--ring-rgb) / 0.3);
+		box-shadow: 0 0 0 3px var(--ring) / 0.3;
 	}
 </style>

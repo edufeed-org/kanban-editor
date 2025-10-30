@@ -22,7 +22,7 @@
 		cardId: string | number;
 		open: boolean;
 	}
-
+	let showModal = $state(false);
 	let { cardId, open = $bindable() }: Props = $props();
 
 	let commentText = $state('');
@@ -154,6 +154,9 @@
 	function handleColorChange(colorValue: string) {
 		boardStore.updateCard(card.id as string, { color: colorValue });
 	}
+	function handleEditClick() {
+		showModal = true;
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -168,25 +171,11 @@
 				<div class="flex items-center gap-2 flex-shrink-0">
 					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
 					<Popover.Root>
-						<Popover.Trigger class="h-8 w-8 p-0 hover:bg-accent rounded flex items-center justify-center">
+						<Popover.Trigger class="mr-4 pl-1 w-6 h-6 btn bg-primary" type="button" title="Kartenoptionen" >
 							<EllipsisVerticalIcon class="h-4 w-4" />
 						</Popover.Trigger>
 					<Popover.Content align="end" side="bottom" class="w-72">
 						<div class="space-y-4">
-							<!-- Author Info -->
-							{#if card.author && card.authorName}
-								<div class="space-y-2">
-									<h4 class="font-medium text-sm">Erstellt von</h4>
-									<div class="flex items-center gap-2 p-2 bg-muted rounded">
-										<UserIcon class="h-4 w-4 text-muted-foreground flex-shrink-0" />
-										<div class="flex-1 min-w-0">
-											<p class="text-sm font-medium truncate">{card.authorName}</p>
-											<code class="text-xs text-muted-foreground font-mono">{card.author.slice(0, 8)}…</code>
-										</div>
-									</div>
-								</div>
-								<Separator.Root class="my-3" />
-							{/if}
 							
 							<!-- Card Rename -->
 							<div class="space-y-2">
@@ -348,9 +337,9 @@
 										variant="ghost"
 										size="sm"
 										onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
-										class="text-destructive hover:bg-destructive/10 h-6 w-6 p-0"
+										class="btn text-destructive bg-destructive h-6 w-6 p-0"
 									>
-										<TrashIcon class="h-3 w-3" />
+										<TrashIcon class="size-3" />
 									</Button>
 								</div>
 								<p class="text-sm text-foreground whitespace-pre-wrap break-words">
@@ -376,6 +365,7 @@
 					<Button
 						variant="outline"
 						size="sm"
+						class="gap-2 bg-secondary"
 						onclick={() => (commentText = '')}
 						disabled={isSubmitting || !commentText.trim()}
 					>
@@ -385,7 +375,7 @@
 						size="sm"
 						onclick={handleAddComment}
 						disabled={isSubmitting || !commentText.trim()}
-						class="gap-2"
+						class="gap-2 bg-primary"
 					>
 						{#if isSubmitting}
 							<LoaderIcon class="h-4 w-4 animate-spin" />
@@ -404,8 +394,8 @@
 			<Button 
 				variant="outline" 
 				size="sm"
-				class="gap-2"
-				onclick={() => console.log('Edit Card:', card.id)}
+				class="gap-2 bg-primary"
+				onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }}
 			>
 				<EditIcon class="h-4 w-4" />
 				<span>Bearbeiten</span>
