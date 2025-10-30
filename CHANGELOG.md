@@ -1221,3 +1221,208 @@ Alle Erweiterungen sind **additiv**:
 ## Lizenz
 
 Gleiche Lizenz wie das Hauptprojekt.
+
+
+## Version 3.5 - Theme für alle Routes aktiviert
+
+**Datum:** 30. Oktober 2025  
+**Branch:** `theme-all-routes`  
+**Status:** ✅ **THEME COVERAGE COMPLETE**
+
+### 🎯 Zusammenfassung
+
+**Vollständige Theme-Aktivierung für alle Routes:**
+- ✅ Main Page (+page.svelte) - Auth Buttons & Profile
+- ✅ Test Suite (test/+page.svelte) - Test Execution Buttons  
+- ✅ AuthStore Tests (test/authstore/+page.svelte) - Auth Test Buttons
+- ✅ Settings Tests (test/settings/+page.svelte) - Config & Debug Buttons
+- ✅ Merge Tests (test/merge/+page.svelte) - Conflict Resolution Buttons
+
+**Impact:** Theme-System jetzt auf **allen Routes** aktiv ⚡  
+**Documentation:** THEME-BUTTONS.md erweitert mit allen Route-Beispielen ✅  
+
+---
+
+### ✨ Implementierte Features
+
+#### 1. Main Page Buttons (+page.svelte)
+
+**Auth Buttons:**
+```svelte
+<!-- Login/Logout Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+
+<Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Anmelden
+</Button>
+```
+
+**Profile Components:**
+- **Card Components:** Auf shadcn-svelte Card-Struktur umgestellt
+- **Avatar Integration:** Konsistente Avatar-Komponenten
+- **Link Button:** `variant="link"` für Nostr.com Profile
+
+#### 2. Test Suite Routes Standardisierung
+
+**test/+page.svelte - Test Runner:**
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={handleRunTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <span class="mr-2">▶️</span>
+    Tests ausführen
+  {/if}
+</Button>
+
+<!-- Secondary Action Button -->
+<Button variant="outline" size="default" onclick={clearResults}>
+  🗑️ Löschen
+</Button>
+```
+
+**test/authstore/+page.svelte - AuthStore Tests:**
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={runAuthStoreTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <PlusIcon class="w-4 h-4 mr-2" />
+    Tests ausführen
+  {/if}
+</Button>
+```
+
+**test/settings/+page.svelte - Settings Tests:**
+```svelte
+<!-- Warning Action Button -->
+<Button variant="destructive" size="default" onclick={forceMergeConfig}>
+  ⚠️ Config Force-Merge
+</Button>
+
+<!-- Small Outline Buttons -->
+<Button variant="outline" size="sm" onclick={test1}>
+  Test 1: Settings laden
+</Button>
+```
+
+**test/merge/+page.svelte - Merge Tests:**
+```svelte
+<!-- Conflict Resolution Button -->
+<Button variant="default" size="default" class="w-full" onclick={openConflictDialog}>
+  <CheckIcon class="h-4 w-4 mr-2" />
+  Konflikte manuell auflösen
+</Button>
+```
+
+#### 3. THEME-BUTTONS.md Erweiterung
+
+**Neue Sektionen hinzugefügt:**
+- **Main Page Buttons:** Auth & Profile Buttons
+- **Test Suite Buttons:** Test Execution & Control Buttons
+- **AuthStore Test Buttons:** Authentication Test Buttons
+- **Settings Test Buttons:** Configuration & Debug Buttons
+- **Merge Test Buttons:** Conflict Resolution Buttons
+
+**Beispiel-Struktur:**
+```svelte
+### Main Page Buttons (+page.svelte)
+<!-- Auth Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+```
+
+#### 4. Konsistente Button-Patterns
+
+**Size Standardisierung:**
+- **sm:** Für Inline-Buttons (Auth, Card Actions)
+- **default:** Für primäre Aktionen (Test Execution)
+- **lg:** Für prominente Aktionen (Add Column)
+
+**Variant Standardisierung:**
+- **default:** Primäre Aktionen
+- **outline:** Sekundäre Aktionen
+- **destructive:** Warnungen/destruktive Aktionen
+- **ghost:** Subtile Aktionen
+- **link:** Link-Buttons
+
+---
+
+### 📝 Documentation Updates
+
+#### THEME-BUTTONS.md Erweitert
+
+**Neue Beispiele (5 Sektionen):**
+1. **Main Page Buttons** - Auth & Profile
+2. **Test Suite Buttons** - Test Runner
+3. **AuthStore Test Buttons** - Authentication Tests
+4. **Settings Test Buttons** - Configuration Tests
+5. **Merge Test Buttons** - Conflict Resolution
+
+**Dokumentations-Struktur:**
+```markdown
+### Main Page Buttons (+page.svelte)
+```svelte
+<!-- Auth Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+```
+```
+
+#### CHANGELOG.md Update
+
+**Version 3.5 hinzugefügt:**
+- Vollständige Route-Coverage dokumentiert
+- Button-Patterns für alle Routes
+- Theme-System jetzt projektweit aktiv
+
+---
+
+### ✅ DoD Checklist (All Routes Coverage)
+
+- ✅ **Main Page:** +page.svelte Buttons standardisiert
+- ✅ **Test Suite:** test/+page.svelte Buttons standardisiert
+- ✅ **AuthStore Tests:** test/authstore/+page.svelte Buttons standardisiert
+- ✅ **Settings Tests:** test/settings/+page.svelte Buttons standardisiert
+- ✅ **Merge Tests:** test/merge/+page.svelte Buttons standardisiert
+- ✅ **Documentation:** THEME-BUTTONS.md mit allen Beispielen
+- ✅ **CHANGELOG.md:** Version 3.5 dokumentiert
+
+---
+
+### 📊 Statistik
+
+- **Routes aktualisiert:** 5 Routes (+page.svelte + 4 Test-Routes)
+- **Buttons standardisiert:** 15+ Button-Komponenten
+- **Dokumentation erweitert:** 5 neue Sektionen in THEME-BUTTONS.md
+- **Theme Coverage:** 100% (alle Routes verwenden shadcn-svelte)
+- **CSS-Variablen:** Projektweit konsistent genutzt
+
+---
+
+### 🎯 Ergebnis
+
+**Vorher:** Theme nur auf `routes/cardsboard` aktiv  
+**Nachher:** Theme auf **allen Routes** aktiv mit konsistenten Button-Patterns
+
+**Vollständige Liste der aktivierten Routes:**
+- ✅ `/` - Main Page mit Auth & Profile
+- ✅ `/cardsboard/*` - Kanban Board (bereits aktiv)
+- ✅ `/test` - Test Suite Runner
+- ✅ `/test/authstore` - Authentication Tests
+- ✅ `/test/settings` - Settings Configuration Tests
+- ✅ `/test/merge` - Merge Conflict Tests
+
+---

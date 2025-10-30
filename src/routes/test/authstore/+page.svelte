@@ -200,13 +200,14 @@
 			<Button
 				onclick={runAuthStoreTests}
 				disabled={isRunning}
-				class="px-6 py-2 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white"
+				variant="default"
+				size="default"
 			>
 				{#if isRunning}
 					<span class="inline-block animate-spin mr-2">⏳</span>
 					Tests laufen...
 				{:else}
-					<PlusIcon class="w-4 h-4 mr-2 inline" />
+					<PlusIcon class="w-4 h-4 mr-2" />
 					Tests ausführen
 				{/if}
 			</Button>
@@ -215,9 +216,9 @@
 				onclick={clearResults}
 				variant="outline"
 				disabled={isRunning}
-				class="px-6 py-2 rounded-lg font-semibold"
+				size="default"
 			>
-				<RotateCwIcon class="w-4 h-4 mr-2 inline" />
+				<RotateCwIcon class="w-4 h-4 mr-2" />
 				Zurücksetzen
 			</Button>
 		</div>

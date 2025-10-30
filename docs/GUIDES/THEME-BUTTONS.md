@@ -306,3 +306,91 @@ button:hover {
   <SquarePlusIcon class="mr-2 h-5 w-5" />
   Neue Spalte hinzufügen
 </Button>
+
+### Main Page Buttons (+page.svelte)
+```svelte
+<!-- Auth Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+
+<Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Anmelden
+</Button>
+
+<!-- Profile Link Button -->
+<Button variant="link" class="mt-4">View on Nostr.com</Button>
+```
+
+### Test Suite Buttons (test/+page.svelte)
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={handleRunTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <span class="mr-2">▶️</span>
+    Tests ausführen
+  {/if}
+</Button>
+
+<!-- Secondary Action Button -->
+<Button variant="outline" size="default" onclick={clearResults}>
+  🗑️ Löschen
+</Button>
+```
+
+### AuthStore Test Buttons (test/authstore/+page.svelte)
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={runAuthStoreTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <PlusIcon class="w-4 h-4 mr-2" />
+    Tests ausführen
+  {/if}
+</Button>
+
+<!-- Secondary Action Button -->
+<Button variant="outline" size="default" onclick={clearResults}>
+  <RotateCwIcon class="w-4 h-4 mr-2" />
+  Zurücksetzen
+</Button>
+```
+
+### Settings Test Buttons (test/settings/+page.svelte)
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={runAllTests}>
+  🚀 Alle Tests ausführen
+</Button>
+
+<!-- Warning Action Button -->
+<Button variant="destructive" size="default" onclick={forceMergeConfig}>
+  ⚠️ Config Force-Merge
+</Button>
+
+<!-- Secondary Action Buttons -->
+<Button variant="outline" size="default" onclick={debugPrint}>
+  🔍 Debug Ausgabe
+</Button>
+
+<!-- Small Outline Buttons -->
+<Button variant="outline" size="sm" onclick={test1}>
+  Test 1: Settings laden
+</Button>
+```
+
+### Merge Test Buttons (test/merge/+page.svelte)
+```svelte
+<!-- Conflict Resolution Button -->
+<Button variant="default" size="default" class="w-full" onclick={openConflictDialog}>
+  <CheckIcon class="h-4 w-4 mr-2" />
+  Konflikte manuell auflösen
+</Button>
+```

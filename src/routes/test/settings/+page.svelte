@@ -464,21 +464,22 @@
 
 	<!-- Buttons -->
 	<div class="flex gap-4 mb-8 flex-wrap">
-		<Button onclick={runAllTests} class="bg-green-600 hover:bg-green-700">
+		<Button onclick={runAllTests} variant="default" size="default">
 			🚀 Alle Tests ausführen
 		</Button>
-		<Button onclick={forceReloadConfig} class="bg-blue-600 hover:bg-blue-700">
+		<Button onclick={forceReloadConfig} variant="default" size="default">
 			🔄 Config.json neu laden
 		</Button>
-		<Button onclick={forceMergeConfig} class="bg-orange-600 hover:bg-orange-700">
+		<Button onclick={forceMergeConfig} variant="destructive" size="default">
 			⚠️ Config Force-Merge
 		</Button>
-		<Button onclick={debugPrint} variant="outline">
+		<Button onclick={debugPrint} variant="outline" size="default">
 			🔍 Debug Ausgabe
 		</Button>
 		<Button
 			onclick={() => (testResults = [])}
 			variant="outline"
+			size="default"
 		>
 			🗑️ Ergebnisse löschen
 		</Button>
@@ -515,16 +516,16 @@
 	<div class="mt-8 pt-6 border-t">
 		<h2 class="text-lg font-semibold mb-4">Einzelne Tests:</h2>
 		<div class="grid grid-cols-3 gap-3">
-			<Button onclick={test1} variant="outline">Test 1: Settings laden</Button>
-			<Button onclick={test2} variant="outline">Test 2: maxCards ändern</Button>
-			<Button onclick={test3} variant="outline">Test 3: localStorage</Button>
-			<Button onclick={test4} variant="outline">Test 4: Theme wechsel</Button>
-			<Button onclick={test5} variant="outline">Test 5: Relay add</Button>
-			<Button onclick={test6} variant="outline">Test 6: Export</Button>
-			<Button onclick={test7} variant="outline">Test 7: config.json Cache</Button>
-			<Button onclick={test8} variant="outline">Test 8: config.json Merge</Button>
-			<Button onclick={test9} variant="outline">Test 9: Relays aus config</Button>
-			<Button onclick={test10} variant="outline">Test 10: Persistenz</Button>
+			<Button onclick={test1} variant="outline" size="sm">Test 1: Settings laden</Button>
+			<Button onclick={test2} variant="outline" size="sm">Test 2: maxCards ändern</Button>
+			<Button onclick={test3} variant="outline" size="sm">Test 3: localStorage</Button>
+			<Button onclick={test4} variant="outline" size="sm">Test 4: Theme wechsel</Button>
+			<Button onclick={test5} variant="outline" size="sm">Test 5: Relay add</Button>
+			<Button onclick={test6} variant="outline" size="sm">Test 6: Export</Button>
+			<Button onclick={test7} variant="outline" size="sm">Test 7: config.json Cache</Button>
+			<Button onclick={test8} variant="outline" size="sm">Test 8: config.json Merge</Button>
+			<Button onclick={test9} variant="outline" size="sm">Test 9: Relays aus config</Button>
+			<Button onclick={test10} variant="outline" size="sm">Test 10: Persistenz</Button>
 		</div>
 	</div>
 

@@ -151,10 +151,11 @@
         
         <!-- Control Buttons -->
         <div class="flex gap-3 mb-6">
-            <Button 
-                onclick={handleRunTests} 
+            <Button
+                onclick={handleRunTests}
                 disabled={isRunning}
-                class="px-6 py-2 rounded-lg font-semibold"
+                variant="default"
+                size="default"
             >
                 {#if isRunning}
                     <span class="inline-block animate-spin mr-2">⏳</span>
@@ -164,12 +165,12 @@
                     Tests ausführen
                 {/if}
             </Button>
-            
-            <Button 
+           
+            <Button
                 onclick={() => { testOutput = ''; testLines = []; testCount = 0; testsPassed = 0; testsFailed = 0; }}
                 variant="outline"
                 disabled={isRunning}
-                class="px-6 py-2 rounded-lg font-semibold"
+                size="default"
             >
                 🗑️ Löschen
             </Button>
