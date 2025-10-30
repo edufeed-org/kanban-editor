@@ -12,7 +12,7 @@
     import { authStore } from "$lib/stores/authStore.svelte.js";
     import { LoginSheet } from '$lib/components/auth/index.js';
 
-    let currentUser = $derived(authStore.currentUser);
+    let currentUser = $derived(authStore.currentUser ?? null);
 
     let showLoginSheet = $state(false);
 
@@ -94,3 +94,4 @@
     open={showLoginSheet}
     onClose={() => showLoginSheet = false}
 />
+

@@ -28,6 +28,27 @@
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.606 0.25 292.717);
+  
+  /* RGB variables for Tailwind (Light Mode) */
+  --background-rgb: 255 255 255;
+  --foreground-rgb: 36 33 34;
+  --card-rgb: 255 255 255;
+  --card-foreground-rgb: 36 33 34;
+  --popover-rgb: 255 255 255;
+  --popover-foreground-rgb: 36 33 34;
+  --primary-rgb: 147 51 234;
+  --primary-foreground-rgb: 247 244 249;
+  --secondary-rgb: 246 246 246;
+  --secondary-foreground-rgb: 53 50 48;
+  --muted-rgb: 246 246 246;
+  --muted-foreground-rgb: 120 113 108;
+  --accent-rgb: 256 100 221;
+  --accent-foreground-rgb: 53 50 48;
+  --destructive-rgb: 220 38 38;
+  --destructive-foreground-rgb: 254 242 242;
+  --border-rgb: 229 231 235;
+  --input-rgb: 229 231 235;
+  --ring-rgb: 147 51 234;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -72,6 +93,28 @@
   --border: oklch(86.401% 0.00884 16.717 / 0.815);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.541 0.281 293.009);
+  
+  /* RGB variables for Tailwind (Dark Mode) */
+  --background-rgb: 44 41 37;
+  --foreground-rgb: 245 245 245;
+  --card-rgb: 38 36 34;
+  --card-foreground-rgb: 245 245 245;
+  --popover-rgb: 30 28 25;
+  --popover-foreground-rgb: 245 245 245;
+  --primary-rgb: 147 51 234;
+  --primary-foreground-rgb: 247 244 249;
+  --secondary-rgb: 42 42 42;
+  --secondary-foreground-rgb: 245 245 245;
+  --muted-rgb: 115 105 90;
+  --muted-foreground-rgb: 158 150 137;
+  --accent-rgb: 256 100 221;
+  --accent-foreground-rgb: 245 245 245;
+  --destructive-rgb: 220 38 38;
+  --destructive-foreground-rgb: 245 243 244;
+  --border-rgb: 255 255 255;
+  --input-rgb: 255 255 255;
+  --ring-rgb: 147 51 234;
+  
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
