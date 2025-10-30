@@ -84,11 +84,13 @@
 </script>
 
 <Popover.Root bind:open onOpenChange={handleOpenChange}>
-	<Popover.Trigger>
+	<Popover.Trigger 
+		type="button"
+		title="Board importieren"
+		class="flex rounded-md p-2 items-center justify-center gap-2 mb-2 w-full bg-primary">
 		<UploadIcon class="h-4 w-4" />
-		Import
+		<span>Import</span>
 	</Popover.Trigger>
-
 	<Popover.Content class="w-80 p-4" side="bottom">
 		<div class="space-y-4">
 			<!-- Header -->

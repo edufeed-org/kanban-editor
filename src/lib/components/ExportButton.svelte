@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DownloadIcon from '@lucide/svelte/icons/download';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte';
 
 	// Wird von Parent (CardViewDialog) kontrolliert
@@ -44,11 +45,12 @@
 	}
 </script>
 
-<button
-	type="button"
+<Button
+	variant="outline"
+	class="h-9 w-9 bg-secondary"
+	size="icon"
 	title="Board als JSON exportieren"
 	onclick={handleClick}
-	class="inline-flex items-center justify-center p-2 text-sm font-medium rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 >
 	<DownloadIcon class="h-4 w-4" />
-</button>
+</Button>

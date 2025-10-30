@@ -25,6 +25,9 @@
     import SettingsPanel from './SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+    import ExportButton from '$lib/components/ExportButton.svelte';
+	
     
 
     // Props für Sidebar-Toggle, Title und Board-Meta
@@ -189,6 +192,24 @@
             boardStore.deleteBoard();
         }
     }
+
+    function downloadAllBoardsAsJson() {
+        try {
+            const json = boardStore.exportAllBoardsAsJson();
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const now = new Date();
+            const timestamp = now.toISOString().split('T')[0];
+            link.href = url;
+            link.download = `boards-backup-${timestamp}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            console.log('✅ Alle Boards heruntergeladen!');
+        } catch (error) {
+            console.error('❌ Fehler beim Herunterladen:', error);
+        }
+    }
     
 </script>
 
@@ -287,12 +308,19 @@
                     </div>
                     
                     <Dialog.Footer>
-                        <Button variant="outline" onclick={() => { dialogOpen = false; }}>Abbrechen</Button>
-                        <Button onclick={saveBoardMeta}>Speichern & An Nostr senden</Button>
-                        <Button variant="destructive" onclick={handleDeleteBoard} class="ml-auto group">
-                            <TrashIcon class="mr-2 h-4 w-4" />
-                            Board löschen
-                        </Button>
+                        <div class="flex justify-between w-full">
+                            <div class="flex gap-2">
+                                <Button variant="outline" onclick={handleDeleteBoard} class="h-9 w-9 bg-destructive btn">
+                                    <TrashIcon class="h-4 w-4" />
+                                </Button>
+                                <ExportButton />
+                            </div>
+                            <div  class="flex gap-2">
+                                <Button variant="outline" onclick={() => { dialogOpen = false; }} class="bg-secondary">Abbrechen</Button>
+                                <Button variant="default" onclick={saveBoardMeta} class="bg-primary border">Speichern</Button>
+                                
+                            </div>
+                        </div>
                     </Dialog.Footer>
                 </Dialog.Content>
             </Dialog.Root>
@@ -324,7 +352,16 @@
             <!-- Settings Panel -->
             <SettingsPanel />
 
-            
+            <!-- Backup All Boards Button -->
+            <Button 
+                variant="default"
+                size="icon"
+                onclick={downloadAllBoardsAsJson}
+                title="Alle Boards als Backup herunterladen"
+                class="h-8 w-8 bg-secondary btn"
+            >
+                <DownloadIcon class="h-4 w-4" />
+            </Button>
 
             <!-- AI Settings Sheet -->
             <Sheet.Root>
