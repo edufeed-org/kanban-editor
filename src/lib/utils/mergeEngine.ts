@@ -13,6 +13,7 @@
 
 import type { NDKEvent } from '@nostr-dev-kit/ndk';
 import type { CardProps } from '$lib/classes/BoardModel.js';
+import { isDeepStrictEqual } from 'util';
 
 /**
  * Card Content für Merge-Engine (CardProps Subset)
@@ -121,27 +122,36 @@ export function threeWayMerge(
     const myVal = (my as any)[field];
     const theirVal = (their as any)[field];
 
-    // Niemand ändert das Feld
-    if (myVal === baseVal && theirVal === baseVal) {
+    // Niemand ändert das Feld (deep equality)
+    if (isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       continue;
     }
 
     changedFields++;
 
-    // Nur ich ändere
-    if (myVal !== baseVal && theirVal === baseVal) {
+    // Nur ich ändere (deep equality checks)
+    if (!isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = myVal;
       continue;
     }
 
-    // Nur sie ändern
-    if (myVal === baseVal && theirVal !== baseVal) {
+    // Nur sie ändern (deep equality checks)
+    if (isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = theirVal;
       continue;
     }
+    
+    // Special Case: updatedAt - IMMER neuesten Timestamp nehmen
+    if (field === 'updatedAt') {
+      const myDate = new Date(myVal).getTime();
+      const theirDate = new Date(theirVal).getTime();
 
-    // BEIDE ändern das Feld
-    if (myVal !== baseVal && theirVal !== baseVal) {
+      (merged as any)[field] = myDate > theirDate ? myVal : theirVal;
+      continue;
+    }
+
+    // BEIDE ändern das Feld (deep equality checks)
+    if (!isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       conflictFields++;
 
       // Spezial: String-Felder → Versuche Diff-Merge
