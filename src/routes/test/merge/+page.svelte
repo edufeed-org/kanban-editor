@@ -259,7 +259,7 @@
                   </div>
                 {/each}
 
-                <Button class="w-full" onclick={openConflictDialog}>
+                <Button variant="default" size="default" class="w-full" onclick={openConflictDialog}>
                   <CheckIcon class="h-4 w-4 mr-2" />
                   Konflikte manuell auflösen
                 </Button>

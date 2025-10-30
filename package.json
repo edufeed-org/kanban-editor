@@ -12,9 +12,7 @@
     "lint": "eslint .",
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run && npm run test:e2e",
-    "test:e2e": "playwright test",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "test:e2e": "playwright test"
   },
   "files": [
     "dist",
@@ -37,7 +35,6 @@
     "svelte": "^5.0.0"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "^4.1.1",
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.36.0",
     "@iconify/json": "^2.2.395",
@@ -45,11 +42,6 @@
     "@internationalized/date": "^3.10.0",
     "@lucide/svelte": "^0.544.0",
     "@playwright/test": "^1.55.1",
-    "@storybook/addon-a11y": "^9.1.10",
-    "@storybook/addon-docs": "^9.1.10",
-    "@storybook/addon-svelte-csf": "^5.0.10",
-    "@storybook/addon-vitest": "^9.1.10",
-    "@storybook/sveltekit": "^9.1.10",
     "@sveltejs/adapter-static": "^3.0.9",
     "@sveltejs/kit": "^2.43.2",
     "@sveltejs/package": "^2.5.4",
@@ -63,7 +55,6 @@
     "bits-ui": "^2.11.5",
     "clsx": "^2.1.1",
     "eslint": "^9.36.0",
-    "eslint-plugin-storybook": "^9.1.10",
     "eslint-plugin-svelte": "^3.12.4",
     "formsnap": "^2.0.1",
     "globals": "^16.4.0",
@@ -73,7 +64,6 @@
     "paneforge": "^1.0.2",
     "playwright": "^1.55.1",
     "publint": "^0.3.13",
-    "storybook": "^9.1.10",
     "svelte": "^5.39.5",
     "svelte-check": "^4.3.2",
     "svelte-sonner": "^1.0.5",
