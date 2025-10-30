@@ -156,8 +156,7 @@ GUIDES/TEST-RUNNER.md
 │             │  │                  │
 │ • Überblick │  │ • Step-by-Step   │
 │ • Quick Tab │  │ • Troubleshoot   │
-│ • Was gemacht
- │  │ • Advanced  │
+│ • Was gemacht  │ • Advanced       │
 └─────────────┘  └──────────────────┘
     │                   │
     └────────┬──────────┘
@@ -198,9 +197,7 @@ docs/ARCHITECTURE/STORES.md ........ Store Architecture
 
 ## 📋 Checkliste zum Starten
 
-- [ ] `pnpm run dev` ausgeführt
-- [ ] Browser zu `http://localhost:5173/test` öffnen
-- [ ] "▶️ Tests ausführen" Button geklickt
+- [ ] `pnpm test` ausgeführt
 - [ ] Tests laufen ✅
 - [ ] Bei Fehler: `GUIDE.md` → Troubleshooting öffnen
 
@@ -210,12 +207,13 @@ docs/ARCHITECTURE/STORES.md ........ Store Architecture
 
 Falls Dokumentation unklar:
 1. Lies nächstes Level (z.B. STATUS → GUIDE)
-2. Öffne Browser Console (F12) für Errors
-3. Überprüfe Implementierung: `src/routes/test/+page.svelte`
+2. Sehe Fehler in Browser
+3. Überprüfe jeweilige Implementierung
+4. Mehr Kontext auf `/test-results`
 
 ---
 
-**Letztes Update:** 22. Oktober 2025  
+**Letztes Update:** 30. Oktober 2025  
 **Status:** 🟢 Production-Ready
 
 **Nächster Schritt:** Öffne `STATUS.md` oder `GUIDE.md`
