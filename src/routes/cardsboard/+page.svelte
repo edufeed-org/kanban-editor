@@ -244,7 +244,7 @@ import { toast } from "svelte-sonner";
 						<p class="text-xs text-muted-foreground mb-3">
 							Der KI-Agent kann Inhalte organisieren und Verbesserungen vorschlagen.
 						</p>
-						<Button variant="outline" class="w-full" size="sm">
+						<Button variant="outline" class="w-full bg-primary" size="sm">
 							KI-Agent aktivieren
 						</Button>
 					</div>

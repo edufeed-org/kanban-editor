@@ -127,7 +127,7 @@
     {/if}
 
     <!-- Suchfeld -->
-    <div class="flex-shrink-0">
+    <div class="m-2 flex-shrink-0">
         <Input
             type="text"
             placeholder="Boards suchen..."

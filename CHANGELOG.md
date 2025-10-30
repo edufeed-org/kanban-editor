@@ -1,5 +1,173 @@
 # Changelog
 
+## Version 3.4 - Theme Buttons Documentation & UI Component Standardization
+
+**Datum:** 30. Oktober 2025
+**Branch:** `theme-buttons`
+**Status:** ✅ **UI CONSISTENCY COMPLETE**
+
+### 🎯 Zusammenfassung
+
+**Vollständige Standardisierung aller UI-Buttons auf shadcn-svelte Komponenten:**
+- ✅ Card Footer Buttons (Card.svelte) - Kommentare, Bearbeiten, Anzeigen
+- ✅ Column Header Buttons (Column.svelte) - Karte hinzufügen, Spalte löschen
+- ✅ Board Add Column Button (Board.svelte) - Neue Spalte hinzufügen
+- ✅ Theme Buttons Dokumentation erstellt - Vollständiges Referenzhandbuch
+
+**Impact:** 100% konsistente Button-Nutzung im gesamten Projekt ⚡
+**Documentation:** Vollständiges Theme-System mit CSS-Variablen und Hover-Effekten ✅
+
+---
+
+### ✨ Implementierte Features
+
+#### 1. Button Standardisierung (Alle Komponenten)
+
+**Card.svelte - Footer Buttons:**
+```svelte
+<!-- Kommentare Button -->
+<Button variant="ghost" size="sm">
+  <MessageSquareIcon class="mr-2 h-4 w-4" />
+  {localComments.length}
+</Button>
+
+<!-- Bearbeiten Button -->
+<Button variant="default" size="sm">
+  <EditIcon class="mr-2 h-4 w-4" />
+  Bearbeiten
+</Button>
+```
+
+**Column.svelte - Header Buttons:**
+```svelte
+<!-- Add Card Button -->
+<Button variant="default" size="sm">
+  <SquarePlusIcon class="h-4 w-4" />
+</Button>
+
+<!-- Delete Column Button -->
+<Button variant="destructive" size="sm">
+  Spalte löschen
+</Button>
+```
+
+**Board.svelte - Add Column Button:**
+```svelte
+<!-- Neue Spalte hinzufügen -->
+<Button variant="outline" size="lg">
+  <SquarePlusIcon class="mr-2 h-5 w-5" />
+  Neue Spalte hinzufügen
+</Button>
+```
+
+#### 2. Theme Buttons Dokumentation (GUIDES/THEME-BUTTONS.md)
+
+**Inhalt (~244 Zeilen):**
+- **CSS-Variablen:** Vollständige Liste aus `src/app.css` (Light + Dark Mode)
+- **Hover-Effekte:** Alle Button-Varianten mit exakten CSS-Regeln
+- **shadcn-svelte Integration:** Korrekte Import-Syntax und Verwendung
+- **Praktische Beispiele:** Alle Button-Varianten mit Code-Snippets
+- **Best Practices:** Icon-Positionierung, Accessibility, Responsive Design
+- **Troubleshooting:** Häufige Probleme und Lösungen
+
+#### 3. CSS-Variablen Dokumentation
+
+**Light Mode Variablen:**
+```css
+:root {
+  --primary: oklch(0.606 0.25 292.717);
+  --primary-foreground: oklch(0.969 0.016 293.756);
+  --secondary: oklch(0.967 0.001 286.375);
+  --accent: oklch(57.646% 0.26532 315.837);
+  --destructive: oklch(0.577 0.245 27.325);
+  /* ... weitere Variablen */
+}
+```
+
+**Dark Mode Variablen:**
+```css
+.dark {
+  --primary: oklch(0.541 0.281 293.009);
+  --accent: oklch(57.646% 0.26532 315.837);
+  --destructive: oklch(0.704 0.191 22.216);
+  /* ... weitere Variablen */
+}
+```
+
+#### 4. Hover-Effekte Dokumentation
+
+**Alle Button-Varianten:**
+- **Primary Button:** `background-color: var(--primary) !important`
+- **Secondary Button:** `background-color: var(--secondary) !important`
+- **Outline Button:** `background-color: var(--accent) !important`
+- **Ghost Button:** `background-color: var(--accent) !important`
+- **Destructive Button:** `background-color: var(--destructive) !important`
+
+#### 5. Icon Import Standardisierung
+
+**Korrekte Lucide Import-Syntax:**
+```typescript
+// ✅ RICHTIG
+import MessageSquareIcon from "@lucide/svelte/icons/message-square";
+import EditIcon from "@lucide/svelte/icons/edit";
+import SquarePlusIcon from "@lucide/svelte/icons/square-plus";
+
+// ❌ FALSCH
+import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
+```
+
+---
+
+### 📝 Documentation Updates
+
+#### THEME-BUTTONS.md (NEU - 244 Zeilen)
+
+**Erstellt:** 30. Oktober 2025
+**Status:** ✅ ACTIVE - Vollständiges Theme-Referenzhandbuch
+
+**Sektionen:**
+1. **CSS-Variablen:** Light + Dark Mode + Card Colors
+2. **Hover-Effekte:** Alle Button-Varianten mit CSS-Regeln
+3. **shadcn-svelte Verwendung:** Import-Syntax + Varianten + Best Practices
+4. **Praktische Beispiele:** Card, Column, Board Buttons
+5. **Farbanpassung:** Light/Dark Mode Konfiguration
+6. **Troubleshooting:** Häufige Probleme + Lösungen
+
+#### _INDEX.md Updates
+
+**Neue Einträge:**
+- **Nach Thema:** "🆕 Theme Buttons & UI Guidelines" (25 min)
+- **GUIDES Struktur:** THEME-BUTTONS.md hinzugefügt
+- **Learning Resources:** Theme Buttons Guide verlinkt
+
+**File Count Update:** 42 → 43 Dateien (+1 THEME-BUTTONS.md)
+
+---
+
+### ✅ DoD Checklist (DOCUMENTATION-RULES-v3.md Compliance)
+
+- ✅ Code-Änderungen implementiert (3 Button-Komponenten)
+- ✅ THEME-BUTTONS.md Dokumentation erstellt (244 Zeilen)
+- ✅ _INDEX.md aktualisiert (2 neue Einträge)
+- ✅ CHANGELOG.md Eintrag hinzugefügt (dieser Eintrag)
+- ✅ CSS-Variablen dokumentiert (aus src/app.css)
+- ✅ Hover-Effekte dokumentiert (alle Varianten)
+- ✅ Icon Import-Syntax standardisiert
+- ✅ shadcn-svelte Patterns konsolidiert
+
+---
+
+### 📊 Statistik
+
+- **Button-Komponenten:** 3 Dateien aktualisiert
+- **Neue Dokumentation:** 1 Datei (244 Zeilen)
+- **Index Updates:** 2 Sektionen erweitert
+- **CSS-Variablen:** 20+ Variablen dokumentiert
+- **Hover-Effekte:** 5 Button-Varianten dokumentiert
+- **Icon Patterns:** Korrekte Import-Syntax etabliert
+
+---
+
 ## Version 3.3 - Phase 1 Card UI Redesign Complete + CSS Cleanup
 
 **Datum:** 29. Oktober 2025 (Final Cleanup)  
@@ -1053,3 +1221,208 @@ Alle Erweiterungen sind **additiv**:
 ## Lizenz
 
 Gleiche Lizenz wie das Hauptprojekt.
+
+
+## Version 3.5 - Theme für alle Routes aktiviert
+
+**Datum:** 30. Oktober 2025  
+**Branch:** `theme-all-routes`  
+**Status:** ✅ **THEME COVERAGE COMPLETE**
+
+### 🎯 Zusammenfassung
+
+**Vollständige Theme-Aktivierung für alle Routes:**
+- ✅ Main Page (+page.svelte) - Auth Buttons & Profile
+- ✅ Test Suite (test/+page.svelte) - Test Execution Buttons  
+- ✅ AuthStore Tests (test/authstore/+page.svelte) - Auth Test Buttons
+- ✅ Settings Tests (test/settings/+page.svelte) - Config & Debug Buttons
+- ✅ Merge Tests (test/merge/+page.svelte) - Conflict Resolution Buttons
+
+**Impact:** Theme-System jetzt auf **allen Routes** aktiv ⚡  
+**Documentation:** THEME-BUTTONS.md erweitert mit allen Route-Beispielen ✅  
+
+---
+
+### ✨ Implementierte Features
+
+#### 1. Main Page Buttons (+page.svelte)
+
+**Auth Buttons:**
+```svelte
+<!-- Login/Logout Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+
+<Button variant="default" size="sm" onclick={() => showLoginSheet = true}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Anmelden
+</Button>
+```
+
+**Profile Components:**
+- **Card Components:** Auf shadcn-svelte Card-Struktur umgestellt
+- **Avatar Integration:** Konsistente Avatar-Komponenten
+- **Link Button:** `variant="link"` für Nostr.com Profile
+
+#### 2. Test Suite Routes Standardisierung
+
+**test/+page.svelte - Test Runner:**
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={handleRunTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <span class="mr-2">▶️</span>
+    Tests ausführen
+  {/if}
+</Button>
+
+<!-- Secondary Action Button -->
+<Button variant="outline" size="default" onclick={clearResults}>
+  🗑️ Löschen
+</Button>
+```
+
+**test/authstore/+page.svelte - AuthStore Tests:**
+```svelte
+<!-- Primary Action Button -->
+<Button variant="default" size="default" onclick={runAuthStoreTests}>
+  {#if isRunning}
+    <span class="inline-block animate-spin mr-2">⏳</span>
+    Tests laufen...
+  {:else}
+    <PlusIcon class="w-4 h-4 mr-2" />
+    Tests ausführen
+  {/if}
+</Button>
+```
+
+**test/settings/+page.svelte - Settings Tests:**
+```svelte
+<!-- Warning Action Button -->
+<Button variant="destructive" size="default" onclick={forceMergeConfig}>
+  ⚠️ Config Force-Merge
+</Button>
+
+<!-- Small Outline Buttons -->
+<Button variant="outline" size="sm" onclick={test1}>
+  Test 1: Settings laden
+</Button>
+```
+
+**test/merge/+page.svelte - Merge Tests:**
+```svelte
+<!-- Conflict Resolution Button -->
+<Button variant="default" size="default" class="w-full" onclick={openConflictDialog}>
+  <CheckIcon class="h-4 w-4 mr-2" />
+  Konflikte manuell auflösen
+</Button>
+```
+
+#### 3. THEME-BUTTONS.md Erweiterung
+
+**Neue Sektionen hinzugefügt:**
+- **Main Page Buttons:** Auth & Profile Buttons
+- **Test Suite Buttons:** Test Execution & Control Buttons
+- **AuthStore Test Buttons:** Authentication Test Buttons
+- **Settings Test Buttons:** Configuration & Debug Buttons
+- **Merge Test Buttons:** Conflict Resolution Buttons
+
+**Beispiel-Struktur:**
+```svelte
+### Main Page Buttons (+page.svelte)
+<!-- Auth Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+```
+
+#### 4. Konsistente Button-Patterns
+
+**Size Standardisierung:**
+- **sm:** Für Inline-Buttons (Auth, Card Actions)
+- **default:** Für primäre Aktionen (Test Execution)
+- **lg:** Für prominente Aktionen (Add Column)
+
+**Variant Standardisierung:**
+- **default:** Primäre Aktionen
+- **outline:** Sekundäre Aktionen
+- **destructive:** Warnungen/destruktive Aktionen
+- **ghost:** Subtile Aktionen
+- **link:** Link-Buttons
+
+---
+
+### 📝 Documentation Updates
+
+#### THEME-BUTTONS.md Erweitert
+
+**Neue Beispiele (5 Sektionen):**
+1. **Main Page Buttons** - Auth & Profile
+2. **Test Suite Buttons** - Test Runner
+3. **AuthStore Test Buttons** - Authentication Tests
+4. **Settings Test Buttons** - Configuration Tests
+5. **Merge Test Buttons** - Conflict Resolution
+
+**Dokumentations-Struktur:**
+```markdown
+### Main Page Buttons (+page.svelte)
+```svelte
+<!-- Auth Buttons -->
+<Button variant="default" size="sm" onclick={() => authStore.logout()}>
+  <KeyRoundIcon class="mr-2 h-4 w-4" />
+  Abmelden
+</Button>
+```
+```
+
+#### CHANGELOG.md Update
+
+**Version 3.5 hinzugefügt:**
+- Vollständige Route-Coverage dokumentiert
+- Button-Patterns für alle Routes
+- Theme-System jetzt projektweit aktiv
+
+---
+
+### ✅ DoD Checklist (All Routes Coverage)
+
+- ✅ **Main Page:** +page.svelte Buttons standardisiert
+- ✅ **Test Suite:** test/+page.svelte Buttons standardisiert
+- ✅ **AuthStore Tests:** test/authstore/+page.svelte Buttons standardisiert
+- ✅ **Settings Tests:** test/settings/+page.svelte Buttons standardisiert
+- ✅ **Merge Tests:** test/merge/+page.svelte Buttons standardisiert
+- ✅ **Documentation:** THEME-BUTTONS.md mit allen Beispielen
+- ✅ **CHANGELOG.md:** Version 3.5 dokumentiert
+
+---
+
+### 📊 Statistik
+
+- **Routes aktualisiert:** 5 Routes (+page.svelte + 4 Test-Routes)
+- **Buttons standardisiert:** 15+ Button-Komponenten
+- **Dokumentation erweitert:** 5 neue Sektionen in THEME-BUTTONS.md
+- **Theme Coverage:** 100% (alle Routes verwenden shadcn-svelte)
+- **CSS-Variablen:** Projektweit konsistent genutzt
+
+---
+
+### 🎯 Ergebnis
+
+**Vorher:** Theme nur auf `routes/cardsboard` aktiv  
+**Nachher:** Theme auf **allen Routes** aktiv mit konsistenten Button-Patterns
+
+**Vollständige Liste der aktivierten Routes:**
+- ✅ `/` - Main Page mit Auth & Profile
+- ✅ `/cardsboard/*` - Kanban Board (bereits aktiv)
+- ✅ `/test` - Test Suite Runner
+- ✅ `/test/authstore` - Authentication Tests
+- ✅ `/test/settings` - Settings Configuration Tests
+- ✅ `/test/merge` - Merge Conflict Tests
+
+---

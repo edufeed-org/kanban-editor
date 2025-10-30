@@ -68,7 +68,7 @@
 	{#if isAuthenticated && currentUser}
 		<!-- User ist angemeldet -->
 		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
+			<DropdownMenu.Trigger class="bg-secondary rounded-md">
 				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
@@ -90,13 +90,13 @@
 			<DropdownMenu.Content align="start" class="w-56">
 				
 				<!-- Settings Option -->
-				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2">
+				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2 menu-item">
 					<SettingsIcon class="h-4 w-4" />
 					<span>Einstellungen</span>
 				</DropdownMenu.Item>
 
 				<!-- Logout -->
-				<DropdownMenu.Item onclick={handleLogout} class="gap-2 text-destructive">
+				<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
 					<LogOutIcon class="h-4 w-4" />
 					<span>Abmelden</span>
 				</DropdownMenu.Item>

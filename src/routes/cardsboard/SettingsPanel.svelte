@@ -37,7 +37,7 @@ import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 <!-- Settings Icon Button -->
 <Popover.Root bind:open={popoverOpen}>
 	<Popover.Trigger 
-		class="inline-flex items-center justify-center h-9 w-9 p-2 rounded-md group hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50" 
+		class="inline-flex items-center justify-center  h-8 w-8 btn bg-secondary" 
 		title="Einstellungen"
 	>
 		<SettingsIcon class="h-4 w-4" />

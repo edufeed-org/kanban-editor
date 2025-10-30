@@ -13,13 +13,14 @@
 	import AvatarStack from "./AvatarStack.svelte";
 	import ColorSelector from "./ColorSelector.svelte";
 	import PublishStateToggle from "./PublishStateToggle.svelte";
-	import PencilLineIcon from "@lucide/svelte/icons/pencil";
+	import EditIcon from '@lucide/svelte/icons/edit';
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 	import { authStore } from "$lib/index.js";
+    import TrashIcon from "@lucide/svelte/icons/trash";
 
 	let {
 		card,
@@ -245,10 +246,10 @@
 	<Card.Header class="px-1 py-1">
 		<div class="card-header-content gap-0">
 			<div class="flex flex-col gap-0 flex-1">
-				<Card.Title class="text-sm">{card.name}</Card.Title>
+				<Card.Title class="text-sm border-b pb-2">{card.name}</Card.Title>
 				
 				{#if card.labels && card.labels.length > 0}
-					<div class="flex flex-wrap gap-1 mt-0 mb-0">
+					<div class="flex flex-wrap gap-1 mt-2 mb-0">
 						{#each card.labels.slice(0, 2) as label}
 							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
 								{label}
@@ -271,14 +272,14 @@
 				{#if showMenu}
 					<Popover.Root>
 						<Popover.Trigger
-								class="popover-trigger h-9 w-5 hover:bg-accent group"
+								class="popover-trigger w-6 h-6 pl-1 bg-secondary btn text-center hover:bg-accent group btn"
 								onclick={(e) => {
 									e.stopPropagation();
 								}}
 								type="button"
 								aria-label="Karten-Aktionen"
 							>
-								<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+								<EllipsisVerticalIcon/>
 							</Popover.Trigger>
 						<Popover.Content align="end" class="w-64" onclick={(e) => {
 							e.stopPropagation();
@@ -322,7 +323,8 @@
 									Karte bearbeiten
 								</Button>
 
-								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full">
+								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full btn">
+									<TrashIcon class="h-4 w-4" />
 									Karte löschen
 								</Button>
 								{/if}
@@ -337,7 +339,7 @@
 	<Card.Content class="px-1 py-1">
 		<!-- Image Section -->
 		{#if localImage}
-			<div class="card-image-container">
+			<div class="card-image-container mb-2">
 				<img
 					src={localImage}
 					alt={card.name}
@@ -358,47 +360,57 @@
 
 		<!-- Link Section -->
 		{#if card.link}
-			<Button variant="link" href="/dashboard" onclick={handleLinkClick}><LinkIcon /> Link öffnen</Button>
+			<Button variant="outline" onclick={handleLinkClick}><LinkIcon class="mr-2 h-4 w-4" /> Link öffnen</Button>
 		{/if}
 	</Card.Content>
 
-	<Card.Footer class="px-1">
+	<Card.Footer class="border-t border-border [.border-t]:pt-0 px-0">
 		<div class="footer-content">
-			<div class="comments-count group">
-				<button 
-				class="view-button group whitespace-nowrap" 
-				onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }} 
-				aria-label="Anzeigen" 
-				title="Anzeigen"
-				type="button"
-				>
-					<MessageSquareIcon /> {#if localComments.length > 0}{localComments.length}{/if}
-				</button>
-		
+			<!-- Links anorden -->
+			<div class="flex items-center gap-2 scale-80">
+				<div class="comments-count">
+					<Button
+						variant="default"
+						size="sm"
+						class="btn"
+						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
+						aria-label="Anzeigen"
+						title="Anzeigen"
+					>
+						<MessageSquareIcon class="mr-2 h-4 w-4" /> {#if localComments.length > 0}{localComments.length}{/if}
+					</Button>
+				</div>
+				{#if attendees.length > 0}
+					<AvatarStack {attendees} maxVisible={3} />
+				{/if}
 			</div>
-			{#if attendees.length > 0}
-				<AvatarStack {attendees} maxVisible={3} />
-			{/if}
-			<button 
-				class="view-button group" 
-				onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }} 
-				aria-label="Anzeigen" 
-				title="Anzeigen"
-				type="button"
-			>
-				<FullscreenIcon />
-			</button>
-			{#if authStore.isAuthenticated }
-			<button 
-				class="edit-button dark:hover:text-white" 
-				onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }} 
-				aria-label="Bearbeiten" 
-				title="Bearbeiten"
-				type="button"
-			>
-			<PencilLineIcon class="h-4 w-4" />
-			</button>
-			{/if}
+			
+			<!-- Rechts anorden -->
+			<div class="flex gap-2 scale-80">
+				<Button
+					variant="default"
+					size="icon"
+					class="btn"
+					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
+					aria-label="Anzeigen"
+					title="Anzeigen"
+				>
+					<FullscreenIcon />
+				</Button>
+				{#if authStore.isAuthenticated }
+				<Button
+					variant="default"
+					size="sm"
+					class="btn"
+					onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }}
+					aria-label="Bearbeiten"
+					title="Bearbeiten"
+				>
+					<EditIcon class="mr-2 h-4 w-4" />
+					Bearbeiten
+				</Button>
+				{/if}
+			</div>
 		</div>
 	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
@@ -496,6 +508,7 @@
 			justify-content: space-between;
 			gap: 1em;
 			flex-grow: 1;
+
 		}
 		
 		.comments-count {
@@ -506,36 +519,6 @@
 			gap: 0.25em;
 		}
 
-		.edit-button {
-			background-color: var(--secondary);
-			color: var(--secondary-foreground);
-			border: none;
-			padding: 0.5em 1em;
-			border-radius: 4px;
-			cursor: pointer;
-			font-size: 0.85em;
-			transition: background-color 0.2s ease;
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-		}
-
 		
-		.edit-button:hover {
-			background-color: rgb(var(--accent-rgb) / 0.1);
-			color: rgb(var(--accent-rgb) / 0.8);
-			box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.3);
-		}
-
-		.edit-button:focus-visible {
-			outline: 2px solid transparent;
-			outline-offset: 2px;
-			box-shadow: 0 0 0 3px rgb(var(--ring-rgb) / 0.2);
-		}
-		
-	/* Ensure buttons and interactive elements can't interfere with drag */
-	button {
-		pointer-events: auto;
-	}
-
+	
 	</style>
