@@ -2,11 +2,12 @@
 	import { flip } from 'svelte/animate';
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
-	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
-	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
-	import { authStore } from '$lib/index.js';
-	import { toast } from "svelte-sonner";
+ 	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
+ 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+ 	import { Button } from "$lib/components/ui/button/index.js";
+ 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+ 	import { authStore } from '$lib/index.js';
+ 	import { toast } from "svelte-sonner";
  	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
 
  	const flipDurationMs = 300;
@@ -211,32 +212,7 @@
 		align-items: stretch;
 	}
 
-	.add-column-button {
-		width: 100%;
-		height: 100%;
-		min-height: 48px;
-		border: 1px dotted var(--muted-foreground);
-		padding: 1em;
-		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--muted-foreground);
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: start;
-		transition: all 0.2s ease;
-		font-size: 1rem;
-	}
-
-	.add-column-button:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-		background: var(--primary)/10;
-	}
-
-	.add-column-button:active {
-		transform: scale(0.95);
-	}
+	
 </style>
 
 <section 
@@ -274,9 +250,10 @@
 	{#if authStore.isAuthenticated }
 	<!-- Add Column Button - ähnlich wie Column Footer -->
 	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
-		<button 
-			type="button" 
-			class="add-column-button"
+		<Button
+			variant="outline"
+			size="lg"
+			class="add-column-button w-full h-full min-h-[48px]  btn bg-secondary"
 			aria-label="Neue Spalte hinzufügen"
 			onclick={() => {
 				console.log('➕ Adding new column...');
@@ -290,9 +267,9 @@
 				}
 			}}
 		>
-			<SquarePlusIcon class="h-5 w-5" />
-			<span class="sr-only">Spalte hinzufügen</span>
-		</button>
+			<SquarePlusIcon class="mr-2 h-5 w-5" />
+			Neue Spalte hinzufügen
+		</Button>
 	</div>
 	{/if}
 </section>

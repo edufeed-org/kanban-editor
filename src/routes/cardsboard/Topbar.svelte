@@ -192,16 +192,16 @@
     
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b bg-background/95 backdrop-blur shrink-0">
+<header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0">
     <div class="container flex h-14 items-center justify-between px-4 w-full mx-auto">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-2">
             <!-- Left Sidebar Trigger -->
             <Button title="Linke Sidebar ein-/ausblenden"
-                variant="ghost"
+                variant="default"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="h-9 w-9 group"
+                class="h-8 w-8 bg-secondary"
             >
                 <PanelLeftIcon class="h-4 w-4" />
                 <span class="sr-only">Toggle Left Sidebar</span>
@@ -216,7 +216,7 @@
             <Dialog.Root bind:open={dialogOpen}>
                 {#if authStore.isAuthenticated }
                 <Dialog.Trigger 
-                    class="inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" 
+                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
                     title="Board-Einstellungen"
                 >
                     <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
@@ -301,7 +301,7 @@
             <!-- AI Summary Button (BotIcon) -->
             <Drawer.Root>
                 <Drawer.Trigger 
-                    class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group" 
+                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
                     title="KI-Zusammenfassung"
                 >
                     <SquareSigmaIcon class="h-4 w-4" />
@@ -329,7 +329,7 @@
             <!-- AI Settings Sheet -->
             <Sheet.Root>
                 <Sheet.Trigger 
-                    class="inline-flex items-center justify-center h-9 w-9 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group"
+                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary"
                 >
                     <BotIcon class="h-4 w-4"/>
                 </Sheet.Trigger>
@@ -363,7 +363,7 @@
             </Sheet.Root>
             
             <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme} class="group h-9 w-9">
+            <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">
                 {#if currentTheme === 'dark'}
                     <SunIcon class="h-4 w-4"/>
                 {:else}
@@ -378,7 +378,7 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="h-9 w-9 group"
+                class="  h-8 w-8 bg-secondary"
             >
                 <PanelRightIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>

@@ -62,7 +62,7 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.541 0.281 293.009);
   --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.274 0.006 286.033);
+  --secondary: oklch(36.011% 0.06726 297.06);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(48.845% 0.05425 284.209);
   --muted-foreground: oklch(0.705 0.015 286.067);
@@ -79,7 +79,7 @@
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.541 0.281 293.009);
+  --sidebar-primary: oklch(37.335% 0.12432 296.933);
   --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -144,11 +144,13 @@ button:hover {
   
 }
 button.btn{
-  border: 1px solid var(--border);
+  background: var(--background);  
+  color: var(--foreground);
   border-radius: var(--radius-md);
+  
 }
 button.btn:hover{
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-color: var(--ring);
 }
 /* Primary Button Hover */
@@ -182,12 +184,12 @@ button.bg-destructive:hover {
   color: var(--destructive-foreground) !important;
 }
 
-/* Icon Hover Effects */
+/* Icon Hover Effects
 .group:hover svg {
   color: var(--accent);
   transform: scale(1.1);
   transition: all 0.2s ease;
-}
+} */
 
 .text-destructive-foreground {
   color: var(--destructive-foreground);
@@ -195,7 +197,7 @@ button.bg-destructive:hover {
 
 @layer base {
   * {
-    border-color: rgba(163, 106, 255, 0.397);
+    border-color: var(--border)
   }
   
   body {

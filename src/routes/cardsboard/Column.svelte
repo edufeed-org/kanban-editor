@@ -397,9 +397,9 @@
 				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
-					variant="ghost" 
+					variant="default" 
 					size="sm" 
-					class="h-6 w-6 p-0 hover:bg-accent group"
+					class="btn"
 					title="Neue Karte am Anfang"
 					onclick={(e) => {
 						e.stopPropagation();
@@ -433,8 +433,8 @@
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen}>
 					{#if authStore.isAuthenticated }
-					<Popover.Trigger 
-						class="popover-trigger-ignore inline-flex items-center justify-center h-9 w-9 p-2 hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md transition-all group"
+					<Popover.Trigger title="Spalten-Optionen"
+						class="popover-trigger-ignore inline-flex items-center justify-center h-8 w-8 btn transition-all"
 					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
 					</Popover.Trigger>

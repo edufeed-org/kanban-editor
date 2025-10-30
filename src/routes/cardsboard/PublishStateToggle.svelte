@@ -38,7 +38,7 @@
 		height: 1.5rem;
 		border-radius: 0.375rem;
 		padding: 0.25rem;
-		border: 1px solid var(--border);
+		/* border: 1px solid var(--border); */
 		background: var(--background);
 		color: var(--foreground);
 		cursor: pointer;
