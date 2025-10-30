@@ -18,6 +18,9 @@ importers:
       '@nostr-dev-kit/svelte':
         specifier: ^2.0.8
         version: 2.0.8(@cashu/cashu-ts@2.7.2)(@cashu/crypto@0.3.4)(@nostr-dev-kit/ndk@2.17.4(nostr-tools@2.14.3(typescript@5.9.3)))(@types/react@19.2.2)(nostr-tools@2.14.3(typescript@5.9.3))(react@19.2.0)(svelte@5.39.11)(typescript@5.9.3)
+      jsoncrush:
+        specifier: ^1.1.8
+        version: 1.1.8
       lucide-svelte:
         specifier: ^0.546.0
         version: 0.546.0(svelte@5.39.11)
@@ -1711,6 +1714,9 @@ packages:
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
+
+  jsoncrush@1.1.8:
+    resolution: {integrity: sha512-lvIMGzMUA0fjuqwNcxlTNRq2bibPZ9auqT/LyGdlR5hvydJtA/BasSgkx4qclqTKVeTidrJvsS/oVjlTCPQ4Nw==}
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
@@ -4400,6 +4406,8 @@ snapshots:
   json-schema-traverse@0.4.1: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
+
+  jsoncrush@1.1.8: {}
 
   keyv@4.5.4:
     dependencies:
