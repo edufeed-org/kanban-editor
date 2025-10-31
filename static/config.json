@@ -1,5 +1,5 @@
 {
-  "$comment": "Kanban Board Configuration - Diese Werte werden in SettingsStore geladen. Siehe ./config.schema.json für Validierung.",
+  "$comment": "Kanban Board Configuration",
 
   "ui": {
     "maxCardsBeforeScroll": 20,
@@ -23,6 +23,11 @@
     "apiKey": "",
     "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
     "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben."
+  },
+
+  "oidc": {
+    "authority": "http://localhost:8080/realms/master",
+    "clientId": "kanban-board"
   },
 
   "mcp": {

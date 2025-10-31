@@ -3,6 +3,8 @@ import { NDKNip07Signer, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { get } from 'svelte/store'
+import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import { settingsStore } from "./settingsStore.svelte.js";
 
 export interface UserSession {
   pubkey: string;
@@ -102,6 +104,37 @@ export class AuthStore {
   public async loginWithNip46(connectionString: string): Promise<NDKUser> {
     // TODO: Implement NIP-46
     throw new Error("NIP-46 not yet implemented");
+  }
+
+  public async loginWithOidc(oidcUser: User): Promise<NDKUser> {
+    try {
+      this.isLoading = true;
+
+      const nsec = (oidcUser.profile as { nsec?: string }).nsec;
+
+      if (!nsec ||
+        !nsec.startsWith("nsec1") || 
+        nsec.length !== 63) {
+        throw new Error("Invalid nsec format");
+      }
+
+      const signer = new NDKPrivateKeySigner(nsec);
+      this.ndk.signer = signer;
+
+      const user = await signer.user();
+      await user.fetchProfile();
+
+      this.currentUser = user;
+
+      await this.saveSession(user, "nsec");
+
+      return user;
+    } catch (error) {
+      console.error("oidc login failed:", error);
+      throw error;
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   /**
@@ -502,6 +535,9 @@ class AuthStoreProxy {
   loginWithNip46(relayUrl: string) {
     return AuthStoreWrapper.getInstance().loginWithNip46(relayUrl);
   }
+  loginWithOidc(oidcUser: User) {
+    return AuthStoreWrapper.getInstance().loginWithOidc(oidcUser);
+  }
   logout() {
     return AuthStoreWrapper.getInstance().logout();
   }
@@ -548,4 +584,19 @@ export const authStore = new AuthStoreProxy();
  */
 export function initializeAuth(ndk: NDK): AuthStore {
   return AuthStoreWrapper.initialize(ndk);
+}
+
+export async function initializeOidcUserManager(currentUrl: string): Promise<UserManager> {
+  const envConfig = await settingsStore.getConfig()
+
+  return new UserManager({
+    authority: envConfig.oidc.authority || 'http://localhost:8080/realms/master',
+    client_id: envConfig.oidc.client_id || 'kanban-board',
+    redirect_uri: currentUrl,
+    post_logout_redirect_uri: currentUrl,
+    response_type: 'code',
+    scope: 'openid profile email',
+    automaticSilentRenew: true,
+    userStore: new WebStorageStateStore({ store: localStorage }),
+  });
 }
