@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  check:
+  check-svelte:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
