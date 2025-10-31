@@ -128,7 +128,7 @@ describe('AuthStore (unit)', () => {
 		const info = store.getSessionInfo();
 
 		expect(info.session.signerType).toBe('nsec');
-	})
+	});
 
 	it('updateProfile updates currentUser profile and persisted session', async () => {
 		// create demo session first
