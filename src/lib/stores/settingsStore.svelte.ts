@@ -727,8 +727,8 @@ export class SettingsStore {
       let basePath = ''
 
       if (window.location.host.includes('github.io') &&
-        window.location.pathname.startsWith('/kanban-board/')) {
-        basePath = '/kanban-board';
+        window.location.pathname.startsWith('/kanban-editor/')) {
+        basePath = '/kanban-editor';
       }
 
       const response = await fetch(`${basePath}/config.json`);
