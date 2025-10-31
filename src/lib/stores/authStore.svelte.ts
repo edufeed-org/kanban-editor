@@ -16,7 +16,7 @@ export interface UserSession {
     nip05?: string;
     lud16?: string;
   };
-  signerType: "nip07" | "nsec" | "nip46" | "oidc" | "demo";
+  signerType: "nip07" | "nsec" | "nip46" | "demo";
   lastLogin: number;
   expires: number;
 }
