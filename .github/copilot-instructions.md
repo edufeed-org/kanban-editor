@@ -372,10 +372,10 @@ src/
 │   │   ├── settingsStore.ts       🟡 MUSS zu .svelte.ts konvertiert werden
 │   │   ├── authStore.svelte.ts    ⏳ TODO: Nostr Auth (NIP-07)
 │   │   └── syncManager.ts         ⏳ TODO: Offline-First Queue
-│   ├── utils/
-│   │   ├── idGenerator.ts         ✅ generateDTag(), generateTimestamp()
-│   │   ├── nostrEvents.ts         ⏳ TODO: boardToNostrEvent(), cardToNostrEvent()
-│   │   └── testSuite.ts           ✅ runTestSuite() für lokales Testing
+|   ├── utils/
+|   │   ├── idGenerator.ts         ✅ generateDTag(), generateTimestamp()
+|   │   ├── nostrEvents.ts         ⏳ TODO: boardToNostrEvent(), cardToNostrEvent()
+|   │   └── testSuite.ts           🟡 LEGACY helper (deprecated) — Tests sind jetzt Vitest `*.spec.ts` neben Komponenten/Modulen
 │   └── components/
 │       ├── ui/                    ✅ shadcn-svelte (Button, Card, Dialog, etc.)
 │       ├── CardEditModal.svelte   🟡 Ggf. zu CardDialog.svelte mergen
@@ -452,12 +452,14 @@ export class AuthStore {
 
 ## 🧪 Testing & Debugging
 
-### Test-Suite lokal ausführen
-```typescript
-import { runTestSuite } from '$lib/utils/testSuite';
-runTestSuite(); // Output in Browser-Konsole
+### Unit- & Integrationstests lokal ausführen (Vitest)
 
-// Tests aktuell abdecken:
+```bash
+pnpm run test:unit         # Einmalige Ausführung aller Unit-Tests (Vitest)
+pnpm run test:unit:watch   # Watch Mode während der Entwicklung
+```
+
+// Tests aktuell abdecken (Beispiele):
 // ✅ Board + Column + Card Management
 // ✅ Card-Verschiebungen (moveCard)
 // ✅ PublishState Management
@@ -465,7 +467,6 @@ runTestSuite(); // Output in Browser-Konsole
 // ✅ Kommentar-System
 // ❌ Nostr Event Serialisierung (TODO)
 // ❌ Offline-Sync (TODO)
-```
 
 ### Build Commands
 ```bash
@@ -1384,8 +1385,8 @@ Bevor du Code commitst, prüfe diese Checklist:
 - [ ] Tests geschrieben & grün
 - [ ] Docs aktualisiert (README, CHANGELOG)
 
-### Code Quality
-- [ ] `runTestSuite()` ausgeführt (0 Fehler)
+-### Code Quality
+- [ ] Unit tests ausgeführt (`pnpm run test:unit`) (0 Fehler)
 - [ ] `pnpm run lint` erfolgreich
 - [ ] `pnpm run check` erfolgreich
 - [ ] Keine console.log() mit sensitiven Daten
@@ -1450,7 +1451,7 @@ Diese Violations MÜSSEN behoben werden, bevor Code merged wird:
 ---
 
 1. **Immer zuerst AGENTS.md lesen** für die Spezifikation
-2. **Testet mit runTestSuite()** nach Änderungen an Core-Klassen
+2. **Testet mit Vitest (`pnpm run test:unit`)** nach Änderungen an Core-Klassen
 3. **Array-Mutations müssen reassigniert werden** (Svelte 5 Requirement)
    - 🛑 **Violation Detection:** `array.push()` → ❌ Keine Reaktivität
 4. **triggerUpdate() immer nach Board-Änderungen aufrufen** (Persistierung)

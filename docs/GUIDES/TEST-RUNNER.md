@@ -1,3 +1,94 @@
+# 🛠️ Test Runner — Technische Implementierung (Vitest)
+
+Dieses Dokument beschreibt die technische Umsetzung der Test-Suite.
+Wir verwenden inzwischen Vitest für Unit- und Integrationstests und Playwright für E2E-Tests.
+Die Anleitungen in `docs/TESTSUITE/GUIDE.md` und `docs/TESTSUITE/INDEX.md` sind die primären Nutzer-Guides — dieses Dokument ergänzt sie mit Implementierungsdetails.
+
+## Grundprinzip
+
+- Unit-Tests: Vitest (`.spec.ts`) — Dateien liegen neben der getesteten Komponente / dem Modul.
+- Integration/Store-Tests: Vitest (`.spec.ts`) in passenden Ordnern (`src/lib/stores/*` oder neben Store-Implementation).
+- E2E-Tests: Playwright im `e2e/`-Ordner.
+
+## Befehle
+
+```bash
+pnpm run test:unit         # Einmalige Ausführung aller Unit-Tests (Vitest)
+pnpm run test:unit:watch   # Watch Mode für Entwicklung
+pnpm run test:e2e          # Playwright E2E-Tests
+pnpm run test:e2e:ui       # Playwright mit UI-Debug (headed)
+```
+
+## Datei-Organisation & Namenskonvention
+
+- Unit/Integration Tests: `*.spec.ts` direkt neben dem Modul oder der Komponente.
+  - Beispiel: `src/routes/page.svelte` → `src/routes/page.svelte.spec.ts`
+  - Beispiel: `src/lib/classes/BoardModel.ts` → `src/lib/classes/BoardModel.spec.ts`
+
+- Store-Tests: neben Store-Dateien oder unter `src/lib/stores/__tests__/` — wichtig ist kleine, gut abgegrenzte Testfälle.
+
+- E2E: alle Playwright-Tests in `e2e/` (z. B. `e2e/demo.test.ts`).
+
+## Patterns & Beispiele
+
+### Vitest + Testing Library (Svelte)
+
+```typescript
+// src/routes/mycomponent.spec.ts
+import { describe, it, expect } from 'vitest';
+import MyComponent from './MyComponent.svelte';
+import { render, fireEvent } from '@testing-library/svelte';
+
+describe('MyComponent', () => {
+  it('rendert initial korrekt', () => {
+    const { getByText } = render(MyComponent);
+    expect(getByText('Erwarteter Text')).toBeTruthy();
+  });
+});
+```
+
+### Store Test (BoardStore Beispiel)
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { BoardStore } from '$lib/stores/kanbanStore.svelte';
+
+describe('BoardStore Integration', () => {
+  let store: BoardStore;
+  beforeEach(() => { store = new BoardStore(); });
+
+  it('creates and moves card atomically', () => {
+    const colA = store.addColumn({ name: 'A' });
+    const colB = store.addColumn({ name: 'B' });
+    const cardId = store.createCard(colA.id, 'Test Card');
+    store.moveCard(cardId, colA.id, colB.id);
+    const found = store.findCardAndColumn(cardId);
+    expect(found?.column.id).toBe(colB.id);
+  });
+});
+```
+
+## Testing Toolkit
+
+- Vitest: Runner + Mocks + Timers (vi)
+- @testing-library/svelte: DOM rendering & user events
+- Playwright: E2E-Run
+
+## Migration von altem `/test` UI-Runner
+
+Frühere Implementierungen bauten auf einer in-app Test-UI (`/test`) und einer `runTestSuite()` helper-Datei. Diese ist nun **deprecated**. Alle Tests sind auf Vitest umgestellt:
+
+- Entferne bitte keine noch genutzten Debug-Helfer, aber beginne, neue Tests als `.spec.ts` zu schreiben.
+- Falls du temporär die alte `src/lib/utils/testSuite.ts` für lokal-debug verwendest, markiere sie deutlich als deprecated und verlinke hier.
+
+## Weiterführende Links
+
+- `docs/TESTSUITE/GUIDE.md` — User-Guide (Wie man Tests ausführt)
+- `docs/TESTSUITE/INDEX.md` — Kurzindex
+- `e2e/` — Playwright E2E-Tests
+
+---
+Version: 1.0 — Aktualisiert: 30. Oktober 2025
 # 📋 Test Suite - Technische Referenz
 
 **Siehe auch:** 
