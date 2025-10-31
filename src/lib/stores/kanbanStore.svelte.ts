@@ -1346,6 +1346,89 @@ export class BoardStore {
         }
     }
 
+    /**
+     * Stellt alle Boards aus einer backup.json Datei wieder her
+     * Erkennt automatisch Backup-Format mit "boards" Array
+     * 
+     * @param jsonString - JSON-String aus backup.json (mit oder ohne Metadaten)
+     * @returns { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] }
+     */
+    public restoreAllBoardsFromBackup(
+        jsonString: string
+    ): { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] } {
+        const result = {
+            success: false,
+            imported: 0,
+            failed: 0,
+            boards: [] as Board[],
+            errors: [] as string[]
+        };
+
+        try {
+            const backupData = JSON.parse(jsonString);
+            
+            // Erkenne Backup-Format: muss "boards" Array haben
+            const boardsArray = backupData.boards || [];
+            
+            if (!Array.isArray(boardsArray) || boardsArray.length === 0) {
+                result.errors.push('Invalid backup format: missing boards array');
+                return result;
+            }
+
+            console.log(`🔄 Stelle ${boardsArray.length} Boards wieder her...`);
+
+            // Importiere jedes Board
+            for (let i = 0; i < boardsArray.length; i++) {
+                try {
+                    const boardData = boardsArray[i];
+                    
+                    // Validiere Board-Struktur
+                    if (!boardData.id || !boardData.name) {
+                        throw new Error(`Board ${i + 1}: missing id or name`);
+                    }
+
+                    // Rekonstruiere Board im OVERWRITE-Mode (nutze original IDs aus backup)
+                    const board = this.reconstructBoard(boardData);
+                    
+                    // Speichere Board dauerhaft
+                    const storageKey = `kanban-${board.id}`;
+                    localStorage.setItem(storageKey, JSON.stringify(boardData));
+                    
+                    // Registriere Board-ID
+                    if (!this.boardIds.includes(board.id)) {
+                        this.boardIds = [...this.boardIds, board.id];
+                    }
+                    
+                    result.boards.push(board);
+                    result.imported++;
+                    
+                    console.log(`✅ Board ${i + 1}/${boardsArray.length}: ${board.name}`);
+                    
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    result.errors.push(`Board ${i + 1}: ${errorMsg}`);
+                    result.failed++;
+                    console.error(`❌ Board ${i + 1} fehlgeschlagen:`, errorMsg);
+                }
+            }
+
+            // Speichere alle Board-IDs persistiert
+            this.saveBoardIds();
+            
+            result.success = result.imported > 0;
+            
+            console.log(`✅ Backup-Wiederherstellung abgeschlossen: ${result.imported} OK, ${result.failed} Fehler`);
+            
+            return result;
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            result.errors.push(`Failed to restore backup: ${errorMessage}`);
+            console.error('❌ Backup-Wiederherstellungsfehler:', errorMessage);
+            return result;
+        }
+    }
+
     public exportData(): any {
         return this.board.getContextData(true);
     }
