@@ -26,7 +26,7 @@
   },
 
   "oidc": {
-    "authority": "https://kc.auth.tchncs.de/realms/nostr-onboarding",
+    "authority": "http://localhost:8080/realms/master",
     "clientId": "kanban-board"
   },
 
