@@ -31,7 +31,9 @@
           authStore.loginWithOidc(user);
       }
     }).catch(err => {
-      // console.debug("Not returning from redirect", err)
+      if (err?.message !== 'No state in response') {
+        console.error('OIDC callback failed:', err);
+      }
     });
 	});
 
