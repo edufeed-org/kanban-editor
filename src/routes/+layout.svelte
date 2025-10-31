@@ -26,15 +26,20 @@
 
 	onMount(async () => {
     const oidcUserManager = await initializeOidcUserManager(window.location.href)
-    oidcUserManager.signinCallback().then(user => {
-      if (user) {
-          authStore.loginWithOidc(user);
-      }
-    }).catch(err => {
-      if (err?.message !== 'No state in response') {
-        console.error('OIDC callback failed:', err);
-      }
-    });
+    // Only process OIDC callback if URL contains 'code' and 'state' parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasOidcParams = urlParams.has('code') && urlParams.has('state');
+    if (hasOidcParams) {
+      oidcUserManager.signinCallback().then(user => {
+        if (user) {
+            authStore.loginWithOidc(user);
+        }
+      }).catch(err => {
+        if (err?.message !== 'No state in response') {
+          console.error('OIDC callback failed:', err);
+        }
+      });
+    }
 	});
 
   // Create reactive pool store for Svelte 5
