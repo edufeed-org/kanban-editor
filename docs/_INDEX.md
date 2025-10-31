@@ -309,7 +309,7 @@ docs/
 | [`GUIDE.md`](./TESTS/GUIDE.md) | Ausführliches Test-Guide | ✅ |
 | [`STATUS.md`](./TESTS/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (4 Dateien)
+### FEATURE/ (5 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -317,6 +317,7 @@ docs/
 | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration | ✅ |
 | [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | ✅ Neu (25.10.) Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
 | [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | ✅ Neu (26.10.) Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
+| [`SHARELINK.md`](./FEATURE/SHARELINK.md) | ✅ Neu (31.10.) URL-basiertes Board-Sharing mit Import-Modi | ✅ Neu (31.10.) |
 
 ### REFERENCE/ (1 Datei)
 
@@ -332,10 +333,10 @@ docs/
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTS/** — 2/2 Dateien verlinkt  
-✅ **FEATURE/** — 4/4 Dateien verlinkt  
+✅ **FEATURE/** — 5/5 Dateien verlinkt (+ SHARELINK.md neu!)  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 42/42 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md)
+**Total: 43/43 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md, +1 SHARELINK.md)
 
 ---
 
