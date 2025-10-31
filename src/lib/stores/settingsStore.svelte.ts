@@ -722,7 +722,16 @@ export class SettingsStore {
       // 2. Lade config.json via fetch
       //    In Development: Vite serviert automatisch aus /public/
       //    In Production: static/ Ordner wird in /build/ kopiert
-      const response = await fetch('/config.json');
+
+      // Hack to get base path because in Github pages it starts with /kanban-board/
+      let basePath = ''
+
+      if (window.location.host.includes('github.io') &&
+        window.location.pathname.startsWith('/kanban-board/')) {
+        basePath = '/kanban-board';
+      }
+
+      const response = await fetch(`${basePath}/config.json`);
       if (!response.ok) {
         console.warn(`⚠️ config.json not found (${response.status}), using defaults`);
         return null;
