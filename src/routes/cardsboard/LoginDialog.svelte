@@ -38,7 +38,8 @@
 	}
 
 	async function handleOidcLogin() {
-		initializeOidcUserManager(window.location.href).signinRedirect().catch(err => {
+		const oidcUserManager = await initializeOidcUserManager(window.location.href)
+		oidcUserManager.signinRedirect().catch(err => {
 			console.error("OIDC Signin Redirect Error:", err);
 		});
 	}

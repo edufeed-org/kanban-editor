@@ -24,13 +24,14 @@
 
   const authStore = initializeAuth(ndk);
 
-	onMount(() => {
-    initializeOidcUserManager(window.location.href).signinCallback().then(user => {
+	onMount(async () => {
+    const oidcUserManager = await initializeOidcUserManager(window.location.href)
+    oidcUserManager.signinCallback().then(user => {
       if (user) {
           authStore.loginWithOidc(user);
       }
     }).catch(err => {
-      console.debug("Not returning from redirect", err)
+      // console.debug("Not returning from redirect", err)
     });
 	});
 
