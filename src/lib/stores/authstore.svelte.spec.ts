@@ -50,7 +50,7 @@ const mockNdk = {
 };
 
 // Now import the AuthStore implementation
-import { AuthStore, initializeAuth, authStore } from '$lib/stores/authStore.svelte.js';
+import { AuthStore } from '$lib/stores/authStore.svelte.js';
 
 describe('AuthStore (unit)', () => {
 	let store: any;
@@ -120,6 +120,15 @@ describe('AuthStore (unit)', () => {
 		localStorage.setItem('kanban-config', JSON.stringify({ allow_demo_session: { enabled: false } }));
 		expect(store.isDemoSessionAllowed()).toBe(false);
 	});
+
+	it('loginWithOidc saves signerType as nsec', async () => {
+		await store.loginWithOidc({
+			profile: { nsec: 'nsec1' + 'b'.repeat(58) }
+		})
+		const info = store.getSessionInfo();
+
+		expect(info.session.signerType).toBe('nsec');
+	})
 
 	it('updateProfile updates currentUser profile and persisted session', async () => {
 		// create demo session first

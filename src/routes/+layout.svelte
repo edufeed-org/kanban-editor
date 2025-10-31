@@ -2,17 +2,13 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
-  import { setContext } from 'svelte';
+  import { setContext, onMount } from 'svelte';
   import { Toaster } from "svelte-sonner";
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
-  import { initializeAuth } from '$lib/stores/authStore.svelte';
+  import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
 
-
-  interface Props {
-    children?: any;
-  }
 
   const { children } = $props();
 
@@ -27,6 +23,16 @@
   ndk.connect();
 
   const authStore = initializeAuth(ndk);
+
+	onMount(() => {
+    initializeOidcUserManager(window.location.href).signinCallback().then(user => {
+      if (user) {
+          authStore.loginWithOidc(user);
+      }
+    }).catch(err => {
+      console.debug("Not returning from redirect", err)
+    });
+	});
 
   // Create reactive pool store for Svelte 5
   createReactivePool(ndk);
