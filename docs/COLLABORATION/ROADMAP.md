@@ -546,36 +546,61 @@ JANUAR 2026
 - ✅ Restore-Funktion stellt Board wieder her
 - ✅ Snapshots sind teil von Export/Import
 
-#### Phase 1.5D: Export / Import — ⏳ PLANNED (Ende November)
+#### Phase 1.5D: Export / Import — ✅ DONE (31.10.2025)
 
 **Ziel:** Förder-Anforderung: Boards sind exportierbar & importierbar  
-**Status:** Abhängig von 1.5A + 1.5C
+**Status:** ✅ FULLY IMPLEMENTED & DOCUMENTED
 
-**Zu implementieren:**
+**Implementation Summary (31.10.2025):**
 
-- [ ] **Store-Level Export API** — `boardStore.exportBoard()`
-  - [ ] Serialisiere `board.getContextData(true)` als JSON
-  - [ ] Inkl. alle Snapshots
-  - [ ] Versionsinformation
+**A) Store-Level Export API:**
+- ✅ `exportBoardAsJson(includeMetadata?: boolean)` — Einzelnes Board exportieren
+- ✅ `exportAllBoardsAsJson()` — Backup aller Boards exportieren
+- ✅ Serialisiert `board.getContextData(true)` als gültiges JSON
+- ✅ Versionsinformation included (version, exportedAt, exportedBy)
 
-- [ ] **Store-Level Import API** — `boardStore.importBoard(json, mode)`
-  - [ ] Validiere Struktur & Versionsnummer
-  - [ ] Mode 'merge': neue IDs für importierte Objekte
-  - [ ] Mode 'overwrite': ersetze Board
-  - [ ] Conflict-Handling wenn IDs duplizieren
+**B) Store-Level Import API:**
+- ✅ `importBoardFromJson(jsonString, mode: 'merge'|'new'|'overwrite')` — JSON validieren & importieren
+- ✅ `saveImportedBoard(board, overwriteExisting?: boolean)` — Nach-Import Persistierung
+- ✅ `restoreAllBoardsFromBackup(backupJson)` — Batch-Restore aus Backup
+- ✅ Alle drei Modi vollständig implementiert:
+  - `merge`: Neue IDs generieren (Konfliktfrei, Standard-Modus)
+  - `new`: Neue IDs + "(Imported)" Suffix im Board-Namen (Varianten-Verwaltung)
+  - `overwrite`: Original-IDs beibehalten (Device-Sync, mit Warnung)
 
-- [ ] **UI: Export/Import Dialog**
-  - [ ] Button in Board-Settings
-  - [ ] Export: Download JSON + Copy-URL
-  - [ ] Import: File Upload + Paste-JSON
-  - [ ] Round-Trip Test: Export → Import → Vergleich
+**C) UI Integration:**
+- ✅ **ExportButton.svelte** — In Topbar/Settings für Single-Board Export
+  - Startet Datei-Download: `{BoardName}_{date}.json`
+- ✅ **ImportPopover.svelte** — File Input im Sidebar
+  - Datei-Auswahl mit `.json` Filterung
+  - Auto-Detect: Erkennt Backup vs Single-Export automatisch
+  - Mode-Radio: merge | new | overwrite wählbar
+  - Success/Error Messages
 
-**Acceptance Criteria (1.5D):**
-- ✅ Export erzeugt vollständiges JSON mit allen Daten
-- ✅ Import validiert & rejected ungültige Dateien
-- ✅ ID-Konflikte werden korrekt gelöst
-- ✅ Round-Trip: Export → Import → Hash stimmt überein
-- ✅ Förder-Anforderung erfüllt ✅
+**D) Testing & Validation:**
+- ✅ **Unit Tests (75+ Tests):** 
+  - `kanbanStore.export-import.spec.ts` — 28 Tests (Backup detection, export, import modes, batch restore, round-trip, edge cases)
+  - `ImportPopover.svelte.spec.ts` — 47 Tests (File selection, UI logic, help text, accessibility)
+- ✅ **Acceptance Criteria erfüllt:**
+  - Export erzeugt gültiges JSON, lädt korrekt herunter
+  - Backup enthält korrekte Anzahl an Boards mit vollständiger Struktur
+  - Import in jedem Modus führt zu erwartetem Ergebnis
+  - ID-Konflikte werden korrekt aufgelöst (neue IDs oder Überschreiben)
+  - UI zeigt eindeutige Success/Error Meldungen
+  - Round-Trip Test: Export → Import → Vergleich erfolgreich
+  - ✅ **Förder-Anforderung erfüllt** ✅
+
+**E) Documentation:**
+- ✅ **Feature-Dokumentation:** [`docs/FEATURE/IMPORT-EXPORT.md`](../FEATURE/IMPORT-EXPORT.md) — Vollständige API-Referenz, UI-Integration, Tests
+- ✅ **Share-Link Feature:** [`docs/FEATURE/SHARELINK.md`](../FEATURE/SHARELINK.md) — URL-basiertes Sharing (Parallel-Feature, auch Phase 1.5)
+
+**Acceptance Criteria (1.5D) — ALL FULFILLED:**
+- ✅ Export erzeugt vollständiges JSON mit allen Daten (Board, Spalten, Karten, Kommentare-Referenzen)
+- ✅ Import validiert Struktur & rejected ungültige Dateien (ID, name required)
+- ✅ ID-Konflikte werden korrekt gelöst (merge/new/overwrite modes)
+- ✅ Round-Trip: Export → Import → Hash stimmt überein (vollständige Rekonstruktion)
+- ✅ **Förder-Anforderung erfüllt** ✅
+- ✅ Backup-Format unterstützt (exportAllBoardsAsJson + restoreAllBoardsFromBackup)
 
 **Timeline für 1.5:**
 - ✅ **Phase 1.5A: DONE** (26.10.2025)
@@ -1306,6 +1331,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 2.8 | 31.10.2025 | 📦 **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). Förder-Anforderung erfüllt! |
 | 2.7 | 31.10.2025 | 🔗 **SHARE-LINK FEATURE:** Phase 1.5B COMPLETE! Full end-to-end implementation + 41 unit tests (100% pass rate). Dokumentation in FEATURE/SHARELINK.md. Atomic 3-Step Sync für Board-Importe, 76% Kompressions-Ratio, Single-Layer URL-Encoding mit XSS-Prevention. |
 | 2.6 | 29.10.2025 | 🎨 **CARD UI REDESIGN PHASE 1:** Badges optimiert, Author-Info zu Popover, Image 60% kleiner, Description 2-line clamp. 70% schneller Entwicklung! |
 | 2.5 | 29.10.2025 | 📚 **DOKUMENTATIONS-GOVERNANCE v3.0:** Bidirektionale Code ↔ Docs Sync MANDATORY! 11-Punkt DoD Checklist, Pre-Commit Hooks, Metriken & KPIs, Enforcement-Rules. Verhindert 5-10 Tage Debugging durch veraltete Docs! |

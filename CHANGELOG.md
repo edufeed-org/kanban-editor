@@ -1,5 +1,89 @@
 # Changelog
 
+## Version 3.6 - Import-Export Feature Complete & Documentation Index Updated
+
+**Datum:** 31. Oktober 2025
+**Branch:** `import-export`
+**Status:** ✅ **IMPORT-EXPORT FEATURE FULLY DOCUMENTED & INDEXED**
+
+### 🎯 Zusammenfassung
+
+**Phase 1.5D Import-Export Feature in docs/FEATURE/IMPORT-EXPORT.md dokumentiert:**
+- ✅ JSON-basiertes Export/Import System (bereits implementiert + getestet)
+- ✅ Drei Import-Modi: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
+- ✅ Store APIs: `exportBoardAsJson()`, `importBoardFromJson()`, `exportAllBoardsAsJson()`
+- ✅ UI Integration: ExportButton, ImportPopover mit Auto-Detect
+- ✅ 75+ Unit Tests (Backup detection, export, import, batch restore, round-trip)
+- ✅ Förder-Anforderung: **Boards sind vollständig exportierbar & importierbar** ✅
+
+### ✨ Features
+
+#### 1. **Feature-Dokumentation: Import-Export.md**
+- Kurzbeschreibung des Features
+- Kern-Funktionen (Store APIs)
+- Export-Format (Single + Backup)
+- UI-Integration (ExportButton, ImportPopover)
+- Sicherheits- & Edge-Case-Behandlung
+- Akzeptanzkriterien & Test-Coverage
+- Known nächste Schritte (Phase 1.5E: Share-Link)
+
+#### 2. **Documentation Index Updated (_INDEX.md)**
+- FEATURE/ Section: 5 → 6 Dateien (+IMPORT-EXPORT.md)
+- Total files: 43 → 44 verlinkt
+- Alle Cross-Links aktualisiert
+- Vollständige Navigation für alle Docs
+
+#### 3. **ROADMAP Updated (v2.8)**
+- Phase 1.5D Status: ⏳ PLANNED → ✅ DONE
+- Neue Version 2.8 Entry dokumentiert
+- Timeline aktualisiert
+
+### 📊 Documentation Status
+
+**New Documentation Files:**
+- ✅ `docs/FEATURE/SHARELINK.md` (31.10.2025) - URL-basiertes Sharing
+- ✅ `docs/FEATURE/IMPORT-EXPORT.md` (31.10.2025) - JSON Export/Import
+
+**Updated Files:**
+- ✅ `docs/COLLABORATION/ROADMAP.md` (v2.8) - Phase 1.5D marked DONE
+- ✅ `docs/_INDEX.md` - 44/44 files indexed
+- ✅ `CHANGELOG.md` - Version history updated
+
+**Total Documentation Coverage:**
+| Kategorie | Dateien | Status |
+|-----------|---------|--------|
+| ARCHITECTURE | 10/10 | ✅ |
+| GUIDES | 8/8 | ✅ |
+| COLLABORATION | 6/6 | ✅ |
+| TESTS | 2/2 | ✅ |
+| FEATURE | 6/6 | ✅ (neu!) |
+| REFERENCE | 1/1 | ✅ |
+| **TOTAL** | **44/44** | **✅ COMPLETE** |
+
+### 🔗 Related Parallel Features (Phase 1.5)
+
+**Parallel dokumentiert & implementiert in Phase 1.5:**
+- ✅ **Share-Link Feature** (v3.5 - URL-basiertes Sharing)
+  - Dokumentation: [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md)
+  - Token Encoding mit pako.deflate (76% Kompression)
+  - 41 Unit Tests (100% passing)
+
+- ✅ **Import-Export Feature** (v3.6 - JSON-basiertes Backup/Restore)
+  - Dokumentation: [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md)
+  - 75+ Unit Tests
+  - Förder-Anforderung erfüllt
+
+### 🔗 Related Documentation
+
+- **Neue Docs:** [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md) (Share-Link feature)
+- **Neue Docs:** [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md) (JSON export/import)
+- **Aktualisiert:** [`docs/COLLABORATION/ROADMAP.md`](./docs/COLLABORATION/ROADMAP.md) (v2.8)
+- **Aktualisiert:** [`docs/_INDEX.md`](./docs/_INDEX.md) (44/44 files)
+- **Tech Spec:** [`AGENTS.md`](./AGENTS.md)
+- **Store API:** [`src/lib/stores/kanbanStore.svelte.ts`](./src/lib/stores/kanbanStore.svelte.ts)
+
+---
+
 ## Version 3.5 - Share-Link Feature & Comprehensive Documentation
 
 **Datum:** 31. Oktober 2025
@@ -137,9 +221,27 @@ Full Suite: 161 passed | 1 skipped (162 total)
 | Overall Suite | 161/162 (99.4%) ✅ |
 | Code Regressions | 0 (all existing tests still pass) ✅ |
 
-### 🔗 Related Documentation
+### � Related Import-Export Feature
 
-- **Neue Docs:** [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md)
+**Parallel dokumentiert in Phase 1.5:**
+- ✅ **Share-Link Feature** (v3.5 - URL-basiertes Sharing mit Kompression)
+  - Dokumentation: [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md)
+  - Token Encoding mit pako.deflate (76% Kompression)
+  - Single-Layer URL-Encoding
+  - 41 Unit Tests (100% passing)
+
+- ✅ **Import-Export Feature** (Phase 1.5D - JSON-basiertes Backup/Restore)
+  - Dokumentation: [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md)
+  - Export: `exportBoardAsJson()`, `exportAllBoardsAsJson()`
+  - Import: `importBoardFromJson(json, mode)` mit 3 Modi
+  - Modes: merge (neue IDs), new (Imported Suffix), overwrite (gleiche IDs)
+  - Validierung & Error-Handling
+  - 75+ Unit Tests (Backup detection, export/import, batch restore)
+
+### �🔗 Related Documentation
+
+- **Neue Docs:** [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md) (Share-Link feature)
+- **Neue Docs:** [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md) (JSON export/import)
 - **Aktualisiert:** [`docs/COLLABORATION/ROADMAP.md`](./docs/COLLABORATION/ROADMAP.md) (v2.7)
 - **Aktualisiert:** [`docs/_INDEX.md`](./docs/_INDEX.md) (43/43 Dateien verlinkt)
 - **Tech Spec:** [`AGENTS.md`](./AGENTS.md)
