@@ -4,6 +4,7 @@ import type NDK from "@nostr-dev-kit/ndk";
 import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { get } from 'svelte/store'
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
+import { settingsStore } from "./settingsStore.svelte.js";
 
 export interface UserSession {
   pubkey: string;
@@ -585,10 +586,12 @@ export function initializeAuth(ndk: NDK): AuthStore {
   return AuthStoreWrapper.initialize(ndk);
 }
 
-export function initializeOidcUserManager(currentUrl: string): UserManager {
+export async function initializeOidcUserManager(currentUrl: string): Promise<UserManager> {
+  const envConfig = await settingsStore.getConfig()
+
   return new UserManager({
-    authority: 'http://localhost:8080/realms/master',
-    client_id: 'kanban-board',
+    authority: envConfig.oidc.authority || 'http://localhost:8080/realms/master',
+    client_id: envConfig.oidc.client_id || 'kanban-board',
     redirect_uri: currentUrl,
     post_logout_redirect_uri: currentUrl,
     response_type: 'code',
