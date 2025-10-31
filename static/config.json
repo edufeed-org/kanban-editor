@@ -28,6 +28,7 @@
   "mcp": {
     "urls": []
   },
+  "shareTokenMaxSize": 200000,
 
   "defaults": {
     "columns": ["To Do", "In Progress", "Done"],

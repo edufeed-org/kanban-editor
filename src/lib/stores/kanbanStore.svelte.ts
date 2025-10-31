@@ -2,6 +2,7 @@
 
 import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
+import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
@@ -1431,6 +1432,116 @@ export class BoardStore {
 
     public exportData(): any {
         return this.board.getContextData(true);
+    }
+
+    /**
+     * Erzeugt einen share-link für ein Board. Komprimiert mit jsoncrush und erzeugt URL
+     * @param boardId - id des zu teilenden Boards
+     * @returns { url: string, tokenSize: number }
+     */
+    public async generateShareLink(boardId: string, includeMetadata = true): Promise<{ url: string; tokenSize: number }> {
+        // Finde Board (falls boardId ist current board, nutze this.board)
+        let board: Board | undefined;
+        if (this.board.id === boardId) board = this.board;
+        else {
+            // versuche aus storage zu laden
+            const raw = localStorage.getItem(`kanban-${boardId}`);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    board = this.reconstructBoard(parsed);
+                } catch (e) {
+                    console.warn('generateShareLink: Failed to parse stored board', e);
+                }
+            }
+        }
+
+        if (!board) throw new Error(`Board ${boardId} not found`);
+
+        const payload = includeMetadata
+            ? { version: '1.0', exportedAt: generateTimestamp(), board: board.getContextData(true) }
+            : board.getContextData(true);
+
+        const json = JSON.stringify(payload);
+    const crushed = jsoncrush.crush(json);
+    const token = encodeURIComponent(crushed);
+
+        // Read optional limit from static config (if available)
+        let maxTokenSize = 200000; // default
+        try {
+            const resp = await fetch('/config.json');
+            if (resp.ok) {
+                const cfg = await resp.json();
+                if (cfg?.shareTokenMaxSize) maxTokenSize = Number(cfg.shareTokenMaxSize) || maxTokenSize;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        if (token.length > maxTokenSize) {
+            throw new Error(`Share token too large (${token.length} > ${maxTokenSize}). Use Export/Backup instead.`);
+        }
+
+        const url = `${window.location.origin}/cardsboard?import=${token}`;
+        return { url, tokenSize: token.length };
+    }
+
+    /**
+     * Dekodiert und validiert einen Share-Token (jsoncrush)
+     * 
+     * Der Token-Flow:
+     * 1. generateShareLink() crusht JSON und encodiert mit encodeURIComponent
+     * 2. URL enthält: ?import=<ENCODED_CRUSHED>
+     * 3. Browser decodiert automatisch bei params.get('import')
+     * 4. parseShareToken() erhält den CRUSHED (aber DECODIERT) Token
+     * 5. Wir uncrushen direkt!
+     */
+    public parseShareToken(token: string): any {
+        try {
+            // Der Token ist bereits decodiert vom Browser!
+            // Er ist CRUSHED aber nicht URI-encoded mehr
+            const json = jsoncrush.uncrush(token);
+            const parsed = JSON.parse(json);
+            
+            console.log('✅ Token erfolgreich geparst:', {
+                hasBoard: !!parsed.board,
+                boardName: parsed.board?.name || 'N/A',
+                boardColumns: parsed.board?.columns?.length || 0,
+                version: parsed.version || 'unknown'
+            });
+            
+            return parsed;
+        } catch (error) {
+            console.error('❌ Token-Parsing Fehler:', error);
+            const msg = error instanceof Error ? error.message : String(error);
+            throw new Error(`Invalid share token: ${msg}`);
+        }
+    }
+
+    /**
+     * Importiert direkt aus einem Share-Token (crushed). Gibt das Import-Ergebnis zurück.
+     */
+    public importFromShareToken(token: string, mode: 'merge'|'new'|'overwrite' = 'merge') {
+        try {
+            const data = this.parseShareToken(token);
+            
+            // ⚠️ parseShareToken() gibt entweder { version, board: {...} } oder direkt board zurück
+            // Je nachdem, was in generateShareLink() als Payload gespeichert wurde
+            const actualData = data.board || data;
+            
+            // Wenn Backup-Format (Array von Boards)
+            if (Array.isArray(actualData.boards)) {
+                return this.restoreAllBoardsFromBackup(JSON.stringify(actualData));
+            }
+            
+            // Single board
+            const jsonString = JSON.stringify(actualData);
+            return this.importBoardFromJson(jsonString, mode);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error('❌ importFromShareToken Fehler:', message);
+            return { success: false, error: message };
+        }
     }
 
     public importData(data: any): void {

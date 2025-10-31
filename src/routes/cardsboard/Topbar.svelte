@@ -137,6 +137,9 @@
     import { onMount } from 'svelte';
     import * as Field from "$lib/components/ui/field/index.js";
     import SheetDescription from '$lib/components/ui/sheet/sheet-description.svelte';
+    import LinkIcon from "@lucide/svelte/icons/link";
+    import CopyIcon from "@lucide/svelte/icons/copy";
+    import CheckIcon from "@lucide/svelte/icons/check";
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -209,6 +212,81 @@
             console.error('❌ Fehler beim Herunterladen:', error);
         }
     }
+
+    // ============================================================================
+    // SHARE-LINK STATE & FUNCTIONS
+    // ============================================================================
+    
+    let shareDialogOpen = $state(false);
+    let shareLink = $state<string | null>(null);
+    let shareLinkSize = $state(0);
+    let maxShareLinkSize = $state(200000);
+    let isGeneratingShareLink = $state(false);
+    let copySuccess = $state(false);
+
+    async function generateAndShowShareLink() {
+        isGeneratingShareLink = true;
+        try {
+            const currentBoardId = boardStore.getCurrentBoardId();
+            const result = await boardStore.generateShareLink(currentBoardId, true);
+            
+            // ⚠️ WICHTIG: result.url ist BEREITS vollständig mit encoded token!
+            // generateShareLink() gibt z.B. zurück: "http://localhost:5173/cardsboard?import=<ENCODED_TOKEN>"
+            // Der Token ist bereits mit encodeURIComponent() in generateShareLink() encoded
+            // NICHT nochmal encoden - sonst wird es double-encoded!
+            
+            const fullUrl = result.url;
+            const token = fullUrl.split('?import=')[1] || '';
+            
+            console.log('🔗 Share-Link Debug:', {
+                tokenLength: token.length,
+                fullUrl: fullUrl.substring(0, 100) + '...',
+                fullUrlLength: fullUrl.length,
+                browserLimit: 2048 // Typisches Minimum
+            });
+            
+            shareLink = fullUrl;
+            shareLinkSize = result.tokenSize;
+            
+            // Config laden
+            const config = await fetch('/config.json').then(r => r.json()).catch(() => ({ shareTokenMaxSize: 200000 }));
+            maxShareLinkSize = config.shareTokenMaxSize || 200000;
+            
+            console.log('✅ Share-Link generiert:', {
+                tokenSize: shareLinkSize,
+                maxSize: maxShareLinkSize,
+                percent: ((shareLinkSize / maxShareLinkSize) * 100).toFixed(1),
+                urlLength: shareLink.length
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Generieren des Share-Links:', error);
+        } finally {
+            isGeneratingShareLink = false;
+            shareDialogOpen = true;
+        }
+    }
+
+    function copyShareLinkToClipboard() {
+        if (!shareLink) return;
+        
+        navigator.clipboard.writeText(shareLink).then(() => {
+            copySuccess = true;
+            console.log('✅ Share-Link in Zwischenablage kopiert');
+            
+            // Reset success indicator nach 2 Sekunden
+            setTimeout(() => {
+                copySuccess = false;
+            }, 2000);
+        }).catch(error => {
+            console.error('❌ Fehler beim Kopieren:', error);
+        });
+    }
+
+    // Berechne visuellen Prozentsatz
+    let shareLinkPercent = $derived((shareLinkSize / maxShareLinkSize) * 100);
+    let isSizeSafe = $derived(shareLinkPercent < 80);
+    let isSizeWarning = $derived(shareLinkPercent >= 80 && shareLinkPercent < 100);
+    let isSizeError = $derived(shareLinkPercent >= 100);
     
 </script>
 
@@ -313,6 +391,17 @@
                                     <TrashIcon class="h-4 w-4" />
                                 </Button>
                                 <ExportButton />
+                                <!-- ShareLink Button -->
+                                <Button 
+                                    variant="outline" 
+                                    size="icon"
+                                    class="h-9 bg-secondary btn"
+                                    title="Share-Link generieren"
+                                    onclick={generateAndShowShareLink}
+                                    disabled={isGeneratingShareLink}
+                                >
+                                    <LinkIcon class="h-4 w-4" />
+                                </Button>
                             </div>
                             <div  class="flex gap-2">
                                 <Button variant="outline" onclick={() => { dialogOpen = false; }} class="bg-secondary">Abbrechen</Button>
@@ -422,3 +511,89 @@
         </div>
     </div>
 </header>
+
+<!-- Share-Link Dialog -->
+<Dialog.Root bind:open={shareDialogOpen}>
+    <Dialog.Content class="max-w-lg">
+        <Dialog.Header>
+            <Dialog.Title>Share-Link für Board</Dialog.Title>
+        </Dialog.Header>
+        
+        <div class="space-y-4 py-4">
+            <!-- Board Info -->
+            <div class="rounded-lg bg-muted/50 p-3 space-y-2">
+                <h3 class="font-semibold text-sm">{currentBoardTitle}</h3>
+                <p class="text-xs text-muted-foreground">{currentBoardDescription || 'Keine Beschreibung'}</p>
+            </div>
+
+            <!-- Token Size Progress -->
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-medium">
+                    <span>Token-Größe</span>
+                    <span class:text-green-600={isSizeSafe} class:text-yellow-600={isSizeWarning} class:text-red-600={isSizeError}>
+                        {(shareLinkSize / 1024).toFixed(1)} KB / {(maxShareLinkSize / 1024).toFixed(0)} KB ({shareLinkPercent.toFixed(1)}%)
+                    </span>
+                </div>
+                <div class="w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div
+                        class="h-full transition-all"
+                        class:bg-green-500={isSizeSafe}
+                        class:bg-yellow-500={isSizeWarning}
+                        class:bg-red-500={isSizeError}
+                        style="width: {Math.min(shareLinkPercent, 100)}%"
+                    ></div>
+                </div>
+                {#if isSizeError}
+                    <p class="text-xs text-red-600 font-semibold">⚠️ Token zu groß! Board ist zu komplett für einen Share-Link.</p>
+                {:else if isSizeWarning}
+                    <p class="text-xs text-yellow-600">⚠️ Token nähert sich dem Limit</p>
+                {/if}
+            </div>
+
+            <!-- Share Link Input -->
+            <div class="space-y-2">
+                <Label for="share-link-input" class="text-sm font-medium">Share-Link</Label>
+                <div class="flex gap-2">
+                    <input
+                        id="share-link-input"
+                        type="text"
+                        readonly
+                        value={shareLink || 'Generieren...'}
+                        class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono text-muted-foreground"
+                    />
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onclick={copyShareLinkToClipboard}
+                        disabled={!shareLink || isGeneratingShareLink}
+                        class="bg-secondary"
+                    >
+                        {#if copySuccess}
+                            <CheckIcon class="h-4 w-4 text-green-600" />
+                        {:else}
+                            <CopyIcon class="h-4 w-4" />
+                        {/if}
+                    </Button>
+                </div>
+                <p class="text-xs text-muted-foreground">
+                    Kopiere den Link und teile ihn mit anderen, um dieses Board zu importieren.
+                </p>
+            </div>
+
+            <!-- Instructions -->
+            <div class="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 space-y-2">
+                <p class="text-xs font-semibold text-blue-900 dark:text-blue-300">📋 Wie man den Link nutzt:</p>
+                <ol class="text-xs text-blue-800 dark:text-blue-200 list-decimal list-inside space-y-1">
+                    <li>Kopiere den Link oben</li>
+                    <li>Öffne den Link in einem neuen Browser-Tab</li>
+                    <li>Wähle Import-Modus: Merge, New oder Overwrite</li>
+                    <li>Das Board wird in dein Konto importiert</li>
+                </ol>
+            </div>
+        </div>
+
+        <Dialog.Footer>
+            <Button variant="outline" onclick={() => { shareDialogOpen = false; }}>Schließen</Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>

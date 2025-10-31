@@ -2,6 +2,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';
+	import ShareLinkPreview from './ShareLinkPreview.svelte';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 
 	let open = $state(false);
@@ -12,6 +13,12 @@
 	let successMsg = $state('');
 	let isBackupFile = $state(false);  // Auto-detect: ist das eine backup.json?
 	let backupStats = $state({ imported: 0, failed: 0, total: 0 });
+
+	// Share-Link Preview State
+	let showShareLinkPreview = $state(false);
+	let shareLinkData = $state<any>(null);
+	let shareLinkSize = $state(0);
+	let maxShareLinkSize = $state(200000);
 
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -155,6 +162,119 @@
 		open = newOpen;
 		if (!newOpen) {
 			resetForm();
+		}
+	}
+
+	// Export function for external use (from +page.svelte)
+	export async function showShareLinkImportDialog(token: string) {
+		try {
+			console.log('📥 showShareLinkImportDialog called, token length:', token.length);
+			console.log('📝 Token preview:', token.substring(0, 50) + (token.length > 50 ? '...' : ''));
+			
+			const parsed = boardStore.parseShareToken(token);
+			console.log('✅ Token geparst erfolgreich!');
+			console.log('📊 Geparste Daten:', {
+				hasBoard: !!parsed.board,
+				hasVersion: !!parsed.version,
+				boardName: parsed.board?.name || parsed.name || 'N/A',
+				boardId: parsed.board?.id || 'N/A',
+				columnCount: parsed.board?.columns?.length || 0,
+				cardCount: parsed.board?.columns?.reduce((sum: number, col: any) => sum + (col.cards?.length || 0), 0) || 0
+			});
+			
+			// ⚠️ WICHTIG: parseShareToken gibt entweder { version, board: {...} } oder direkt board zurück
+			// Wir müssen beide Fälle handhaben!
+			const boardData = parsed.board || parsed;
+			
+			console.log('🎯 Board-Daten für Dialog:', {
+				name: boardData.name,
+				columns: boardData.columns?.length,
+				cards: boardData.columns?.reduce((sum: number, col: any) => sum + (col.cards?.length || 0), 0)
+			});
+			
+			shareLinkData = boardData;
+			
+			// Get token size (approximate)
+			const encoded = encodeURIComponent(token);
+			shareLinkSize = encoded.length;
+			
+			// Get max size from config
+			try {
+				const config = await fetch('/config.json').then(r => r.json());
+				maxShareLinkSize = config.shareTokenMaxSize || 200000;
+			} catch {
+				maxShareLinkSize = 200000;
+			}
+			
+			console.log('📦 Token-Größe:', { tokenSize: shareLinkSize, maxSize: maxShareLinkSize });
+			console.log('🎯 Zeige ShareLinkPreview Dialog...');
+			showShareLinkPreview = true;
+			return true;
+		} catch (error) {
+			console.error('❌ Fehler beim Parsen des Share-Link-Tokens:', error);
+			const parseError = error instanceof Error ? error.message : 'Unbekannter Fehler';
+			console.error('📋 Fehler-Details:', { parseError, tokenLength: token.length });
+			errorMsg = `Fehler beim Parsen des Share-Link-Tokens: ${parseError}`;
+			return false;
+		}
+	}
+
+	async function handleShareLinkImport(mode: 'merge' | 'new' | 'overwrite') {
+		console.log(`📥 Importiere Share-Link im ${mode}-Modus`);
+		console.log('📦 Share-Link Daten (Typ):', typeof shareLinkData, Array.isArray(shareLinkData));
+		
+		if (!shareLinkData) {
+			errorMsg = 'Keine Board-Daten vorhanden';
+			return;
+		}
+		
+		isLoading = true;
+		
+		try {
+			// ⚠️ shareLinkData ist ein PLAIN OBJECT (geparst vom JSON Token)
+			// Nutze importBoardFromJson() das macht die Rekonstruktion automatisch!
+			// WICHTIG: Die mode wird DIREKT weitergeleitet (nicht umkonvertieren!)
+			
+			const jsonString = JSON.stringify(shareLinkData);
+			const result = boardStore.importBoardFromJson(jsonString, mode);
+			
+			if (result.success && result.board) {
+				console.log('✅ Share-Link Board importiert (vor Speicherung):', {
+					boardId: result.board?.id,
+					boardName: result.board?.name,
+					mode
+				});
+				
+				// 🔥 WICHTIG: Das Board MUSS zum Store hinzugefügt werden!
+				// importBoardFromJson() gibt das Board zurück, speichert es aber NICHT
+				const overwrite = mode === 'overwrite';
+				boardStore.saveImportedBoard(result.board, overwrite);
+				
+				console.log('✅ Board gespeichert im Store');
+				
+				// ✅ Message je nach Mode
+				if (mode === 'overwrite') {
+					successMsg = `✅ Board aktualisiert! ${result.board.name}`;
+				} else if (mode === 'new') {
+					successMsg = `✅ Neues Board importiert! ${result.board.name}`;
+				} else {
+					successMsg = `✅ Board zusammengeführt! ${result.board.name}`;
+				}
+				
+				// Schließe Dialog nach kurzer Verzögerung
+				setTimeout(() => {
+					showShareLinkPreview = false;
+					successMsg = '';
+				}, 1500);
+			} else {
+				errorMsg = result.error || 'Import fehlgeschlagen';
+			}
+			
+		} catch (error) {
+			console.error('❌ Fehler beim Share-Link-Import:', error);
+			errorMsg = `Fehler beim Import: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+		} finally {
+			isLoading = false;
 		}
 	}
 </script>
@@ -310,3 +430,18 @@
 		</div>
 	</Popover.Content>
 </Popover.Root>
+
+<!-- Share-Link Preview Dialog -->
+<ShareLinkPreview
+	open={showShareLinkPreview}
+	boardData={shareLinkData}
+	tokenSize={shareLinkSize}
+	maxTokenSize={maxShareLinkSize}
+	isLoading={isLoading}
+	onConfirm={handleShareLinkImport}
+	onCancel={() => {
+		showShareLinkPreview = false;
+		shareLinkData = null;
+		isLoading = false;
+	}}
+/>
