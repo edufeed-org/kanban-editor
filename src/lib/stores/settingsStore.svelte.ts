@@ -176,12 +176,23 @@ export class SettingsStore {
    * Kann auch manuell aufgerufen werden zum Force-Reload
    */
   public async initializeConfig(forceOverwrite: boolean = false): Promise<void> {
+    const config = await this.getConfig();
+    if (config) {
+      this.mergeConfigIntoSettings(config, forceOverwrite);
+      return;
+    }
+  }
+
+  /**
+   * Getter für config.json (synchron)
+   * Wird auch von anderen Elementen genutzt
+   */
+  public async getConfig() {
     // Versuch 1: Synchron aus localStorage (wenn bereits gecacht)
     const cachedConfig = this.loadConfigSync();
     if (cachedConfig) {
       console.log('📦 Config aus localStorage geladen');
-      this.mergeConfigIntoSettings(cachedConfig, forceOverwrite);
-      return;
+      return cachedConfig;
     }
 
     // Versuch 2: Asynchron laden (beim ersten App-Start)
@@ -189,7 +200,7 @@ export class SettingsStore {
       const config = await this.loadAndCacheConfig();
       if (config) {
         console.log('🌐 Config von /config.json geladen');
-        this.mergeConfigIntoSettings(config, forceOverwrite);
+        return config;
       }
     } catch (error) {
       console.error('❌ Failed to load config.json:', error);

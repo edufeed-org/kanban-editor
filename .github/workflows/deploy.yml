@@ -30,7 +30,8 @@ jobs:
           BASE_PATH: '/${{ github.event.repository.name }}'
         run: |
           pnpm run build
-      
+          echo '${{ secrets.CONFIG_JSON }}' > build/config.json
+
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v4
         with:
