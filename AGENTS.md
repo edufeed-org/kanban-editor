@@ -354,7 +354,7 @@ Der aktuelle Stand der Codebase zeigt folgende Struktur:
 | **`src/routes/cardsboard/CardDialog.svelte`** | **Card-Detail-Modal mit Tabs.** `onSave` triggert `boardStore.editCard()` für Persistence.                                   | ✅ |
 | **`src/routes/cardsboard/types.ts`** | **TypeScript-Definitionen.** `CardItem`, `UIColumn`, `BoardUpdateHandler` interfaces.                                                 | ✅ |
 | **`src/routes/cardsboard/data.ts`** | **Mock-Daten.** Beispiel-Boards für Development.                                                                                                 | ✅ |
-| `src/lib/utils/testSuite.ts`        | Test-Suite ohne externes Framework. Validiert alle Kern-Funktionen.                                                                                                         | ✅ |
+| `src/lib/utils/testSuite.ts`        | Legacy helper (deprecated). Tests sind jetzt Vitest `.spec.ts` Dateien neben Komponenten/Modulen; Playwright für E2E.                                                | ✅ |
 | **`src/lib/stores/settingsStore.svelte.ts`** | **🟡 MUSS KONVERTIERT WERDEN!** Aktuell: Svelte 4 `writable()` — sollte zu `.svelte.ts` mit Runes migriert werden.                                                          | 🟡 |
 | **`src/lib/stores/authStore.svelte.ts`** | **⏳ Noch zu erstellen** — Nostr User Management (`.svelte.ts` mit `$state` für user session).                                                       | ⏳ |
 | **`src/lib/utils/nostrEvents.ts`**  | **⏳ Noch zu erstellen** — Event Serialization/Deserialization (boardToNostrEvent, cardToNostrEvent).                                                                           | ⏳ |
@@ -1121,43 +1121,52 @@ export interface BoardState {
 
 ## VIII. Test-Suite
 
-Um die korrekte Implementierung der Klassenlogik zu verifizieren, soll der Agent eine Test-Suite in der Datei `src/lib/utils/testSuite.ts` erstellen. Diese Suite soll **kein** externes Test-Framework (wie Jest oder Vitest) verwenden, sondern eine einfache, ausführbare Funktion sein, die den Zustand im Speicher manipuliert und die Ergebnisse über `console.log` ausgibt.
+Tests im Projekt werden nicht mehr über eine in-app Test-UI (`/test`) oder eine monolithische `runTestSuite()` helper-Funktion ausgeführt.
+Die aktuelle Teststrategie ist:
 
-### 8.1 Datei: `src/lib/utils/testSuite.ts`
+- Unit- und Integrationstests: Vitest (`*.spec.ts`) — Tests liegen neben der getesteten Komponente oder dem Modul.
+- Store- und Integrationstests: Vitest, ggf. in `src/lib/stores/__tests__` oder neben dem Store-Modul.
+- E2E-Tests: Playwright im `e2e/`-Ordner.
 
-Die Datei soll eine einzelne exportierbare Funktion `runTestSuite()` enthalten, die alle Kernfunktionen testet **inklusive** der neuen Nostr- und Kommentar-Features.
+Siehe `docs/TESTSUITE/GUIDE.md` und `docs/GUIDES/TEST-RUNNER.md` für ausführliche Anleitungen.
+
+### 8.1 Unit- & Integrationstests (Vitest)
+
+- Verwende Vitest für Unit- und Integrationstests.
+- Benenne Testdateien als `*.spec.ts` und lege sie neben der Implementation ab.
+  - Beispiel: `src/routes/page.svelte` → `src/routes/page.svelte.spec.ts`
+  - Beispiel: `src/lib/classes/BoardModel.ts` → `src/lib/classes/BoardModel.spec.ts`
+
+Kurzes Beispiel:
 
 ```typescript
-// src/lib/utils/testSuite.ts
+import { describe, it, expect } from 'vitest';
+import MyComponent from './MyComponent.svelte';
+import { render, fireEvent } from '@testing-library/svelte';
 
-import { Board, Chat } from '$lib/classes/BoardModel';
-import type { Card, Column } from '$lib/classes/BoardModel';
+describe('MyComponent', () => {
+  it('rendert initial korrekt', () => {
+    const { getByText } = render(MyComponent);
+    expect(getByText('Erwarteter Text')).toBeTruthy();
+  });
+});
+```
 
-export function runTestSuite() {
-    console.clear();
-    console.group("===== KANBAN BOARD TEST SUITE START =====");
+### 8.2 Store-Tests & Mocking
 
-    // 1. Board-Erstellung
-    console.group("1. Board & Column Management");
-    const board = new Board({ name: "Projekt Phoenix", description: "Vollständige Neuentwicklung des Kanban-Boards." });
-    console.log("✅ Board erstellt:", board.name);
-  
-    const todoCol = board.addColumn({ name: "To Do" });
-    const progressCol = board.addColumn({ name: "In Arbeit" });
-    const doneCol = board.addColumn({ name: "Fertig" });
-    console.log("✅ Spalten hinzugefügt:", board.columns.map(c => c.name));
-  
-    progressCol.update({ name: "In Progress" });
-    console.log("✅ Spalte aktualisiert:", progressCol.name);
-    console.groupEnd();
+- Store-Tests sollten die reaktiven Flows prüfen (`$derived.by()`-Outputs, `triggerUpdate()`-Side-Effects).
+- Nutze `vi` (Vitest) für Timer-Mocking und globale Mocks (z.B. `localStorage`, `fetch`, NDK-Mocks).
 
-    // 2. Card Management
-    console.group("2. Card Management");
-    const card1 = todoCol.addCard({ heading: "Klassenstruktur definieren", content: "Alle Klassen in TypeScript erstellen." });
-    const card2 = todoCol.addCard({ heading: "Svelte Stores einrichten", labels: ["state-management"] });
-    console.log(`✅ ${todoCol.cards.length} Karten zur 'To Do'-Spalte hinzugefügt.`);
-  
-    card1.update({ content: "Alle Klassen in TypeScript mit strikter Typisierung erstellen." });
+### 8.3 E2E (Playwright)
+
+- Playwright bleibt das Tool der Wahl für End-to-End Tests. Platziere E2E-Szenarien unter `e2e/`.
+
+### 8.4 Migration & Legacy Helpers
+
+Falls es noch eine `src/lib/utils/testSuite.ts` mit `runTestSuite()` gibt, markiere diese Datei als deprecated (nur noch als debug helper). Neue Tests bitte ausschließlich mit Vitest anlegen.
+
+---
+
     console.log("✅ Karte aktualisiert:", card1.content);
   
     card1.addComment("Das ist die wichtigste Aufgabe!", "npub1...");

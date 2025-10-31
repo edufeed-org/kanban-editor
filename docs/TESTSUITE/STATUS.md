@@ -12,7 +12,7 @@
 | Aspekt | Status | Details |
 |--------|--------|---------|
 | **Test Suite** | ✅ | ~35 Tests, 0 Duplikate |
-| **Test Runner UI** | ✅ | Route `/test`, visuelle Output |
+| **Unit Tests** | ✅ | `.spec.ts` neben Komponenten |
 | **TypeScript** | ✅ | 0 errors, 0 warnings |
 | **Production Build** | ✅ | Erfolgreich gebaut |
 | **Dokumentation** | ✅ | `/docs/TESTSUITE/` Struktur |
@@ -40,20 +40,17 @@ TOTAL TESTS:                                     ~35 Tests ✅
 ## 📁 Projektstruktur
 
 ```
-src/routes/test/
-├── +page.svelte .......................... Test Runner UI
-│   ├── Visual Console
-│   ├── Live Test Counter
-│   ├── Status Cards
-│   └── Run/Clear Buttons
+src/routes/
+├── page.svelte.spec.ts ................... Unit Tests für Homepage
+├── cardsboard/
+│   ├── Card.svelte.spec.ts .............. Unit Tests für Card Komponente
+│   ├── Column.svelte.spec.ts ............ Unit Tests für Column Komponente
+│   └── Board.svelte.spec.ts ............. Unit Tests für Board Komponente
 
-src/lib/utils/
-├── testSuite.ts .......................... Test Suite (~35 Tests)
-│   ├── Section 1-5: Core Features
-│   ├── Section 5: Comment System
-│   ├── Section 6: BoardStore UI
-│   ├── Section 7-9: Integration
-│   └── All Passing ✅
+src/lib/
+├── stores/
+│   ├── kanbanStore.svelte.spec.ts ....... Unit Tests für BoardStore
+│   └── authStore.svelte.spec.ts ......... Unit Tests für AuthStore
 
 docs/TESTSUITE/
 ├── STATUS.md ............................. Dieses Dokument
@@ -63,35 +60,35 @@ docs/TESTSUITE/
 
 ---
 
-## 🚀 Schnellstart (30 Sekunden)
+## 🚀 Quick Start
 
 ```bash
-# 1. Dev Server starten
-pnpm run dev
+# 1. Unit Tests ausführen (watch mode)
+pnpm run test:unit
 
-# 2. Browser öffnen
-http://localhost:5173/test
+# 2. Einzelne Test-Datei ausführen
+pnpm run test:unit src/routes/cardsboard/Card.svelte.spec.ts
 
-# 3. Button klicken: "▶️ Tests ausführen"
+# 3. E2E Tests ausführen
+pnpm run test:e2e
 ```
-
-**Done!** Alle Tests sollten grün ✅ sein! 🎉
 
 ---
 
 ## ✅ Was wurde gemacht
 
-### Phase 1: Test Suite Bereinigung
-- ❌ **Entfernt:** 3 doppelte Test-Sektionen
+### Phase 1: Test Suite Modernisierung
+- ✅ **Migriert:** Alle Tests zu `.spec.ts` Unit Tests
+- ✅ **Entfernt:** `/test` Route & Browser UI
 - ✅ **Hinzugefügt:** 11 neue Comment System Tests
 - ✅ **Hinzugefügt:** 4 neue BoardStore UI Tests
-- ✅ **Ergebnis:** ~35 Tests, alle sauber organisiert
+- ✅ **Ergebnis:** ~35 Tests, modern strukturiert
 
-### Phase 2: Test Runner UI
-- ✅ Route `/test` mit visuellem Interface
-- ✅ Live Test Counter
-- ✅ Farbiges Highlighting (grün/rot/orange)
-- ✅ Status Cards (ausgeführt/erfolgreich/fehler)
+### Phase 2: Testing Framework Update
+- ✅ Vitest als primärer Test Runner
+- ✅ @testing-library/svelte für Komponenten-Tests
+- ✅ watch mode für schnelles Feedback
+- ✅ Coverage Reports für Code-Qualität
 - ✅ Responsive Design
 
 ### Phase 3: Dokumentation
