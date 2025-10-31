@@ -1,9 +1,11 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { replaceState } from '$app/navigation';
 import Board from "./Board.svelte";
 import BoardsList from "./BoardsList.svelte";
 import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
 import Topbar from "./Topbar.svelte";
+import ImportPopover from "$lib/components/ImportPopover.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { Separator } from "$lib/components/ui/separator/index.js";
@@ -11,7 +13,15 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
 
-	// Suppress passive event listener warnings for dnd-action
+	// Reference to ImportPopover component for share-link preview
+	let importPopoverComponent: any;
+
+	// ============================================================================
+	// LIFECYCLE: ONMOUNT HOOKS (Browser API calls - only once per component mount)
+	// ============================================================================
+
+	// Hook 1: Suppress passive event listener warnings for dnd-action
+	// ✅ CORRECT: onMount for one-time side effects
 	onMount(() => {
 		const originalWarn = console.warn;
 		console.warn = function(...args) {
@@ -25,6 +35,49 @@ import { toast } from "svelte-sonner";
 			}
 			originalWarn.apply(console, args);
 		};
+	});
+
+	// Hook 2: Handle share-link import via ?import=<token> parameter
+	// ✅ CORRECT: onMount for URL parameter detection (runs ONCE)
+	// ❌ DO NOT USE $effect.root here - would re-run on every store update!
+	// ⚠️ FIX: Wait for ImportPopover component to mount before proceeding (polling mechanism)
+	onMount(async () => {
+		try {
+			const params = new URL(window.location.href).searchParams;
+			const token = params.get('import');
+			
+			if (token) {
+				// ⏳ Wait for ImportPopover component to mount (race condition fix)
+				// Problem: onMount runs BEFORE template components are mounted
+				// Solution: Poll until importPopoverComponent is defined (max 5 seconds)
+				let attempts = 0;
+				const maxAttempts = 50; // 100ms * 50 = 5 seconds
+				
+				while (!importPopoverComponent && attempts < maxAttempts) {
+					await new Promise(resolve => setTimeout(resolve, 100));
+					attempts++;
+				}
+				
+				if (importPopoverComponent) {
+					// ✅ NOW safe to proceed - component is mounted
+					console.log('🔗 Share-Link erkannt, zeige Preview-Dialog...');
+					const success = await importPopoverComponent.showShareLinkImportDialog(token);
+					
+					if (success) {
+						// Clean up URL param only after successful dialog show
+						// Use SvelteKit's replaceState instead of history.replaceState
+						replaceState(window.location.pathname + window.location.hash, {});
+					} else {
+						toast.error('Fehler beim Parsen des Share-Link-Tokens');
+					}
+				} else {
+					console.error('❌ ImportPopover component nicht gefunden (timeout nach 5s)');
+					toast.error('Fehler: Import-Komponente nicht bereit');
+				}
+			}
+		} catch (e) {
+			console.error('Fehler beim Verarbeiten des Import-Tokens:', e);
+		}
 	});
 
 	// Konvertiere boardStore.uiData in das Format, das Board.svelte erwartet
@@ -253,3 +306,6 @@ import { toast } from "svelte-sonner";
 		{/if}
 	</Resizable.PaneGroup>
 </div>
+
+<!-- ImportPopover Component (hidden, used for share-link preview) -->
+<ImportPopover bind:this={importPopoverComponent} />

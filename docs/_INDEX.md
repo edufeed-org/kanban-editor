@@ -53,7 +53,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 8. **Einstellungen:** [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) (Theme, Relays, LLM)
 9. **Cheat Sheet:** [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) (Quick Reference)
 10. **Quick Start:** [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) (Copy-Paste Code Snippets)
-11. **Tests verstehen:** [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) (Test Suite Übersicht)
+11. **Tests verstehen:** [`TESTS/GUIDE.md`](./TESTS/GUIDE.md) (Test-Szenarien & How-To)
 
 **Häufige Aufgaben:**
 - Neue Komponente erstellen? → [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md)
@@ -61,7 +61,6 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 - Props bearbeiten? → [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) (inkl. Verification Checklist)
 - Einstellungen UI? → [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md)
 - Login & Auth? → [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) + [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md)
-- Tests ausführen? → [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md)
 - Kommentare implementieren? → [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md)
 
 ---
@@ -126,7 +125,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **🆕 Dokumentations-Governance v3.0** | [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md) | 20 min | ✅ Neu (29.10.)
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
-| **Test Suite** | [`TESTSUITE/STATUS.md`](./TESTSUITE/STATUS.md) | 15 min |
+| **Tests Status** | [`TESTS/STATUS.md`](./TESTS/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
 | **KI-Chatbot Integration (Spec)** | [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | 30 min |
 
@@ -151,7 +150,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Auth UI-Komponenten (30 min)** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) |
 | **Settings Verwaltung (30 min)** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) |
 | **Svelte 5 Runes (40 min)** | [`ARCHITECTURE/REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) |
-| **Test Suite (5 min)** | [`TESTSUITE/INDEX.md`](./TESTSUITE/INDEX.md) |
+| **Unit Tests (5 min)** | [`TESTS/GUIDE.md`](./TESTS/GUIDE.md) |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) |
 | **Vollständige Spezifikation** | [`AGENTS.md`](../AGENTS.md) |
 | **Produktvision** | [`KONZEPT.md`](../KONZEPT.md) |
@@ -206,10 +205,8 @@ docs/
 │   ├── CONTRIBUTING.md
 │   └── ROADMAP.md
 │
-├── TESTSUITE/
-│   ├── AUTHSTORE-TEST-PAGE.md
+├── TESTS/
 │   ├── GUIDE.md
-│   ├── INDEX.md
 │   └── STATUS.md
 │
 └── FEATURE/
@@ -305,16 +302,14 @@ docs/
 | [`DOCUMENTATION-AUDIT-REPORT.md`](./COLLABORATION/DOCUMENTATION-AUDIT-REPORT.md) | Detailed Audit Report | ✅ Neu (24.10.) |
 | [`BOARD-VERSIONING.md`](./COLLABORATION/BOARD-VERSIONING.md) | ✅ Neu (26.10.) Manual Snapshots + Conflict Resolution | ✅ Neu (26.10.) |
 
-### TESTSUITE/ (4 Dateien)
+### TESTS/ (2 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
-| [`AUTHSTORE-TEST-PAGE.md`](./TESTSUITE/AUTHSTORE-TEST-PAGE.md) | AuthStore Test-Dokumentation | ✅ |
-| [`GUIDE.md`](./TESTSUITE/GUIDE.md) | Ausführliches Test-Guide | ✅ |
-| [`INDEX.md`](./TESTSUITE/INDEX.md) | Test Suite Navigation Hub | ✅ |
-| [`STATUS.md`](./TESTSUITE/STATUS.md) | Test Suite Status & Überblick | ✅ |
+| [`GUIDE.md`](./TESTS/GUIDE.md) | Ausführliches Test-Guide | ✅ |
+| [`STATUS.md`](./TESTS/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (4 Dateien)
+### FEATURE/ (6 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -322,6 +317,8 @@ docs/
 | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration | ✅ |
 | [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | ✅ Neu (25.10.) Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
 | [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | ✅ Neu (26.10.) Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
+| [`SHARELINK.md`](./FEATURE/SHARELINK.md) | ✅ Neu (31.10.) URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |
+| [`IMPORT-EXPORT.md`](./FEATURE/IMPORT-EXPORT.md) | ✅ Neu (31.10.) JSON-Export/Import mit 3 Modi (merge/new/overwrite) | ✅ Neu (31.10.) |
 
 ### REFERENCE/ (1 Datei)
 
@@ -336,11 +333,11 @@ docs/
 ✅ **ARCHITECTURE/** — 10/10 Dateien verlinkt (4 root + 6 STORES/)  
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
-✅ **TESTSUITE/** — 4/4 Dateien verlinkt  
-✅ **FEATURE/** — 4/4 Dateien verlinkt  
+✅ **TESTS/** — 2/2 Dateien verlinkt  
+✅ **FEATURE/** — 6/6 Dateien verlinkt (+ IMPORT-EXPORT.md neu!)  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 42/42 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md)
+**Total: 44/44 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md, +1 SHARELINK.md, +1 IMPORT-EXPORT.md)
 
 ---
 

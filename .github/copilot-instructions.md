@@ -1645,7 +1645,143 @@ public async addComment(cardId: string, text: string) {
 
 ---
 
-## 🔗 Schnelle Links
+## � SVELTE 5 COMPONENT MIGRATION - HÄUFIGE FEHLER
+
+### 🔴 CRITICAL: `asChild` existiert NICHT in Svelte 5!
+
+**Problem:** Svelte 4 hatte `asChild` für Trigger-Komponenten in Compound Components (wie Popover, Dialog, etc.). Svelte 5 nutzt **Snippets** und **native HTML elements** statt `asChild`.
+
+**FALSCH (Svelte 4 Pattern - funktioniert NICHT in Svelte 5):**
+```svelte
+<!-- ❌ FALSCH -->
+<Popover.Root>
+  <Popover.Trigger asChild let:builder>
+    <Button builders={[builder]} size="sm" variant="outline">
+      <UploadIcon class="h-4 w-4" />
+      Import
+    </Button>
+  </Popover.Trigger>
+</Popover.Root>
+
+<!-- Fehler:
+Error: '"asChild"' does not exist in type
+Error: '"builders"' does not exist on Button
+Error: '$$slot_def' is of type 'unknown'
+-->
+```
+
+**RICHTIG (Svelte 5 Pattern - Popover.Trigger rendert selbst den Button!):**
+```svelte
+<!-- ✅ RICHTIG: Popover.Trigger OHNE Button oder natives Element Wrapper! -->
+<Popover.Root bind:open onOpenChange={handleOpenChange}>
+  <Popover.Trigger>
+    <UploadIcon class="h-4 w-4" />
+    Import
+  </Popover.Trigger>
+  <Popover.Content class="w-80 p-4">
+    <!-- Content here -->
+  </Popover.Content>
+</Popover.Root>
+
+<!-- 🎯 KEY INSIGHT: Popover.Trigger IST bereits ein Button!
+  - Kümmert sich um: Button-Rendering, Click-Handling, Open/Close
+  - Kümmert sich um: Accessibility (aria-expanded, etc)
+  - WIR NUR: Icon + Text/Label hinzufügen! -->
+```
+
+**FALSCH (Svelte 4 Pattern - FUNKTIONIERT NICHT!):**
+```svelte
+<!-- ❌ FALSCH 1: asChild + let:builder + builders -->
+<Popover.Trigger asChild let:builder>
+  <Button builders={[builder]} size="sm" variant="outline">
+    Icon + Text
+  </Button>
+</Popover.Trigger>
+
+<!-- ❌ FALSCH 2: Native Button im Trigger - doppelte Button-Wrapper! -->
+<Popover.Trigger>
+  <button type="button" class="...">
+    Icon + Text
+  </button>
+</Popover.Trigger>
+
+<!-- ❌ FALSCH 3: Button-Komponente im Trigger -->
+<Popover.Trigger>
+  <Button size="sm" variant="outline">
+    Icon + Text
+  </Button>
+</Popover.Trigger>
+```
+
+**Key Learning:**
+- ✅ `Popover.Trigger` **IST SELBST** ein Button
+- ✅ Icon + Text/Label direkt hinzufügen
+- ✅ Kein Wrapper-Element notwendig!
+- ❌ KEIN `asChild` 
+- ❌ KEIN `let:builder`
+- ❌ KEIN `builders={}`
+- ❌ KEIN native `<button>` Element
+- ❌ KEIN `<Button>` Komponente
+
+**Betroffen sind diese shadcn-svelte Komponenten:**
+- `<Popover.Trigger>` ← rendert Button
+- `<Dialog.Trigger>` ← rendert Button
+- `<Sheet.Trigger>` ← rendert Button
+- `<Dropdown.Trigger>` ← rendert Button
+- `<DropdownMenu.Trigger>` ← rendert Button
+- Alle anderen Trigger-Komponenten
+
+**Real-World Beispiel aus diesem Projekt (30.10.2025):**
+
+❌ **BEFORE (4 Compilation Errors):**
+```svelte
+<!-- ImportPopover.svelte - WRONG! -->
+import { Button } from '$lib/components/ui/button/index.js';
+
+<Popover.Root bind:open>
+  <Popover.Trigger asChild let:builder>
+    <Button builders={[builder]} size="sm" variant="outline" class="gap-2">
+      <UploadIcon class="h-4 w-4" />
+      <span class="hidden sm:inline">Import</span>
+    </Button>
+  </Popover.Trigger>
+</Popover.Root>
+
+<!-- Errors:
+Error 1: '"asChild"' does not exist in type
+Error 2: '$$slot_def' is of type 'unknown'
+Error 3: '"builders"' does not exist on Button
+Error 4: Cannot find module (bei falscher import path)
+-->
+```
+
+✅ **AFTER (0 Errors - Build Passing):**
+```svelte
+<!-- ImportPopover.svelte - CORRECT! -->
+<!-- Kein Button Import nötig! -->
+
+<Popover.Root bind:open onOpenChange={handleOpenChange}>
+  <Popover.Trigger>
+    <UploadIcon class="h-4 w-4" />
+    Import
+  </Popover.Trigger>
+  <Popover.Content class="w-80 p-4">
+    <!-- Rest of content -->
+  </Popover.Content>
+</Popover.Root>
+
+<!-- ✅ 0 Errors! Build passing! -->
+```
+
+**Why Diese Änderung So Wichtig?**
+- **Session 1-4:** Agent machte diesen Fehler **IMMER** bei Trigger-Komponenten
+- **Root Cause:** Svelte 4 Pattern noch in den Original-Instructions (bits-ui compound components)
+- **Learning Captured:** copilot-instructions.md jetzt mit **RICHTIGEM** Svelte 5 Pattern
+- **Future Prevention:** Agent wird diesen Fehler nie mehr machen - Section ist deutlich und prominent!
+
+---
+
+## �🔗 Schnelle Links
 
 - **GitHub Repository:** https://github.com/edufeed-org/kanban-editor
 - **Branch:** `connect-stores`

@@ -12,7 +12,47 @@
  */
 
 import type { NDKEvent } from '@nostr-dev-kit/ndk';
-import deepEqual from "fast-deep-equal";
+import type { CardProps } from '$lib/classes/BoardModel.js';
+
+/**
+ * Browser-kompatible Deep Equality Check (ersetzt util.isDeepStrictEqual)
+ */
+function isDeepStrictEqual(a: any, b: any): boolean {
+  // Primitive types & exact same reference
+  if (a === b) return true;
+  
+  // Different types
+  if (typeof a !== typeof b) return false;
+  
+  // Null/undefined
+  if (a === null || b === null) return a === b;
+  if (a === undefined || b === undefined) return a === b;
+  
+  // Dates
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+  
+  // Arrays
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((val, idx) => isDeepStrictEqual(val, b[idx]));
+  }
+  
+  // Objects
+  if (typeof a === 'object' && typeof b === 'object') {
+    const aKeys = Object.keys(a).sort();
+    const bKeys = Object.keys(b).sort();
+    
+    if (aKeys.length !== bKeys.length) return false;
+    if (!aKeys.every((key, idx) => key === bKeys[idx])) return false;
+    
+    return aKeys.every(key => isDeepStrictEqual(a[key], b[key]));
+  }
+  
+  return false;
+}
+
 /**
  * Card Content für Merge-Engine (CardProps Subset)
  * Nutzt offizielle CardProps von BoardModel.ts
@@ -121,20 +161,20 @@ export function threeWayMerge(
     const theirVal = (their as any)[field];
 
     // Niemand ändert das Feld (deep equality)
-    if (deepEqual(myVal, baseVal) && deepEqual(theirVal, baseVal)) {
+    if (isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       continue;
     }
 
     changedFields++;
 
     // Nur ich ändere (deep equality checks)
-    if (!deepEqual(myVal, baseVal) && deepEqual(theirVal, baseVal)) {
+    if (!isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = myVal;
       continue;
     }
 
     // Nur sie ändern (deep equality checks)
-    if (deepEqual(myVal, baseVal) && !deepEqual(theirVal, baseVal)) {
+    if (isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = theirVal;
       continue;
     }
@@ -149,7 +189,7 @@ export function threeWayMerge(
     }
 
     // BEIDE ändern das Feld (deep equality checks)
-    if (!deepEqual(myVal, baseVal) && !deepEqual(theirVal, baseVal)) {
+    if (!isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       conflictFields++;
 
       // Spezial: String-Felder → Versuche Diff-Merge

@@ -1,7 +1,8 @@
 // src/lib/stores/kanbanStore.svelte.ts
 
-import { Board, Chat, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
-import { generateTimestamp } from '../utils/idGenerator.js';
+import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
+import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
+import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
@@ -1153,15 +1154,400 @@ export class BoardStore {
         return this.board.getContextData(full);
     }
 
+    // ============================================================================
+    // EXPORT/IMPORT FUNKTIONALITÄT (Phase 1.5D)
+    // ============================================================================
+
+    /**
+     * Exportiert das aktuelle Board als JSON mit Metadaten
+     * @param includeMetadata - true: Wrapper mit Version/Timestamp. false: Raw Board data
+     * @returns JSON-String
+     */
+    public exportBoardAsJson(includeMetadata = true): string {
+        const data = this.board.getContextData(true);
+        
+        if (includeMetadata) {
+            return JSON.stringify({
+                version: '1.0',
+                exportedAt: generateTimestamp(),
+                exportedBy: 'kanban-editor',
+                boardId: this.board.id,
+                boardName: this.board.name,
+                board: data
+            }, null, 2);
+        }
+        
+        return JSON.stringify(data, null, 2);
+    }
+
+    /**
+     * Exportiert alle Boards als Backup-Datei
+     * @returns JSON-String mit allen Boards
+     */
+    public exportAllBoardsAsJson(): string {
+        const allBoards: any[] = [];
+        
+        // Lade alle Boards aus localStorage
+        for (const boardId of this.boardIds) {
+            const storageKey = `kanban-${boardId}`;
+            const stored = localStorage.getItem(storageKey);
+            
+            if (stored) {
+                try {
+                    const data = JSON.parse(stored);
+                    allBoards.push(data);
+                } catch (error) {
+                    console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, error);
+                }
+            }
+        }
+        
+        return JSON.stringify({
+            version: '1.0',
+            exportedAt: generateTimestamp(),
+            exportedBy: 'kanban-editor',
+            boardCount: allBoards.length,
+            boards: allBoards
+        }, null, 2);
+    }
+
+    /**
+     * Importiert ein Board aus JSON
+     * @param jsonString - JSON-String mit Board-Daten
+     * @param mode - 'merge' (neue IDs), 'new' (separates Board), 'overwrite' (replace aktuelles)
+     * @returns { success, board?, error? }
+     */
+    public importBoardFromJson(
+        jsonString: string,
+        mode: 'merge' | 'new' | 'overwrite' = 'merge'
+    ): { success: boolean; board?: Board; error?: string } {
+        try {
+            const importData = JSON.parse(jsonString);
+            
+            // Entpacke Metadaten falls vorhanden
+            const boardData = importData.board || importData;
+            
+            // Validiere Struktur
+            if (!boardData.id || !boardData.name) {
+                return { 
+                    success: false, 
+                    error: 'Invalid board structure: missing id or name' 
+                };
+            }
+
+            let newBoard: Board;
+
+            if (mode === 'merge' || mode === 'new') {
+                // MERGE-Mode: Neue IDs für alle Elemente (keine Konflikte!)
+                // NEW-Mode: Wie MERGE, aber mit "(Imported)" Suffix
+                
+                newBoard = new Board({
+                    id: generateDTag('board'),
+                    name: mode === 'new' 
+                        ? `${boardData.name} (Imported)`
+                        : boardData.name,
+                    description: boardData.description,
+                    publishState: boardData.publishState || 'draft',
+                    author: boardData.author || 'anonymous',
+                    maintainers: boardData.maintainers || [boardData.author || 'anonymous'],
+                    tags: boardData.tags || [],
+                    ccLicense: boardData.ccLicense || 'cc-by-4.0',
+                    columns: []
+                });
+
+                // Rekonstruiere Spalten mit neuen IDs
+                newBoard.columns = (boardData.columns || []).map((colData: any) => {
+                    const newCol = new Column({
+                        id: generateDTag('column'),
+                        name: colData.name,
+                        color: colData.color || 'slate',
+                        cards: []
+                    });
+                    
+                    // Rekonstruiere Karten mit neuen IDs
+                    newCol.cards = (colData.cards || []).map((cardData: any) => {
+                        return new Card({
+                            id: generateDTag('card'),
+                            heading: cardData.heading,
+                            content: cardData.content,
+                            image: cardData.image,
+                            color: cardData.color || 'slate',
+                            author: cardData.author || 'anonymous',
+                            authorName: cardData.authorName,
+                            comments: cardData.comments || [],
+                            labels: cardData.labels || [],
+                            links: cardData.links || [],
+                            attendees: cardData.attendees || [],
+                            publishState: cardData.publishState || 'draft'
+                        });
+                    });
+                    
+                    return newCol;
+                });
+                
+                console.log(`✅ Board importiert im '${mode}'-Modus:`, newBoard.name);
+                
+            } else if (mode === 'overwrite') {
+                // OVERWRITE-Mode: Nutze IDs aus Datei (direkt ersetzen)
+                newBoard = this.reconstructBoard(boardData);
+                console.log('✅ Board importiert im "overwrite"-Modus:', newBoard.name);
+            } else {
+                return { success: false, error: 'Unknown import mode' };
+            }
+
+            return { success: true, board: newBoard };
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('❌ Import-Fehler:', errorMessage);
+            return { 
+                success: false, 
+                error: `Failed to import board: ${errorMessage}` 
+            };
+        }
+    }
+
+    /**
+     * Speichert ein importiertes Board dauerhaft
+     * @param board - Das zu speichernde Board
+     * @param overwriteExisting - true: Ersetze aktuelles Board. false: Speichere als separates Board
+     */
+    public saveImportedBoard(board: Board, overwriteExisting = false): string {
+        if (typeof window === 'undefined') {
+            throw new Error('Cannot save board: not in browser environment');
+        }
+
+        try {
+            const data = board.getContextData(true);
+            const storageKey = `kanban-${board.id}`;
+            
+            // Speichere das Board
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            
+            // Registriere die Board-ID wenn es nicht bereits existiert
+            if (!this.boardIds.includes(board.id)) {
+                this.boardIds = [...this.boardIds, board.id];
+                this.saveBoardIds();
+            }
+            
+            // Wenn overwriteExisting: Setze aktuelles Board
+            if (overwriteExisting) {
+                this.board = board;
+                this._columnOrder = board.columns.map(c => c.id);
+                this.updateTrigger++;
+            }
+            
+            console.log('✅ Importiertes Board gespeichert:', storageKey);
+            return board.id;
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('❌ Fehler beim Speichern des importierten Boards:', errorMessage);
+            throw error;
+        }
+    }
+
+    /**
+     * Stellt alle Boards aus einer backup.json Datei wieder her
+     * Erkennt automatisch Backup-Format mit "boards" Array
+     * 
+     * @param jsonString - JSON-String aus backup.json (mit oder ohne Metadaten)
+     * @returns { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] }
+     */
+    public restoreAllBoardsFromBackup(
+        jsonString: string
+    ): { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] } {
+        const result = {
+            success: false,
+            imported: 0,
+            failed: 0,
+            boards: [] as Board[],
+            errors: [] as string[]
+        };
+
+        try {
+            const backupData = JSON.parse(jsonString);
+            
+            // Erkenne Backup-Format: muss "boards" Array haben
+            const boardsArray = backupData.boards || [];
+            
+            if (!Array.isArray(boardsArray) || boardsArray.length === 0) {
+                result.errors.push('Invalid backup format: missing boards array');
+                return result;
+            }
+
+            console.log(`🔄 Stelle ${boardsArray.length} Boards wieder her...`);
+
+            // Importiere jedes Board
+            for (let i = 0; i < boardsArray.length; i++) {
+                try {
+                    const boardData = boardsArray[i];
+                    
+                    // Validiere Board-Struktur
+                    if (!boardData.id || !boardData.name) {
+                        throw new Error(`Board ${i + 1}: missing id or name`);
+                    }
+
+                    // Rekonstruiere Board im OVERWRITE-Mode (nutze original IDs aus backup)
+                    const board = this.reconstructBoard(boardData);
+                    
+                    // Speichere Board dauerhaft
+                    const storageKey = `kanban-${board.id}`;
+                    localStorage.setItem(storageKey, JSON.stringify(boardData));
+                    
+                    // Registriere Board-ID
+                    if (!this.boardIds.includes(board.id)) {
+                        this.boardIds = [...this.boardIds, board.id];
+                    }
+                    
+                    result.boards.push(board);
+                    result.imported++;
+                    
+                    console.log(`✅ Board ${i + 1}/${boardsArray.length}: ${board.name}`);
+                    
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    result.errors.push(`Board ${i + 1}: ${errorMsg}`);
+                    result.failed++;
+                    console.error(`❌ Board ${i + 1} fehlgeschlagen:`, errorMsg);
+                }
+            }
+
+            // Speichere alle Board-IDs persistiert
+            this.saveBoardIds();
+            
+            result.success = result.imported > 0;
+            
+            console.log(`✅ Backup-Wiederherstellung abgeschlossen: ${result.imported} OK, ${result.failed} Fehler`);
+            
+            return result;
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            result.errors.push(`Failed to restore backup: ${errorMessage}`);
+            console.error('❌ Backup-Wiederherstellungsfehler:', errorMessage);
+            return result;
+        }
+    }
+
     public exportData(): any {
         return this.board.getContextData(true);
     }
 
+    /**
+     * Erzeugt einen share-link für ein Board. Komprimiert mit jsoncrush und erzeugt URL
+     * @param boardId - id des zu teilenden Boards
+     * @returns { url: string, tokenSize: number }
+     */
+    public async generateShareLink(boardId: string, includeMetadata = true): Promise<{ url: string; tokenSize: number }> {
+        // Finde Board (falls boardId ist current board, nutze this.board)
+        let board: Board | undefined;
+        if (this.board.id === boardId) board = this.board;
+        else {
+            // versuche aus storage zu laden
+            const raw = localStorage.getItem(`kanban-${boardId}`);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    board = this.reconstructBoard(parsed);
+                } catch (e) {
+                    console.warn('generateShareLink: Failed to parse stored board', e);
+                }
+            }
+        }
+
+        if (!board) throw new Error(`Board ${boardId} not found`);
+
+        const payload = includeMetadata
+            ? { version: '1.0', exportedAt: generateTimestamp(), board: board.getContextData(true) }
+            : board.getContextData(true);
+
+        const json = JSON.stringify(payload);
+    const crushed = jsoncrush.crush(json);
+    const token = encodeURIComponent(crushed);
+
+        // Read optional limit from static config (if available)
+        let maxTokenSize = 200000; // default
+        try {
+            const resp = await fetch('/config.json');
+            if (resp.ok) {
+                const cfg = await resp.json();
+                if (cfg?.shareTokenMaxSize) maxTokenSize = Number(cfg.shareTokenMaxSize) || maxTokenSize;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        if (token.length > maxTokenSize) {
+            throw new Error(`Share token too large (${token.length} > ${maxTokenSize}). Use Export/Backup instead.`);
+        }
+
+        const url = `${window.location.origin}/cardsboard?import=${token}`;
+        return { url, tokenSize: token.length };
+    }
+
+    /**
+     * Dekodiert und validiert einen Share-Token (jsoncrush)
+     * 
+     * Der Token-Flow:
+     * 1. generateShareLink() crusht JSON und encodiert mit encodeURIComponent
+     * 2. URL enthält: ?import=<ENCODED_CRUSHED>
+     * 3. Browser decodiert automatisch bei params.get('import')
+     * 4. parseShareToken() erhält den CRUSHED (aber DECODIERT) Token
+     * 5. Wir uncrushen direkt!
+     */
+    public parseShareToken(token: string): any {
+        try {
+            // Der Token ist bereits decodiert vom Browser!
+            // Er ist CRUSHED aber nicht URI-encoded mehr
+            const json = jsoncrush.uncrush(token);
+            const parsed = JSON.parse(json);
+            
+            console.log('✅ Token erfolgreich geparst:', {
+                hasBoard: !!parsed.board,
+                boardName: parsed.board?.name || 'N/A',
+                boardColumns: parsed.board?.columns?.length || 0,
+                version: parsed.version || 'unknown'
+            });
+            
+            return parsed;
+        } catch (error) {
+            console.error('❌ Token-Parsing Fehler:', error);
+            const msg = error instanceof Error ? error.message : String(error);
+            throw new Error(`Invalid share token: ${msg}`);
+        }
+    }
+
+    /**
+     * Importiert direkt aus einem Share-Token (crushed). Gibt das Import-Ergebnis zurück.
+     */
+    public importFromShareToken(token: string, mode: 'merge'|'new'|'overwrite' = 'merge') {
+        try {
+            const data = this.parseShareToken(token);
+            
+            // ⚠️ parseShareToken() gibt entweder { version, board: {...} } oder direkt board zurück
+            // Je nachdem, was in generateShareLink() als Payload gespeichert wurde
+            const actualData = data.board || data;
+            
+            // Wenn Backup-Format (Array von Boards)
+            if (Array.isArray(actualData.boards)) {
+                return this.restoreAllBoardsFromBackup(JSON.stringify(actualData));
+            }
+            
+            // Single board
+            const jsonString = JSON.stringify(actualData);
+            return this.importBoardFromJson(jsonString, mode);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error('❌ importFromShareToken Fehler:', message);
+            return { success: false, error: message };
+        }
+    }
+
     public importData(data: any): void {
-        // Einfache Import-Funktionalität (kann erweitert werden)
+        // Legacy-Methode: Nur für interne Tests
         if (data && data.columns) {
-            // Hier würde eine vollständige Import-Logik implementiert werden
-            console.log('Importing board data...', data);
+            console.log('Legacy importData() aufgerufen. Nutze stattdessen importBoardFromJson()');
         }
     }
 }

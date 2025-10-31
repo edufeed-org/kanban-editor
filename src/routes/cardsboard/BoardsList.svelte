@@ -8,6 +8,7 @@
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
+    import ImportPopover from '$lib/components/ImportPopover.svelte';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -194,6 +195,9 @@
             {/each}
         {/if}
     </div>
+    <!-- Import Popover -->
+    <ImportPopover />
+
 </div>
 
 <style>
