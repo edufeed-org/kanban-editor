@@ -161,20 +161,20 @@ export function threeWayMerge(
     const theirVal = (their as any)[field];
 
     // Niemand ändert das Feld (deep equality)
-    if (deepEqual(myVal, baseVal) && deepEqual(theirVal, baseVal)) {
+    if (isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       continue;
     }
 
     changedFields++;
 
     // Nur ich ändere (deep equality checks)
-    if (!deepEqual(myVal, baseVal) && deepEqual(theirVal, baseVal)) {
+    if (!isDeepStrictEqual(myVal, baseVal) && isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = myVal;
       continue;
     }
 
     // Nur sie ändern (deep equality checks)
-    if (deepEqual(myVal, baseVal) && !deepEqual(theirVal, baseVal)) {
+    if (isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       (merged as any)[field] = theirVal;
       continue;
     }
@@ -189,7 +189,7 @@ export function threeWayMerge(
     }
 
     // BEIDE ändern das Feld (deep equality checks)
-    if (!deepEqual(myVal, baseVal) && !deepEqual(theirVal, baseVal)) {
+    if (!isDeepStrictEqual(myVal, baseVal) && !isDeepStrictEqual(theirVal, baseVal)) {
       conflictFields++;
 
       // Spezial: String-Felder → Versuche Diff-Merge
