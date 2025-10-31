@@ -176,7 +176,7 @@ export class SettingsStore {
    * Kann auch manuell aufgerufen werden zum Force-Reload
    */
   public async initializeConfig(forceOverwrite: boolean = false): Promise<void> {
-    const config = this.getConfig();
+    const config = await this.getConfig();
     if (config) {
       this.mergeConfigIntoSettings(config, forceOverwrite);
       return;
