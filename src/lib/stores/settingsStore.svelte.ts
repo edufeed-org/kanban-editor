@@ -190,8 +190,10 @@ export class SettingsStore {
   public async getConfig() {
     // Versuch 1: Synchron aus localStorage (wenn bereits gecacht)
     const cachedConfig = this.loadConfigSync();
-    console.log('📦 Config aus localStorage geladen');
-    if (cachedConfig) return cachedConfig;
+    if (cachedConfig) {
+      console.log('📦 Config aus localStorage geladen');
+      return cachedConfig;
+    }
 
     // Versuch 2: Asynchron laden (beim ersten App-Start)
     try {
