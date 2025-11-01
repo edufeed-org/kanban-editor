@@ -19,7 +19,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 6. 🔴 **NEU:** Code → Docs Sync (11-Punkt DoD bei Code-Änderungen)
 7. 🔴 **NEU:** Docs → Code Sync (Audit bei Docs-Updates)
 
-**Migration:** [`archive/DOCUMENTATION-RULES-v2.md`](./archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+**Migration:** [`DOCUMENTATION-RULES-v2.md`](./DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
 
 **Nicht befolgen = PR REJECTED! 📖⚠️**
 

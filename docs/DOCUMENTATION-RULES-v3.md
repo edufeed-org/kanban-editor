@@ -36,31 +36,31 @@ DOKUMENTATIONS-UPDATE → Code MUSS aktualisiert werden
 
 ### 🔴 RULE #1: `/docs/` ist die SOURCE OF TRUTH
 
-**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES.md
+**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES-v2.md
 
 ---
 
 ### 🔴 RULE #2: EIN THEMA = EIN DOKUMENT
 
-**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES.md
+**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES-v2.md
 
 ---
 
 ### 🟡 RULE #3: STRUKTUR jedes Dokuments
 
-**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES.md
+**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES-v2.md
 
 ---
 
 ### 🟢 RULE #4: Neue Docs in `/docs/_INDEX.md` verlinken
 
-**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES.md
+**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES-v2.md
 
 ---
 
 ### 🟢 RULE #5: Ordner-Struktur
 
-**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES.md
+**Unverändert von v2.0** - Siehe DOCUMENTATION-RULES-v2.md
 
 ---
 

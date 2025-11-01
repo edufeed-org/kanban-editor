@@ -20,7 +20,6 @@
 
 **Schnell-Referenz:**
 - **Vollständige Regeln:** [`docs/DOCUMENTATION-RULES-v3.md`](../docs/DOCUMENTATION-RULES-v3.md)
-- **Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](../docs/archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
 - **ROADMAP:** [`docs/COLLABORATION/ROADMAP.md`](../docs/COLLABORATION/ROADMAP.md) v2.5
 
 **Bei jeder Code-Änderung:**
