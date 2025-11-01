@@ -64,12 +64,13 @@
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
     
-    // 🔥 Sync Status - reactive derived from SyncManager
+    // 🔥 Sync Status - reactive derived from SyncManager with initialization check
     let syncStatus = $derived.by(() => {
         try {
-            return getSyncManager().status;
+            const syncManager = getSyncManager();
+            return syncManager?.status || { isOnline: true, isSyncing: false, queuedEvents: 0 };
         } catch (error) {
-            console.warn('⚠️ Could not get sync status:', error);
+            // SyncManager not initialized yet - return default status
             return { isOnline: true, isSyncing: false, queuedEvents: 0 };
         }
     });
@@ -151,7 +152,6 @@
     // Beim Mount: Theme initialisieren und Systemänderungen überwachen
     import { onMount } from 'svelte';
     import * as Field from "$lib/components/ui/field/index.js";
-    import SheetDescription from '$lib/components/ui/sheet/sheet-description.svelte';
     import LinkIcon from "@lucide/svelte/icons/link";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";

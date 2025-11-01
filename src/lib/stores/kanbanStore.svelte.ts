@@ -174,7 +174,8 @@ export class BoardStore {
      */
     public dispose(): void {
         try {
-            getSyncManager().dispose();
+            const syncManager = getSyncManager();
+            if (syncManager) syncManager.dispose();
             console.log('✅ SyncManager disposed');
         } catch (error) {
             console.warn('⚠️ SyncManager dispose warning:', error);
