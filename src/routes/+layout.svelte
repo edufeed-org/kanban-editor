@@ -2,12 +2,13 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
-  import { setContext, onMount } from 'svelte';
+  import { setContext, onMount, onDestroy } from 'svelte';
   import { Toaster } from "svelte-sonner";
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
   import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
+  import { boardStore } from '$lib/stores/kanbanStore.svelte';
 
 
   const { children } = $props();
@@ -24,7 +25,15 @@
 
   const authStore = initializeAuth(ndk);
 
-	onMount(async () => {
+  onMount(async () => {
+    // Initialize BoardStore with NDK for Nostr publishing
+    try {
+      boardStore.initializeNostr(ndk);
+      console.log('✅ BoardStore initialized with NDK - publishing ready');
+    } catch (error) {
+      console.error('⚠️ Failed to initialize BoardStore:', error);
+    }
+
     const oidcUserManager = await initializeOidcUserManager(window.location.href)
     // Only process OIDC callback if URL contains 'code' and 'state' parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -44,6 +53,16 @@
 
   // Create reactive pool store for Svelte 5
   createReactivePool(ndk);
+
+  // Cleanup on component destroy
+  onDestroy(() => {
+    try {
+      boardStore.dispose();
+      console.log('✅ BoardStore cleaned up');
+    } catch (error) {
+      console.warn('⚠️ Cleanup warning:', error);
+    }
+  });
 
   setContext('ndk', ndk);
   setContext('authStore', authStore);

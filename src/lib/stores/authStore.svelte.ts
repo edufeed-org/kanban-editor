@@ -5,6 +5,7 @@ import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { get } from 'svelte/store'
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { settingsStore } from "./settingsStore.svelte.js";
+import { getSyncManager } from "./syncManager.svelte.js";
 
 export interface UserSession {
   pubkey: string;
@@ -56,6 +57,14 @@ export class AuthStore {
       this.currentUser.profile = await user.fetchProfile() || undefined
 
       await this.saveSession(user, "nip07");
+      
+      // 🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after NIP-07 login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -88,6 +97,14 @@ export class AuthStore {
       this.currentUser = user;
 
       await this.saveSession(user, "nsec");
+      
+      // 🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after nsec login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -127,6 +144,14 @@ export class AuthStore {
       this.currentUser = user;
 
       await this.saveSession(user, "nsec");
+      
+      // 🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after OIDC login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -145,6 +170,14 @@ export class AuthStore {
     this.ndk.signer = undefined;
 
     this.sessionStore.set(null);
+    
+    // 🔄 Clear SyncManager signer on logout
+    try {
+      getSyncManager().updateSigner(undefined);
+      console.log('✅ SyncManager signer cleared after logout');
+    } catch (error) {
+      console.warn('⚠️ SyncManager signer clear warning:', error);
+    }
 
     console.log("🚪 User logged out");
   }
