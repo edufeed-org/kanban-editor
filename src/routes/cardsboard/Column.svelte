@@ -75,6 +75,7 @@
 	let editName = $state(name);
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
+	let popoverKey = $state(0); // Force re-mount key
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -391,10 +392,23 @@
 		}
 	}} role="button" tabindex="0">
 		<div class="flex items-center justify-between w-full">
-			<div class="column-title">{name}</div>
+			<!-- Drag Handle + Title -->
+			<div class="flex items-center gap-2 flex-1 cursor-grab active:cursor-grabbing" title="Spalte verschieben" data-dnd-handle>
+				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+					<path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
+				</svg>
+				<div class="column-title">{name}</div>
+			</div>
 			
-			<!-- Header Toolbar: Add Card + Menu -->
-			<div class="flex items-center gap-1">
+			<!-- Header Toolbar: Add Card + Menu (click-only, no drag) -->
+			<div 
+				class="flex items-center gap-1" 
+				role="toolbar" 
+				tabindex="0"
+				aria-label="Spalten-Aktionen"
+				onpointerdown={(e) => e.stopPropagation()} 
+				onmousedown={(e) => e.stopPropagation()}
+			>
 				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
@@ -432,14 +446,21 @@
 				</Button>
 				{/if}
 				<!-- Spalten-Aktionen Popover -->
-				<Popover.Root bind:open={popoverOpen}>
-					{#if authStore.isAuthenticated }
-					<Popover.Trigger title="Spalten-Optionen"
+				{#if authStore.isAuthenticated }
+				<Popover.Root bind:open={popoverOpen} onOpenChange={(open) => {
+					console.log('🔍 Popover open state changed:', open);
+					popoverOpen = open;
+				}}>
+					<Popover.Trigger 
+						title="Spalten-Optionen"
 						class="popover-trigger-ignore inline-flex items-center justify-center h-8 w-8 btn transition-all"
+						onclick={(e) => {
+							console.log('🖱️ Popover trigger clicked');
+							e.stopPropagation();
+						}}
 					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
 					</Popover.Trigger>
-					{/if}
 					<Popover.Content align="end" class="w-64">
 						<div class="space-y-4">
 							<div class="space-y-2">
@@ -494,6 +515,7 @@
 						</div>
 					</Popover.Content>
 				</Popover.Root>
+				{/if}
 			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
