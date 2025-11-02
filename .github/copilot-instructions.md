@@ -180,6 +180,21 @@ export class BoardStore {
 - ✅ updateTrigger als Fallback-Dependency
 - ✅ `.svelte.ts` Datei-Endung NICHT optional!
 
+**🆕 WICHTIG:** Nicht alle Stores nutzen `persisted()`!
+
+→ **Siehe:** [`docs/GUIDES/STORE-PATTERNS.md`](../docs/GUIDES/STORE-PATTERNS.md)
+
+**Store-Persisten-Strategien:**
+
+| Store | Pattern | Grund |
+|-------|---------|-------|
+| **AuthStore** | `persisted()` | Single Key, einfache Session-Daten |
+| **BoardStore** | Manual localStorage | Dynamische Keys (`kanban-${id}`), Klassen |
+| **SettingsStore** | Manual localStorage | Async config.json merge, Smart-Merge |
+
+**Regel:** Nutze `persisted()` NUR für Simple Stores mit statischen Keys!
+Für Complex Stores (Multi-Board, Klassen, Async) → Manual localStorage ist richtig!
+
 ### 2. **BoardModel Klassen-Pattern**
 
 **Datei:** `src/lib/classes/BoardModel.ts`

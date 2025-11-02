@@ -123,6 +123,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Settings & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
+| **🆕 Store-Patterns Guide** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) | 20 min | ✅ Neu (02.11.) - persisted() vs Manual localStorage
 | **🆕 Dokumentations-Governance v3.0** | [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md) | 20 min | ✅ Neu (29.10.)
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Tests Status** | [`TESTS/STATUS.md`](./TESTS/STATUS.md) | 15 min |
@@ -143,6 +144,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | Learning Resource | Dokument |
 |---|---|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
+| **🆕 Store-Patterns Guide (20 min)** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
 | **🆕 Theme Buttons & UI Guidelines (25 min)** | [`GUIDES/THEME-BUTTONS.md`](./GUIDES/THEME-BUTTONS.md) |
 | **Store-Übersicht (30 min)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) |
@@ -197,6 +199,7 @@ docs/
 │   ├── QUICK-START.md
 │   ├── SIDEBAR-LOGIN-DOCS-INDEX.md
 │   ├── SIDEBAR-LOGIN-INTEGRATION.md
+│   ├── STORE-PATTERNS.md               ← ✅ Neu (02.11.) - persisted() vs Manual!
 │   ├── TEST-RUNNER.md
 │   └── THEME-BUTTONS.md  ← ✅ Neu (30.10.)
 │

@@ -36,9 +36,9 @@
   "shareTokenMaxSize": 200000,
 
   "defaults": {
-    "columns": ["To Do", "In Progress", "Done"],
-    "boardPublishState": "draft",
-    "cardPublishState": "draft"
+    "columns": ["Material", "Einstieg","Erarbeitung", "Sicherung"],
+    "boardPublishState": "private",
+    "cardPublishState": "private"
   },
 
   "sidebar": {

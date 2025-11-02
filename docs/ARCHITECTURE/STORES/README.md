@@ -25,6 +25,28 @@
 
 ---
 
+## 🎯 Store-Pattern Guide (NEU!)
+
+**⚠️ WICHTIG:** Nicht alle Stores verwenden dasselbe Persistierungs-Pattern!
+
+→ **Lese ZUERST:** [`GUIDES/STORE-PATTERNS.md`](../../GUIDES/STORE-PATTERNS.md) (20 min)
+
+**Schnell-Übersicht:**
+
+| Store | Persisten-Muster | Wann verwenden | Grund |
+|-------|------------------|-----------------|-------|
+| **AuthStore** | `persisted()` | ✅ Session-Daten | Statischer Key, einfache Daten |
+| **BoardStore** | Manual localStorage | ✅ Multi-Board | Dynamische Keys (`kanban-${id}`) |
+| **SettingsStore** | Manual localStorage | ✅ Config-Merge | Async config.json Integration |
+
+**Design-Entscheidung:**
+- ✅ **persisted()** = Simple Stores (AuthStore)
+- ✅ **Manual localStorage** = Complex Stores (BoardStore, SettingsStore)
+
+**Nicht automatisch alles zu persisted() konvertieren!** Lies Pattern-Guide für Details.
+
+---
+
 ## 🎯 Quick Start für Entwickler
 
 ### Store nutzen in Komponenten
