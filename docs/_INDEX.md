@@ -86,21 +86,24 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ### 🧠 KI / ML Developer
 **Ziel:** KI-Integration, Chat-Klasse, Kontext-Serialisierung
 
-**Learning Path:**
-1. **🆕 AI Collaborative Generation (Pattern):** [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) (GitHub Copilot-ähnlicher Workflow)
-2. **ChatStore API:** [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) (Konversation speichern)
-3. **ChatBotStore Design:** [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) (Board-Generierung, Phase 3.2-3.3)
-4. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
-5. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
-6. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
+**⚠️ WICHTIG:** Agent-spezifische Stores (ChatStore, ChatBotStore, UserPreferencesStore) wurden in den **`feature/agent-chatstore`** Branch verschoben für isolierte Entwicklung.
+
+**Learning Path (Main Branch):**
+1. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
+2. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
+3. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
+
+**Learning Path (feature/agent-chatstore Branch):**
+1. **🆕 AI Collaborative Generation (Pattern):** `ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md` (GitHub Copilot-ähnlicher Workflow)
+2. **ChatStore API:** `ARCHITECTURE/STORES/CHATSTORE.md` (Konversation speichern)
+3. **ChatBotStore Design:** `ARCHITECTURE/STORES/CHATBOTSTORE.md` (Board-Generierung, Phase 3.2-3.3)
+4. **UserPreferencesStore:** `ARCHITECTURE/STORES/USERPREFERENCESSTORE.md` (Cross-board Learning)
+5. **AI-Actions Reference:** `ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md` (11 Action Types)
 
 **Kritische Methoden:**
 - `Card.getContextData()` — KI-Kontext serialisieren
 - `Chat.sendPromptToAI()` — Payload für KI vorbereiten
 - `Chat.processAIAction()` — KI-Antworten verarbeiten
-- `ChatStore.getAIContext()` — Konversations-Context für LLM
-- `ChatBotStore.generateBoardStructure()` — Struktur-Vorschläge
-- `ChatBotStore.applyBoardStructure()` — Struktur persistieren
 
 ---
 
@@ -273,7 +276,7 @@ docs/
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (10 Dateien)
+### ARCHITECTURE/ (8 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -281,17 +284,20 @@ docs/
 | [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
 | [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
 | [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
-| **AGENT/** | **KI-Integration Pattern (2 Dateien)** | |
-| [`AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) | 🆕 **NEU (03.11.)**: GitHub Copilot-ähnlicher Workflow (ChatStore + ChatBotStore) | ✅ Neu (03.11.) |
-| [`AGENT/AI-ACTIONS-REFERENCE.md`](./ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md) | 🆕 **NEU (03.11.)**: Vollständige Referenz aller 11 AI-Action Types | ✅ Neu (03.11.) |
-| **STORES/** | **Store-Architektur (7 Dateien)** | |
+| **STORES/** | **Store-Architektur (4 Dateien)** | |
 | [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (29.10.) |
 | [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (29.10.) |
 | [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (29.10.) |
-| [`STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | KI-Chatbot Integration (TODO Phase 3) | ✅ Neu (29.10.) |
 | [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (29.10.) |
 | [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
-| [`STORES/USERPREFERENCESSTORE.md`](./ARCHITECTURE/STORES/USERPREFERENCESSTORE.md) | 🆕 **NEU (03.11.)**: Cross-Board Learning & User-Präferenzen | ✅ Neu (03.11.) |
+
+**⚠️ Agent-Features verschoben:**
+- **AGENT/** Directory → **`feature/agent-chatstore`** Branch
+- **STORES/CHATSTORE.md** → **`feature/agent-chatstore`** Branch
+- **STORES/CHATBOTSTORE.md** → **`feature/agent-chatstore`** Branch
+- **STORES/USERPREFERENCESSTORE.md** → **`feature/agent-chatstore`** Branch
+
+→ Siehe Branch `feature/agent-chatstore` für AI-Agent-spezifische Implementierungen
 
 ### GUIDES/ (8 Dateien)
 
