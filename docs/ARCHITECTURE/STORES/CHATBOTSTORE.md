@@ -286,10 +286,49 @@ private gatherContext(
 ### AIAction-Interface
 
 ```typescript
+/**
+ * Alle möglichen Aktionen, die die KI ausführen kann
+ */
 export interface AIAction {
-    type: 'add_card' | 'update_card' | 'move_card' | 'split_card';
+    type: 
+        // Card Operations
+        | 'add_card' 
+        | 'update_card' 
+        | 'move_card' 
+        | 'split_card' 
+        | 'delete_card'
+        // Column Operations
+        | 'add_column'
+        | 'update_column'
+        | 'move_column'
+        | 'delete_column'
+        // Board Operations (optional)
+        | 'update_board'
+        | 'reorder_cards'      // Batch: Karten in Spalte neu ordnen
+        | 'reorder_columns';   // Batch: Spalten neu ordnen
+    
     [key: string]: any;
 }
+
+/**
+ * Payload-Typen pro Action-Type
+ */
+export type AIActionPayload =
+    // Card Operations
+    | { type: 'add_card'; columnId: string; cardProps: Partial<CardProps> }
+    | { type: 'update_card'; cardId: string; updates: Partial<CardProps> }
+    | { type: 'move_card'; cardId: string; fromColumnId: string; toColumnId: string }
+    | { type: 'split_card'; columnId: string; sourceCardId: string; newCards: CardProps[] }
+    | { type: 'delete_card'; cardId: string; columnId: string }
+    // Column Operations
+    | { type: 'add_column'; columnProps: Partial<ColumnProps> }
+    | { type: 'update_column'; columnId: string; updates: Partial<ColumnProps> }
+    | { type: 'move_column'; columnId: string; toPosition: number }
+    | { type: 'delete_column'; columnId: string }
+    // Board Operations
+    | { type: 'update_board'; updates: Partial<BoardProps> }
+    | { type: 'reorder_cards'; columnId: string; cardIds: string[] }
+    | { type: 'reorder_columns'; columnIds: string[] };
 ```
 
 ### Action-Processing
@@ -303,21 +342,22 @@ export class Chat {
         
         try {
             switch (action.type) {
-                case 'split_card': {
-                    const column = this.board.findColumn(action.columnId);
-                    if (!column) throw new Error('Column not found');
-                    
-                    column.splitCard(action.sourceCardId, action.newCards);
-                    console.log('✅ Card split successfully');
-                    break;
-                }
-                
+                // ==================== CARD OPERATIONS ====================
                 case 'add_card': {
                     const column = this.board.findColumn(action.columnId);
                     if (!column) throw new Error('Column not found');
                     
                     column.addCard(action.cardProps);
                     console.log('✅ Card added');
+                    break;
+                }
+                
+                case 'update_card': {
+                    const result = this.board.findCardAndColumn(action.cardId);
+                    if (!result) throw new Error('Card not found');
+                    
+                    result.card.update(action.updates);
+                    console.log('✅ Card updated');
                     break;
                 }
                 
@@ -331,12 +371,97 @@ export class Chat {
                     break;
                 }
                 
-                case 'update_card': {
-                    const result = this.board.findCardAndColumn(action.cardId);
-                    if (!result) throw new Error('Card not found');
+                case 'split_card': {
+                    const column = this.board.findColumn(action.columnId);
+                    if (!column) throw new Error('Column not found');
                     
-                    result.card.update(action.updates);
-                    console.log('✅ Card updated');
+                    column.splitCard(action.sourceCardId, action.newCards);
+                    console.log('✅ Card split successfully');
+                    break;
+                }
+                
+                case 'delete_card': {
+                    const column = this.board.findColumn(action.columnId);
+                    if (!column) throw new Error('Column not found');
+                    
+                    column.deleteCard(action.cardId);
+                    console.log('✅ Card deleted');
+                    break;
+                }
+                
+                // ==================== COLUMN OPERATIONS ====================
+                case 'add_column': {
+                    this.board.addColumn(action.columnProps);
+                    console.log('✅ Column added');
+                    break;
+                }
+                
+                case 'update_column': {
+                    const column = this.board.findColumn(action.columnId);
+                    if (!column) throw new Error('Column not found');
+                    
+                    column.update(action.updates);
+                    console.log('✅ Column updated');
+                    break;
+                }
+                
+                case 'move_column': {
+                    const column = this.board.findColumn(action.columnId);
+                    if (!column) throw new Error('Column not found');
+                    
+                    // Remove from current position
+                    this.board.columns = this.board.columns.filter(c => c.id !== action.columnId);
+                    
+                    // Insert at new position
+                    const newPosition = Math.max(0, Math.min(action.toPosition, this.board.columns.length));
+                    this.board.columns = [
+                        ...this.board.columns.slice(0, newPosition),
+                        column,
+                        ...this.board.columns.slice(newPosition)
+                    ];
+                    
+                    console.log('✅ Column moved');
+                    break;
+                }
+                
+                case 'delete_column': {
+                    this.board.deleteColumn(action.columnId);
+                    console.log('✅ Column deleted');
+                    break;
+                }
+                
+                // ==================== BOARD OPERATIONS ====================
+                case 'update_board': {
+                    // Update Board-Properties
+                    if (action.updates.name) this.board.name = action.updates.name;
+                    if (action.updates.description) this.board.description = action.updates.description;
+                    if (action.updates.tags) this.board.tags = action.updates.tags;
+                    
+                    console.log('✅ Board updated');
+                    break;
+                }
+                
+                case 'reorder_cards': {
+                    const column = this.board.findColumn(action.columnId);
+                    if (!column) throw new Error('Column not found');
+                    
+                    // Reorder cards based on provided IDs
+                    const orderedCards = action.cardIds
+                        .map(id => column.findCard(id))
+                        .filter(card => card !== undefined);
+                    
+                    column.cards = orderedCards;
+                    console.log('✅ Cards reordered');
+                    break;
+                }
+                
+                case 'reorder_columns': {
+                    const reorderedColumns = action.columnIds
+                        .map(id => this.board.findColumn(id))
+                        .filter(col => col !== undefined);
+                    
+                    this.board.columns = reorderedColumns;
+                    console.log('✅ Columns reordered');
                     break;
                 }
                 
@@ -672,5 +797,26 @@ export const chatBotStore = new ChatBotStore();
 | **REGEL 5** | AI-Actions werden geloggt | 🟡 MEDIUM |
 | **REGEL 6** | triggerUpdate() nach AI-Action | 🔴 CRITICAL |
 | **REGEL 7** | LLM antwortet im OpenAI-Format | 🔴 CRITICAL |
+| **REGEL 8** | Alle AI-Actions prozessieren (siehe Switch) | 🔴 CRITICAL |
+
+### Unterstützte AI-Actions (11 Typen)
+
+**Card Operations (5):**
+- `add_card` — Neue Karte zu Spalte hinzufügen
+- `update_card` — Karten-Properties aktualisieren
+- `move_card` — Karte zwischen Spalten verschieben
+- `split_card` — Karte aufteilen (1 → mehrere)
+- `delete_card` — Karte löschen ✅ NEU!
+
+**Column Operations (4):**
+- `add_column` — Neue Spalte hinzufügen ✅ NEU!
+- `update_column` — Spalten-Name/Farbe ändern ✅ NEU!
+- `move_column` — Spalte verschieben ✅ NEU!
+- `delete_column` — Spalte löschen ✅ NEU!
+
+**Board Operations (2):**
+- `update_board` — Board-Name/Description ändern ✅ NEU!
+- `reorder_cards` — Karten in Spalte umsortieren ✅ NEU!
+- `reorder_columns` — Spalten neu ordnen ✅ NEU!
 
 **Status:** ⏳ Phase 3.1-3.3 (ROADMAP.md) — Noch zu implementieren!

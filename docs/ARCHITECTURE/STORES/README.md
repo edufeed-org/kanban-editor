@@ -20,6 +20,7 @@
 
 | Store | Datei | Status | Phase | Dokumentation |
 |-------|-------|--------|-------|---------------|
+| **UserPreferencesStore** | `userPreferencesStore.svelte.ts` | ⏳ TODO | Phase 3.1B | [USERPREFERENCESSTORE.md](./USERPREFERENCESSTORE.md) ✨ **NEU (03.11.)** |
 | **SyncManager** | `syncManager.ts` | ⏳ TODO | Phase 1.2 | [SYNCMANAGER.md](./SYNCMANAGER.md) |
 | **ChatBotStore** | `chatBotStore.svelte.ts` | ⏳ TODO | Phase 3.1-3.3 | [CHATBOTSTORE.md](./CHATBOTSTORE.md) |
 

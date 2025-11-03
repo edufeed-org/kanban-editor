@@ -286,6 +286,18 @@ Dann neuer Store.
 - ❌ Klassen-Instanzen werden zerstört
 - ❌ Keine async Initialization
 
+### F: Sollten wir BaseStore für bestehende Stores nutzen? ← **NEU 02.11.2025**
+
+**A:** ❌ **NEIN!** Alle bestehenden Stores bleiben wie sie sind:
+- **BoardStore** → Custom (Multi-Board, Export/Import zu komplex)
+- **ChatStore** → Custom (Memory Ranking, AI Context zu speziell)
+- **AuthStore** → Custom (NDK Integration, async profile fetching)
+- **SettingsStore** → Custom (async config.json loading)
+
+**BaseStore ist nur für NEUE einfache Stores** (z.B. NotificationStore, RecentBoardsStore in Phase 2+)
+
+Siehe: [`BASESTORES.md`](../ARCHITECTURE/STORES/BASESTORES.md) für Details
+
 ---
 
 ## 📌 Zusammenfassung
@@ -297,6 +309,9 @@ Dann neuer Store.
 | Externe Config laden | Manual localStorage | Async Init |
 | KI-Chat-Verlauf | Manual localStorage | Klassen-Hierarchie |
 | Nostr-Event-Queue | Manual localStorage | Komplexe Logik |
+| **Neue einfache Stores (Phase 2+)** | **BaseComplexStore/BaseSimpleStore** | **DRY Pattern (~30 Zeilen gespart)** |
+
+**🚨 WICHTIG:** Bestehende Stores (Board, Chat, Auth, Settings) NICHT zu BaseStore migrieren!
 
 ---
 
@@ -311,11 +326,18 @@ Dann neuer Store.
 
 ## 📝 Versionshistorie
 
-| Version | Fokus | Zeilen |
-|---------|-------|--------|
-| v1.0 | Vollständige Analyse (mit Historie) | 1072 |
-| v2.0 | **Praktische Zukunftsentwicklung** | **~300** |
-| v3.0 | **Maximal praktisch + fokussiert** | **~200** |
+| Version | Fokus | Zeilen | Datum |
+|---------|-------|--------|-------|
+| v1.0 | Vollständige Analyse (mit Historie) | 1072 | 01.11.2025 |
+| v2.0 | **Praktische Zukunftsentwicklung** | **~300** | 02.11.2025 |
+| v3.0 | **Maximal praktisch + fokussiert** | **~200** | 02.11.2025 |
+| v3.1 | **BaseStore Klarstellung** | **~210** | 02.11.2025 |
+
+**v3.1 Changes:**
+- ✅ FAQ erweitert: "Sollten wir BaseStore nutzen?" → **NEIN für bestehende Stores**
+- ✅ Zusammenfassung erweitert mit BaseStore-Zeile
+- ✅ Verweis auf BASESTORES.md hinzugefügt
+- ✅ Klarstellung: Bestehende Stores bleiben wie sie sind
 
 **v3.0 Changes:**
 - ✅ ChatStore als Real-World Beispiel für Manual Pattern
@@ -329,4 +351,4 @@ Dann neuer Store.
 
 **Status:** ✅ PRAKTISCH & FOKUSSIERT  
 **Zielgruppe:** Entwickler die JETZT Stores bauen  
-**Aktualisierung:** 02.11.2025
+**Aktualisierung:** 02.11.2025 (v3.1)

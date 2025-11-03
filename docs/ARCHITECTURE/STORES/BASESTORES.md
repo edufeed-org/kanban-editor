@@ -309,44 +309,79 @@ export class AuthStore extends BaseSimpleStore<UserSession | null> {
 
 ---
 
-## 📋 Migration Checklist (Phase 1.6)
+## � Wann BaseStore nutzen? (Decision Tree für NEUE Stores)
 
-### Schritt 1: BaseStore.ts erstellen (~10 Min)
-
-```typescript
-- [ ] src/lib/stores/BaseStore.ts erstellen
-- [ ] IStore interface definieren
-- [ ] IPersistentStore<T> interface definieren
-- [ ] BaseComplexStore<T> abstract class implementieren
-- [ ] BaseSimpleStore<T> abstract class implementieren
-- [ ] Export all interfaces/classes
+```
+Neue Store nötig?
+    ↓
+Braucht localStorage?
+    ├─ NEIN → Nutze plain $state (kein BaseStore)
+    └─ JA → Weiter
+         ↓
+Hat komplexe Logik? (NDK, Async, Klassen?)
+    ├─ JA → Custom Implementation (wie ChatStore, BoardStore)
+    └─ NEIN → Weiter
+         ↓
+Ist es ein einfacher Key-Value Store?
+    ├─ JA → Nutze persisted() (schnellste Lösung)
+    └─ NEIN → Weiter
+         ↓
+Dynamische Storage Keys? (z.B. chat-${id})
+    ├─ JA → Nutze BaseComplexStore ✅
+    └─ NEIN → Nutze BaseSimpleStore ✅
 ```
 
-### Schritt 2: ChatStore migrieren (~5 Min)
+**Beispiele für ZUKÜNFTIGE BaseStore-Nutzung:**
+
+### Beispiel 1: NotificationStore (BaseSimpleStore)
 
 ```typescript
-- [ ] Import BaseComplexStore
-- [ ] extends BaseComplexStore<ChatSession | null>
-- [ ] Implementiere getStorageKey()
-- [ ] Implementiere getData()
-- [ ] Implementiere loadFromStorage()
-- [ ] Entferne triggerUpdate(), saveToStorage(), clear() methods
-- [ ] Tests laufen lassen
+export class NotificationStore extends BaseSimpleStore<Notification[]> {
+    protected getStorageKey(): string {
+        return 'notifications';
+    }
+    
+    protected getDefaultValue(): Notification[] {
+        return [];
+    }
+    
+    // Custom methods
+    public addNotification(text: string): void {
+        const notifications = [...this.data, { id: Date.now(), text }];
+        this.update(notifications);
+    }
+}
 ```
 
-### Schritt 3: BoardStore migrieren (~5 Min)
+### Beispiel 2: RecentBoardsStore (BaseComplexStore)
 
 ```typescript
-- [ ] Import BaseComplexStore
-- [ ] extends BaseComplexStore<Board>
-- [ ] Implementiere getStorageKey()
-- [ ] Implementiere getData()
-- [ ] Implementiere loadFromStorage()
-- [ ] Entferne duplicated methods
-- [ ] Tests laufen lassen
+export class RecentBoardsStore extends BaseComplexStore<BoardMetadata[]> {
+    private recentBoards = $state<BoardMetadata[]>(this.loadFromStorage());
+    
+    protected getStorageKey(): string {
+        return 'recent-boards';
+    }
+    
+    protected getData(): BoardMetadata[] {
+        return this.recentBoards;
+    }
+    
+    protected loadFromStorage(): BoardMetadata[] {
+        // Custom loading logic
+        return [];
+    }
+    
+    public addBoard(id: string, name: string): void {
+        this.recentBoards = [{ id, name, lastAccessed: Date.now() }, ...this.recentBoards];
+        this.triggerUpdate();
+    }
+}
 ```
 
-### Schritt 4: AuthStore migrieren (~5 Min)
+---
+
+## ❌ KEINE Migration bestehender Stores (Stand 02.11.2025)
 
 ```typescript
 - [ ] Import BaseSimpleStore
@@ -400,6 +435,50 @@ BaseComplexStore ist **NICHT geeignet** für:
    - < 50 Zeilen Code
    - Overhead würde Nutzen übersteigen
 
+4. **⚠️ BESTEHENDE STORES (WICHTIG!)** ← **NEU 02.11.2025**
+   - **BoardStore** → ❌ NICHT migrieren
+     - Zu komplex: Multi-Board Management, Dynamic Keys (`kanban-${id}`)
+     - Spezielle Logik: Klassen-Rekonstruktion, Export/Import
+     - ~200 Zeilen unique Code würden nicht reduziert
+   - **ChatStore** → ❌ NICHT migrieren  
+     - Perfekt wie es ist: Klarer Manual Pattern
+     - Spezielle Logik: Memory Ranking, AI Context Preparation
+     - Migration würde Code SCHWERER lesbar machen
+   - **AuthStore** → ❌ NICHT migrieren
+     - Zu komplex: NDK Integration, Signer Management
+     - Async Operations: Profile fetching, Session restore
+     - Nutzt bereits `persisted()` für Session
+   - **SettingsStore** → ❌ NICHT migrieren
+     - Async config.json loading + localStorage merge
+     - Theme Detection (system preferences)
+     - Migration würde mehr Probleme schaffen als lösen
+
+**Fazit:** BaseStore ist für **ZUKÜNFTIGE einfache Stores** gedacht, NICHT für Refactoring bestehender Stores!
+
+---
+
+## 🎯 Wann BaseStores wirklich Sinn machen
+
+**Nutze BaseComplexStore NUR für:**
+
+1. **Neue einfache Stores** (Phase 2+)
+   - NotificationStore
+   - ThemeStore (wenn von SettingsStore getrennt)
+   - KeyboardShortcutStore
+   - RecentBoardsStore
+
+2. **Wenn 5+ neue Stores** hinzukommen
+   - Dann lohnt sich die Abstraktion
+   - Jetzt: Nur 4 Stores, alle sehr unterschiedlich
+
+**Aktueller Stand (02.11.2025):**
+- ✅ ChatStore: Fertig, bleibt wie es ist
+- ✅ BoardStore: Fertig, bleibt wie es ist  
+- ✅ AuthStore: Fertig, bleibt wie es ist
+- ✅ SettingsStore: Fertig, bleibt wie es ist
+
+**→ BaseStore Pattern = Referenz für ZUKÜNFTIGE Stores, nicht für Refactoring!** 🎯
+
 ---
 
 ## 📚 Related Documentation
@@ -415,10 +494,28 @@ BaseComplexStore ist **NICHT geeignet** für:
 
 | Version | Datum | Änderungen |
 |---------|-------|------------|
+| 1.1 | 02.11.2025 | ⚠️ **KLARSTELLUNG:** Keine Migration bestehender Stores! BaseStore nur für NEUE einfache Stores in Zukunft |
 | 1.0 | 02.11.2025 | Initial concept für Phase 1.6+ |
 
 ---
 
+## 📋 Zusammenfassung
+
+**Was ist BaseStore?**
+- Abstract Base Classes für DRY localStorage-Logik
+- Reduziert ~30 Zeilen Boilerplate pro Store
+
+**Wann nutzen?**
+- ✅ Für NEUE einfache Stores (Phase 2+)
+- ✅ Wenn 5+ neue Stores mit ähnlicher Logik
+- ❌ NICHT für bestehende komplexe Stores
+
+**Bestehende Stores:**
+- BoardStore → Bleibt Custom (zu komplex)
+- ChatStore → Bleibt Custom (perfekt wie es ist)
+- AuthStore → Bleibt Custom (NDK Integration)
+- SettingsStore → Bleibt Custom (async config)
+
 **Status:** 🔮 FUTURE CONCEPT  
-**Implementation:** Ab Phase 1.6 (wenn 3+ Manual Stores existieren)  
+**Implementation:** Ab Phase 1.6+ (nur für NEUE Stores)  
 **Zeit bis Implementation:** ~2-3 Wochen (nach Phase 1.5 Export/Import)
