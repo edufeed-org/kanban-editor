@@ -139,6 +139,9 @@
   .border-muted{
     border-color: var(--muted)!important;
   }
+  button.outline-none{
+    background-color: var(--primary);
+  }
 }
 
 /* Button Hover Effects - Specific to shadcn-svelte variants */
@@ -195,6 +198,10 @@ button.bg-destructive:hover {
 
 .text-destructive-foreground {
   color: var(--destructive-foreground);
+}
+
+.card-content button {
+  background-color: var(--primary)!important;
 }
 
 @layer base {

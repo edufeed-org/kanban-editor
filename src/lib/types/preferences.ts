@@ -43,6 +43,12 @@ export interface PreferencesState {
 	preferences: TeachingPreference[];
 	version: string; // z.B. "1.0" für Migrations-Kompatibilität
 	lastExport?: string; // ISO 8601 - Letzter Export-Zeitstempel
+	learnedPatterns?: Record<string, {
+		confidence: number;
+		usageCount: number;
+		lastUsed: string;
+		patternHash: string;
+	}>; // Gelernte AI-Action Patterns (ChatStore Integration - Phase 3)
 }
 
 /**

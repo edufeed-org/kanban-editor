@@ -96,7 +96,7 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="max-w-2xl">
+  <Dialog.Content class="max-w-lg min-w-[800px]">
     <Dialog.Header>
       <Dialog.Title class="flex items-center gap-2">
         <BrainIcon class="h-5 w-5" />
@@ -166,24 +166,24 @@
     <Separator />
     
     <!-- Action Buttons -->
-    <Dialog.Footer class="flex justify-between">
-      <!-- Cancel Button (links) -->
-      <Button variant="ghost" onclick={handleCancel}>
+    <Dialog.Footer class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+      <!-- Cancel Button -->
+      <Button variant="ghost" onclick={handleCancel} class="mt-2 sm:mt-0">
         <XIcon class="mr-2 h-4 w-4" />
         Abbrechen
       </Button>
       
-      <!-- Execute Buttons (rechts) -->
-      <div class="flex gap-2">
-        <Button variant="outline" onclick={handleExecuteOnce}>
-          <PlayIcon class="mr-2 h-4 w-4" />
-          Einmalig ausführen
-        </Button>
-        <Button variant="default" onclick={handleConfirm}>
-          <CheckIcon class="mr-2 h-4 w-4" />
-          Ausführen & Lernen
-        </Button>
-      </div>
+      <!-- Execute Once Button -->
+      <Button variant="outline" onclick={handleExecuteOnce}>
+        <PlayIcon class="mr-2 h-4 w-4" />
+        Einmalig ausführen
+      </Button>
+      
+      <!-- Execute & Learn Button -->
+      <Button variant="default" onclick={handleConfirm}>
+        <CheckIcon class="mr-2 h-4 w-4" />
+        Ausführen & Lernen
+      </Button>
     </Dialog.Footer>
     
   </Dialog.Content>

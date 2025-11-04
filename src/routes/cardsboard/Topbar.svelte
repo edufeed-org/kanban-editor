@@ -314,10 +314,10 @@
             <Dialog.Root bind:open={dialogOpen}>
                 {#if authStore.isAuthenticated }
                 <Dialog.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground" 
                     title="Board-Einstellungen"
                 >
-                    <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+                    <EllipsisVerticalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
                 {/if}
                 <Dialog.Content class="max-w-md">
@@ -439,15 +439,11 @@
         <div class="flex items-center gap-2">
             <!-- Settings Dialog -->
             <Dialog.Root>
-                <Dialog.Trigger>
-                    <Button 
-                        variant="ghost"
-                        size="icon"
-                        title="Einstellungen"
-                        class="h-8 w-8 bg-secondary"
-                    >
-                        <SlidersHorizontalIcon class="h-4 w-4" />
-                    </Button>
+                <Dialog.Trigger
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground"
+                    title="Einstellungen"
+                >
+                    <SlidersHorizontalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
                 <Dialog.Content class="max-w-5xl max-h-[90vh] overflow-y-auto">
                     <Dialog.Header>

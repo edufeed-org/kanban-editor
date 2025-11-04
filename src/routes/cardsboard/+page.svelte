@@ -6,6 +6,7 @@ import BoardsList from "./BoardsList.svelte";
 import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
 import Topbar from "./Topbar.svelte";
 import ImportPopover from "$lib/components/ImportPopover.svelte";
+import AIPanel from "./AIPanel.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { Separator } from "$lib/components/ui/separator/index.js";
@@ -256,52 +257,16 @@ import { toast } from "svelte-sonner";
 			<Resizable.Handle withHandle />
 		{/if}
 		
-		<!-- Rechte Sidebar (KI & Debug) - nur rendern wenn offen -->
+		<!-- Rechte Sidebar (KI-Agent) - nur rendern wenn offen -->
 		{#if rightSidebarOpen}
 			<Resizable.Pane 
-				defaultSize={15} 
-				minSize={10} 
-				maxSize={40} 
-				class="border-l bg-muted/10 overflow-y-auto"
+				defaultSize={20} 
+				minSize={15} 
+				maxSize={50} 
+				class="border-l bg-background"
 				onResize={(size: number) => { rightSidebarSize = size; }}
 			>
-				<div class="p-4 space-y-6">
-					<div>
-						<h2 class="text-sm font-semibold mb-2">Board Status</h2>
-						<div class="space-y-1 text-xs text-muted-foreground">
-							<p>Spalten: {stats.columnsCount}</p>
-							<p>Karten: {stats.cardsCount}</p>
-							{#if stats.selectedColumn}
-								<p class="text-primary">Spalte: {stats.selectedColumn}</p>
-							{/if}
-							{#if stats.selectedCard}
-								<p class="text-primary">Karte: {stats.selectedCard}</p>
-							{/if}
-							{#if selectedCardHierarchy}
-								<div class="mt-3 pt-3 border-t border-muted">
-									<p class="text-xs font-semibold text-foreground mb-2">📍 Kartenhierarchie:</p>
-									<div class="space-y-1">
-										<p><span class="font-semibold">Board:</span> {selectedCardHierarchy.boardId}</p>
-										<p><span class="font-semibold">Spalte:</span> {selectedCardHierarchy.columnName}</p>
-										<p><span class="font-semibold">Karte:</span> {selectedCardHierarchy.cardName}</p>
-									</div>
-								</div>
-							{/if}
-						</div>
-					</div>
-					
-					<Separator />
-					
-					<div>
-						<h2 class="text-sm font-semibold mb-2">KI-Agent</h2>
-						<p class="text-xs text-muted-foreground mb-3">
-							Der KI-Agent kann Inhalte organisieren und Verbesserungen vorschlagen.
-						</p>
-						<Button variant="outline" class="w-full bg-primary" size="sm">
-							KI-Agent aktivieren
-						</Button>
-					</div>
-				</div>
+				<AIPanel boardId={currentBoardId} />
 			</Resizable.Pane>
 		{/if}
 	</Resizable.PaneGroup>

@@ -454,6 +454,96 @@ export class ChatStore {
 		// Aktuell: Keine Aktion (nur Erfolge werden gelernt)
 		console.log(`Action rejected: ${patternHash}`);
 	}
+
+	// ============================================================================
+	// LLM Integration (OpenAI-kompatible API)
+	// ============================================================================
+
+	/**
+	 * Sendet eine Nachricht an das konfigurierte LLM
+	 * Nutzt OpenAI-kompatible API (funktioniert mit Ollama, OpenAI, etc.)
+	 * 
+	 * @param userMessage - Die Nachricht des Users
+	 * @param boardContext - Optional: Board-Kontext für AI (Karten, Spalten, etc.)
+	 * @returns AI Response als String
+	 */
+	public async sendToLLM(
+		userMessage: string,
+		boardContext?: any
+	): Promise<{ content: string; error?: string }> {
+		const settings = settingsStore.settings;
+
+		// Check if LLM is configured
+		if (!settings.llmModel || !settings.llmBaseUrl) {
+			return {
+				content: '',
+				error: '❌ LLM nicht konfiguriert. Bitte in Settings LLM-Model und Base URL eintragen.'
+			};
+		}
+
+		try {
+			// Prepare messages for OpenAI-compatible API
+			const messages = [
+				{
+					role: 'system',
+					content: settings.llmSystemPrompt
+				},
+				// Add previous messages for context (last 5)
+				...this.messages
+					.slice(-5)
+					.map((msg) => ({
+						role: msg.role === 'user' ? 'user' : 'assistant',
+						content: msg.content
+					})),
+				{
+					role: 'user',
+					content: boardContext
+						? `${userMessage}\n\nBoard Context:\n${JSON.stringify(boardContext, null, 2)}`
+						: userMessage
+				}
+			];
+
+			console.log('🤖 Sending to LLM:', settings.llmBaseUrl, settings.llmModel);
+
+			// Call OpenAI-compatible API
+			const response = await fetch(`${settings.llmBaseUrl}/v1/chat/completions`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					// Only add Authorization if API key is present (not needed for local Ollama)
+					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {})
+				},
+				body: JSON.stringify({
+					model: settings.llmModel,
+					messages,
+					temperature: 0.7,
+					max_tokens: 1000
+				})
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error('❌ LLM API Error:', response.status, errorText);
+				return {
+					content: '',
+					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+				};
+			}
+
+			const data = await response.json();
+			const content = data.choices?.[0]?.message?.content || '';
+
+			console.log('✅ LLM Response received:', content.slice(0, 100) + '...');
+
+			return { content };
+		} catch (error) {
+			console.error('❌ LLM Error:', error);
+			return {
+				content: '',
+				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+			};
+		}
+	}
 }
 
 // ============================================================================

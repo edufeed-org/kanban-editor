@@ -42,6 +42,17 @@
     }
 	});
 
+  // Aktualisiere Board-Author wenn User sich einloggt
+  $effect(() => {
+    if (authStore.isAuthenticated) {
+      console.log('🔐 User eingeloggt, aktualisiere Board-Author...');
+      // Dynamischer Import um circular dependency zu vermeiden
+      import('$lib/stores/kanbanStore.svelte').then(({ boardStore }) => {
+        boardStore.updateBoardAuthor();
+      });
+    }
+  });
+
   // Create reactive pool store for Svelte 5
   createReactivePool(ndk);
 

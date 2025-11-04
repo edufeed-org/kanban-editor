@@ -57,6 +57,14 @@ export class UserPreferencesStore {
 
 	private preferencesState = $state<PreferencesState>(this.loadFromStorage());
 	private updateTrigger = $state(0);
+	
+	/**
+	 * Gelernte AI-Action Patterns (ChatStore Integration)
+	 * 
+	 * Key: patternHash
+	 * Value: LearnedPattern mit confidence, usageCount, lastUsed
+	 */
+	private learnedPatterns = $state<Map<string, LearnedPattern>>(new Map());
 
 	// ========================================
 	// 2️⃣ DERIVED REACTIVE VALUES
@@ -124,6 +132,11 @@ export class UserPreferencesStore {
 		// Note: In tests, localStorage is mocked via vitest-setup-server.ts
 		// In SSR, localStorage doesn't exist - catch block handles it
 		try {
+			// SSR Check: localStorage doesn't exist on server
+			if (typeof localStorage === 'undefined') {
+				return this.getDefaultState();
+			}
+			
 			const stored = localStorage.getItem('user-preferences');
 			if (!stored) {
 				return this.getDefaultState();
@@ -135,6 +148,11 @@ export class UserPreferencesStore {
 			if (parsed.version !== '1.0') {
 				console.warn('⚠️ UserPreferences version mismatch, using defaults');
 				return this.getDefaultState();
+			}
+
+			// Lade learnedPatterns aus localStorage (Record → Map conversion)
+			if (parsed.learnedPatterns) {
+				this.learnedPatterns = new Map(Object.entries(parsed.learnedPatterns));
 			}
 
 			return parsed;
@@ -150,7 +168,18 @@ export class UserPreferencesStore {
 		// In browser, localStorage exists natively
 		// No window check needed - if localStorage doesn't exist, catch block handles it
 		try {
-			const serialized = JSON.stringify(this.preferencesState);
+			// SSR Check: localStorage doesn't exist on server
+			if (typeof localStorage === 'undefined') {
+				return;
+			}
+			
+			// Convert learnedPatterns Map → Record für JSON serialization
+			const stateWithPatterns: PreferencesState = {
+				...this.preferencesState,
+				learnedPatterns: Object.fromEntries(this.learnedPatterns)
+			};
+			
+			const serialized = JSON.stringify(stateWithPatterns);
 			localStorage.setItem('user-preferences', serialized);
 		} catch (error) {
 			console.error('❌ Failed to save user preferences:', error);
@@ -455,6 +484,15 @@ export class UserPreferencesStore {
 	 */
 	public resetPattern(patternHash: string): void {
 		this.deletePreference(patternHash);
+	}
+
+	/**
+	 * Gibt alle gelernten Patterns zurück
+	 * 
+	 * @returns Map mit allen gelernten Patterns
+	 */
+	public getAllLearnedPatterns(): Map<string, LearnedPattern> {
+		return this.learnedPatterns;
 	}
 
 	/**

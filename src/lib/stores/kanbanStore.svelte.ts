@@ -428,25 +428,30 @@ export class BoardStore {
     
     /**
      * Hilfsmethode: Gibt Author sicher zurück (auch wenn authStore noch nicht initialisiert)
+     * 
+     * WICHTIG: Während SSR ist authStore noch nicht verfügbar!
+     * Der Store wird erst im Browser via +layout.svelte initialisiert.
      */
     private getSafeAuthor(): string {
         try {
-            const pubkey = authStore?.getPubkey();
-            const isAuth = authStore?.isAuthenticated;
+            // SSR Check: authStore existiert nur im Browser
+            if (typeof window === 'undefined') {
+                return 'anonymous';
+            }
             
-            console.log('🔍 getSafeAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
+            // Nutze sichere Methode die null zurückgibt statt Error zu werfen
+            const pubkey = authStore?.getPubkeySafe();
             
             if (pubkey) {
                 console.log('✅ Author gefunden:', pubkey.slice(0, 16) + '...');
                 return pubkey;
             }
             
-            console.warn('⚠️ Kein pubkey verfügbar, nutze "anonymous" als Author');
+            console.warn('⚠️ authStore nicht initialisiert oder kein User eingeloggt, nutze "anonymous"');
             return 'anonymous';
         } catch (error) {
-            // authStore noch nicht initialisiert
-            console.error('❌ authStore Fehler:', error);
-            console.warn('⚠️ authStore noch nicht verfügbar, nutze "anonymous" als Author');
+            // Fallback für unerwartete Fehler
+            console.error('❌ Unerwarteter Fehler in getSafeAuthor():', error);
             return 'anonymous';
         }
     }
@@ -1822,6 +1827,42 @@ export class BoardStore {
         
         // Delegation an LearningManager
         return boardLearningManager.createColumnWithTemplate(columnName, applyTemplate, minConfidence);
+    }
+
+    /**
+     * Aktualisiert den Author des aktuellen Boards
+     * 
+     * Wird von +layout.svelte nach erfolgreichem Login aufgerufen,
+     * um "anonymous" durch den echten User zu ersetzen.
+     * 
+     * @returns true wenn erfolgreich aktualisiert
+     */
+    public updateBoardAuthor(): boolean {
+        try {
+            const pubkey = authStore?.getPubkeySafe();
+            
+            if (!pubkey) {
+                console.warn('⚠️ Kein Pubkey verfügbar, Author bleibt unverändert');
+                return false;
+            }
+            
+            // Nur updaten wenn aktueller Author "anonymous" ist
+            if (this.board.author === 'anonymous') {
+                console.log('🔄 Aktualisiere Board-Author von "anonymous" zu:', pubkey.slice(0, 16) + '...');
+                this.board.author = pubkey;
+                this.triggerUpdate();
+                this.publishToNostr();
+                return true;
+            }
+            
+            // Board-Author ist bereits gesetzt
+            const currentAuthor = this.board.author || 'unknown';
+            console.log('✅ Board-Author ist bereits gesetzt:', currentAuthor.length > 16 ? currentAuthor.slice(0, 16) + '...' : currentAuthor);
+            return false;
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren des Board-Authors:', error);
+            return false;
+        }
     }
 }
 
