@@ -61,6 +61,7 @@ export class SyncManager {
   private eventQueue = $state<QueuedEvent[]>([]);
   private lastSyncTime = $state<number | undefined>(undefined);
   private nextRetryTime = $state<number | undefined>(undefined);
+  private signer = $state<NDKSigner | undefined>(undefined); // 🔴 FIX: Must be $state!
 
   // ========== Configuration ==========
   private config: Required<SyncConfig>;
@@ -77,9 +78,10 @@ export class SyncManager {
    */
   constructor(
     private ndk: NDK,
-    private signer: NDKSigner | undefined,
+    initialSigner: NDKSigner | undefined,
     config: SyncConfig = {}
   ) {
+    this.signer = initialSigner; // 🔄 Set via $state variable
     this.config = {
       maxRetries: config.maxRetries ?? 3,
       backoffMultiplier: config.backoffMultiplier ?? 2,
@@ -104,15 +106,24 @@ export class SyncManager {
 
   /**
    * Update signer (called when user logs in/out)
+   * 🔴 CRITICAL FIX: Must be $state variable to trigger reactivity!
    */
   public updateSigner(signer: NDKSigner | undefined): void {
-    this.signer = signer;
-    console.log('[SyncManager] Signer updated');
+    const wasSigner = this.signer ? 'yes' : 'no';
+    const isSigner = signer ? 'yes' : 'no';
+    
+    this.signer = signer;  // 🔄 Update reactive state
+    
+    console.log(`[SyncManager] Signer updated: ${wasSigner} → ${isSigner}`);
     
     // Try to sync if we now have a signer
     if (signer && this.isOnline && this.eventQueue.length > 0) {
-      console.log('[SyncManager] New signer available, attempting sync...');
+      console.log(`[SyncManager] ✅ New signer available! Syncing ${this.eventQueue.length} queued event(s)...`);
       this.syncQueue();
+    } else if (signer && this.eventQueue.length === 0) {
+      console.log('[SyncManager] New signer available, but no queued events');
+    } else if (!signer) {
+      console.log('[SyncManager] Signer cleared (logged out)');
     }
   }
 
