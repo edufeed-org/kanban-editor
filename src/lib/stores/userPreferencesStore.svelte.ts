@@ -99,11 +99,8 @@ export class UserPreferencesStore {
 	// ========================================
 
 	private loadFromStorage(): PreferencesState {
-		if (typeof window === 'undefined') {
-			// SSR Safety
-			return this.getDefaultState();
-		}
-
+		// Note: In tests, localStorage is mocked via vitest-setup-server.ts
+		// In SSR, localStorage doesn't exist - catch block handles it
 		try {
 			const stored = localStorage.getItem('user-preferences');
 			if (!stored) {
@@ -120,6 +117,7 @@ export class UserPreferencesStore {
 
 			return parsed;
 		} catch (error) {
+			// Handles both SSR (no localStorage) and corrupted data
 			console.error('❌ Failed to load user preferences:', error);
 			return this.getDefaultState();
 		}

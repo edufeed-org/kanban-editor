@@ -21,11 +21,13 @@ describe('UserPreferencesStore', () => {
 
 	describe('1. Initialization & Storage', () => {
 		it('should initialize with empty preferences', () => {
-			expect(store.preferences).toEqual([]);
+			expect(store.getPreferences()).toEqual([]);
 		});
 
 		it('should load from localStorage if exists', () => {
-			// Setup: Save data to localStorage
+			// Clear and setup: Save data to localStorage BEFORE creating store
+			localStorage.clear();
+			
 			const mockData = {
 				preferences: [
 					{
@@ -46,14 +48,17 @@ describe('UserPreferencesStore', () => {
 
 			// Create new store (should load from localStorage)
 			const newStore = new UserPreferencesStore();
-			expect(newStore.preferences.length).toBe(1);
-			expect(newStore.preferences[0].key).toBe('TEST_KEY');
+			const prefs = newStore.getPreferences();
+			
+			expect(prefs.length).toBe(1);
+			expect(prefs[0].key).toBe('TEST_KEY');
+			expect(prefs[0].confidence).toBe(0.5);
 		});
 
 		it('should use default state on corrupted localStorage', () => {
 			localStorage.setItem('user-preferences', 'invalid-json');
 			const newStore = new UserPreferencesStore();
-			expect(newStore.preferences).toEqual([]);
+			expect(newStore.getPreferences()).toEqual([]);
 		});
 	});
 
@@ -238,8 +243,11 @@ describe('UserPreferencesStore', () => {
 	describe('7. getAIContext()', () => {
 		beforeEach(() => {
 			// Setup preferences
+			// COLUMNS: 3 calls = 0.5 + 0.1 + 0.1 = 0.7 (meets threshold)
 			store.learnPreference('structure', 'COLUMNS', ['A', 'B'], 'board-1');
 			store.learnPreference('structure', 'COLUMNS', ['A', 'B'], 'board-2');
+			store.learnPreference('structure', 'COLUMNS', ['A', 'B'], 'board-3');
+			// Others: 0.5 (below threshold)
 			store.learnPreference('workflow', 'START_WITH', 'brainstorm', 'board-1');
 			store.learnPreference('pedagogy', 'PRINCIPLE', 'constructivism', 'board-1');
 		});
@@ -282,11 +290,11 @@ describe('UserPreferencesStore', () => {
 	describe('8. deletePreference()', () => {
 		it('should delete existing preference', () => {
 			store.learnPreference('structure', 'KEY', 'value', 'board-1');
-			expect(store.preferences).toHaveLength(1);
+			expect(store.getPreferences()).toHaveLength(1);
 
 			const deleted = store.deletePreference('KEY');
 			expect(deleted).toBe(true);
-			expect(store.preferences).toHaveLength(0);
+			expect(store.getPreferences()).toHaveLength(0);
 		});
 
 		it('should return false for non-existent key', () => {
@@ -308,10 +316,10 @@ describe('UserPreferencesStore', () => {
 		it('should clear all preferences', () => {
 			store.learnPreference('structure', 'KEY_1', 'value1', 'board-1');
 			store.learnPreference('workflow', 'KEY_2', 'value2', 'board-1');
-			expect(store.preferences).toHaveLength(2);
+			expect(store.getPreferences()).toHaveLength(2);
 
 			store.clear();
-			expect(store.preferences).toHaveLength(0);
+			expect(store.getPreferences()).toHaveLength(0);
 		});
 
 		it('should persist clear to localStorage', () => {
@@ -342,7 +350,7 @@ describe('UserPreferencesStore', () => {
 
 		it('should import with "replace" mode', () => {
 			store.learnPreference('structure', 'KEY_3', 'value3', 'board-1');
-			expect(store.preferences).toHaveLength(3);
+			expect(store.getPreferences()).toHaveLength(3);
 
 			const exported = store.exportPreferences();
 			store.clear();
@@ -350,7 +358,7 @@ describe('UserPreferencesStore', () => {
 
 			const success = store.importPreferences(exported, 'replace');
 			expect(success).toBe(true);
-			expect(store.preferences).toHaveLength(3); // Replaced with exported data
+			expect(store.getPreferences()).toHaveLength(3); // Replaced with exported data
 		});
 
 		it('should import with "merge" mode', () => {
@@ -359,7 +367,7 @@ describe('UserPreferencesStore', () => {
 
 			const success = store.importPreferences(exported, 'merge');
 			expect(success).toBe(true);
-			expect(store.preferences).toHaveLength(3); // 2 old + 1 new
+			expect(store.getPreferences()).toHaveLength(3); // 2 old + 1 new
 		});
 
 		it('should import with "overwrite" mode', () => {
