@@ -9,6 +9,9 @@ import {
 	type Memory,
 	type ConversationSummary
 } from '../classes/ChatModel.js';
+import type { AIAction } from '../classes/BoardModel.js';
+import { settingsStore } from './settingsStore.svelte.js';
+import { userPreferencesStore } from './userPreferencesStore.svelte.js';
 
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
@@ -296,6 +299,132 @@ export class ChatStore {
 		const summaries = this.session.summaries.map((s: ConversationSummary) => s.getContextData());
 
 		return { messages, memories, summaries };
+	}
+
+	// ============================================================================
+	// Learning System - Pattern Hashing & Confidence Management
+	// ============================================================================
+
+	/**
+	 * Generiert einen Pattern-Hash für eine AI-Action
+	 * Format: "type:cardCount_theme"
+	 * 
+	 * Beispiele:
+	 * - "split_card:1_task_breakdown"
+	 * - "add_card:0_brainstorming"
+	 * - "update_card:1_bug_fix"
+	 */
+	private generatePatternHash(action: AIAction): string {
+		const type = action.type;
+		
+		// Card Count (wenn vorhanden)
+		const cardCount = (action as any).newCards?.length 
+			|| (action as any).cards?.length 
+			|| (action as any).cardId ? 1 : 0;
+		
+		// Theme Detection (einfache Keyword-Analyse)
+		const theme = this.detectTheme(action);
+		
+		return `${type}:${cardCount}_${theme}`;
+	}
+
+	/**
+	 * Detektiert Theme/Kategorie einer Action basierend auf Content
+	 * Nutzt einfache Keyword-Matching
+	 */
+	private detectTheme(action: AIAction): string {
+		// Content zusammenfassen (aus allen relevanten Feldern)
+		const content = [
+			(action as any).heading || '',
+			(action as any).content || '',
+			(action as any).newCards?.map((c: any) => c.heading).join(' ') || '',
+			(action as any).cards?.map((c: any) => c.heading).join(' ') || ''
+		].join(' ').toLowerCase();
+
+		// Theme-Kategorien (erweiterbar)
+		const themes = {
+			task_breakdown: ['aufteilen', 'split', 'subtask', 'breakdown', 'teil'],
+			brainstorming: ['idee', 'brainstorm', 'sammeln', 'finden'],
+			bug_fix: ['bug', 'fehler', 'fix', 'problem', 'issue'],
+			feature_add: ['feature', 'funktion', 'add', 'neu', 'new'],
+			refactor: ['refactor', 'umstruktur', 'optimier'],
+			documentation: ['doku', 'documentation', 'readme', 'erkl'],
+			planning: ['plan', 'strategie', 'roadmap', 'meilenstein'],
+			research: ['research', 'recherche', 'analyse', 'untersuch']
+		};
+
+		// Finde passendes Theme
+		for (const [theme, keywords] of Object.entries(themes)) {
+			if (keywords.some(keyword => content.includes(keyword))) {
+				return theme;
+			}
+		}
+
+		return 'general';
+	}
+
+	/**
+	 * Verarbeitet eine AI-Action mit Learning System
+	 * Entscheidet ob Auto-Execute oder User-Confirmation nötig
+	 * 
+	 * @returns { shouldAutoExecute: boolean, patternHash: string, confidence: number }
+	 */
+	public async checkActionConfidence(action: AIAction): Promise<{
+		shouldAutoExecute: boolean;
+		patternHash: string;
+		confidence: number;
+		usageCount: number;
+	}> {
+		// Pattern Hash generieren
+		const patternHash = this.generatePatternHash(action);
+
+		// Confidence Threshold aus Settings
+		const threshold = settingsStore.settings.learningConfidenceThreshold;
+
+		// Gelernte Pattern-Daten holen
+		const learned = userPreferencesStore.getLearnedPattern(patternHash);
+
+		if (learned) {
+			// Pattern bekannt: Confidence prüfen
+			const shouldAutoExecute = learned.confidence >= threshold;
+
+			return {
+				shouldAutoExecute,
+				patternHash,
+				confidence: learned.confidence,
+				usageCount: learned.usageCount
+			};
+		} else {
+			// Pattern unbekannt: Initial Confidence
+			const initialConfidence = settingsStore.settings.learningInitialConfidence;
+
+			return {
+				shouldAutoExecute: initialConfidence >= threshold, // Sehr unwahrscheinlich bei Default 0.3
+				patternHash,
+				confidence: initialConfidence,
+				usageCount: 0
+			};
+		}
+	}
+
+	/**
+	 * Registriert eine erfolgreiche Action-Ausführung
+	 * Erhöht Confidence für das Pattern
+	 */
+	public recordActionSuccess(patternHash: string): void {
+		userPreferencesStore.recordPatternSuccess(patternHash);
+	}
+
+	/**
+	 * Registriert eine abgelehnte Action
+	 * Reduziert Confidence für das Pattern (optional)
+	 */
+	public recordActionRejection(patternHash: string): void {
+		// Optional: Confidence reduzieren bei Ablehnung
+		// userPreferencesStore.decreasePatternConfidence(patternHash);
+		
+		// Aktuell: Keine Aktion (nur Erfolge werden gelernt)
+		console.log(`Action rejected: ${patternHash}`);
 	}
 }
 

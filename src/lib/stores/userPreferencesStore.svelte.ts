@@ -27,6 +27,16 @@ export type {
 } from '$lib/types/preferences';
 
 /**
+ * Interface für gelernte Action-Patterns (ChatStore Pattern Hashing)
+ */
+export interface LearnedPattern {
+	confidence: number;
+	usageCount: number;
+	lastUsed: string;
+	patternHash: string;
+}
+
+/**
  * UserPreferencesStore - Globaler Store für Cross-Board Learning
  * 
  * Zweck: Lernt aus Benutzer-Korrekturen über alle Boards hinweg
@@ -369,6 +379,82 @@ export class UserPreferencesStore {
 	 */
 	public getPreference(key: string): TeachingPreference | undefined {
 		return this.preferencesState.preferences.find((p: TeachingPreference) => p.key === key);
+	}
+
+	// ========================================
+	// 6.5️⃣ PUBLIC API - PATTERN LEARNING (für ChatStore Integration)
+	// ========================================
+
+	/**
+	 * Holt ein gelerntes Action-Pattern
+	 * 
+	 * @param patternHash - Hash des Patterns (z.B. "split_card:1_task_breakdown")
+	 * @returns LearnedPattern oder undefined
+	 */
+	public getLearnedPattern(patternHash: string): LearnedPattern | undefined {
+		const pref = this.getPreference(patternHash);
+		if (!pref) return undefined;
+
+		return {
+			confidence: pref.confidence,
+			usageCount: pref.learnedFrom.length,
+			lastUsed: pref.lastUsed,
+			patternHash: pref.key
+		};
+	}
+
+	/**
+	 * Registriert eine erfolgreiche Pattern-Ausführung
+	 * Erhöht Confidence für das Pattern
+	 * 
+	 * @param patternHash - Hash des Patterns
+	 */
+	public recordPatternSuccess(patternHash: string): void {
+		const existing = this.getPreference(patternHash);
+		const now = new Date().toISOString();
+
+		if (existing) {
+			// Bestehend: Confidence erhöhen
+			const previousConfidence = existing.confidence;
+			const increment = 0.15; // Aus settingsStore.learningConfidenceIncrement (könnte dynamisch sein)
+			existing.confidence = Math.min(1.0, existing.confidence + increment);
+			existing.lastUsed = now;
+			existing.updatedAt = now;
+
+			// Usage Count via learnedFrom tracking
+			existing.learnedFrom = [
+				...existing.learnedFrom,
+				{ boardId: 'pattern-usage', boardName: undefined, timestamp: now }
+			];
+
+			this.triggerUpdate();
+		} else {
+			// Neu: Initial Confidence
+			const initialConfidence = 0.3; // Aus settingsStore.learningInitialConfidence
+			const newPreference: TeachingPreference = {
+				id: generateDTag(),
+				category: 'workflow', // Pattern sind "workflow" Präferenzen
+				key: patternHash,
+				value: { patternHash }, // Minimal value
+				confidence: initialConfidence,
+				learnedFrom: [{ boardId: 'pattern-usage', boardName: undefined, timestamp: now }],
+				lastUsed: now,
+				createdAt: now,
+				updatedAt: now
+			};
+
+			this.preferencesState.preferences = [...this.preferencesState.preferences, newPreference];
+			this.triggerUpdate();
+		}
+	}
+
+	/**
+	 * Setzt ein Pattern zurück (löscht es)
+	 * 
+	 * @param patternHash - Hash des zu löschenden Patterns
+	 */
+	public resetPattern(patternHash: string): void {
+		this.deletePreference(patternHash);
 	}
 
 	/**
