@@ -21,7 +21,7 @@
     import BotIcon from "@lucide/svelte/icons/bot";
     import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
     import TrashIcon from "@lucide/svelte/icons/trash";
-    import SettingsPanel from './SettingsPanel.svelte';
+    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
@@ -437,8 +437,25 @@
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-2">
-            <!-- Settings Panel -->
-            <SettingsPanel />
+            <!-- Settings Dialog -->
+            <Dialog.Root>
+                <Dialog.Trigger>
+                    <Button 
+                        variant="ghost"
+                        size="icon"
+                        title="Einstellungen"
+                        class="h-8 w-8 bg-secondary"
+                    >
+                        <SlidersHorizontalIcon class="h-4 w-4" />
+                    </Button>
+                </Dialog.Trigger>
+                <Dialog.Content class="max-w-5xl max-h-[90vh] overflow-y-auto">
+                    <Dialog.Header>
+                        <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
+                    </Dialog.Header>
+                    <SettingsPanel />
+                </Dialog.Content>
+            </Dialog.Root>
 
             <!-- Backup All Boards Button -->
             <Button 

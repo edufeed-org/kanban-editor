@@ -1,11 +1,14 @@
 {
-  "$comment": "Kanban Board Configuration",
+  "$comment": "Kanban Board Configuration - Single Source of Truth",
+  "$schema_version": "1.1.0",
+  "$last_updated": "2025-11-04",
 
   "ui": {
     "maxCardsBeforeScroll": 20,
     "alignColumnsToMaxHeight": true,
     "columnWidth": 350,
-    "theme": "auto"
+    "theme": "auto",
+    "$comment": "UI-spezifische Einstellungen für Layout und Darstellung"
   },
 
   "nostr": {
@@ -48,7 +51,15 @@
   
   "learning": {
     "useLearningManager": true,
-    "$comment": "Aktiviert das Cross-Board Learning System (UserPreferencesStore + BoardLearningManager). Lernt aus wiederholten Mustern wie Spaltenstrukturen, Labels, etc."
+    "confidenceThreshold": 0.7,
+    "initialConfidence": 0.3,
+    "confidenceIncrement": 0.15,
+    "minUsageCount": 3,
+    "$comment_useLearningManager": "Aktiviert das Cross-Board Learning System (UserPreferencesStore + BoardLearningManager)",
+    "$comment_confidenceThreshold": "Ab diesem Wert (0.0-1.0) werden KI-Aktionen automatisch ausgeführt ohne User-Confirmation",
+    "$comment_initialConfidence": "Startwert für neu gelernte Patterns",
+    "$comment_confidenceIncrement": "Um wie viel steigt Confidence bei jeder erfolgreichen Nutzung",
+    "$comment_minUsageCount": "Mindestanzahl Nutzungen bevor Pattern als 'learned' gilt"
   },
   
   "allow_demo_session": {

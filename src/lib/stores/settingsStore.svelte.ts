@@ -48,6 +48,13 @@ export interface SettingsState {
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
   showRightSidebar: boolean; // KI-Agent + Debug Sidebar
+
+  // Learning System Configuration
+  useLearningManager: boolean; // Aktiviert das Cross-Board Learning System
+  learningConfidenceThreshold: number; // Ab 0.7: Auto-Execute ohne Confirmation (0.0-1.0)
+  learningInitialConfidence: number; // Startwert für neue Patterns (Default: 0.3)
+  learningConfidenceIncrement: number; // Increment bei erfolgreicher Nutzung (Default: 0.15)
+  learningMinUsageCount: number; // Mindestanzahl Nutzungen für "learned" Status (Default: 3)
 }
 
 /**
@@ -87,6 +94,13 @@ export const DEFAULT_SETTINGS: SettingsState = {
   // Sidebar
   showLeftSidebar: true,
   showRightSidebar: true,
+
+  // Learning System
+  useLearningManager: true,
+  learningConfidenceThreshold: 0.7,
+  learningInitialConfidence: 0.3,
+  learningConfidenceIncrement: 0.15,
+  learningMinUsageCount: 3,
 };
 
 /**
@@ -337,6 +351,32 @@ export class SettingsStore {
 
       if (Object.keys(sidebarPartial).length > 0) {
         this.settings = { ...this.settings, ...sidebarPartial };
+      }
+    }
+
+    // Learning System Configuration
+    if (config.learning) {
+      const learningPartial: Partial<SettingsState> = {};
+      
+      if (config.learning.useLearningManager !== undefined) {
+        learningPartial.useLearningManager = config.learning.useLearningManager;
+      }
+      if (config.learning.confidenceThreshold !== undefined) {
+        learningPartial.learningConfidenceThreshold = config.learning.confidenceThreshold;
+      }
+      if (config.learning.initialConfidence !== undefined) {
+        learningPartial.learningInitialConfidence = config.learning.initialConfidence;
+      }
+      if (config.learning.confidenceIncrement !== undefined) {
+        learningPartial.learningConfidenceIncrement = config.learning.confidenceIncrement;
+      }
+      if (config.learning.minUsageCount !== undefined) {
+        learningPartial.learningMinUsageCount = config.learning.minUsageCount;
+      }
+
+      if (Object.keys(learningPartial).length > 0) {
+        this.settings = { ...this.settings, ...learningPartial };
+        console.log('📚 Learning configuration loaded from config.json');
       }
     }
 
@@ -778,6 +818,63 @@ export class SettingsStore {
       console.error('Failed to load config sync:', error);
       return null;
     }
+  }
+
+  /**
+   * ────────────────────────────────────────────
+   * Learning System Settings
+   * ────────────────────────────────────────────
+   */
+
+  public setUseLearningManager(value: boolean): void {
+    this.settings.useLearningManager = value;
+    this.saveToStorage();
+    console.log(`📚 Learning Manager ${value ? 'enabled' : 'disabled'}`);
+  }
+
+  public setLearningConfidenceThreshold(value: number): void {
+    if (value < 0 || value > 1) {
+      console.warn('Invalid confidence threshold (must be 0.0-1.0):', value);
+      return;
+    }
+    this.settings.learningConfidenceThreshold = value;
+    this.saveToStorage();
+    console.log(`📊 Confidence threshold set to ${value}`);
+  }
+
+  public setLearningInitialConfidence(value: number): void {
+    if (value < 0 || value > 1) {
+      console.warn('Invalid initial confidence (must be 0.0-1.0):', value);
+      return;
+    }
+    this.settings.learningInitialConfidence = value;
+    this.saveToStorage();
+    console.log(`🆕 Initial confidence set to ${value}`);
+  }
+
+  public setLearningConfidenceIncrement(value: number): void {
+    if (value < 0 || value > 1) {
+      console.warn('Invalid confidence increment (must be 0.0-1.0):', value);
+      return;
+    }
+    this.settings.learningConfidenceIncrement = value;
+    this.saveToStorage();
+    console.log(`📈 Confidence increment set to ${value}`);
+  }
+
+  public setLearningMinUsageCount(value: number): void {
+    if (value < 1) {
+      console.warn('Invalid min usage count (must be >= 1):', value);
+      return;
+    }
+    this.settings.learningMinUsageCount = value;
+    this.saveToStorage();
+    console.log(`🔢 Min usage count set to ${value}`);
+  }
+
+  // Convenience getter für Learning-Enabled Status
+  public get isLearningEnabled(): boolean {
+    return this.settings.useLearningManager;
   }
 
   /**
