@@ -45,6 +45,12 @@
     "showLeft": true,
     "showRight": true
   },
+  
+  "learning": {
+    "useLearningManager": true,
+    "$comment": "Aktiviert das Cross-Board Learning System (UserPreferencesStore + BoardLearningManager). Lernt aus wiederholten Mustern wie Spaltenstrukturen, Labels, etc."
+  },
+  
   "allow_demo_session": {
     "enabled": false
   }

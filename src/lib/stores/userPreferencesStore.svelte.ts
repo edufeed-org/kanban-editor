@@ -14,6 +14,18 @@ import type {
 	AdaptResult
 } from '$lib/types/preferences';
 
+// Re-export types for external use
+export type {
+	TeachingPreference,
+	PreferenceCategory,
+	PreferencesState,
+	PreferencesAIContext,
+	LearningSource,
+	ImportMode,
+	LearnResult,
+	AdaptResult
+} from '$lib/types/preferences';
+
 /**
  * UserPreferencesStore - Globaler Store für Cross-Board Learning
  * 
@@ -287,6 +299,44 @@ export class UserPreferencesStore {
 		};
 	}
 
+	/**
+	 * Lernt eine wiederkehrende Karten-Struktur in einer Spalte
+	 * 
+	 * @param columnName - Name der Spalte (z.B. "Einstieg")
+	 * @param cardTitles - Array von Karten-Überschriften
+	 * @param boardId - Board, aus dem gelernt wird
+	 * @param boardName - Name des Boards (optional)
+	 * @returns LearnResult mit Präferenz & isNew Flag
+	 */
+	public learnCardTemplate(
+		columnName: string,
+		cardTitles: string[],
+		boardId: string,
+		boardName?: string
+	): LearnResult {
+		const key = `COLUMN_CARDS_${columnName.toUpperCase().replace(/\s+/g, '_')}`;
+
+		return this.learnPreference('structure', key, cardTitles, boardId, boardName);
+	}
+
+	/**
+	 * Holt die gelernten Karten-Templates für eine Spalte
+	 * 
+	 * @param columnName - Name der Spalte
+	 * @param minConfidence - Minimum Confidence (default: 0.7)
+	 * @returns Array von Karten-Titeln oder null
+	 */
+	public getCardTemplate(columnName: string, minConfidence: number = 0.7): string[] | null {
+		const key = `COLUMN_CARDS_${columnName.toUpperCase().replace(/\s+/g, '_')}`;
+		const pref = this.getPreference(key);
+
+		if (!pref || pref.confidence < minConfidence) {
+			return null; // Nicht genug Confidence
+		}
+
+		return pref.value as string[];
+	}
+
 	// ========================================
 	// 6️⃣ PUBLIC API - QUERYING
 	// ========================================
@@ -410,6 +460,34 @@ export class UserPreferencesStore {
 		this.triggerUpdate();
 	}
 
+	/**
+	 * 🧪 TEST UTILITY: Reset store und reload aus localStorage
+	 * 
+	 * DEPRECATED: This method is no longer used!
+	 * 
+	 * WHY? After 8 failed attempts, we discovered that Svelte 5 $state() proxies
+	 * in global singletons CANNOT be reset via any method:
+	 * - Reassignment doesn't work
+	 * - Mutation doesn't work
+	 * - Deep clone doesn't work
+	 * - updateTrigger++ doesn't work
+	 * - $state() recreation not allowed by compiler
+	 * 
+	 * THE SOLUTION: Recreate the entire singleton instance in the test setup!
+	 * See kanbanStore.card-templates.spec.ts beforeEach hook:
+	 * ```
+	 * import { userPreferencesStore } from '...';
+	 * userPreferencesStore = new UserPreferencesStore();
+	 * ```
+	 * 
+	 * This creates a FRESH $state() proxy without old references.
+	 * The singleton export was changed from `const` to `let` to allow this.
+	 */
+	public resetForTesting(): void {
+		console.log('⚠️  resetForTesting() is DEPRECATED - recreate singleton instead!');
+		console.log('   Use: userPreferencesStore = new UserPreferencesStore()');
+	}
+
 	// ========================================
 	// 8️⃣ EXPORT / IMPORT
 	// ========================================
@@ -519,4 +597,43 @@ export class UserPreferencesStore {
 // 🌐 GLOBAL SINGLETON INSTANCE
 // ========================================
 
-export const userPreferencesStore = new UserPreferencesStore();
+/**
+ * Global singleton instance of UserPreferencesStore
+ * 
+ * ⚠️ Changed from `const` to `let` to allow test recreation!
+ * 
+ * WHY? Because Svelte 5 $state() proxies in global singletons cannot be reset:
+ * - Reassignment doesn't work: `this.preferencesState = {...}`
+ * - Mutation doesn't work: `.length = 0`, `.splice(0)`
+ * - Deep clone doesn't work: `{...pref, learnedFrom: [...] }`
+ * - updateTrigger++ doesn't work: explicit reactivity signal ignored
+ * - $state() recreation doesn't work: compiler error (invalid placement)
+ * 
+ * THE ONLY SOLUTION: Recreate the entire singleton instance:
+ * ```
+ * resetUserPreferencesStore();
+ * ```
+ * This creates a FRESH $state() proxy without old references.
+ * 
+ * Note: We use a factory function because ES6 modules make exports read-only,
+ * even when declared with `let`. Direct reassignment would fail in tests.
+ */
+
+// Singleton instance holder
+let _instance: UserPreferencesStore = new UserPreferencesStore();
+
+/**
+ * Resets the singleton instance (for testing)
+ * This is the ONLY way to get a fresh $state() proxy without old references
+ */
+export function resetUserPreferencesStore(): void {
+	_instance = new UserPreferencesStore();
+}
+
+// Export the singleton instance via proxy that forwards all method calls
+export const userPreferencesStore = new Proxy({} as UserPreferencesStore, {
+	get(_, prop: string | symbol) {
+		// Forward all property accesses to the current instance
+		return _instance[prop as keyof UserPreferencesStore];
+	}
+});

@@ -2,9 +2,11 @@
 
 import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
+import { initializeLearningManager, boardLearningManager } from './boardLearningManager.svelte.js';
 import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
+import { userPreferencesStore, type LearnResult } from './userPreferencesStore.svelte.js';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
 export type CardItem = {
@@ -75,6 +77,9 @@ export class BoardStore {
             
             // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
             this.exposeCurrentBoardIdToWindow();
+            
+            // 🎓 LEARNING MANAGER: Initialisiere wenn in config.json aktiviert
+            this.initializeLearningManagerIfEnabled();
         }
     }
     
@@ -86,6 +91,32 @@ export class BoardStore {
         setTimeout(() => {
             this.fixAnonymousBoardAuthor();
         }, 500); // 500ms sollten reichen für Auth-Init in +layout.svelte
+    }
+    
+    /**
+     * Initialisiert den BoardLearningManager wenn in config.json aktiviert
+     */
+    private async initializeLearningManagerIfEnabled(): Promise<void> {
+        try {
+            // Lade config.json
+            const response = await fetch('/config.json');
+            if (!response.ok) {
+                console.log('ℹ️ config.json nicht gefunden, LearningManager nicht initialisiert');
+                return;
+            }
+            
+            const config = await response.json();
+            const useLearning = config.learning?.useLearningManager ?? false;
+            
+            if (useLearning) {
+                initializeLearningManager(this);
+                console.log('✅ BoardLearningManager aktiviert (via config.json)');
+            } else {
+                console.log('ℹ️ BoardLearningManager deaktiviert (config.learning.useLearningManager = false)');
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Laden von config.json für LearningManager:', error);
+        }
     }
     
     /**
@@ -1700,6 +1731,97 @@ export class BoardStore {
         if (data && data.columns) {
             console.log('Legacy importData() aufgerufen. Nutze stattdessen importBoardFromJson()');
         }
+    }
+
+    // ============================================================================
+    // LEARNING METHODS - DELEGATED TO BOARDLEARNINGMANAGER (Phase 3.1B)
+    // ============================================================================
+    
+    /**
+     * 🎓 LEARNING INTERFACE: Lernt die Kartenstruktur einer Spalte
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * Wenn LearningManager deaktiviert: Gibt Error zurück
+     * 
+     * @param columnId - ID der zu lernenden Spalte
+     * @returns Lern-Ergebnis mit Status und Konfidenz
+     * 
+     * @see BoardLearningManager.learnColumnStructure()
+     * 
+     * @example
+     * // Nach dem Erstellen einer "Einstieg"-Spalte mit 4 Standard-Karten:
+     * boardStore.learnColumnStructure('column-123');
+     * // → Delegiert an: boardLearningManager.learnColumnStructure('column-123')
+     */
+    public learnColumnStructure(columnId: string): LearnResult | { success: false; error: string } {
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            return { 
+                success: false, 
+                error: 'LearningManager nicht aktiviert (config.learning.useLearningManager = false)' 
+            };
+        }
+        
+        return boardLearningManager.learnColumnStructure(columnId) as any;
+    }
+
+    /**
+     * 🎓 LEARNING INTERFACE: Lernt die Struktur aller Spalten im Board
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * 
+     * @returns Array von Lern-Ergebnissen pro Spalte
+     * 
+     * @see BoardLearningManager.learnBoardStructure()
+     * 
+     * @example
+     * // Nach dem Finalisieren eines typischen Unterrichts-Boards:
+     * const results = boardStore.learnBoardStructure();
+     * // → Delegiert an: boardLearningManager.learnBoardStructure()
+     */
+    public learnBoardStructure(): Array<{ columnName: string; result: LearnResult | { success: false; error: string } }> {
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            return [];
+        }
+        
+        return boardLearningManager.learnBoardStructure();
+    }
+
+    /**
+     * 🎓 LEARNING INTERFACE: Erstellt Spalte mit gelerntem Template
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * Falls LearningManager deaktiviert: Erstellt Spalte ohne Template
+     * 
+     * @param columnName - Name der neuen Spalte
+     * @param applyTemplate - Ob gelernte Karten automatisch hinzugefügt werden sollen
+     * @param minConfidence - Minimale Konfidenz für Template-Anwendung (default: 0.7)
+     * @returns Objekt mit columnId und optional templateApplied + cardIds
+     * 
+     * @see BoardLearningManager.createColumnWithTemplate()
+     * 
+     * @example
+     * // Erstellt "Einstieg"-Spalte MIT Template (wenn gelernt):
+     * const result = boardStore.createColumnWithTemplate('Einstieg', true);
+     * // → Delegiert an: boardLearningManager.createColumnWithTemplate('Einstieg', true, 0.7)
+     */
+    public createColumnWithTemplate(
+        columnName: string,
+        applyTemplate: boolean = false,
+        minConfidence: number = 0.7
+    ): {
+        columnId: string;
+        templateApplied?: boolean;
+        cardIds?: string[];
+        confidence?: number;
+    } {
+        // Fallback: Wenn LearningManager nicht verfügbar → erstelle einfache Spalte
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            const columnId = this.createColumn(columnName);
+            return { columnId, templateApplied: false };
+        }
+        
+        // Delegation an LearningManager
+        return boardLearningManager.createColumnWithTemplate(columnName, applyTemplate, minConfidence);
     }
 }
 
