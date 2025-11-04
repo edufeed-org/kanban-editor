@@ -167,9 +167,21 @@ pnpm run dev -- --open
 # Tests ausführen
 pnpm run test:unit
 
-# Storybook starten
-pnpm run storybook
 ```
+
+### Lokales Relay
+
+1. `docker compose up # füge -d dazu, um das Terminal freizuhaben`
+2. Ändere `./static/config.json` so
+```json
+  "nostr": {
+    "relaysPublic": [
+      "ws://localhost:7000"
+    ],
+    "relaysPrivate": []
+```
+3. `pnpm dev`
+4. Um zu testen, ob es funktioniert, gib ins Terminal rein: `$ websocat ws://localhost:7000`
 
 ### Test-Suite ausführen
 
