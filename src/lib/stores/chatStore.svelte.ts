@@ -12,6 +12,7 @@ import {
 import type { AIAction } from '../classes/BoardModel.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { userPreferencesStore } from './userPreferencesStore.svelte.js';
+import { toast } from 'svelte-sonner';
 
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
@@ -410,9 +411,36 @@ export class ChatStore {
 	/**
 	 * Registriert eine erfolgreiche Action-Ausführung
 	 * Erhöht Confidence für das Pattern
+	 * Zeigt Toast-Notification
 	 */
-	public recordActionSuccess(patternHash: string): void {
+	public recordActionSuccess(patternHash: string, isAutoExecute: boolean = false): void {
+		const before = userPreferencesStore.getLearnedPattern(patternHash);
 		userPreferencesStore.recordPatternSuccess(patternHash);
+		const after = userPreferencesStore.getLearnedPattern(patternHash);
+		
+		if (isAutoExecute) {
+			// Auto-Execute Toast
+			toast.success('✅ Auto-Execute', {
+				description: `Aktion wurde automatisch basierend auf gelernten Präferenzen ausgeführt.`,
+				duration: 4000,
+			});
+		} else if (after) {
+			// Pattern Learning Toast
+			const threshold = settingsStore.settings.learningConfidenceThreshold;
+			
+			toast.info('📚 Pattern gelernt', {
+				description: `Confidence: ${after.confidence.toFixed(2)} nach ${after.usageCount} Nutzungen`,
+				duration: 3000,
+			});
+			
+			// Threshold erreicht?
+			if (before && before.confidence < threshold && after.confidence >= threshold) {
+				toast.success('🎯 Threshold erreicht!', {
+					description: `Diese Aktion wird ab jetzt automatisch ausgeführt.`,
+					duration: 5000,
+				});
+			}
+		}
 	}
 
 	/**
