@@ -50,6 +50,10 @@ export class UserPreferencesStore {
 
 	/**
 	 * Präferenzen nach Kategorie gruppiert (reaktiv)
+	 * 
+	 * IMPORTANT für Tests:
+	 * - In Svelte-Komponenten: Nutze `store.categorizedPreferences` (reaktiv via $derived)
+	 * - In Unit-Tests: Nutze `store.getCategorizedPreferences()` (da $derived nicht auto-evaluiert)
 	 */
 	public categorizedPreferences = $derived.by(() => {
 		this.updateTrigger; // Dependency tracking
@@ -64,13 +68,30 @@ export class UserPreferencesStore {
 		};
 	});
 
+	/**
+	 * Getter-Methode für Unit-Tests (da $derived nicht außerhalb von Komponenten funktioniert)
+	 * 
+	 * @returns Präferenzen gruppiert nach Kategorie (ohne Reaktivität)
+	 */
+	public getCategorizedPreferences() {
+		const prefs = this.preferencesState.preferences;
+
+		return {
+			structure: prefs.filter((p: TeachingPreference) => p.category === 'structure'),
+			workflow: prefs.filter((p: TeachingPreference) => p.category === 'workflow'),
+			pedagogy: prefs.filter((p: TeachingPreference) => p.category === 'pedagogy'),
+			constraints: prefs.filter((p: TeachingPreference) => p.category === 'constraints'),
+			content: prefs.filter((p: TeachingPreference) => p.category === 'content')
+		};
+	}
+
 	// ========================================
 	// 3️⃣ CONSTRUCTOR & INITIALIZATION
 	// ========================================
 
 	constructor() {
 		// Auto-load from localStorage on instantiation
-		// Migration logic happens in loadFromStorage()
+		this.preferencesState = this.loadFromStorage();
 	}
 
 	// ========================================
@@ -105,8 +126,9 @@ export class UserPreferencesStore {
 	}
 
 	private saveToStorage(): void {
-		if (typeof window === 'undefined') return;
-
+		// Note: In tests (Node.js), localStorage is mocked via vitest-setup-server.ts
+		// In browser, localStorage exists natively
+		// No window check needed - if localStorage doesn't exist, catch block handles it
 		try {
 			const serialized = JSON.stringify(this.preferencesState);
 			localStorage.setItem('user-preferences', serialized);
@@ -158,7 +180,8 @@ export class UserPreferencesStore {
 			if (valueMatches) {
 				// Wert ist identisch → Confidence erhöhen
 				const previousConfidence = existing.confidence;
-				existing.confidence = Math.min(1.0, existing.confidence + 0.1);
+				const newConfidence = existing.confidence + 0.1;
+				existing.confidence = newConfidence >= 1.0 ? 1.0 : Math.round(newConfidence * 10) / 10;
 				existing.lastUsed = now;
 				existing.updatedAt = now;
 
@@ -262,7 +285,7 @@ export class UserPreferencesStore {
 		return {
 			preference: existing,
 			confidenceDelta: existing.confidence - previousConfidence,
-			wasAutoApplied
+			wasAutoApplied: wasAutoApplied
 		};
 	}
 
@@ -385,7 +408,7 @@ export class UserPreferencesStore {
 	 * Löscht alle Präferenzen (Factory Reset)
 	 */
 	public clear(): void {
-		this.preferencesState = this.getDefaultState();
+		this.preferencesState.preferences = [];
 		this.triggerUpdate();
 	}
 
