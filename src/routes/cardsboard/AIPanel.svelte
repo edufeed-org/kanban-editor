@@ -120,8 +120,8 @@
       return;
     }
     
-    // 🎯 Try to parse JSON response from LLM
-    let action: AIAction | null = null;
+    // 🎯 Try to parse JSON response from LLM (supports multiple actions)
+    let actions: AIAction[] = [];
     let responseText = content;
     let actionDescription = '';
     
@@ -137,10 +137,15 @@
           responseText = parsed.response;
         }
         
-        // Extract action
-        if (parsed.action && parsed.action.type) {
-          const actionType = parsed.action.type;
-          const details = parsed.action.details || {};
+        // 🆕 Support for multiple actions (array) or single action
+        const actionData = parsed.actions || (parsed.action ? [parsed.action] : []);
+        
+        for (const actionItem of actionData) {
+          if (!actionItem || !actionItem.type) continue;
+          
+          let action: AIAction | null = null;
+          const actionType = actionItem.type;
+          const details = actionItem.details || {};
           
           switch (actionType) {
             case 'add_column':
@@ -149,22 +154,33 @@
                 columnName: details.columnName || 'Neue Spalte',
                 color: details.color || 'slate'
               };
-              actionDescription = `➕ Spalte hinzufügen: "${details.columnName || 'Neue Spalte'}"`;
               console.log('🎯 Action: add_column', details);
               break;
               
             case 'add_card':
-              const columns = boardStore.uiData;
-              const targetColumn = columns.length > 0 ? columns[0] : null;
+              // 🆕 Smart column selection: Use columnName if provided, otherwise last created column, otherwise first column
+              let targetColumnId = details.columnId;
               
-              if (targetColumn) {
+              if (!targetColumnId && details.columnName) {
+                // Find column by name
+                const columns = boardStore.uiData;
+                const foundColumn = columns.find(c => c.name === details.columnName);
+                targetColumnId = foundColumn?.id;
+              }
+              
+              if (!targetColumnId) {
+                // Use last created column (likely from previous action in sequence)
+                const columns = boardStore.uiData;
+                targetColumnId = columns.length > 0 ? columns[columns.length - 1].id : null;
+              }
+              
+              if (targetColumnId) {
                 action = {
                   type: 'add_card',
-                  columnId: details.columnId || targetColumn.id,
+                  columnId: targetColumnId,
                   heading: details.heading || 'Neue Karte',
                   content: details.content || ''
                 };
-                actionDescription = `➕ Karte hinzufügen: "${details.heading || 'Neue Karte'}"`;
                 console.log('🎯 Action: add_card', details);
               }
               break;
@@ -180,7 +196,6 @@
                   { heading: 'Subtask 3' }
                 ]
               };
-              actionDescription = `📋 Karte aufteilen in ${details.newCards?.length || 3} Subtasks`;
               console.log('🎯 Action: split_card', details);
               break;
               
@@ -191,9 +206,12 @@
                 fromColumnId: details.fromColumnId,
                 toColumnId: details.toColumnId
               };
-              actionDescription = `🔄 Karte verschieben`;
               console.log('🎯 Action: move_card', details);
               break;
+          }
+          
+          if (action) {
+            actions.push(action);
           }
         }
       }
@@ -201,13 +219,85 @@
       console.log('⚠️ No JSON in LLM response, using plain text');
       
       // 🔄 FALLBACK: Try keyword-based detection if no JSON
-      const lowerMessage = userMessage.toLowerCase();
+      const lowerMessage = responseText.toLowerCase();
+      const lowerUserMessage = userMessage.toLowerCase();
       
-      // Check for "Spalte erstellen" pattern
-      if ((lowerMessage.includes('spalte') || lowerMessage.includes('column')) && 
-          (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
+      // Check if user requested board creation
+      const userRequestsCreation = (lowerUserMessage.includes('erstell') || 
+                                   lowerUserMessage.includes('create') ||
+                                   lowerUserMessage.includes('leg') ||
+                                   lowerUserMessage.includes('anlegen'));
+      
+      // Check if this is a multi-column creation (LLM listed columns in RESPONSE)
+      // Format 1: **Kolumne X: Name**
+      let columnMatches = responseText.match(/\*\*Kolumne \d+: (.+?)\*\*/gi);
+      
+      // Format 2: **Spalte X: Name**
+      if (!columnMatches || columnMatches.length === 0) {
+        columnMatches = responseText.match(/\*\*Spalte \d+: (.+?)\*\*/gi);
+      }
+      
+      // Format 3: ### **Spalte X: Name** (with heading)
+      if (!columnMatches || columnMatches.length === 0) {
+        columnMatches = responseText.match(/###\s+\*\*Spalte \d+: (.+?)\*\*/gi);
+      }
+      
+      // Only auto-create if user explicitly requested it
+      if (columnMatches && columnMatches.length > 0 && userRequestsCreation) {
+        // Extract all column names from markdown format
+        console.log('🎯 FALLBACK: User requested creation, detected multiple columns from list', columnMatches);
         
-        // Extract column name from quotes or after "namens" or after "Spalte"
+        for (const match of columnMatches) {
+          const nameMatch = match.match(/(?:Kolumne|Spalte) \d+: (.+?)\*\*/i);
+          if (nameMatch && nameMatch[1]) {
+            const columnName = nameMatch[1].trim();
+            actions.push({
+              type: 'add_column',
+              columnName: columnName,
+              color: 'slate'
+            });
+            console.log('🎯 FALLBACK Action: add_column', { columnName });
+            
+            // Try to extract cards for this column (lines starting with - after the column)
+            const columnIndex = responseText.indexOf(match);
+            const nextColumnIndex = responseText.indexOf('**Spalte', columnIndex + match.length);
+            const columnSection = nextColumnIndex > 0 
+              ? responseText.substring(columnIndex, nextColumnIndex)
+              : responseText.substring(columnIndex);
+            
+            // Match lines starting with - (with optional emoji and **bold**)
+            const cardLines = columnSection.match(/^-\s+(.+)$/gm);
+            if (cardLines && cardLines.length > 0) {
+              console.log('🎯 FALLBACK: Found', cardLines.length, 'cards for column', columnName);
+              
+              for (const cardLine of cardLines) {
+                let cardText = cardLine.substring(1).trim(); // Remove "-"
+                
+                // Remove emoji if present (emoji at start)
+                cardText = cardText.replace(/^[^\w\s]+\s*/, '');
+                
+                // Remove **bold** markdown
+                cardText = cardText.replace(/\*\*(.+?)\*\*/g, '$1');
+                
+                // Remove any remaining markdown or special chars
+                cardText = cardText.trim();
+                
+                if (cardText && cardText.length > 3) {
+                  actions.push({
+                    type: 'add_card',
+                    heading: cardText,
+                    content: '',
+                    columnName: columnName
+                  });
+                  console.log('🎯 FALLBACK Action: add_card', { heading: cardText, columnName });
+                }
+              }
+            }
+          }
+        }
+      } else if ((lowerMessage.includes('spalte') || lowerMessage.includes('column')) && 
+                 (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
+        // Single column creation
         let columnName = 'Neue Spalte';
         
         const quotesMatch = userMessage.match(/"([^"]+)"|'([^']+)'|„([^"]+)"|"([^"]+)"/);
@@ -222,81 +312,105 @@
           }
         }
         
-        action = {
+        actions.push({
           type: 'add_column',
           columnName: columnName,
           color: 'slate'
-        };
+        });
         actionDescription = `➕ Spalte hinzufügen: "${columnName}"`;
         console.log('🎯 FALLBACK Action: add_column', { columnName });
       }
       
-      // Check for "Karte erstellen" pattern
-      if ((lowerMessage.includes('karte') || lowerMessage.includes('card')) && 
-          (lowerMessage.includes('erstell') || lowerMessage.includes('create') || lowerMessage.includes('neu'))) {
-        
-        // Extract card heading
-        let heading = 'Neue Karte';
-        let content = '';
-        
-        const quotesMatch = userMessage.match(/"([^"]+)"|'([^']+)'|„([^"]+)"|"([^"]+)"/);
-        if (quotesMatch) {
-          heading = quotesMatch[1] || quotesMatch[2] || quotesMatch[3] || quotesMatch[4];
-        }
-        
-        // Extract content after "mit" or "Inhalt"
-        const contentMatch = userMessage.match(/(?:mit|inhalt|text|beschreibung)[:\s]+(.+)/i);
-        if (contentMatch) {
-          content = contentMatch[1].trim();
-        }
-        
-        const columns = boardStore.uiData;
-        const targetColumn = columns.length > 0 ? columns[0] : null;
-        
-        if (targetColumn) {
-          action = {
-            type: 'add_card',
-            columnId: targetColumn.id,
-            heading: heading,
-            content: content
-          };
-          actionDescription = `➕ Karte hinzufügen: "${heading}"`;
-          console.log('🎯 FALLBACK Action: add_card', { heading, content });
-        }
-      }
     }
     
     // Add LLM response text
     chatStore.addMessage(responseText, 'assistant');
     
-    // If action detected, proceed with confidence check
-    if (action) {
-      const result = await chatStore.checkActionConfidence(action);
+    // 🆕 Process multiple actions sequentially
+    if (actions.length > 0) {
+      console.log(`🎯 Processing ${actions.length} action(s)`);
+      
+      // If multiple actions, show summary message
+      if (actions.length > 1) {
+        chatStore.addMessage(
+          `📋 Ich führe ${actions.length} Aktionen aus: ${actions.map((a, i) => `${i + 1}. ${getActionDescription(a)}`).join(', ')}`,
+          'assistant'
+        );
+      }
+      
+      // Process first action with confidence check
+      const firstAction = actions[0];
+      const result = await chatStore.checkActionConfidence(firstAction);
       console.log('🎯 Confidence check result:', result);
       
-      if (result.shouldAutoExecute) {
+      // Store remaining actions for sequential execution
+      const remainingActions = actions.slice(1);
+      
+      if (result.shouldAutoExecute && remainingActions.length === 0) {
+        // Auto-execute single action
+        const desc = getActionDescription(firstAction);
         chatStore.addMessage(
-          `✅ Aktion wird automatisch ausgeführt (Confidence: ${Math.round(result.confidence * 100)}%): ${actionDescription}`,
+          `✅ Aktion wird automatisch ausgeführt (Confidence: ${Math.round(result.confidence * 100)}%): ${desc}`,
           'assistant'
         );
         
-        executeAction(action);
+        await executeAction(firstAction);
+        chatStore.recordActionSuccess(result.patternHash, true);
+      } else if (result.shouldAutoExecute && remainingActions.length > 0) {
+        // Auto-execute first, then process remaining
+        await executeAction(firstAction);
         chatStore.recordActionSuccess(result.patternHash, true);
         
-      } else {
+        // Process remaining actions
+        for (const action of remainingActions) {
+          await executeAction(action);
+        }
+        
         chatStore.addMessage(
-          `🤔 Ich schlage vor: ${actionDescription}. Confidence: ${Math.round(result.confidence * 100)}%. Möchten Sie bestätigen?`,
+          `✅ Alle ${actions.length} Aktionen erfolgreich ausgeführt!`,
+          'assistant'
+        );
+      } else {
+        // Show confirmation dialog
+        const desc = getActionDescription(firstAction);
+        chatStore.addMessage(
+          `🤔 Ich schlage vor: ${desc}. Confidence: ${Math.round(result.confidence * 100)}%. Möchten Sie bestätigen?`,
           'assistant'
         );
         
-        pendingAction = action;
+        pendingAction = firstAction;
         pendingPatternHash = result.patternHash;
         pendingConfidence = result.confidence;
         pendingUsageCount = result.usageCount;
         showConfirmDialog = true;
         
+        // Store remaining actions for later
+        if (remainingActions.length > 0) {
+          (pendingAction as any)._remainingActions = remainingActions;
+        }
+        
         console.log('🎯 Confirmation dialog prepared, showing...');
       }
+    }
+  }
+  
+  /**
+   * Get human-readable description of action
+   */
+  function getActionDescription(action: AIAction): string {
+    switch (action.type) {
+      case 'add_column':
+        return `➕ Spalte "${(action as any).columnName}"`;
+      case 'add_card':
+        return `➕ Karte "${(action as any).heading}"`;
+      case 'split_card':
+        return `📋 Karte aufteilen`;
+      case 'move_card':
+        return `🔄 Karte verschieben`;
+      case 'update_card':
+        return `✏️ Karte bearbeiten`;
+      default:
+        return `🤖 ${action.type}`;
     }
   }
   
@@ -403,14 +517,32 @@
   /**
    * Handle dialog confirm (Execute & Learn)
    */
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!pendingAction) return;
     
-    // Execute action
-    executeAction(pendingAction);
+    // Execute first action
+    await executeAction(pendingAction);
     
     // Record success (triggers toast)
     chatStore.recordActionSuccess(pendingPatternHash, false);
+    
+    // 🆕 Process remaining actions if any
+    const remainingActions = (pendingAction as any)._remainingActions || [];
+    if (remainingActions.length > 0) {
+      chatStore.addMessage(
+        `⏳ Führe ${remainingActions.length} weitere Aktion(en) aus...`,
+        'assistant'
+      );
+      
+      for (const action of remainingActions) {
+        await executeAction(action);
+      }
+      
+      chatStore.addMessage(
+        `✅ Alle ${remainingActions.length + 1} Aktionen erfolgreich ausgeführt!`,
+        'assistant'
+      );
+    }
     
     // Cleanup
     pendingAction = null;

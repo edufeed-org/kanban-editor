@@ -505,13 +505,27 @@ export class ChatStore {
 
 			console.log('🤖 Sending to LLM:', settings.llmBaseUrl, settings.llmModel);
 
+			// Detect if using OpenRouter (check base URL)
+			const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+			
+			// Build API endpoint URL
+			// OpenRouter uses full path, Ollama/OpenAI use /v1/chat/completions
+			const apiUrl = isOpenRouter 
+				? `${settings.llmBaseUrl}/chat/completions`  // OpenRouter: /api/v1/chat/completions
+				: `${settings.llmBaseUrl}/v1/chat/completions`;  // Ollama/OpenAI
+
 			// Call OpenAI-compatible API
-			const response = await fetch(`${settings.llmBaseUrl}/v1/chat/completions`, {
+			const response = await fetch(apiUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					// Only add Authorization if API key is present (not needed for local Ollama)
-					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {})
+					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
+					// OpenRouter-specific headers
+					...(isOpenRouter ? {
+						'HTTP-Referer': 'https://kanban-editor.nostr.tools',
+						'X-Title': 'Nostr Kanban Editor'
+					} : {})
 				},
 				body: JSON.stringify({
 					model: settings.llmModel,
