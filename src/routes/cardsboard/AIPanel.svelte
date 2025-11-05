@@ -13,6 +13,7 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { Separator } from '$lib/components/ui/separator';
+  import * as Dialog from '$lib/components/ui/dialog';
   import ActionConfirmationDialog from '$lib/components/ui/ActionConfirmationDialog.svelte';
   import { chatStore } from '$lib/stores/chatStore.svelte.js';
   import { userPreferencesStore } from '$lib/stores/userPreferencesStore.svelte.js';
@@ -22,7 +23,17 @@
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+  import LoaderIcon from '@lucide/svelte/icons/loader';
   import type { AIAction } from '$lib/classes/BoardModel.js';
+  import {
+    parseContentProposal,
+    generateStructureFromContent,
+    parseStructureProposal,
+    structureToActions,
+    validateStructureJSON,
+    formatValidationError,
+    type ContentProposal
+  } from '$lib/utils/aiActionGenerator.js';
   
   // Props
   let {
@@ -34,6 +45,17 @@
   // Chat State
   let userInput = $state('');
   let isProcessing = $state(false);
+  
+  // 🆕 2-Phase System State
+  let currentContentProposal = $state<ContentProposal | null>(null);
+  let showContentDialog = $state(false);
+  let isGeneratingStructure = $state(false);
+  let structureRetries = $state(0);
+  let structureGenerationError = $state('');
+  let phase1MarkdownContent = $state<string>(''); // 🆕 Phase 1 Markdown anzeigen
+  let isPhase2Running = $state(false); // 🆕 Phase 2 läuft
+  let phase2Toast = $state<string>(''); // 🆕 Toast Nachricht
+  const MAX_STRUCTURE_RETRIES = 3;
   
   // Action Confirmation Dialog State
   let showConfirmDialog = $state(false);
@@ -74,6 +96,214 @@
     }
     return count;
   })
+  
+  /**
+   * Phase 1: Parse KI-Antwort als Content-Vorschlag
+   */
+  async function handlePhase1Response(responseText: string) {
+    console.log('🔄 Phase 1: Parsing content proposal...');
+    
+    const proposal = await parseContentProposal(responseText);
+    currentContentProposal = proposal;
+    
+    if (proposal.canGenerate) {
+      showContentDialog = true;
+      chatStore.addMessage(
+        `📋 Erkannt: ${proposal.structure === 'spalten-mit-karten' ? 'Spalten mit Karten' : proposal.structure === 'phasen' ? 'Phasen-Struktur' : 'Karten-Liste'}\n\nMöchten Sie, dass ich eine Board-Struktur generiere?`,
+        'assistant'
+      );
+    }
+  }
+  
+  /**
+   * Phase 2: Generiere Struktur aus Proposal
+   */
+  async function handleApproveProposal() {
+    if (!currentContentProposal) return;
+    
+    showContentDialog = false;
+    isGeneratingStructure = true;
+    structureRetries = 0;
+    structureGenerationError = '';
+    
+    chatStore.addMessage(
+      '⏳ Generiere Board-Struktur als JSON...',
+      'assistant'
+    );
+    
+    await generateBoardStructure();
+  }
+  
+  /**
+   * Rekursive Struktur-Generierung mit Retry-Logik (FIXED!)
+   * 
+   * FIX: Nutzt jetzt sendToLLMWithSystem() mit spezialisi ertem System-Prompt
+   * Das verhindert Prompt-Injections und stellt sicher, dass LLM valides JSON liefert
+   */
+  async function generateBoardStructure() {
+    if (!currentContentProposal) return;
+    
+    if (structureRetries >= MAX_STRUCTURE_RETRIES) {
+      chatStore.addMessage(
+        `❌ Struktur-Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen. Bitte versuchen Sie es später erneut.`,
+        'assistant'
+      );
+      isGeneratingStructure = false;
+      return;
+    }
+    
+    try {
+      // Generate ONLY user prompt (system prompt wird separat übergeben!)
+      const userPrompt = generateStructureFromContent(
+        currentContentProposal.content,
+        { boardName: boardStore.uiData[0]?.name }
+      );
+      
+      // SPEZIALISIERTEN System-Prompt für JSON-Generierung
+      const systemPrompt = `Du bist ein Experte für die Strukturierung von Lerninhalten in Kanban-Boards.
+Deine Aufgabe: Analysiere den Lerninhalt und generiere AUSSCHLIESSLICH eine valide JSON-Struktur.
+
+REGELN (BEACHTE DIESE GENAU!):
+1. Antworte NUR mit JSON - kein Text davor, kein Text danach
+2. Keine Markdown-Code-Blöcke (keine \`\`\`json)
+3. Valide JSON-Syntax (alle Strings in Anführungszeichen, kein Komma nach letztem Element)
+4. Alle erforderlichen Felder: name, cards Array mit heading
+5. Wenn unsicher: Einfach halten, aber struktur-treu
+
+Beispiel OK:
+{"columns":[{"name":"Phase 1","cards":[{"heading":"Einführung"}]}]}
+
+Beispiel FALSCH:
+\`\`\`json
+{"columns": [...]}
+\`\`\`
+
+Jetzt generiere JSON für den Lerninhalt:`;
+
+      // Send to LLM with CUSTOM system prompt!
+      const { content: jsonResponse, error } = await chatStore.sendToLLMWithSystem(
+        userPrompt,
+        systemPrompt
+      );
+      
+      if (error) {
+        throw new Error(error);
+      }
+
+      // Log für Debugging
+      console.log('📋 Raw JSON Response:', jsonResponse);
+      
+      // Validate JSON
+      const validation = validateStructureJSON(jsonResponse);
+      
+      if (!validation.valid) {
+        structureRetries++;
+        structureGenerationError = validation.error || 'Unbekannter Fehler';
+        
+        console.log(`⚠️ Validation failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, validation.error);
+        console.log('📋 Response was:', jsonResponse.substring(0, 200));
+        
+        chatStore.addMessage(
+          `⚠️ Versuch ${structureRetries}: ${formatValidationError(validation.error || 'Unbekannter Fehler')}`,
+          'assistant'
+        );
+        
+        // Retry
+        await generateBoardStructure();
+        return;
+      }
+      
+      // Parse und execute actions
+      const proposal = parseStructureProposal(jsonResponse);
+      if (!proposal) {
+        throw new Error('Failed to parse structure proposal');
+      }
+      
+      chatStore.addMessage(
+        `✅ Struktur generiert! Erstelle ${proposal.columns.length} Spalten mit ${proposal.columns.reduce((sum, c) => sum + c.cards.length, 0)} Karten...`,
+        'assistant'
+      );
+      
+      await processStructureAndCreateActions(proposal);
+      
+    } catch (err) {
+      structureRetries++;
+      const errorMsg = err instanceof Error ? err.message : 'Unbekannter Fehler';
+      structureGenerationError = errorMsg;
+      
+      console.error(`❌ Generation error (Attempt ${structureRetries}):`, err);
+      
+      if (structureRetries < MAX_STRUCTURE_RETRIES) {
+        chatStore.addMessage(
+          `⚠️ Fehler bei Versuch ${structureRetries}: ${errorMsg}\nWiederhole...`,
+          'assistant'
+        );
+        await generateBoardStructure();
+      } else {
+        chatStore.addMessage(
+          `❌ Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen: ${errorMsg}`,
+          'assistant'
+        );
+        isGeneratingStructure = false;
+      }
+    }
+  }
+  
+  /**
+   * Konvertiere Struktur zu Aktionen und führe sie aus
+   * 🆕 Mit Phase 2 Toast & Spinner
+   */
+  async function processStructureAndCreateActions(proposal: any) {
+    try {
+      const actions = structureToActions(proposal);
+      console.log(`🎯 Executing ${actions.length} actions...`);
+      
+      // 🆕 Phase 2 starten - Toast zeigen
+      isPhase2Running = true;
+      phase2Toast = `✅ Board-Struktur wird generiert... (${actions.length} Aktionen)`;
+      
+      for (const action of actions) {
+        await executeAction(action);
+      }
+      
+      // 🆕 Phase 2 erfolgreich
+      phase2Toast = `✅ Fertig! ${actions.length} Aktionen ausgeführt`;
+      chatStore.addMessage(
+        `✅ Board-Struktur erfolgreich erstellt! (${actions.length} Aktionen ausgeführt)`,
+        'assistant'
+      );
+      
+      // 🆕 Toast für 3 Sekunden anzeigen, dann ausblenden
+      setTimeout(() => {
+        isPhase2Running = false;
+        phase2Toast = '';
+      }, 3000);
+      
+    } catch (err) {
+      console.error('❌ Action execution error:', err);
+      phase2Toast = '';
+      isPhase2Running = false;
+      chatStore.addMessage(
+        `❌ Fehler bei Board-Erstellung: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+        'assistant'
+      );
+    } finally {
+      isGeneratingStructure = false;
+      currentContentProposal = null;
+    }
+  }
+  
+  /**
+   * Reject proposal (cancel 2-phase generation)
+   */
+  function handleRejectProposal() {
+    showContentDialog = false;
+    currentContentProposal = null;
+    chatStore.addMessage(
+      'Struktur-Generierung abgebrochen.',
+      'assistant'
+    );
+  }
   
   /**
    * Handle user message send
@@ -120,7 +350,14 @@
       return;
     }
     
-    // 🎯 Try to parse JSON response from LLM (supports multiple actions)
+    // Add LLM response text
+    chatStore.addMessage(content, 'assistant');
+    
+    // � Phase 1: Parse als Content-Proposal
+    await handlePhase1Response(content);
+    
+    // 🆕 (Old fallback kept for backward compatibility)
+    // Try to parse JSON response from LLM (supports multiple actions)
     let actions: AIAction[] = [];
     let responseText = content;
     let actionDescription = '';
@@ -321,9 +558,6 @@
       
     }
     
-    // Add LLM response text
-    chatStore.addMessage(responseText, 'assistant');
-    
     // 🆕 Process multiple actions sequentially
     if (actions.length > 0) {
       console.log(`🎯 Processing ${actions.length} action(s)`);
@@ -413,6 +647,12 @@
   }
   
   /**
+   * Track column ID mapping during execution
+   * Map from column name (from AI) to actual column ID (from boardStore)
+   */
+  let columnNameToIdMap: Record<string, string> = {};
+  
+  /**
    * Execute AI action via boardStore
    */
   function executeAction(action: AIAction) {
@@ -426,6 +666,11 @@
           // color is always set to 'slate' internally
           const colId = boardStore.createColumn(colName);
           console.log('✅ Column created:', colId);
+          
+          // Store the mapping for add_card actions
+          columnNameToIdMap[colName] = colId;
+          console.log('📌 Column name→ID mapping:', columnNameToIdMap);
+          
           chatStore.addMessage(
             `✅ Spalte "${colName}" erfolgreich erstellt!`,
             'assistant'
@@ -436,10 +681,18 @@
         case 'add_card': {
           const heading = (action as any).heading || 'Neue Karte';
           const content = (action as any).content || '';
-          const columnId = (action as any).columnId;
+          
+          // Try to find columnId in two ways:
+          // 1. Direct columnId (if already mapped)
+          // 2. Look up via columnName in our mapping
+          let columnId = (action as any).columnId;
+          
+          if (!columnId && (action as any).columnName) {
+            columnId = columnNameToIdMap[(action as any).columnName];
+          }
           
           if (!columnId) {
-            throw new Error('Spalten-ID fehlt');
+            throw new Error(`Spalten-ID fehlt (columnName: "${(action as any).columnName}")`);
           }
           
           const cardId = boardStore.createCard(columnId, heading, content);
@@ -696,6 +949,71 @@
   </div>
   
 </div>
+
+<!-- 🆕 Content Proposal Dialog (Phase 1) -->
+{#if currentContentProposal}
+  <Dialog.Root bind:open={showContentDialog}>
+    <Dialog.Content class="max-w-md">
+      <Dialog.Header>
+        <Dialog.Title>📋 Board-Struktur generieren?</Dialog.Title>
+      </Dialog.Header>
+      
+      <div class="space-y-4 py-4">
+        <div>
+          <p class="text-sm font-medium mb-2">Erkannter Titel:</p>
+          <p class="text-sm text-muted-foreground">{currentContentProposal.title}</p>
+        </div>
+        
+        <div>
+          <p class="text-sm font-medium mb-2">Erkannte Struktur:</p>
+          <Badge variant="outline" class="text-xs">
+            {currentContentProposal.structure === 'spalten-mit-karten' ? '📊 Spalten mit Karten' :
+             currentContentProposal.structure === 'phasen' ? '📅 Phasen-Struktur' :
+             currentContentProposal.structure === 'nur-karten' ? '📇 Karten-Liste' :
+             '❓ Unbekannt'}
+          </Badge>
+        </div>
+        
+        {#if structureGenerationError}
+          <div class="rounded-md bg-red-50 p-3 text-sm text-red-900">
+            {structureGenerationError}
+            <p class="text-xs mt-2">Versuch {structureRetries}/{MAX_STRUCTURE_RETRIES}</p>
+          </div>
+        {/if}
+        
+        <div class="rounded-md bg-blue-50 p-3">
+          <p class="text-xs text-blue-900">
+            Ich kann KI-Vorschläge automatisch in ein funktionierendes Board-Layout umwandeln.
+            Klicken Sie <strong>Generieren</strong>, um zu starten!
+          </p>
+        </div>
+      </div>
+      
+      <Dialog.Footer>
+        <Button
+          variant="outline"
+          onclick={handleRejectProposal}
+          disabled={isGeneratingStructure}
+        >
+          Abbrechen
+        </Button>
+        <Button
+          onclick={handleApproveProposal}
+          disabled={isGeneratingStructure}
+          class="gap-2"
+        >
+          {#if isGeneratingStructure}
+            <LoaderIcon class="h-4 w-4 animate-spin" />
+            Generiere...
+          {:else}
+            <SparklesIcon class="h-4 w-4" />
+            ✨ Generieren
+          {/if}
+        </Button>
+      </Dialog.Footer>
+    </Dialog.Content>
+  </Dialog.Root>
+{/if}
 
 <!-- Action Confirmation Dialog -->
 {#if pendingAction}

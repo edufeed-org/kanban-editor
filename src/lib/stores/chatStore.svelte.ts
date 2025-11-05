@@ -467,6 +467,106 @@ export class ChatStore {
 	 * @param boardContext - Optional: Board-Kontext für AI (Karten, Spalten, etc.)
 	 * @returns AI Response als String
 	 */
+	public async sendToLLMWithSystem(
+		userMessage: string,
+		systemPrompt: string,
+		boardContext?: any
+	): Promise<{ content: string; error?: string }> {
+		const settings = settingsStore.settings;
+
+		// Check if LLM is configured
+		if (!settings.llmModel || !settings.llmBaseUrl) {
+			return {
+				content: '',
+				error: '❌ LLM nicht konfiguriert. Bitte in Settings LLM-Model und Base URL eintragen.'
+			};
+		}
+
+		try {
+			// Prepare messages for OpenAI-compatible API
+			// KRITISCH: Benutze den übergebenen systemPrompt, NICHT settings.llmSystemPrompt!
+			const messages = [
+				{
+					role: 'system',
+					content: systemPrompt  // ← CUSTOM System-Prompt!
+				},
+				// Add previous messages for context (last 5)
+				...this.messages
+					.slice(-5)
+					.map((msg) => ({
+						role: msg.role === 'user' ? 'user' : 'assistant',
+						content: msg.content
+					})),
+				{
+					role: 'user',
+					content: boardContext
+						? `${userMessage}\n\nBoard Context:\n${JSON.stringify(boardContext, null, 2)}`
+						: userMessage
+				}
+			];
+
+			console.log('🤖 Sending to LLM (with custom system prompt):', settings.llmBaseUrl, settings.llmModel);
+
+			// Detect if using OpenRouter (check base URL)
+			const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+			
+			// Build API endpoint URL
+			const apiUrl = isOpenRouter 
+				? `${settings.llmBaseUrl}/chat/completions`
+				: `${settings.llmBaseUrl}/v1/chat/completions`;
+
+			// Call OpenAI-compatible API
+			const response = await fetch(apiUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
+					...(isOpenRouter ? {
+						'HTTP-Referer': 'https://kanban-editor.nostr.tools',
+						'X-Title': 'Nostr Kanban Editor'
+					} : {})
+				},
+				body: JSON.stringify({
+					model: settings.llmModel,
+					messages,
+					temperature: 0.2,  // ← NIEDRIGER für konsistente JSON-Generierung
+					max_tokens: 2000  // ← Erhöht für JSON-Generierung
+				})
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error('❌ LLM API Error:', response.status, errorText);
+				return {
+					content: '',
+					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+				};
+			}
+
+			const data = await response.json();
+			const content = data.choices?.[0]?.message?.content || '';
+
+			if (!content) {
+				console.warn('⚠️ LLM returned empty content');
+				return {
+					content: '',
+					error: 'LLM returned empty response'
+				};
+			}
+
+			console.log('✅ LLM Response received (length: ' + content.length + ')');
+			console.log('📋 Response start:', content.substring(0, 150));
+
+			return { content };
+		} catch (error) {
+			console.error('❌ LLM Error:', error);
+			return {
+				content: '',
+				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+			};
+		}
+	}
+
 	public async sendToLLM(
 		userMessage: string,
 		boardContext?: any
