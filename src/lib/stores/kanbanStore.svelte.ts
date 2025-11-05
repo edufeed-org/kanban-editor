@@ -875,16 +875,7 @@ export class BoardStore {
         
         const card = this.addCard(columnId, cardProps);
         console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'authorName:', authorName, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
-        
-        // publishToNostr() wird bereits in addCard() aufgerufen
-        
-        // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
-        if (card?.id) {
-            this.publishCardAsync(card.id).catch(err => 
-                console.error('⚠️ Async card publishing failed:', err)
-            );
-        }
-        
+
         return card.id;
     }
 
