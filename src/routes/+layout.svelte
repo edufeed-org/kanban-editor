@@ -54,16 +54,6 @@
   // Create reactive pool store for Svelte 5
   createReactivePool(ndk);
 
-  // Cleanup on component destroy
-  onDestroy(() => {
-    try {
-      boardStore.dispose();
-      console.log('✅ BoardStore cleaned up');
-    } catch (error) {
-      console.warn('⚠️ Cleanup warning:', error);
-    }
-  });
-
   setContext('ndk', ndk);
   setContext('authStore', authStore);
 </script>

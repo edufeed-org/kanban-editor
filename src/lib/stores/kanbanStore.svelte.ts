@@ -1219,9 +1219,9 @@ export class BoardStore {
 
             // Queue for publishing (handles signing + retry logic)
             const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(event, 'card', 'normal');
 
             console.log(`✅ Card ${cardId} queued for publishing`);
+            await syncManager.publishOrQueue(event, 'card', 'normal');
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
