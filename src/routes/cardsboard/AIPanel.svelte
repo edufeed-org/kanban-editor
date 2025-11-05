@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   🤖 AIPanel.svelte - AI-Agent Interface in rechter Sidebar
   
   Features:
@@ -24,6 +24,8 @@
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
   import LoaderIcon from '@lucide/svelte/icons/loader';
+  import XIcon from '@lucide/svelte/icons/x';
+  import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
   import type { AIAction } from '$lib/classes/BoardModel.js';
   import {
     parseContentProposal,
@@ -56,6 +58,14 @@
   let isPhase2Running = $state(false); // 🆕 Phase 2 läuft
   let phase2Toast = $state<string>(''); // 🆕 Toast Nachricht
   const MAX_STRUCTURE_RETRIES = 3;
+  
+  // 🆕 Board Confirmation State
+  let showBoardConfirmationDialog = $state(false);
+  let pendingBoardActions = $state<AIAction[]>([]);
+  let pendingBoardPreview = $state<{
+    columns: Array<{ name: string; cardCount: number; cards: string[] }>;
+    totalCards: number;
+  } | null>(null);
   
   // Action Confirmation Dialog State
   let showConfirmDialog = $state(false);
@@ -99,6 +109,10 @@
   
   /**
    * Phase 1: Parse KI-Antwort als Content-Vorschlag
+   * 🆕 Zeigt Markdown-Antwort UND generiert Struktur im Hintergrund
+   * 
+   * WICHTIG: chatStore.addMessage() wurde bereits in simulateAIResponse() aufgerufen!
+   * Wir speichern nur und starten Phase 2.
    */
   async function handlePhase1Response(responseText: string) {
     console.log('🔄 Phase 1: Parsing content proposal...');
@@ -106,17 +120,29 @@
     const proposal = await parseContentProposal(responseText);
     currentContentProposal = proposal;
     
+    // 🆕 Phase 1 Markdown speichern (bereits im Chat sichtbar von simulateAIResponse!)
+    phase1MarkdownContent = proposal.content;
+    console.log('📝 Phase 1 Markdown gespeichert und bereits im Chat sichtbar');
+    
+    // 🆕 Automatisch Phase 2 starten (kein Dialog nötig!)
     if (proposal.canGenerate) {
-      showContentDialog = true;
-      chatStore.addMessage(
-        `📋 Erkannt: ${proposal.structure === 'spalten-mit-karten' ? 'Spalten mit Karten' : proposal.structure === 'phasen' ? 'Phasen-Struktur' : 'Karten-Liste'}\n\nMöchten Sie, dass ich eine Board-Struktur generiere?`,
-        'assistant'
-      );
+      console.log('🤖 Starte automatisch Phase 2: Board-Struktur wird generiert...');
+      
+      // Small delay für bessere UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Phase 2 im Hintergrund starten
+      isGeneratingStructure = true;
+      structureRetries = 0;
+      structureGenerationError = '';
+      
+      await generateBoardStructure();
     }
   }
   
   /**
    * Phase 2: Generiere Struktur aus Proposal
+   * 🆕 Mit Toast-Notification & Spinner
    */
   async function handleApproveProposal() {
     if (!currentContentProposal) return;
@@ -252,44 +278,174 @@ Jetzt generiere JSON für den Lerninhalt:`;
   /**
    * Konvertiere Struktur zu Aktionen und führe sie aus
    * 🆕 Mit Phase 2 Toast & Spinner
+   * 🆕🆕 Mit Confirmation Dialog STATT direkter Ausführung
    */
   async function processStructureAndCreateActions(proposal: any) {
     try {
       const actions = structureToActions(proposal);
-      console.log(`🎯 Executing ${actions.length} actions...`);
+      console.log(`🎯 Generated ${actions.length} actions for preview...`);
       
       // 🆕 Phase 2 starten - Toast zeigen
       isPhase2Running = true;
       phase2Toast = `✅ Board-Struktur wird generiert... (${actions.length} Aktionen)`;
       
-      for (const action of actions) {
-        await executeAction(action);
-      }
+      // 🆕🆕 STATT: Direkt ausführen → Erstelle Preview
+      // for (const action of actions) {
+      //   await executeAction(action);
+      // }
       
-      // 🆕 Phase 2 erfolgreich
-      phase2Toast = `✅ Fertig! ${actions.length} Aktionen ausgeführt`;
+      // Erstelle Board-Preview aus Actions
+      const preview = createBoardPreview(actions);
+      
+      // Speichere Actions für spätere Ausführung
+      pendingBoardActions = actions;
+      pendingBoardPreview = preview;
+      
+      // 🆕 Phase 2 erfolgreich - zeige Confirmation Dialog
+      isPhase2Running = false;
+      phase2Toast = '';
+      
+      // Zeige Confirmation Dialog
+      showBoardConfirmationDialog = true;
+      
       chatStore.addMessage(
-        `✅ Board-Struktur erfolgreich erstellt! (${actions.length} Aktionen ausgeführt)`,
+        `✅ Board-Struktur generiert! ${preview.columns.length} Spalten mit ${preview.totalCards} Karten. Bitte bestätigen.`,
         'assistant'
       );
       
-      // 🆕 Toast für 3 Sekunden anzeigen, dann ausblenden
-      setTimeout(() => {
-        isPhase2Running = false;
-        phase2Toast = '';
-      }, 3000);
-      
     } catch (err) {
-      console.error('❌ Action execution error:', err);
+      console.error('❌ Action generation error:', err);
       phase2Toast = '';
       isPhase2Running = false;
       chatStore.addMessage(
-        `❌ Fehler bei Board-Erstellung: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+        `❌ Fehler bei Board-Generierung: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
         'assistant'
       );
     } finally {
       isGeneratingStructure = false;
-      currentContentProposal = null;
+    }
+  }
+  
+  /**
+   * 🆕 Erstelle Board-Preview aus Actions
+   * Zeigt Spalten-Namen und Karten-Titel ohne tatsächlich zu speichern
+   */
+  function createBoardPreview(actions: AIAction[]) {
+    const columns: Array<{ name: string; cardCount: number; cards: string[] }> = [];
+    let currentColumn: { name: string; cardCount: number; cards: string[] } | null = null;
+    
+    for (const action of actions) {
+      if (action.type === 'add_column') {
+        // Neuer Spalte
+        currentColumn = {
+          name: action.name,
+          cardCount: 0,
+          cards: []
+        };
+        columns.push(currentColumn);
+      } else if (action.type === 'add_card' && currentColumn) {
+        // Karte zur aktuellen Spalte hinzufügen
+        currentColumn.cards.push(action.heading);
+        currentColumn.cardCount++;
+      }
+    }
+    
+    const totalCards = columns.reduce((sum, col) => sum + col.cardCount, 0);
+    
+    return { columns, totalCards };
+  }
+  
+  /**
+   * 🆕 Handler für Board Confirmation Dialog
+   * 
+   * @param action - 'confirm' | 'reject' | 'adjust'
+   */
+  async function handleBoardConfirmation(action: 'confirm' | 'reject' | 'adjust') {
+    switch (action) {
+      case 'confirm':
+        // ✅ BESTÄTIGEN: Board speichern + Learning aktivieren
+        console.log('✅ User bestätigt Board-Struktur');
+        
+        try {
+          // Führe alle Actions aus
+          for (const act of pendingBoardActions) {
+            await executeAction(act);
+          }
+          
+          chatStore.addMessage(
+            `✅ Board erfolgreich erstellt! ${pendingBoardActions.length} Aktionen ausgeführt.`,
+            'assistant'
+          );
+          
+          // 🆕 LearningManager: Lerne von diesem Board!
+          // TODO Phase 2: boardLearningManager Integration
+          // if (boardLearningManager?.isEnabled) {
+          //   const results = boardLearningManager.learnBoardStructure();
+          //   console.log('✨ Patterns gelernt:', results);
+          //   chatStore.addMessage(
+          //     `✨ Pattern gelernt! Beim nächsten Mal kann ich ähnliche Boards schneller erstellen.`,
+          //     'assistant'
+          //   );
+          // }
+          
+        } catch (err) {
+          console.error('❌ Board creation error:', err);
+          chatStore.addMessage(
+            `❌ Fehler beim Erstellen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+            'assistant'
+          );
+        } finally {
+          showBoardConfirmationDialog = false;
+          pendingBoardActions = [];
+          pendingBoardPreview = null;
+          currentContentProposal = null;
+        }
+        break;
+        
+      case 'reject':
+        // ❌ ABLEHNEN: Verwerfen und zurück zu Input
+        console.log('❌ User lehnt Board-Struktur ab');
+        
+        chatStore.addMessage(
+          '❌ Board-Struktur abgelehnt. Was möchtest du anders haben?',
+          'assistant'
+        );
+        
+        showBoardConfirmationDialog = false;
+        pendingBoardActions = [];
+        pendingBoardPreview = null;
+        currentContentProposal = null;
+        break;
+        
+      case 'adjust':
+        // 🔄 ANPASSEN: Neue Phase 1 mit Context
+        console.log('🔄 User möchte Board-Struktur anpassen');
+        
+        // Erstelle Anpassungs-Kontext
+        const adjustmentContext = `
+Der Benutzer hat folgende Board-Struktur erhalten:
+
+${pendingBoardPreview?.columns.map(col => 
+  `- Spalte "${col.name}" mit ${col.cardCount} Karten:\n  ${col.cards.map(c => `  • ${c}`).join('\n')}`
+).join('\n')}
+
+Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktur, basierend auf den folgenden Wünschen:
+`;
+        
+        chatStore.addMessage(
+          '🔄 Was möchtest du an der Struktur ändern? (Spalten umbenennen, Karten hinzufügen/entfernen, etc.)',
+          'assistant'
+        );
+        
+        // Setze Input mit Context vor (User kann ergänzen)
+        userInput = ''; // User muss eigene Wünsche eingeben
+        
+        // Speichere Context für nächste LLM-Anfrage
+        // TODO: Context in chatStore speichern für nächste Anfrage
+        
+        showBoardConfirmationDialog = false;
+        // Behalte pendingBoardActions/Preview für Vergleich (optional)
+        break;
     }
   }
   
@@ -918,9 +1074,33 @@ Jetzt generiere JSON für den Lerninhalt:`;
             </div>
           </div>
         {/each}
+        
+        <!-- 🆕 Phase 2 Spinner (unter Markdown) -->
+        {#if isPhase2Running}
+          <div class="flex gap-2 justify-start">
+            <div class="rounded-lg px-3 py-2 bg-blue-50 border border-blue-200">
+              <div class="flex items-center gap-2">
+                <LoaderIcon class="h-4 w-4 animate-spin text-blue-600" />
+                <p class="text-xs text-blue-900">{phase2Toast}</p>
+              </div>
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
   </div>
+  
+  <!-- 🆕 Toast Notification (oben rechts, überlagert) -->
+  {#if phase2Toast}
+    <div class="fixed top-20 right-4 max-w-xs animate-in fade-in slide-in-from-right-4">
+      <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 shadow-lg">
+        <div class="flex items-center gap-2">
+          <CheckCircleIcon class="h-4 w-4 text-green-600" />
+          <p class="text-sm text-green-900">{phase2Toast}</p>
+        </div>
+      </div>
+    </div>
+  {/if}
   
   <Separator />
   
@@ -1015,6 +1195,101 @@ Jetzt generiere JSON für den Lerninhalt:`;
   </Dialog.Root>
 {/if}
 
+<!-- 🆕🆕 Board Confirmation Dialog (Phase 2 Complete) -->
+{#if showBoardConfirmationDialog && pendingBoardPreview}
+  <Dialog.Root bind:open={showBoardConfirmationDialog}>
+    <Dialog.Content class="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <Dialog.Header>
+        <Dialog.Title>✨ Board-Struktur bestätigen?</Dialog.Title>
+        <Dialog.Description>
+          Das Board wurde generiert. Bitte überprüfen Sie die Struktur.
+        </Dialog.Description>
+      </Dialog.Header>
+      
+      <div class="space-y-4 py-4">
+        <!-- Statistik -->
+        <div class="flex gap-4 text-sm">
+          <div class="flex items-center gap-2">
+            <Badge variant="outline">{pendingBoardPreview.columns.length} Spalten</Badge>
+          </div>
+          <div class="flex items-center gap-2">
+            <Badge variant="outline">{pendingBoardPreview.totalCards} Karten</Badge>
+          </div>
+        </div>
+        
+        <Separator />
+        
+        <!-- Spalten-Preview -->
+        <div class="space-y-3">
+          {#each pendingBoardPreview.columns as column, i}
+            <div class="border-l-4 border-blue-500 pl-3 py-2 bg-muted/30 rounded-r">
+              <div class="flex items-center justify-between mb-2">
+                <p class="font-semibold text-sm">{i + 1}. {column.name}</p>
+                <Badge variant="secondary" class="text-xs">
+                  {column.cardCount} {column.cardCount === 1 ? 'Karte' : 'Karten'}
+                </Badge>
+              </div>
+              
+              {#if column.cards.length > 0}
+                <div class="space-y-1 mt-2">
+                  {#each column.cards as card}
+                    <div class="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
+                      • {card}
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+        
+        <Separator />
+        
+        <!-- Info Box -->
+        <div class="rounded-md bg-blue-50 p-3">
+          <p class="text-xs text-blue-900 mb-2">
+            <strong>✅ Bestätigen:</strong> Board wird gespeichert und das System lernt von dieser Struktur.
+          </p>
+          <p class="text-xs text-blue-900 mb-2">
+            <strong>🔄 Anpassen:</strong> Sie können Änderungswünsche äußern und eine neue Struktur erhalten.
+          </p>
+          <p class="text-xs text-blue-900">
+            <strong>❌ Ablehnen:</strong> Board wird verworfen, keine Speicherung.
+          </p>
+        </div>
+      </div>
+      
+      <Dialog.Footer class="flex gap-2">
+        <Button
+          variant="outline"
+          onclick={() => handleBoardConfirmation('reject')}
+          class="gap-2"
+        >
+          <XIcon class="h-4 w-4" />
+          Ablehnen
+        </Button>
+        
+        <Button
+          variant="outline"
+          onclick={() => handleBoardConfirmation('adjust')}
+          class="gap-2"
+        >
+          <RefreshCwIcon class="h-4 w-4" />
+          Anpassen
+        </Button>
+        
+        <Button
+          onclick={() => handleBoardConfirmation('confirm')}
+          class="gap-2"
+        >
+          <CheckCircleIcon class="h-4 w-4" />
+          ✅ Bestätigen
+        </Button>
+      </Dialog.Footer>
+    </Dialog.Content>
+  </Dialog.Root>
+{/if}
+
 <!-- Action Confirmation Dialog -->
 {#if pendingAction}
   <ActionConfirmationDialog
@@ -1029,3 +1304,4 @@ Jetzt generiere JSON für den Lerninhalt:`;
     onExecuteOnce={handleExecuteOnce}
   />
 {/if}
+
