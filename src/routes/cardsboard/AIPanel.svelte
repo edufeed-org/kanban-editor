@@ -151,8 +151,8 @@
             case 'add_column':
               action = {
                 type: 'add_column',
-                columnName: details.columnName || 'Neue Spalte',
-                color: details.color || 'slate'
+                columnName: details.columnName || 'Neue Spalte'
+                // Note: color is not used - boardStore.createColumn() always uses 'slate'
               };
               console.log('🎯 Action: add_column', details);
               break;
@@ -253,8 +253,7 @@
             const columnName = nameMatch[1].trim();
             actions.push({
               type: 'add_column',
-              columnName: columnName,
-              color: 'slate'
+              columnName: columnName
             });
             console.log('🎯 FALLBACK Action: add_column', { columnName });
             
@@ -314,8 +313,7 @@
         
         actions.push({
           type: 'add_column',
-          columnName: columnName,
-          color: 'slate'
+          columnName: columnName
         });
         actionDescription = `➕ Spalte hinzufügen: "${columnName}"`;
         console.log('🎯 FALLBACK Action: add_column', { columnName });
@@ -424,8 +422,9 @@
       switch (action.type) {
         case 'add_column': {
           const colName = (action as any).columnName || 'Neue Spalte';
-          const color = (action as any).color || 'slate';
-          const colId = boardStore.createColumn(colName, color);
+          // Note: boardStore.createColumn() only accepts name parameter
+          // color is always set to 'slate' internally
+          const colId = boardStore.createColumn(colName);
           console.log('✅ Column created:', colId);
           chatStore.addMessage(
             `✅ Spalte "${colName}" erfolgreich erstellt!`,
