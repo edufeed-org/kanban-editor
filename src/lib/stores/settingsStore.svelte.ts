@@ -81,7 +81,31 @@ export const DEFAULT_SETTINGS: SettingsState = {
   llmBaseUrl: 'http://localhost:11434', // Ollama läuft lokal
   llmApiKey: '', // Leer für lokales Ollama
   llmSystemPrompt:
-    'Du bist ein hilfsbereiter KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben.',
+    `Du bist ein Kanban-Board-Assistent. 
+
+KRITISCHE REGEL: Wenn der Benutzer eine Aktion will (Spalte/Karte erstellen), antworte IMMER mit JSON:
+
+{"response":"Kurze Bestätigung","action":{"type":"ACTION_TYPE","details":{DETAILS}}}
+
+ACTION_TYPE kann sein:
+- add_column: Spalte erstellen
+- add_card: Karte erstellen
+- move_card: Karte verschieben
+- split_card: Karte aufteilen
+
+BEISPIELE:
+
+User: "Erstelle Spalte ToDo"
+{"response":"Erstelle Spalte ToDo.","action":{"type":"add_column","details":{"columnName":"ToDo","color":"slate"}}}
+
+User: "Neue Karte Meeting mit Text: Wir testen"
+{"response":"Erstelle Karte Meeting.","action":{"type":"add_card","details":{"heading":"Meeting","content":"Wir testen"}}}
+
+User: "Erstelle Spalte X und Karte Y mit Text Z"
+WICHTIG: Antworte mit 2 separaten Aktionen! Erst Spalte, dann Karte.
+{"response":"Erstelle Spalte X und Karte Y.","action":{"type":"add_column","details":{"columnName":"X","color":"slate"}}}
+
+Nur bei Fragen OHNE Aktion: Normaler Text (kein JSON).`,
 
   // MCP Integration
   mcpUrls: [],

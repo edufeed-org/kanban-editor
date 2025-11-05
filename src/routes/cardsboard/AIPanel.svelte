@@ -107,13 +107,10 @@
    * Send message to LLM and process response
    */
   async function simulateAIResponse(userMessage: string) {
-    // 🔍 DEBUG: Log user message
     console.log('🔍 User Message:', userMessage);
-    console.log('🔍 Contains "aufteilen"?', userMessage.toLowerCase().includes('aufteilen'));
-    console.log('🔍 Contains "split"?', userMessage.toLowerCase().includes('split'));
     
     // Get board context for AI
-    const boardContext = boardStore.getContextData(false); // false = summary only
+    const boardContext = boardStore.getContextData(false);
     
     // Send to LLM
     const { content, error } = await chatStore.sendToLLM(userMessage, boardContext);
@@ -123,56 +120,175 @@
       return;
     }
     
-    // Add LLM response
-    chatStore.addMessage(content, 'assistant');
+    // 🎯 Try to parse JSON response from LLM
+    let action: AIAction | null = null;
+    let responseText = content;
+    let actionDescription = '';
     
-    // Check if user asks for card splitting (example pattern for learning system)
-    if (userMessage.toLowerCase().includes('aufteilen') || 
-        userMessage.toLowerCase().includes('split')) {
+    try {
+      // Check if response is JSON
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        console.log('📦 Parsed JSON from LLM:', parsed);
+        
+        // Extract response text
+        if (parsed.response) {
+          responseText = parsed.response;
+        }
+        
+        // Extract action
+        if (parsed.action && parsed.action.type) {
+          const actionType = parsed.action.type;
+          const details = parsed.action.details || {};
+          
+          switch (actionType) {
+            case 'add_column':
+              action = {
+                type: 'add_column',
+                columnName: details.columnName || 'Neue Spalte',
+                color: details.color || 'slate'
+              };
+              actionDescription = `➕ Spalte hinzufügen: "${details.columnName || 'Neue Spalte'}"`;
+              console.log('🎯 Action: add_column', details);
+              break;
+              
+            case 'add_card':
+              const columns = boardStore.uiData;
+              const targetColumn = columns.length > 0 ? columns[0] : null;
+              
+              if (targetColumn) {
+                action = {
+                  type: 'add_card',
+                  columnId: details.columnId || targetColumn.id,
+                  heading: details.heading || 'Neue Karte',
+                  content: details.content || ''
+                };
+                actionDescription = `➕ Karte hinzufügen: "${details.heading || 'Neue Karte'}"`;
+                console.log('🎯 Action: add_card', details);
+              }
+              break;
+              
+            case 'split_card':
+              action = {
+                type: 'split_card',
+                sourceCardId: details.sourceCardId || 'mock-card-id',
+                columnId: details.columnId || 'mock-column-id',
+                newCards: details.newCards || [
+                  { heading: 'Subtask 1' },
+                  { heading: 'Subtask 2' },
+                  { heading: 'Subtask 3' }
+                ]
+              };
+              actionDescription = `📋 Karte aufteilen in ${details.newCards?.length || 3} Subtasks`;
+              console.log('🎯 Action: split_card', details);
+              break;
+              
+            case 'move_card':
+              action = {
+                type: 'move_card',
+                cardId: details.cardId,
+                fromColumnId: details.fromColumnId,
+                toColumnId: details.toColumnId
+              };
+              actionDescription = `🔄 Karte verschieben`;
+              console.log('🎯 Action: move_card', details);
+              break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ No JSON in LLM response, using plain text');
       
-      console.log('🎯 "aufteilen" keyword detected! Preparing action...');
+      // 🔄 FALLBACK: Try keyword-based detection if no JSON
+      const lowerMessage = userMessage.toLowerCase();
       
-      // Create mock AI action
-      const action: AIAction = {
-        type: 'split_card',
-        sourceCardId: 'mock-card-id',
-        columnId: 'mock-column-id',
-        newCards: [
-          { heading: 'Subtask 1: Frontend' },
-          { heading: 'Subtask 2: Backend' },
-          { heading: 'Subtask 3: Testing' }
-        ]
-      };
+      // Check for "Spalte erstellen" pattern
+      if ((lowerMessage.includes('spalte') || lowerMessage.includes('column')) && 
+          (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
+        
+        // Extract column name from quotes or after "namens" or after "Spalte"
+        let columnName = 'Neue Spalte';
+        
+        const quotesMatch = userMessage.match(/"([^"]+)"|'([^']+)'|„([^"]+)"|"([^"]+)"/);
+        if (quotesMatch) {
+          columnName = quotesMatch[1] || quotesMatch[2] || quotesMatch[3] || quotesMatch[4];
+        } else {
+          // Try to extract after "Spalte" or "namens"
+          const afterMatch = userMessage.match(/(?:spalte|column)\s+["']?(\w+)["']?/i) ||
+                            userMessage.match(/namens\s+["']?(\w+)["']?/i);
+          if (afterMatch) {
+            columnName = afterMatch[1];
+          }
+        }
+        
+        action = {
+          type: 'add_column',
+          columnName: columnName,
+          color: 'slate'
+        };
+        actionDescription = `➕ Spalte hinzufügen: "${columnName}"`;
+        console.log('🎯 FALLBACK Action: add_column', { columnName });
+      }
       
-      // Check confidence
+      // Check for "Karte erstellen" pattern
+      if ((lowerMessage.includes('karte') || lowerMessage.includes('card')) && 
+          (lowerMessage.includes('erstell') || lowerMessage.includes('create') || lowerMessage.includes('neu'))) {
+        
+        // Extract card heading
+        let heading = 'Neue Karte';
+        let content = '';
+        
+        const quotesMatch = userMessage.match(/"([^"]+)"|'([^']+)'|„([^"]+)"|"([^"]+)"/);
+        if (quotesMatch) {
+          heading = quotesMatch[1] || quotesMatch[2] || quotesMatch[3] || quotesMatch[4];
+        }
+        
+        // Extract content after "mit" or "Inhalt"
+        const contentMatch = userMessage.match(/(?:mit|inhalt|text|beschreibung)[:\s]+(.+)/i);
+        if (contentMatch) {
+          content = contentMatch[1].trim();
+        }
+        
+        const columns = boardStore.uiData;
+        const targetColumn = columns.length > 0 ? columns[0] : null;
+        
+        if (targetColumn) {
+          action = {
+            type: 'add_card',
+            columnId: targetColumn.id,
+            heading: heading,
+            content: content
+          };
+          actionDescription = `➕ Karte hinzufügen: "${heading}"`;
+          console.log('🎯 FALLBACK Action: add_card', { heading, content });
+        }
+      }
+    }
+    
+    // Add LLM response text
+    chatStore.addMessage(responseText, 'assistant');
+    
+    // If action detected, proceed with confidence check
+    if (action) {
       const result = await chatStore.checkActionConfidence(action);
-      
       console.log('🎯 Confidence check result:', result);
       
       if (result.shouldAutoExecute) {
-        // Auto-execute
         chatStore.addMessage(
-          '✅ Aktion wird automatisch ausgeführt (Confidence: ' + 
-          Math.round(result.confidence * 100) + '%).',
+          `✅ Aktion wird automatisch ausgeführt (Confidence: ${Math.round(result.confidence * 100)}%): ${actionDescription}`,
           'assistant'
         );
         
-        // Execute action (placeholder)
         executeAction(action);
-        
-        // Record success
         chatStore.recordActionSuccess(result.patternHash, true);
         
       } else {
-        // Show confirmation dialog
         chatStore.addMessage(
-          '🤔 Ich schlage vor, die Karte in 3 Subtasks aufzuteilen. ' +
-          'Confidence: ' + Math.round(result.confidence * 100) + '%. ' +
-          'Möchten Sie bestätigen?',
+          `🤔 Ich schlage vor: ${actionDescription}. Confidence: ${Math.round(result.confidence * 100)}%. Möchten Sie bestätigen?`,
           'assistant'
         );
         
-        // Prepare dialog
         pendingAction = action;
         pendingPatternHash = result.patternHash;
         pendingConfidence = result.confidence;
@@ -185,21 +301,103 @@
   }
   
   /**
-   * Execute AI action (placeholder - implement with boardStore)
+   * Execute AI action via boardStore
    */
   function executeAction(action: AIAction) {
     console.log('🤖 Executing action:', action);
     
-    // TODO: Implement real action execution via boardStore
-    // Example:
-    // if (action.type === 'split_card') {
-    //   boardStore.splitCard(action.columnId, action.sourceCardId, action.newCards);
-    // }
-    
-    chatStore.addMessage(
-      '✅ Aktion erfolgreich ausgeführt!',
-      'assistant'
-    );
+    try {
+      switch (action.type) {
+        case 'add_column': {
+          const colName = (action as any).columnName || 'Neue Spalte';
+          const color = (action as any).color || 'slate';
+          const colId = boardStore.createColumn(colName, color);
+          console.log('✅ Column created:', colId);
+          chatStore.addMessage(
+            `✅ Spalte "${colName}" erfolgreich erstellt!`,
+            'assistant'
+          );
+          break;
+        }
+        
+        case 'add_card': {
+          const heading = (action as any).heading || 'Neue Karte';
+          const content = (action as any).content || '';
+          const columnId = (action as any).columnId;
+          
+          if (!columnId) {
+            throw new Error('Spalten-ID fehlt');
+          }
+          
+          const cardId = boardStore.createCard(columnId, heading, content);
+          console.log('✅ Card created:', cardId);
+          chatStore.addMessage(
+            `✅ Karte "${heading}" erfolgreich erstellt!`,
+            'assistant'
+          );
+          break;
+        }
+        
+        case 'split_card': {
+          // TODO: Implement split_card when boardStore has this method
+          console.log('⚠️ split_card not yet implemented in boardStore');
+          chatStore.addMessage(
+            '⚠️ Karte aufteilen ist noch nicht implementiert.',
+            'assistant'
+          );
+          break;
+        }
+        
+        case 'update_card': {
+          const cardId = (action as any).cardId;
+          const updates = (action as any).updates || {};
+          
+          if (!cardId) {
+            throw new Error('Karten-ID fehlt');
+          }
+          
+          boardStore.editCard(cardId, updates);
+          console.log('✅ Card updated:', cardId);
+          chatStore.addMessage(
+            '✅ Karte erfolgreich aktualisiert!',
+            'assistant'
+          );
+          break;
+        }
+        
+        case 'move_card': {
+          const cardId = (action as any).cardId;
+          const fromColId = (action as any).fromColumnId;
+          const toColId = (action as any).toColumnId;
+          
+          if (!cardId || !fromColId || !toColId) {
+            throw new Error('Karten-ID oder Spalten-ID fehlt');
+          }
+          
+          boardStore.moveCard(cardId, fromColId, toColId);
+          console.log('✅ Card moved:', cardId);
+          chatStore.addMessage(
+            '✅ Karte erfolgreich verschoben!',
+            'assistant'
+          );
+          break;
+        }
+        
+        default:
+          console.warn('⚠️ Unknown action type:', action.type);
+          chatStore.addMessage(
+            `⚠️ Aktion "${action.type}" ist nicht implementiert.`,
+            'assistant'
+          );
+      }
+      
+    } catch (error) {
+      console.error('❌ Action execution failed:', error);
+      chatStore.addMessage(
+        `❌ Fehler beim Ausführen der Aktion: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        'assistant'
+      );
+    }
   }
   
   /**

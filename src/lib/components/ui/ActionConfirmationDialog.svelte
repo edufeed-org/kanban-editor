@@ -57,8 +57,9 @@
   // Action Type Display
   let actionTypeDisplay = $derived.by(() => {
     switch (action.type) {
-      case 'split_card': return '📋 Karte aufteilen';
+      case 'add_column': return '➕ Spalte hinzufügen';
       case 'add_card': return '➕ Karte hinzufügen';
+      case 'split_card': return '📋 Karte aufteilen';
       case 'update_card': return '✏️ Karte bearbeiten';
       case 'move_card': return '🔄 Karte verschieben';
       default: return '🤖 AI-Aktion';
@@ -67,13 +68,31 @@
   
   // Action Preview Content
   let actionPreview = $derived.by(() => {
+    if (action.type === 'add_column') {
+      const name = (action as any).columnName || 'Unbenannt';
+      const color = (action as any).color || 'slate';
+      return `Spaltenname: ${name}\nFarbe: ${color}`;
+    }
+    if (action.type === 'add_card') {
+      const heading = (action as any).heading || 'Unbenannt';
+      const content = (action as any).content || '';
+      return `Titel: ${heading}\nBeschreibung: ${content || '(leer)'}`;
+    }
     if (action.type === 'split_card' && (action as any).newCards) {
       return (action as any).newCards
         .map((c: any, i: number) => `${i + 1}. ${c.heading}`)
         .join('\n');
     }
-    if (action.type === 'add_card' && (action as any).heading) {
-      return (action as any).heading;
+    if (action.type === 'move_card') {
+      const fromCol = (action as any).fromColumnId || 'unbekannt';
+      const toCol = (action as any).toColumnId || 'unbekannt';
+      return `Von Spalte: ${fromCol}\nNach Spalte: ${toCol}`;
+    }
+    if (action.type === 'update_card') {
+      const updates = (action as any).updates || {};
+      return Object.entries(updates)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
     }
     return JSON.stringify(action, null, 2);
   });
