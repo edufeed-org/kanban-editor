@@ -181,7 +181,14 @@ describe('SyncManager', () => {
 
       const event = new NDKEvent(mockNDK);
       event.kind = 30301;
-      event.sig = 'dummy_sig'; // Simulate successful sign
+      
+      // Mock the event's sign method to track calls and simulate success
+      event.sign = vi.fn().mockImplementation(async (signer) => {
+        signSpy(); // Call our spy
+        event.sig = 'dummy_sig'; // Simulate successful sign
+        return event;
+      });
+      
       event.publish = vi.fn().mockResolvedValue(new Set(['relay1']));
 
       await manager.publishOrQueue(event, 'board');
@@ -224,9 +231,12 @@ describe('SyncManager', () => {
         sign: vi.fn().mockRejectedValue(new Error('Signing failed')),
       };
 
+      // Set offline first to prevent auto-sync during initialization
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
       const manager = new SyncManager(mockNDK, failingSigner as any);
-      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
-
+      
+      // Now force online and sync manually
+      manager.forceOnlineStatus(true);
       await manager.syncQueue();
 
       const events = manager.getQueuedEvents();
@@ -250,11 +260,14 @@ describe('SyncManager', () => {
         sign: vi.fn().mockRejectedValue(new Error('Signing failed')),
       };
 
+      // Set offline first to prevent auto-sync during initialization
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
       const manager = new SyncManager(mockNDK, failingSigner as any, {
         maxRetries: 3,
       });
-      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
-
+      
+      // Now force online and sync manually
+      manager.forceOnlineStatus(true);
       await manager.syncQueue();
 
       // Event should be removed (exceeds max retries)

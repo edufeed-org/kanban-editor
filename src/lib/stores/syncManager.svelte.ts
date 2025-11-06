@@ -256,6 +256,8 @@ export class SyncManager {
    * - Next sync will retry from beginning
    */
   public async syncQueue(): Promise<void> {
+    console.log(`[SyncManager] syncQueue called - isOnline: ${this.isOnline}, isSyncing: ${this.isSyncing}, hasSigner: ${!!this.signer}`);
+    
     if (this.isSyncing || !this.isOnline || !this.signer) {
       const reason = this.isSyncing 
         ? 'already syncing' 
@@ -269,12 +271,21 @@ export class SyncManager {
     this.isSyncing = true;
     console.log(`[SyncManager] 🔄 Starting sync - ${this.eventQueue.length} events to process`);
 
-    // Process queue in order
+    // Process queue in order - make a snapshot to avoid mutation issues
     let successCount = 0;
     let failureCount = 0;
 
-    for (const queuedEvent of this.eventQueue) {
+    // Create snapshot to avoid iterator issues
+    const queueSnapshot = [...this.eventQueue];
+
+    for (const queuedEvent of queueSnapshot) {
       try {
+        // Check if event still exists in queue (might have been removed)
+        const currentIdx = this.eventQueue.findIndex(e => e.timestamp === queuedEvent.timestamp);
+        if (currentIdx === -1) {
+          continue; // Event was already removed, skip
+        }
+
         // Deserialize event
         const rawEvent = JSON.parse(queuedEvent.event);
         const event = new NDKEvent(this.ndk, rawEvent);
@@ -295,25 +306,31 @@ export class SyncManager {
         failureCount++;
         console.error(`[SyncManager] ⚠️ Sync failed for event:`, error);
 
-        // Increment retry counter
+        // Find current event in queue (it might have moved)
         const idx = this.eventQueue.findIndex(e => e.timestamp === queuedEvent.timestamp);
         if (idx >= 0) {
-          queuedEvent.retries++;
-
-          // Dead-letter: Remove after max retries
-          if (queuedEvent.retries >= this.config.maxRetries) {
+          // Increment retry counter by creating new object
+          const currentEvent = this.eventQueue[idx];
+          const updatedEvent = { ...currentEvent, retries: currentEvent.retries + 1 };
+          
+          // Check if we should remove after max retries
+          if (updatedEvent.retries >= this.config.maxRetries) {
             console.error(
-              `[SyncManager] ❌ Event failed ${queuedEvent.retries} times - removing from queue`
+              `[SyncManager] ❌ Event failed ${updatedEvent.retries} times - removing from queue`
             );
             this.removeFromQueue(queuedEvent.timestamp);
           } else {
-            // Calculate next retry time
-            const delayMs = Math.pow(this.config.backoffMultiplier, queuedEvent.retries) * this.config.baseDelayMs;
-            this.nextRetryTime = Date.now() + delayMs;
-            console.log(`[SyncManager] ⏰ Next retry in ${delayMs}ms`);
+            // Update the queue with incremented retries (Svelte 5 reassignment)
+            const updatedQueue = [...this.eventQueue];
+            updatedQueue[idx] = updatedEvent;
+            this.eventQueue = updatedQueue;
             
-            // Update queue for storage
-            this.eventQueue = [...this.eventQueue];
+            // Calculate next retry time
+            const delayMs = Math.pow(this.config.backoffMultiplier, updatedEvent.retries) * this.config.baseDelayMs;
+            this.nextRetryTime = Date.now() + delayMs;
+            console.log(`[SyncManager] ⏰ Next retry in ${delayMs}ms (attempt ${updatedEvent.retries + 1})`);
+            
+            // Persist updated queue
             this.saveQueueToStorage();
           }
         }
@@ -464,6 +481,14 @@ export class SyncManager {
     console.warn('[SyncManager] ⚠️ Clearing entire queue - this cannot be undone!');
     this.eventQueue = [];
     this.saveQueueToStorage();
+  }
+
+  /**
+   * Force set online status (for testing)
+   */
+  public forceOnlineStatus(online: boolean): void {
+    this.isOnline = online;
+    console.log(`[SyncManager] Forced online status: ${online}`);
   }
 
   /**
