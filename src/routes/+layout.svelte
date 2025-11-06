@@ -2,7 +2,7 @@
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
-  import { setContext, onMount, onDestroy } from 'svelte';
+  import { setContext, onMount } from 'svelte';
   import { Toaster } from "svelte-sonner";
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
