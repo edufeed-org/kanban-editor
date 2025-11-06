@@ -44,15 +44,48 @@ export function detectUserIntent(userMessage: string): UserIntent {
 		return 'confirmation';
 	}
 
-	// Pattern 1b: Confirmation with "daraus" (bezieht sich auf vorherigen Vorschlag)
-	// 🆕 "Erstelle daraus das Board" / "Mache daraus ein Board" / "Generiere daraus"
+	// Pattern 1b: Confirmation with "daraus" or "aus dem/der" (bezieht sich auf vorherigen Vorschlag)
+	// 🆕 "Erstelle daraus das Board" / "Erstelle aus dem Markdown" / "Generiere aus der Vorlage"
 	const hasConfirmationVerb = [
 		'erstelle daraus',
 		'mache daraus',
 		'generiere daraus',
 		'baue daraus',
 		'lege daraus an',
-		'erstell daraus'
+		'erstell daraus',
+		// 🆕 Neue Patterns mit "aus dem/der"
+		'erstelle aus dem',
+		'erstelle aus der',
+		'mache aus dem',
+		'generiere aus dem',
+		'baue aus dem',
+		// 🆕 Pattern mit "die Spalten" / "das Board" (explizite Umsetzung)
+		'erstelle die spalten',
+		'erstelle das board',
+		'generiere die spalten',
+		'baue die spalten',
+		// 🆕 Pattern mit "nun/jetzt das Board" (Bestätigung mit Zeitbezug)
+		'erstelle nun das board',
+		'erstelle jetzt das board',
+		'mache nun das board',
+		'generiere nun das board',
+		'baue nun das board',
+		'erstelle nun die spalten',
+		'erstelle jetzt die spalten',
+		// 🆕 Pattern mit "das Board/die Spalten" + "nun/jetzt" (Reihenfolge vertauscht)
+		'erstelle das board nun',
+		'erstelle das board jetzt',
+		'mache das board nun',
+		'generiere das board jetzt',
+		'erstelle die spalten nun',
+		'erstelle die spalten jetzt',
+		// 🆕 Pattern mit "Karten für" (explizite Karten-Erstellung)
+		'erstelle karten für',
+		'generiere karten für',
+		'mache karten für',
+		'füge karten',
+		'erstelle cards',
+		'fülle die spalten'
 	].some((phrase) => lowerMsg.includes(phrase));
 
 	if (hasConfirmationVerb) {

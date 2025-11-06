@@ -501,6 +501,25 @@
             </p>
           </div>
           
+          <Separator />
+          
+          <!-- LLM Intent Detection Toggle -->
+          <div class="flex items-center justify-between">
+            <div class="space-y-0.5">
+              <Label>🤖 LLM-basierte Intent-Erkennung (Experimentell)</Label>
+              <p class="text-sm text-muted-foreground">
+                Nutzt LLM für flexiblere Bestätigungs-Erkennung ("ja", "ok", "mach das", etc.)
+              </p>
+              <p class="text-xs text-muted-foreground">
+                Deaktiviert: Schnellere regelbasierte Mustererkennung (Standard, 0ms, offline)
+              </p>
+            </div>
+            <Switch 
+              checked={settings.llmUseLlmIntent}
+              onCheckedChange={(checked) => settingsStore.setLlmUseLlmIntent(checked)}
+            />
+          </div>
+          
         </Card.Content>
       </Card.Root>
     </Tabs.Content>

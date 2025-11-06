@@ -88,17 +88,20 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 **Learning Path:**
 1. **🆕 AI Collaborative Generation (Pattern):** [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) (GitHub Copilot-ähnlicher Workflow)
-2. **ChatStore API:** [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) (Konversation speichern)
-3. **ChatBotStore Design:** [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) (Board-Generierung, Phase 3.2-3.3)
-4. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
-5. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
-6. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
+2. **🆕 LLM Intent Detection:** [`FEATURE/LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) (Kontext-bewusste Intent-Erkennung, Alternative zu regelbasiert)
+3. **ChatStore API:** [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) (Konversation speichern)
+4. **ChatBotStore Design:** [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) (Board-Generierung, Phase 3.2-3.3)
+5. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
+6. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
+7. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
 
 **Kritische Methoden:**
 - `Card.getContextData()` — KI-Kontext serialisieren
 - `Chat.sendPromptToAI()` — Payload für KI vorbereiten
 - `Chat.processAIAction()` — KI-Antworten verarbeiten
 - `ChatStore.getAIContext()` — Konversations-Context für LLM
+- **🆕 `llmDetectIntention()`** — LLM-basierte Intent-Erkennung mit Kontext
+- **🆕 `llmRequest()`** — Globale LLM-Anfragen (non-chat)
 - `ChatBotStore.generateBoardStructure()` — Struktur-Vorschläge
 - `ChatBotStore.applyBoardStructure()` — Struktur persistieren
 
@@ -324,12 +327,14 @@ docs/
 | [`GUIDE.md`](./TESTS/GUIDE.md) | Ausführliches Test-Guide | ✅ |
 | [`STATUS.md`](./TESTS/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (6 Dateien)
+### FEATURE/ (8 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
 | [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
 | [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration | ✅ |
+| [`INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) | 🆕 **NEU (06.11.)**: Phase 2 - Bestehende Spalten intelligent berücksichtigen | ✅ Neu (06.11.) |
+| [`LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) | 🆕 **NEU (06.11.)**: Kontext-bewusste Intent-Erkennung via LLM (Alternative zu regelbasiert) | ✅ Neu (06.11.) |
 | [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | ✅ Neu (25.10.) Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
 | [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | ✅ Neu (26.10.) Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
 | [`SHARELINK.md`](./FEATURE/SHARELINK.md) | ✅ Neu (31.10.) URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |
@@ -349,10 +354,10 @@ docs/
 ✅ **GUIDES/** — 8/8 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTS/** — 2/2 Dateien verlinkt  
-✅ **FEATURE/** — 6/6 Dateien verlinkt (+ IMPORT-EXPORT.md neu!)  
+✅ **FEATURE/** — 8/8 Dateien verlinkt (+ LLM-INTENT-DETECTION.md neu!)  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 44/44 Dateien in /docs verlinkt und dokumentiert** (+1 DOCUMENTATION-RULES-v3.md, +1 SHARELINK.md, +1 IMPORT-EXPORT.md)
+**Total: 46/46 Dateien in /docs verlinkt und dokumentiert** (+1 LLM-INTENT-DETECTION.md)
 
 ---
 

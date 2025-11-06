@@ -8,13 +8,23 @@ import type { AIAction } from '$lib/classes/BoardModel';
 
 /**
  * System-Prompt für Phase 2 (Structure Generation)
+ * 
+ * WICHTIG: Unterstützt jetzt intelligente Integration mit bestehenden Boards
  */
 export const STRUCTURE_GENERATION_SYSTEM_PROMPT = `Du bist ein Experte für die Strukturierung von Lerninhalten in Kanban-Boards.
 
 Deine Aufgabe:
-1. Analysiere den Lerninhalt
-2. Strukturiere ihn in logische Spalten (z.B. "Einführung", "Vertiefung", "Übung", "Reflexion")
-3. Erstelle konkrete Karten mit Aufgaben/Materialien pro Spalte
+1. Analysiere den Lerninhalt gründlich
+2. Prüfe ob bereits Board-Spalten existieren
+3. Entscheide intelligent:
+   - Bei BESTEHENDEN Spalten: Füge Karten zu passenden Spalten hinzu
+   - Bei LEEREM Board: Erstelle logische neue Spalten (z.B. "Einführung", "Vertiefung", "Übung")
+   - Bei GEMISCHTEM Fall: Kombiniere geschickt (nutze bestehende + ergänze bei Bedarf)
+
+Spalten-Strategien:
+- Status-Boards (Todo/Doing/Done): Karten nach Workflow verteilen
+- Themen-Boards (Einführung/Vertiefung/Übung): Karten nach Lern-Phase zuordnen  
+- Zeit-Boards (Stunde 1/2/3): Karten chronologisch verteilen
 
 Antworte AUSSCHLIESSLICH mit einem JSON-Objekt (OHNE Markdown Code-Blöcke wie \`\`\`json).
 
@@ -24,11 +34,11 @@ Format:
   "description": "Kurze Beschreibung",
   "columns": [
     {
-      "name": "Spaltenname",
+      "name": "Spaltenname (NUTZE BESTEHENDE wenn vorhanden!)",
       "cards": [
         {
-          "heading": "Karten-Titel",
-          "content": "Karten-Beschreibung (optional)",
+          "heading": "Karten-Titel (präzise, min 3 Zeichen)",
+          "content": "Detaillierte Beschreibung (optional, aber empfohlen)",
           "labels": ["label1", "label2"]
         }
       ]
@@ -36,11 +46,82 @@ Format:
   ]
 }
 
-WICHTIG:
+KRITISCHE REGELN:
 - Keine Code-Blöcke (\`\`\`)
 - Nur valides JSON
-- Mindestens 2 Spalten
-- Jede Spalte hat mindestens 1 Karte`;
+- Wenn bestehende Spalten genannt sind: NUTZE DIESE (keine neuen erstellen!)
+- Jede Spalte hat mindestens 1 Karte
+- Jede Karte hat aussagekräftiges "heading"
+- Labels helfen bei Kategorisierung (z.B. "video", "übung", "lesen")
+
+Bei bestehenden Spalten:
+- Ordne Karten intelligent zu (basierend auf Spalten-Namen)
+- Verteile Karten gleichmäßig (keine Spalte leer lassen)
+- Respektiere die bestehende Struktur (z.B. nicht "Todo" in "Done" Spalte)`;
+
+/**
+ * Analysiert bestehende Board-Struktur und gibt Kontext zurück
+ * 
+ * @param existingColumns - Array von Spalten-Namen
+ * @returns Strukturierter Kontext für LLM
+ */
+export function analyzeExistingStructure(existingColumns: string[]): {
+	hasColumns: boolean;
+	columnCount: number;
+	strategy: 'create_new' | 'add_to_existing' | 'mixed';
+	instructions: string;
+} {
+	if (!existingColumns || existingColumns.length === 0) {
+		return {
+			hasColumns: false,
+			columnCount: 0,
+			strategy: 'create_new',
+			instructions: 'Erstelle neue Spalten für die Board-Struktur.'
+		};
+	}
+
+	// Analysiere bestehende Spalten-Namen für Muster
+	const hasPhases = existingColumns.some((col) =>
+		/phase|schritt|step|etappe/i.test(col)
+	);
+	const hasStatus = existingColumns.some((col) =>
+		/todo|doing|done|backlog|progress|review/i.test(col)
+	);
+	const hasTopics = existingColumns.some((col) =>
+		/einführung|vertiefung|übung|material|ressource/i.test(col)
+	);
+
+	let strategy: 'create_new' | 'add_to_existing' | 'mixed' = 'add_to_existing';
+	let instructions = '';
+
+	if (hasPhases || hasStatus) {
+		// Status-Board → Füge Karten zu bestehenden Spalten hinzu
+		strategy = 'add_to_existing';
+		instructions = `WICHTIG: Das Board hat bereits ${existingColumns.length} Spalten (${existingColumns.join(', ')}). 
+ERSTELLE KEINE NEUEN SPALTEN! Füge die neuen Karten zu den BESTEHENDEN Spalten hinzu.
+Verteile die Karten sinnvoll auf die vorhandenen Spalten basierend auf deren Namen.`;
+	} else if (hasTopics && existingColumns.length < 5) {
+		// Themen-Board mit wenigen Spalten → Mixed Strategy
+		strategy = 'mixed';
+		instructions = `Das Board hat bereits ${existingColumns.length} Spalten (${existingColumns.join(', ')}). 
+Du kannst:
+1. Neue Karten zu bestehenden Spalten hinzufügen, ODER
+2. Neue thematische Spalten erstellen, wenn der Inhalt neue Themen abdeckt.
+Entscheide intelligent basierend auf dem Lerninhalt.`;
+	} else {
+		// Viele Spalten oder unklares Muster → Nur Karten hinzufügen
+		strategy = 'add_to_existing';
+		instructions = `WICHTIG: Das Board hat bereits ${existingColumns.length} Spalten (${existingColumns.join(', ')}). 
+ERSTELLE KEINE NEUEN SPALTEN! Füge die neuen Karten zu den BESTEHENDEN Spalten hinzu.`;
+	}
+
+	return {
+		hasColumns: true,
+		columnCount: existingColumns.length,
+		strategy,
+		instructions
+	};
+}
 
 /**
  * Generiert User-Prompt für Phase 2 (Structure Generation)
@@ -56,37 +137,61 @@ export function generateStructurePrompt(
 	originalContent: string,
 	userContext?: { boardName?: string; existingColumns?: string[] }
 ): string {
-	const userPrompt = `Analysiere diesen Lerninhalt und generiere AUSSCHLIESSLICH eine Kanban-Board-Struktur als valides JSON.
+	// Analysiere bestehende Struktur
+	const existingColumns = userContext?.existingColumns || [];
+	const structureAnalysis = analyzeExistingStructure(existingColumns);
 
-Deine Antwort MUSS nur JSON sein - kein Text davor, kein Text danach, keine Markdown-Code-Blöcke!
+	// Basis-Prompt
+	let prompt = `Analysiere diesen Lerninhalt und generiere eine Kanban-Board-Struktur als valides JSON.\n\n`;
 
-JSON Format MUSS exakt dieses Schema erfüllen:
-{
-  "title": "Board Titel",
-  "description": "Optional: Board Beschreibung",
-  "columns": [
-    {
-      "name": "Spaltenname",
-      "cards": [
-        {
-          "heading": "Kartentitel",
-          "content": "Optionale detaillierte Beschreibung",
-          "labels": ["tag1", "tag2"]
-        }
-      ]
-    }
-  ]
-}
+	// Kontext: Bestehende Struktur
+	if (structureAnalysis.hasColumns) {
+		prompt += `📊 BESTEHENDE BOARD-STRUKTUR:\n`;
+		prompt += `Das Board hat bereits ${structureAnalysis.columnCount} Spalten:\n`;
+		prompt += existingColumns.map((col, idx) => `${idx + 1}. "${col}"`).join('\n');
+		prompt += '\n\n';
+		prompt += `🎯 STRATEGIE:\n${structureAnalysis.instructions}\n\n`;
+	}
 
-Lerninhalt zum Strukturieren:
-${originalContent}
+	// Board-Name als Kontext
+	if (userContext?.boardName) {
+		prompt += `📋 Board Name: "${userContext.boardName}"\n\n`;
+	}
 
-${userContext?.boardName ? `\nBoard Name: ${userContext.boardName}` : ''}
-${userContext?.existingColumns ? `\nExistierenden Spalten beachten: ${userContext.existingColumns.join(', ')}` : ''}
+	// Hauptinhalt
+	prompt += `📚 LERNINHALT:\n${originalContent}\n\n`;
 
-WICHTIG: Antworte NUR mit validem JSON! Keine Erklärungen, keine Markdown!`;
+	// JSON-Format
+	prompt += `📝 JSON FORMAT (exakt so!):\n`;
+	prompt += `{\n`;
+	prompt += `  "title": "Board Titel",\n`;
+	prompt += `  "description": "Kurze Beschreibung",\n`;
+	prompt += `  "columns": [\n`;
+	prompt += `    {\n`;
+	prompt += `      "name": "Spaltenname"${structureAnalysis.hasColumns ? ' (NUTZE BESTEHENDE!)' : ''},\n`;
+	prompt += `      "cards": [\n`;
+	prompt += `        {\n`;
+	prompt += `          "heading": "Karten-Titel (min 3 Zeichen)",\n`;
+	prompt += `          "content": "Detaillierte Beschreibung (optional)",\n`;
+	prompt += `          "labels": ["label1", "label2"]\n`;
+	prompt += `        }\n`;
+	prompt += `      ]\n`;
+	prompt += `    }\n`;
+	prompt += `  ]\n`;
+	prompt += `}\n\n`;
 
-	return userPrompt;
+	// Kritische Regeln
+	prompt += `⚠️ KRITISCHE REGELN:\n`;
+	prompt += `1. Antworte NUR mit JSON (keine Markdown-Blöcke wie \`\`\`json)\n`;
+	prompt += `2. Keine Erklärungen vor oder nach dem JSON\n`;
+	prompt += `3. Jede Spalte braucht mindestens 1 Karte\n`;
+	prompt += `4. Jede Karte braucht ein "heading" (min 3 Zeichen)\n`;
+
+	if (structureAnalysis.strategy === 'add_to_existing') {
+		prompt += `5. ⚠️ ERSTELLE KEINE NEUEN SPALTEN - nutze nur: ${existingColumns.join(', ')}\n`;
+	}
+
+	return prompt;
 }
 
 /**
@@ -187,6 +292,58 @@ export function validateStructureJSON(jsonString: string): ValidationResult {
 		const errorMsg = err instanceof Error ? err.message : 'Unexpected error';
 		return { valid: false, error: `Validation error: ${errorMsg}` };
 	}
+}
+
+/**
+ * Validiert, dass generierte Spalten mit bestehenden übereinstimmen (falls gefordert)
+ * 
+ * @param generatedColumns - Generierte Spalten vom LLM
+ * @param existingColumns - Bestehende Spalten auf dem Board
+ * @param strategy - Erwartete Strategie
+ * @returns ValidationResult mit Hinweisen auf Probleme
+ */
+export function validateColumnAlignment(
+	generatedColumns: Array<{ name: string }>,
+	existingColumns: string[],
+	strategy: 'create_new' | 'add_to_existing' | 'mixed'
+): ValidationResult {
+	// Keine bestehenden Spalten → alles OK
+	if (!existingColumns || existingColumns.length === 0) {
+		return { valid: true };
+	}
+
+	const generatedNames = generatedColumns.map((c) => c.name.toLowerCase().trim());
+	const existingNames = existingColumns.map((c) => c.toLowerCase().trim());
+
+	// Bei "add_to_existing": Alle generierten Spalten MÜSSEN in existingColumns sein
+	if (strategy === 'add_to_existing') {
+		const invalidColumns = generatedNames.filter((name) => !existingNames.includes(name));
+
+		if (invalidColumns.length > 0) {
+			return {
+				valid: false,
+				error: `WARNUNG: LLM hat neue Spalten erstellt, obwohl nur bestehende genutzt werden sollten:\n` +
+					`Neue Spalten: ${invalidColumns.join(', ')}\n` +
+					`Erwartete Spalten: ${existingColumns.join(', ')}\n\n` +
+					`Die Karten werden trotzdem hinzugefügt, aber in neuen Spalten.`
+			};
+		}
+	}
+
+	// Bei "mixed": OK wenn mindestens 1 bestehende Spalte genutzt wird
+	if (strategy === 'mixed') {
+		const usedExisting = generatedNames.filter((name) => existingNames.includes(name));
+
+		if (usedExisting.length === 0 && generatedNames.length > 0) {
+			return {
+				valid: true, // Nicht blockieren, aber warnen
+				error: `HINWEIS: LLM hat keine der bestehenden Spalten genutzt (${existingColumns.join(', ')}).\n` +
+					`Dies ist bei 'mixed' Strategie OK, aber möglicherweise suboptimal.`
+			};
+		}
+	}
+
+	return { valid: true };
 }
 
 /**

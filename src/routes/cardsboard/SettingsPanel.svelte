@@ -43,7 +43,7 @@ import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 		<SettingsIcon class="h-4 w-4" />
 	</Popover.Trigger>
 
-	<Popover.Content align="end" class="w-80">
+	<Popover.Content align="end" class="w-96 max-h-[800px] overflow-y-auto">
 		<div class="space-y-4">
 			<div>
 				<h4 class="font-semibold text-sm">Kanban-Einstellungen</h4>
@@ -91,6 +91,28 @@ import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 				</RadioGroup.Root>
 				<p class="text-xs text-muted-foreground">
 					Wenn aktiviert, wachsen alle Spalten auf die Höhe der längsten Spalte.
+				</p>
+			</div>
+
+			<!-- Setting 3: LLM Intent Detection (Beta) -->
+			<div class="space-y-2">
+				<div class="text-sm font-medium">🤖 KI-Bestätigung (Experimentell)</div>
+				<RadioGroup.Root
+					value={settings?.llmUseLlmIntent ? 'true' : 'false'}
+					onValueChange={(value) => settingsStore.setLlmUseLlmIntent(value === 'true')}
+				>
+					<div class="flex items-center space-x-2 mb-2">
+						<RadioGroup.Item value="false" id="llm-intent-false" />
+						<label for="llm-intent-false" class="text-sm cursor-pointer">Schnelle regelbasierte Erkennung (Standard)</label>
+					</div>
+					<div class="flex items-center space-x-2">
+						<RadioGroup.Item value="true" id="llm-intent-true" />
+						<label for="llm-intent-true" class="text-sm cursor-pointer">🧪 KI-basierte Erkennung (Beta)</label>
+					</div>
+				</RadioGroup.Root>
+				<p class="text-xs text-muted-foreground">
+					Experimentell: Nutzt LLM für flexiblere Bestätigungs-Erkennung ("ja", "ok", "mach das", etc.). 
+					Deaktiviert: Schnellere Mustererkennung ohne API-Aufruf.
 				</p>
 			</div>
 

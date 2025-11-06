@@ -24,6 +24,23 @@ describe('detectUserIntent', () => {
 			expect(detectUserIntent('erstell daraus das board')).toBe('confirmation'); // lowercase
 			expect(detectUserIntent('ERSTELLE DARAUS DAS BOARD')).toBe('confirmation'); // uppercase
 		});
+
+		it('should detect "aus dem/der" confirmations (NEW - 06.11.2025)', () => {
+			// 🆕 Real-World Case: "erstelle aus dem Markdown die Spalten und Kärtchen"
+			expect(detectUserIntent('erstelle aus dem Markdown die Spalten und Kärtchen')).toBe('confirmation');
+			expect(detectUserIntent('erstelle aus dem Markdown das Board')).toBe('confirmation');
+			expect(detectUserIntent('erstelle aus der Vorlage')).toBe('confirmation');
+			expect(detectUserIntent('generiere aus dem Konzept die Struktur')).toBe('confirmation');
+			expect(detectUserIntent('mache aus dem Plan ein Board')).toBe('confirmation');
+		});
+
+		it('should detect explicit "die Spalten/das Board" confirmations (NEW - 06.11.2025)', () => {
+			// 🆕 Pattern: User fordert explizit Umsetzung
+			expect(detectUserIntent('erstelle die Spalten')).toBe('confirmation');
+			expect(detectUserIntent('erstelle das Board')).toBe('confirmation');
+			expect(detectUserIntent('generiere die Spalten und Karten')).toBe('confirmation');
+			expect(detectUserIntent('baue die Spalten')).toBe('confirmation');
+		});
 	});
 
 	describe('Explicit Patterns', () => {
@@ -91,6 +108,47 @@ describe('detectUserIntent', () => {
 		it('Explicit request should work', () => {
 			const intent = detectUserIntent('Erstelle ein Board für Schöpfungsgarten Klasse 4');
 			expect(intent).toBe('explicit');
+		});
+	});
+
+	describe('Card Creation Confirmations (NEW - 06.11.2025)', () => {
+		it('should detect "erstelle Karten für" confirmations', () => {
+			expect(detectUserIntent('erstelle Karten für die leeren Spalten')).toBe('confirmation');
+			expect(detectUserIntent('Erstelle Karten für Ziele und Inhalte')).toBe('confirmation');
+			expect(detectUserIntent('generiere Karten für die Spalten')).toBe('confirmation');
+		});
+
+		it('should detect "füge Karten" variations', () => {
+			expect(detectUserIntent('füge Karten hinzu')).toBe('confirmation');
+			expect(detectUserIntent('fülle die Spalten mit Karten')).toBe('confirmation');
+			expect(detectUserIntent('fülle die spalten')).toBe('confirmation');
+		});
+
+		it('should detect "nun/jetzt das Board" temporal confirmations', () => {
+			expect(detectUserIntent('erstelle nun das Board')).toBe('confirmation');
+			expect(detectUserIntent('Erstelle jetzt das Board')).toBe('confirmation');
+			expect(detectUserIntent('mache nun das board')).toBe('confirmation');
+			expect(detectUserIntent('erstelle nun die Spalten')).toBe('confirmation');
+		});
+
+		it('Real-world case: "erstelle Karten für die leeren Spalten Ziele und Inhalte"', () => {
+			// User context:
+			// 1. Board has empty columns "Ziele" and "Inhalte"
+			// 2. User: "erstelle Karten für die leeren Spalten Ziele und Inhalte"
+			// Expected: Should trigger Phase 3 (Action Execution)
+			
+			const intent = detectUserIntent('erstelle Karten für die leeren Spalten "Ziele" und "Inhalte"');
+			expect(intent).toBe('confirmation');
+		});
+
+		it('Real-world case: "erstelle nun das Board" after proposal', () => {
+			// User context:
+			// 1. AI shows content proposal with JSON
+			// 2. User: "erstelle nun das Board"
+			// Expected: Should trigger Phase 2 (Structure Generation)
+			
+			const intent = detectUserIntent('erstelle nun das Board');
+			expect(intent).toBe('confirmation');
 		});
 	});
 });

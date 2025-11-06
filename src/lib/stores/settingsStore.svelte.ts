@@ -36,6 +36,7 @@ export interface SettingsState {
   llmBaseUrl: string; // Base URL des OpenAI-kompatiblen Providers
   llmApiKey: string; // Provider API-Key (oder leer bei lokalem Ollama)
   llmSystemPrompt: string; // System Prompt für KI-Kontext
+  llmUseLlmIntent: boolean; // LLM-basierte Intent Detection (false = regelbasiert, true = LLM)
 
   // MCP Integration
   mcpUrls: string[]; // Liste von URLs zu MCP Servern (z.B. n8n MCP Server)
@@ -80,6 +81,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   llmModel: 'ollama/mistral', // Default: lokales Ollama
   llmBaseUrl: 'http://localhost:11434', // Ollama läuft lokal
   llmApiKey: '', // Leer für lokales Ollama
+  llmUseLlmIntent: false, // Default: regelbasierte Intent Detection (schneller, offline)
   llmSystemPrompt:
     `Du bist ein erfahrener Unterrichtsplanungs-Experte, der Lehrkräfte beim STRUKTURIEREN von Unterrichtsinhalten unterstützt.
 
@@ -366,6 +368,9 @@ export class SettingsStore {
       if (config.llm.systemPrompt !== undefined) {
         llmPartial.llmSystemPrompt = config.llm.systemPrompt;
       }
+      if (config.llm.useLlmIntent !== undefined) {
+        llmPartial.llmUseLlmIntent = config.llm.useLlmIntent;
+      }
 
       if (Object.keys(llmPartial).length > 0) {
         this.settings = { ...this.settings, ...llmPartial };
@@ -641,6 +646,12 @@ export class SettingsStore {
     }
     // ✅ Reassignment für Reaktivität
     this.settings = { ...this.settings, llmSystemPrompt: prompt };
+    this.saveToStorage();
+  }
+
+  public setLlmUseLlmIntent(useLlm: boolean): void {
+    // ✅ Reassignment für Reaktivität
+    this.settings = { ...this.settings, llmUseLlmIntent: useLlm };
     this.saveToStorage();
   }
 

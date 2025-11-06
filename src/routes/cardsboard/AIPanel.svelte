@@ -31,10 +31,14 @@
   // 🆕 Agent Modules (refactored)
   import {
     detectUserIntent,
+    llmDetectIntention,
+    detectIntentViaLLM,
     getIntentAwareSystemPrompt,
     parseContentProposal,
+    analyzeExistingStructure,
     generateStructurePrompt,
     validateStructureJSON,
+    validateColumnAlignment,
     parseStructureProposal,
     structureToActions,
     createBoardPreview,
@@ -157,8 +161,10 @@
       return;
     }
     
-    // Fall 2: User bestätigt vorherigen Vorschlag → Phase 2 starten
-    if (userIntent === 'confirmation' && awaitingUserConfirmation && proposal.canGenerate) {
+    // Fall 2: User bestätigt vorherigen Vorschlag ODER gibt Confirmation-Intent → Phase 2 starten
+    // 🆕 FIX: Auch wenn KEIN vorheriger Vorschlag existiert (awaitingUserConfirmation=false),
+    //         aber User sagt "erstelle Karten für..." mit JSON → Phase 2 starten!
+    if (userIntent === 'confirmation' && proposal.canGenerate) {
       console.log('✅ User-Bestätigung erhalten → Starte Phase 2');
       
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -233,6 +239,9 @@
       // Get existing columns for structure prompt
       const existingColumns = boardStore.uiData.map(col => col.name);
       
+      // 🆕 Analyze existing structure to get strategy
+      const structureAnalysis = analyzeExistingStructure(existingColumns);
+      
       // Generate ONLY user prompt (system prompt wird separat übergeben!)
       const userPrompt = generateStructurePrompt(
         currentContentProposal.content,
@@ -262,7 +271,7 @@ Jetzt generiere JSON für den Lerninhalt:`;
       // Log für Debugging
       console.log('📋 Raw JSON Response:', jsonResponse);
       
-      // Validate JSON
+      // Validate JSON structure
       const validation = validateStructureJSON(jsonResponse);
       
       if (!validation.valid) {
@@ -277,6 +286,37 @@ Jetzt generiere JSON für den Lerninhalt:`;
         phase2Toast = '';
         
         const formattedError = `❌ Struktur-Validierung fehlgeschlagen:\n${validation.error || 'Unbekannter Fehler'}\n\nBitte versuchen Sie erneut.`;
+        chatStore.addMessage(
+          `⚠️ Versuch ${structureRetries}: ${formattedError}`,
+          'assistant'
+        );
+        
+        // Retry
+        await generateBoardStructure();
+        return;
+      }
+      
+      // 🆕 Validate column alignment with detected strategy
+      const columnValidation = validateColumnAlignment(
+        validation.data.columns,
+        existingColumns,
+        structureAnalysis.strategy
+      );
+      
+      if (!columnValidation.valid) {
+        structureRetries++;
+        structureGenerationError = columnValidation.error || 'Spalten-Alignment fehlgeschlagen';
+        
+        console.log(`⚠️ Column alignment failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, columnValidation.error);
+        console.log('📋 Generated columns:', validation.data.columns.map((c: any) => c.name));
+        console.log('📋 Existing columns:', existingColumns);
+        console.log('📋 Expected strategy:', structureAnalysis.strategy);
+        
+        // Reset Spinner
+        isPhase2Running = false;
+        phase2Toast = '';
+        
+        const formattedError = `❌ Spalten-Validierung fehlgeschlagen:\n${columnValidation.error}\n\nBitte versuchen Sie erneut.`;
         chatStore.addMessage(
           `⚠️ Versuch ${structureRetries}: ${formattedError}`,
           'assistant'
@@ -518,10 +558,34 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   async function simulateAIResponse(userMessage: string) {
     console.log('🔍 User Message:', userMessage);
     
-    // 🆕 Step 1: Detect User Intent
-    const intent = detectUserIntent(userMessage);
+    // 🆕 Step 1: Detect User Intent (with LLM toggle)
+    const useLlmIntent = settingsStore.settings.llmUseLlmIntent;
+    let intent: UserIntent;
+    
+    if (useLlmIntent) {
+      try {
+        // 🧪 LLM-basierte Intent Detection (Beta)
+        console.log('🤖 Using LLM-based intent detection...');
+        const aiMessages = chatStore.messages
+          .filter(m => m.role === 'assistant')
+          .map(m => m.content)
+          .slice(-2); // Letzte 2 AI-Antworten für Kontext
+        
+        const result = await llmDetectIntention(aiMessages, userMessage);
+        intent = result.intent;
+        console.log('🎯 LLM Intent:', result.intent, '| Confidence:', result.confidence, '| Reason:', result.reason);
+      } catch (err) {
+        console.warn('⚠️ LLM intent detection failed, fallback to rule-based:', err);
+        intent = detectUserIntent(userMessage);
+        console.log('🎯 Fallback Intent (rule-based):', intent);
+      }
+    } else {
+      // 📏 Regelbasierte Intent Detection (Standard)
+      intent = detectUserIntent(userMessage);
+      console.log('🎯 Intent (rule-based):', intent);
+    }
+    
     userIntent = intent;
-    console.log('🎯 Detected Intent:', intent);
     
     // 🆕 Step 2: Get intent-aware system prompt
     const systemPrompt = getIntentAwareSystemPrompt(intent);
