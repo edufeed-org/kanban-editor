@@ -5,12 +5,23 @@
  * Starte Ollama mit: ollama serve
  * Installiere Granite4: ollama pull granite3-dense:8b
  * 
- * Tests werden übersprungen wenn Ollama nicht läuft.
+ * Tests werden übersprungen wenn:
+ * - CI/CD Environment (GitHub Actions)
+ * - Ollama nicht erreichbar ist
+ * - SKIP_LLM_TESTS=true
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { llmDetectIntention, detectIntentViaLLM } from './llmIntentDetection';
 import { settingsStore } from '$lib/stores/settingsStore.svelte';
+
+// ⚠️ Skip in GitHub Actions CI/CD
+const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
+const skipTests = isCI || process.env.SKIP_LLM_TESTS === 'true';
+
+if (skipTests) {
+	console.log('⏭️  Skipping LLM integration tests (CI/CD or SKIP_LLM_TESTS=true)');
+}
 
 // ✅ Configure Ollama before tests run
 settingsStore.setLlmModel('granite4:latest'); // Use available model
@@ -19,10 +30,11 @@ settingsStore.setLlmApiKey(''); // No API key needed for local Ollama
 
 console.log('🔧 LLM configured for tests:', {
 	model: settingsStore.settings.llmModel,
-	baseUrl: settingsStore.settings.llmBaseUrl
+	baseUrl: settingsStore.settings.llmBaseUrl,
+	skipTests
 });
 
-describe('llmDetectIntention (LLM-based Intent Detection)', () => {
+describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', () => {
 	beforeAll(() => {
 		console.log('✅ Running LLM tests with Ollama Granite4');
 	});
