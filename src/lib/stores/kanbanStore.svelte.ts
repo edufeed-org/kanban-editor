@@ -623,11 +623,6 @@ export class BoardStore {
             tags: this.board.tags,
             ccLicense: this.board.ccLicense
         });
-        
-        // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
-        this.publishBoardAsync().catch(err => 
-            console.error('⚠️ Async board publishing failed:', err)
-        );
     }
 
     // ============================================================================
@@ -641,13 +636,19 @@ export class BoardStore {
             throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
+        const oldState = this.board.publishState
+        console.log({oldState})
         this.board.setPublishState(state);
         this.triggerUpdate();
         
-        // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
-        this.publishBoardAsync().catch(err => 
-            console.error('⚠️ Async board publishing failed:', err)
-        );
+        if (state === 'published') {
+            this.publishBoardAsync().catch(err => {
+                this.board.setPublishState(oldState);
+                console.log('this.board', this.board)
+                this.triggerUpdate();
+                console.error('⚠️ Async board publishing failed:', err);
+            });
+        }
     }
 
     public addColumn(props: ColumnProps) {
@@ -1240,8 +1241,6 @@ export class BoardStore {
             // Queue for publishing
             const syncManager = getSyncManager();
             await syncManager.publishOrQueue(event, 'board', 'normal');
-
-            console.log(`✅ Board ${this.board.id} queued for publishing`);
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
         }

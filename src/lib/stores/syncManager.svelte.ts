@@ -156,6 +156,7 @@ export class SyncManager {
           }
         } catch (error) {
           console.warn(`[SyncManager] ⚠️ Publish failed, will queue:`, error);
+          console.log(`✅ Event ${event.id} queued for publishing`);
           this.queueEvent(event, type, priority);
         }
       } else {
