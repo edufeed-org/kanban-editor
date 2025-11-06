@@ -27,15 +27,24 @@
   import XIcon from '@lucide/svelte/icons/x';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
   import type { AIAction } from '$lib/classes/BoardModel.js';
+  
+  // 🆕 Agent Modules (refactored)
   import {
+    detectUserIntent,
+    getIntentAwareSystemPrompt,
     parseContentProposal,
-    generateStructureFromContent,
+    generateStructurePrompt,
+    validateStructureJSON,
     parseStructureProposal,
     structureToActions,
-    validateStructureJSON,
-    formatValidationError,
-    type ContentProposal
-  } from '$lib/utils/aiActionGenerator.js';
+    createBoardPreview,
+    executeActions,
+    STRUCTURE_GENERATION_SYSTEM_PROMPT,
+    type UserIntent,
+    type ContentProposal,
+    type StructureProposal,
+    type BoardPreview
+  } from '$lib/agent';
   
   // Props
   let {
@@ -115,55 +124,13 @@
   })
   
   /**
-   * 🆕 Intent Detection: Prüft ob User explizit eine Aktion möchte
-   * 
-   * Explizite Intents:
-   * - "Erstelle ein Board zu..."
-   * - "Mach eine Karte in..."
-   * - "Ja", "Ja bitte", "Los", "Mach das" (Bestätigung)
-   * 
-   * Vage Anfragen:
-   * - "Reformation 7. Klasse" (ohne Verb)
-   * → LLM soll fragen: "Soll ich ein Board erstellen?"
-   */
-  function detectUserIntent(userMessage: string): 'explicit' | 'confirmation' | 'vague' {
-    const lowerMsg = userMessage.toLowerCase().trim();
-    
-    // Bestätigungen (nach LLM-Frage)
-    const confirmationPhrases = [
-      'ja', 'ja bitte', 'ja gerne', 'gerne', 'ok', 'okay',
-      'mach das', 'los', 'go', 'setze um', 'umsetzen'
-    ];
-    
-    if (confirmationPhrases.some(phrase => lowerMsg === phrase || lowerMsg.startsWith(phrase + ' '))) {
-      return 'confirmation';
-    }
-    
-    // Explizite Intents (Verben für Aktionen)
-    const explicitVerbs = [
-      'erstelle', 'mache', 'mach', 'generiere', 'lege an', 'erzeuge', 'baue',
-      'füge hinzu', 'füg hinzu', 'hinzufügen', 'add',
-      'ändere', 'bearbeite', 'aktualisiere', 'update', 'edit'
-    ];
-    
-    const hasExplicitVerb = explicitVerbs.some(verb => lowerMsg.includes(verb));
-    
-    if (hasExplicitVerb) {
-      return 'explicit';
-    }
-    
-    // Vage Anfrage (kein erkennbares Verb)
-    return 'vague';
-  }
-  
-  /**
    * Phase 1: Parse KI-Antwort als Content-Vorschlag
    * 🆕 MIT Intent-Detection: Nur bei explizitem Intent oder Bestätigung → Phase 2
    * 
    * WICHTIG: chatStore.addMessage() wurde bereits in simulateAIResponse() aufgerufen!
    */
-  async function handlePhase1Response(responseText: string, userIntent: 'explicit' | 'confirmation' | 'vague') {
-    console.log('🔄 Phase 1: Parsing content proposal... (Intent:', userIntent, ')');
+  async function handlePhase1Response(responseText: string, intent: UserIntent) {
+    console.log('🔄 Phase 1: Parsing content proposal... (Intent:', intent, ')');
     
     const proposal = await parseContentProposal(responseText);
     currentContentProposal = proposal;
@@ -176,7 +143,7 @@
     // 🆕 DECISION: Wann Phase 2 starten?
     
     // Fall 1: User hat expliziten Intent → Direkt Phase 2 starten
-    if (userIntent === 'explicit' && proposal.canGenerate) {
+    if (intent === 'explicit' && proposal.canGenerate) {
       console.log('✅ Expliziter Intent erkannt → Starte Phase 2 direkt');
       
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -257,36 +224,26 @@
     }
     
     try {
+      // Get existing columns for structure prompt
+      const existingColumns = boardStore.uiData.map(col => col.name);
+      
       // Generate ONLY user prompt (system prompt wird separat übergeben!)
-      const userPrompt = generateStructureFromContent(
+      const userPrompt = generateStructurePrompt(
         currentContentProposal.content,
-        { boardName: boardStore.uiData[0]?.name }
+        existingColumns
       );
       
-      // SPEZIALISIERTEN System-Prompt für JSON-Generierung
-      const systemPrompt = `Du bist ein Experte für die Strukturierung von Lerninhalten in Kanban-Boards.
-Deine Aufgabe: Analysiere den Lerninhalt und generiere AUSSCHLIESSLICH eine valide JSON-Struktur.
-
-REGELN (BEACHTE DIESE GENAU!):
-1. Antworte NUR mit JSON - kein Text davor, kein Text danach
-2. Keine Markdown-Code-Blöcke (keine \`\`\`json)
-3. Valide JSON-Syntax (alle Strings in Anführungszeichen, kein Komma nach letztem Element)
-4. Alle erforderlichen Felder: name, cards Array mit heading
-5. Wenn unsicher: Einfach halten, aber struktur-treu
-
-Beispiel OK:
-{"columns":[{"name":"Phase 1","cards":[{"heading":"Einführung"}]}]}
-
-Beispiel FALSCH:
-\`\`\`json
-{"columns": [...]}
-\`\`\`
+      // Use SPECIALIZED system prompt for JSON generation from module
+      const systemPrompt = STRUCTURE_GENERATION_SYSTEM_PROMPT;
+      
+      // Append user context to prompt
+      const fullUserPrompt = `${userPrompt}
 
 Jetzt generiere JSON für den Lerninhalt:`;
 
       // Send to LLM with CUSTOM system prompt!
       const { content: jsonResponse, error } = await chatStore.sendToLLMWithSystem(
-        userPrompt,
+        fullUserPrompt,
         systemPrompt
       );
       
@@ -307,8 +264,9 @@ Jetzt generiere JSON für den Lerninhalt:`;
         console.log(`⚠️ Validation failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, validation.error);
         console.log('📋 Response was:', jsonResponse.substring(0, 200));
         
+        const formattedError = `❌ Struktur-Validierung fehlgeschlagen:\n${validation.error || 'Unbekannter Fehler'}\n\nBitte versuchen Sie erneut.`;
         chatStore.addMessage(
-          `⚠️ Versuch ${structureRetries}: ${formatValidationError(validation.error || 'Unbekannter Fehler')}`,
+          `⚠️ Versuch ${structureRetries}: ${formattedError}`,
           'assistant'
         );
         
@@ -402,35 +360,6 @@ Jetzt generiere JSON für den Lerninhalt:`;
     } finally {
       isGeneratingStructure = false;
     }
-  }
-  
-  /**
-   * 🆕 Erstelle Board-Preview aus Actions
-   * Zeigt Spalten-Namen und Karten-Titel ohne tatsächlich zu speichern
-   */
-  function createBoardPreview(actions: AIAction[]) {
-    const columns: Array<{ name: string; cardCount: number; cards: string[] }> = [];
-    let currentColumn: { name: string; cardCount: number; cards: string[] } | null = null;
-    
-    for (const action of actions) {
-      if (action.type === 'add_column') {
-        // Neuer Spalte
-        currentColumn = {
-          name: action.name,
-          cardCount: 0,
-          cards: []
-        };
-        columns.push(currentColumn);
-      } else if (action.type === 'add_card' && currentColumn) {
-        // Karte zur aktuellen Spalte hinzufügen
-        currentColumn.cards.push(action.heading);
-        currentColumn.cardCount++;
-      }
-    }
-    
-    const totalCards = columns.reduce((sum, col) => sum + col.cardCount, 0);
-    
-    return { columns, totalCards };
   }
   
   /**
@@ -567,54 +496,6 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     }
   }
   
-  /**
-   * Generate intent-aware system prompt
-   */
-  function getIntentAwareSystemPrompt(intent: 'explicit' | 'confirmation' | 'vague'): string {
-    switch (intent) {
-      case 'vague':
-        return `Du bist ein Lern-Assistent für Kanban-Board-Erstellung.
-
-Der User hat eine VAGE Anfrage gestellt (nur ein Thema oder Konzept genannt, ohne explizite Aufforderung).
-
-Deine Aufgabe:
-1. Fasse kurz zusammen, was du verstanden hast
-2. Frage EXPLIZIT: "Soll ich ein Board zu [Thema] erstellen?"
-3. Erstelle KEINE Struktur - warte auf Bestätigung
-
-Beispiel:
-User: "Reformation 7. Klasse"
-Du: "Ich verstehe, du möchtest Materialien zur Reformation für die 7. Klasse strukturieren. Soll ich ein Kanban-Board mit Spalten und Karten zu diesem Thema erstellen?"`;
-      
-      case 'explicit':
-        return `Du bist ein Experte für die Strukturierung von Lerninhalten in Kanban-Boards.
-
-Der User hat EXPLIZIT eine Aktion angefordert (z.B. "Erstelle ein Board zu...").
-
-Erstelle sofort eine Struktur im Markdown-Format:
-# [Thema]
-## Spalte 1: [Name]
-- Karte: [Titel]
-## Spalte 2: [Name]
-- Karte: [Titel]
-...
-
-Die Struktur sollte pädagogisch sinnvoll sein mit Spalten für verschiedene Lernphasen.`;
-      
-      case 'confirmation':
-        return `Du bist ein Lern-Assistent.
-
-Der User hat eine BESTÄTIGUNG gegeben (z.B. "Ja bitte", "mach das").
-
-Antworte kurz bestätigend: "Alles klar! Ich erstelle das Board jetzt."
-Dann erstelle die Struktur im Markdown-Format:
-# [Thema]
-## Spalte 1: [Name]
-- Karte: [Titel]
-...`;
-    }
-  }
-
   /**
    * Send message to LLM and process response
    */
@@ -1280,19 +1161,18 @@ Dann erstelle die Struktur im Markdown-Format:
       
       <div class="space-y-4 py-4">
         <div>
-          <p class="text-sm font-medium mb-2">Erkannter Titel:</p>
-          <p class="text-sm text-muted-foreground">{currentContentProposal.title}</p>
+          <p class="text-sm font-medium mb-2">Erkannter Content:</p>
+          <div class="text-sm text-muted-foreground max-h-40 overflow-y-auto rounded-md bg-muted/30 p-3">
+            <pre class="whitespace-pre-wrap text-xs">{currentContentProposal.content}</pre>
+          </div>
         </div>
         
-        <div>
-          <p class="text-sm font-medium mb-2">Erkannte Struktur:</p>
-          <Badge variant="outline" class="text-xs">
-            {currentContentProposal.structure === 'spalten-mit-karten' ? '📊 Spalten mit Karten' :
-             currentContentProposal.structure === 'phasen' ? '📅 Phasen-Struktur' :
-             currentContentProposal.structure === 'nur-karten' ? '📇 Karten-Liste' :
-             '❓ Unbekannt'}
-          </Badge>
-        </div>
+        {#if !currentContentProposal.canGenerate}
+          <div class="rounded-md bg-yellow-50 p-3 text-sm text-yellow-900">
+            <p class="font-medium mb-1">⚠️ Struktur-Generierung nicht möglich</p>
+            <p class="text-xs">{currentContentProposal.reason || 'Keine klare Struktur erkannt'}</p>
+          </div>
+        {/if}
         
         {#if structureGenerationError}
           <div class="rounded-md bg-red-50 p-3 text-sm text-red-900">

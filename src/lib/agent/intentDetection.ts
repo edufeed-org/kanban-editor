@@ -1,0 +1,111 @@
+/**
+ * Intent Detection & System Prompt Generation
+ * Erkennt Benutzerabsichten und generiert passende LLM-Prompts
+ */
+
+import type { UserIntent } from './types';
+
+/**
+ * Erkennt die Absicht des Benutzers aus seiner Nachricht
+ * 
+ * @param userMessage - Die Benutzernachricht
+ * @returns Intent-Typ: 'explicit' | 'confirmation' | 'vague'
+ * 
+ * @example
+ * detectUserIntent("Erstelle ein Board zur Reformation") // → 'explicit'
+ * detectUserIntent("Ja bitte") // → 'confirmation'
+ * detectUserIntent("Reformation 7. Klasse") // → 'vague'
+ */
+export function detectUserIntent(userMessage: string): UserIntent {
+	const lowerMsg = userMessage.toLowerCase().trim();
+
+	// Pattern 1: Confirmation Responses
+	const confirmationPhrases = [
+		'ja',
+		'ja bitte',
+		'ja gerne',
+		'mach das',
+		'setze um',
+		'los',
+		'okay',
+		'ok'
+	];
+
+	// Exact match or starts with confirmation phrase
+	const isConfirmation = confirmationPhrases.some(
+		(phrase) => lowerMsg === phrase || lowerMsg.startsWith(phrase + ' ')
+	);
+
+	if (isConfirmation) {
+		return 'confirmation';
+	}
+
+	// Pattern 2: Explicit Action Requests
+	const explicitVerbs = [
+		'erstelle ein board',
+		'mache ein board',
+		'generiere ein board',
+		'lege ein board an',
+		'neues board'
+	];
+
+	const hasExplicitVerb = explicitVerbs.some((verb) => lowerMsg.includes(verb));
+
+	if (hasExplicitVerb) {
+		return 'explicit';
+	}
+
+	// Pattern 3: Vague (everything else)
+	return 'vague';
+}
+
+/**
+ * Generiert intent-spezifische System-Prompts für die LLM
+ * 
+ * @param intent - Der erkannte Intent-Typ
+ * @returns System-Prompt String für die LLM
+ */
+export function getIntentAwareSystemPrompt(intent: UserIntent): string {
+	switch (intent) {
+		case 'vague':
+			return `Du bist ein Lern-Assistent für Kanban-Board-Erstellung.
+
+Der User hat eine VAGE Anfrage gestellt (nur ein Thema oder Konzept genannt, ohne explizite Aufforderung).
+
+Deine Aufgabe:
+1. Fasse kurz zusammen, was du verstanden hast
+2. Frage EXPLIZIT: "Soll ich ein Board zu [Thema] erstellen?"
+3. Erstelle KEINE Struktur - warte auf Bestätigung
+
+Beispiel:
+User: "Reformation 7. Klasse"
+Du: "Ich verstehe, du möchtest Materialien zur Reformation für die 7. Klasse strukturieren. Soll ich ein Kanban-Board mit Spalten und Karten zu diesem Thema erstellen?"`;
+
+		case 'explicit':
+			return `Du bist ein Experte für die Strukturierung von Lerninhalten in Kanban-Boards.
+
+Der User hat EXPLIZIT eine Aktion angefordert (z.B. "Erstelle ein Board zu...").
+
+Erstelle sofort eine Struktur im Markdown-Format:
+# [Thema]
+## Spalte 1: [Name]
+- Karte: [Titel]
+## Spalte 2: [Name]
+- Karte: [Titel]
+...
+
+Die Struktur sollte pädagogisch sinnvoll sein mit Spalten für verschiedene Lernphasen.`;
+
+		case 'confirmation':
+			return `Du bist ein Lern-Assistent.
+
+Der User hat eine BESTÄTIGUNG gegeben (z.B. "Ja bitte", "mach das").
+
+Antworte kurz bestätigend: "Alles klar! Ich erstelle das Board jetzt."
+Dann erstelle die Struktur im Markdown-Format:
+# [Thema]
+## Spalte 1: [Name]
+- Karte: [Titel]
+...`;
+	}
+}
