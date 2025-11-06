@@ -660,7 +660,7 @@
   <Separator />
   
   <!-- Footer Actions -->
-  <div class="flex items-center justify-between">
+  <div class="flex items-center flex-col justify-between">
     <Button variant="outline" onclick={handleReset}>
       Alle Einstellungen zurücksetzen
     </Button>
