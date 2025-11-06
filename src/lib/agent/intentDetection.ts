@@ -14,12 +14,13 @@ import type { UserIntent } from './types';
  * @example
  * detectUserIntent("Erstelle ein Board zur Reformation") // → 'explicit'
  * detectUserIntent("Ja bitte") // → 'confirmation'
+ * detectUserIntent("Erstelle daraus das Board") // → 'confirmation' (bei bestehendem Vorschlag)
  * detectUserIntent("Reformation 7. Klasse") // → 'vague'
  */
 export function detectUserIntent(userMessage: string): UserIntent {
 	const lowerMsg = userMessage.toLowerCase().trim();
 
-	// Pattern 1: Confirmation Responses
+	// Pattern 1: Confirmation Responses (Simple)
 	const confirmationPhrases = [
 		'ja',
 		'ja bitte',
@@ -28,7 +29,10 @@ export function detectUserIntent(userMessage: string): UserIntent {
 		'setze um',
 		'los',
 		'okay',
-		'ok'
+		'ok',
+		'genau',
+		'klar',
+		'gerne'
 	];
 
 	// Exact match or starts with confirmation phrase
@@ -40,13 +44,29 @@ export function detectUserIntent(userMessage: string): UserIntent {
 		return 'confirmation';
 	}
 
-	// Pattern 2: Explicit Action Requests
+	// Pattern 1b: Confirmation with "daraus" (bezieht sich auf vorherigen Vorschlag)
+	// 🆕 "Erstelle daraus das Board" / "Mache daraus ein Board" / "Generiere daraus"
+	const hasConfirmationVerb = [
+		'erstelle daraus',
+		'mache daraus',
+		'generiere daraus',
+		'baue daraus',
+		'lege daraus an',
+		'erstell daraus'
+	].some((phrase) => lowerMsg.includes(phrase));
+
+	if (hasConfirmationVerb) {
+		return 'confirmation';
+	}
+
+	// Pattern 2: Explicit Action Requests (mit "ein Board")
 	const explicitVerbs = [
 		'erstelle ein board',
 		'mache ein board',
 		'generiere ein board',
 		'lege ein board an',
-		'neues board'
+		'neues board',
+		'erstell ein board'
 	];
 
 	const hasExplicitVerb = explicitVerbs.some((verb) => lowerMsg.includes(verb));
