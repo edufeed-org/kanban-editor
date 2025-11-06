@@ -54,33 +54,76 @@ export async function llmRequest<T = any>(
 
 	const config = getApiConfig();
 
-	if (!config.apiKey) {
+	// ✅ Ollama (local) braucht keinen API Key
+	const isOllama = config.endpoint.includes('localhost') || config.endpoint.includes('127.0.0.1');
+	
+	if (!isOllama && !config.apiKey) {
 		throw new Error('API Key nicht konfiguriert! Bitte in Einstellungen hinterlegen.');
 	}
 
-	const payload = {
-		model: config.model,
-		messages: [
-			{ role: 'system', content: systemPrompt },
-			{ role: 'user', content: userMessage }
-		],
-		temperature,
-		max_tokens: maxTokens,
-		...(returnType === 'json' && {
-			response_format: { type: 'json_object' }
-		})
+	// 🔧 Ollama verwendet /api/chat statt OpenAI /v1/chat/completions
+	let endpoint = config.endpoint;
+	if (isOllama && !endpoint.includes('/api/')) {
+		endpoint = endpoint.replace(/\/$/, '') + '/api/chat';
+	}
+
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
 	};
 
-	const response = await fetch(config.endpoint, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${config.apiKey}`,
-			...(config.endpoint.includes('openrouter.ai') && {
-				'HTTP-Referer': window.location.origin,
-				'X-Title': 'Kanban Editor AI Agent'
+	let payload: any;
+	let parseResponse: (data: any) => string;
+
+	if (isOllama) {
+		// ✅ Ollama API Format: https://docs.ollama.com/api/chat
+		payload = {
+			model: config.model,
+			messages: [
+				{ role: 'system', content: systemPrompt },
+				{ role: 'user', content: userMessage }
+			],
+			stream: false,
+			options: {
+				temperature,
+				num_predict: maxTokens
+			}
+		};
+		
+		// Ollama response: { message: { content: "..." } }
+		parseResponse = (data) => data.message?.content || '';
+	} else {
+		// ✅ OpenAI/OpenRouter API Format
+		payload = {
+			model: config.model,
+			messages: [
+				{ role: 'system', content: systemPrompt },
+				{ role: 'user', content: userMessage }
+			],
+			temperature,
+			max_tokens: maxTokens,
+			...(returnType === 'json' && {
+				response_format: { type: 'json_object' }
 			})
-		},
+		};
+		
+		// ✅ Nur für externe APIs Authorization Header hinzufügen
+		if (config.apiKey) {
+			headers['Authorization'] = `Bearer ${config.apiKey}`;
+		}
+
+		// OpenRouter spezifische Headers
+		if (config.endpoint.includes('openrouter.ai')) {
+			headers['HTTP-Referer'] = window.location.origin;
+			headers['X-Title'] = 'Kanban Editor AI Agent';
+		}
+		
+		// OpenAI response: { choices: [{ message: { content: "..." } }] }
+		parseResponse = (data) => data.choices?.[0]?.message?.content || '';
+	}
+
+	const response = await fetch(endpoint, {
+		method: 'POST',
+		headers,
 		body: JSON.stringify(payload)
 	});
 
@@ -90,7 +133,7 @@ export async function llmRequest<T = any>(
 	}
 
 	const data = await response.json();
-	const content = data.choices?.[0]?.message?.content;
+	const content = parseResponse(data);
 
 	if (!content) {
 		throw new Error('LLM returned empty response');

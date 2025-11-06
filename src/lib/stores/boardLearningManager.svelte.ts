@@ -95,7 +95,6 @@ export class BoardLearningManager {
         );
         
         const confidence = 'preference' in result ? result.preference.confidence : 'N/A';
-        console.log(`📚 Learned column structure: "${column.name}" with ${cardTitles.length} cards (confidence: ${confidence})`);
         
         return result;
     }

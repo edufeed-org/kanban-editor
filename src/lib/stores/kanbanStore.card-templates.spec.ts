@@ -20,15 +20,12 @@ describe('BoardStore - Card Template Learning', () => {
 		localStorage.clear();
 		
 		// Step 2: RECREATE userPreferencesStore singleton with fresh $state proxy!
-		// After 9 failed attempts at resetForTesting(), we discovered the ONLY solution:
-		// Create a NEW instance to get a fresh Svelte 5 $state() proxy without old references.
-		// Since ES6 modules make exports read-only, we use a factory function instead.
 		resetUserPreferencesStore();
 		
 		// Step 3: Reset global LearningManager singleton
 		resetLearningManagerForTesting();
 		
-		// Initialize authStore with mock NDK
+		// Step 4: Initialize authStore with mock NDK
 		const mockNDK = {
 			signer: {
 				user: () => Promise.resolve({ pubkey: 'test-pubkey-123' })
@@ -37,11 +34,17 @@ describe('BoardStore - Card Template Learning', () => {
 		
 		initializeAuth(mockNDK);
 		
-		// Mock authStore methods
-		vi.spyOn(authStore, 'getPubkey').mockReturnValue('test-pubkey-123');
+		// Step 5: 🔐 FAKE AUTH SESSION for tests (bypassing demo session creation)
+		// Instead of calling createDemoSession() which requires config,
+		// we directly mock all auth-related methods to simulate a logged-in user
+		const testPubkey = 'test-pubkey-demo-123';
+		vi.spyOn(authStore, 'getPubkey').mockReturnValue(testPubkey);
+		vi.spyOn(authStore, 'getPubkeySafe').mockReturnValue(testPubkey);  // ← CRITICAL!
+		vi.spyOn(authStore, 'getNpub').mockReturnValue('npub1test...');
+		vi.spyOn(authStore, 'getUserName').mockReturnValue('Test User');
 		vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(true);
 		
-		// Create fresh BoardStore instance
+		// Step 6: Create fresh BoardStore instance
 		store = new BoardStore();
 		
 		// Initialize LearningManager for the store
@@ -50,6 +53,13 @@ describe('BoardStore - Card Template Learning', () => {
 		// Create a test board
 		const boardId = store.createBoard('Unterricht Römer');
 		store.loadBoard(boardId);
+		
+		// 🔧 FIX: Manually set board author and maintainers to match test pubkey
+		// Problem: createBoard() calls getSafeAuthor() which doesn't reliably use mocked getPubkeySafe()
+		// Solution: After board creation, manually override author and maintainers
+		(store as any).board.author = testPubkey;
+		(store as any).board.maintainers = [testPubkey];
+		(store as any).triggerUpdate(); // Save to localStorage with correct author
 		
 		// Delete all columns for clean testing
 		const allColumns = store.uiData || [];
