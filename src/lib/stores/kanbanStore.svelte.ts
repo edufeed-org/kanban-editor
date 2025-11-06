@@ -86,11 +86,12 @@ export class BoardStore {
     /**
      * Plant die Aktualisierung des Board-Authors nach Auth-Initialisierung
      */
-    private scheduleAuthorFix(): void {
-        // Warte kurz bis authStore initialisiert ist, dann fixe anonymous boards
-        setTimeout(() => {
-            this.fixAnonymousBoardAuthor();
-        }, 500); // 500ms sollten reichen für Auth-Init in +layout.svelte
+    private async scheduleAuthorFix(): Promise<void> {
+        // Warte bis authStore initialisiert ist, dann fixe anonymous boards
+        if (authStore.ready && typeof authStore.ready.then === 'function') {
+            await authStore.ready;
+        }
+        this.fixAnonymousBoardAuthor();
     }
     
     /**
