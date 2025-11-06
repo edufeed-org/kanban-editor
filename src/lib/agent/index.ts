@@ -10,11 +10,12 @@ export type { UserIntent, ContentProposal, StructureProposal, BoardPreview, AIAc
 export { detectUserIntent, getIntentAwareSystemPrompt } from './intentDetection';
 
 // Content Proposal (Phase 1)
-export { parseContentProposal, generateStructurePrompt } from './contentProposal';
+export { parseContentProposal } from './contentProposal';
 
 // Structure Generation (Phase 2)
 export {
 	STRUCTURE_GENERATION_SYSTEM_PROMPT,
+	generateStructurePrompt,
 	validateStructureJSON,
 	parseStructureProposal,
 	structureToActions

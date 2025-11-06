@@ -236,7 +236,9 @@
       // Generate ONLY user prompt (system prompt wird separat übergeben!)
       const userPrompt = generateStructurePrompt(
         currentContentProposal.content,
-        existingColumns
+        {
+          existingColumns
+        }
       );
       
       // Use SPECIALIZED system prompt for JSON generation from module

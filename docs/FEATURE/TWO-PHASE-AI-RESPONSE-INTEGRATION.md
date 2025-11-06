@@ -90,10 +90,11 @@ import {
   parseStructureProposal,
   structureToActions,
   validateStructureJSON,
-  formatValidationError,
   type ContentProposal
-} from '$lib/utils/aiActionGenerator.js';
+} from '$lib/agent';
 ```
+
+**Hinweis:** `formatValidationError()` wurde entfernt - Fehlerbehandlung erfolgt direkt in `validateStructureJSON()`.
 
 #### ChatStore-Integration
 ```typescript
