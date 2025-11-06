@@ -706,7 +706,6 @@ export class BoardStore {
         if (column) {
             const card = column.addCard(props);
             this.triggerUpdate(); // Trigger Reaktivität
-            this.publishToNostr();
             return card;
         }
         throw new Error(`Column with id ${columnId} not found`);
