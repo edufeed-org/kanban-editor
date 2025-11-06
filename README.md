@@ -7,7 +7,8 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 ## 🎯 Features
 
 - ✅ **Offline-First:** Arbeiten Sie ohne Internetverbindung, automatische Synchronisation bei Reconnect
-- 🧠 **KI-Integration:** Intelligente Karten-Aufteilung und Aufgaben-Management
+- � **KI-Agent-System (Phase 3.0 ✅):** Intelligente Intent-Erkennung, 2-Phase Response Processing, Learning Manager mit Confidence Scoring
+- 🧠 **Intelligente Karten-Aufteilung:** Automatische Card-Struktur und Aufgaben-Management via LLM
 - 🌐 **Nostr-basiert:** Dezentrale Speicherung über Nostr-Relays (NIP-30301/30302)
 - 💬 **Kommentar-System:** Lokal persistent mit lokalisierter UI (in Phase D: Nostr Publishing)
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
@@ -21,7 +22,8 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 **KRITISCH:** Code ohne Docs-Update → PR wird REJECTED!
 
 - **[📚 DOCUMENTATION-RULES-v3.md](./docs/DOCUMENTATION-RULES-v3.md)** - 🔴 **v3.0 MANDATORY** - DoD Checklist (11 Punkte), Enforcement-Rules
-- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (42 Dateien)
+- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (52/52 Dateien verlinkt!)
+- **[📚 Phase 3.0 KI-Developer Path](./docs/_INDEX.md#-kientwickler-learning-path)** - 11 neue KI-Integration Ressourcen
 
 **Bei jeder Code-Änderung:**
 1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
@@ -40,7 +42,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 ### 📖 Kern-Dokumentation
 
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
-- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap v2.5 (Phase 1-5)
+- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap v3.0 (Phase 1-5, Phase 3.0 Complete!)
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
 - **[STORES.md](./docs/ARCHITECTURE/STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
 - **[AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)** - Serialisierung & Persistierung Pattern
@@ -49,7 +51,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
 - **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
 - **[UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)** - shadcn-svelte UI Guidelines
-- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (Version 3.2 - Governance v3.0)
+- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (✅ Version 4.0 - Phase 3.0 AI Agent Infrastructure Complete!)
 
 ### 🗺️ Documentation Map (für Entwickler)
 
