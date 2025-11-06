@@ -85,13 +85,17 @@ export class BoardStore {
     
     /**
      * Plant die Aktualisierung des Board-Authors nach Auth-Initialisierung
+     * 
+     * Wird sofort aufgerufen - wenn authStore später authentifiziert wird,
+     * wird updateBoardAuthor() via authStore.svelte.ts aufgerufen
      */
-    private async scheduleAuthorFix(): Promise<void> {
-        // Warte bis authStore initialisiert ist, dann fixe anonymous boards
-        if (authStore.ready && typeof authStore.ready.then === 'function') {
-            await authStore.ready;
-        }
+    private scheduleAuthorFix(): void {
+        // AuthStore wird in +layout.svelte initialisiert
+        // Wenn hier schon authentifiziert: sofort fixen
         this.fixAnonymousBoardAuthor();
+        
+        // Falls später authentifiziert: updateBoardAuthor() wird manuell aufgerufen
+        // (z.B. von SettingsPanel.svelte nach Login)
     }
     
     /**
@@ -122,11 +126,30 @@ export class BoardStore {
     
     /**
      * Aktualisiert Board-Author wenn er 'anonymous' ist aber User eingeloggt ist
+     * 
+     * WICHTIG: authStore muss bereits von +layout.svelte initialisiert sein!
+     * Falls nicht initialisiert → gibt Error aus, nicht kritisch
+     * Die Funktion wird später via updateBoardAuthor() nach Login erneut aufgerufen
      */
     private fixAnonymousBoardAuthor(): void {
         try {
-            const pubkey = authStore?.getPubkey();
-            const isAuth = authStore?.isAuthenticated;
+            // ⚠️ DEFENSIV: authStore könnte noch nicht initialisiert sein (early import)
+            // Prüfe ob authStore überhaupt verfügbar ist
+            if (!authStore) {
+                console.warn('⚠️ authStore nicht verfügbar (noch nicht von +layout.svelte initialisiert)');
+                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
+                return;
+            }
+            
+            // Prüfe ob authStore.getPubkey() Funktion hat (könnte auch nicht vollständig initialisiert sein)
+            if (typeof authStore.getPubkey !== 'function') {
+                console.warn('⚠️ authStore.getPubkey() nicht verfügbar (authStore nicht vollständig initialisiert)');
+                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
+                return;
+            }
+            
+            const pubkey = authStore.getPubkey();
+            const isAuth = authStore.isAuthenticated;
             
             console.log('🔍 fixAnonymousBoardAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
             
@@ -152,6 +175,7 @@ export class BoardStore {
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
+            console.log('ℹ️ Dieser Fehler ist nicht kritisch - Board-Author wird später aktualisiert');
         }
     }
 
