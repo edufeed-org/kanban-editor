@@ -208,7 +208,7 @@
   /**
    * Rekursive Struktur-Generierung mit Retry-Logik (FIXED!)
    * 
-   * FIX: Nutzt jetzt sendToLLMWithSystem() mit spezialisi ertem System-Prompt
+   * FIX: Nutzt jetzt sendToLLMWithSystem() mit spezialisiertem System-Prompt
    * Das verhindert Prompt-Injections und stellt sicher, dass LLM valides JSON liefert
    */
   async function generateBoardStructure() {
@@ -220,10 +220,16 @@
         'assistant'
       );
       isGeneratingStructure = false;
+      isPhase2Running = false;
+      phase2Toast = '';
       return;
     }
     
     try {
+      // 🆕 Zeige Spinner für Phase 2 (JSON-Generierung)
+      isPhase2Running = true;
+      phase2Toast = '🔄 Generiere Board-Struktur (JSON)...';
+      
       // Get existing columns for structure prompt
       const existingColumns = boardStore.uiData.map(col => col.name);
       
@@ -264,6 +270,10 @@ Jetzt generiere JSON für den Lerninhalt:`;
         console.log(`⚠️ Validation failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, validation.error);
         console.log('📋 Response was:', jsonResponse.substring(0, 200));
         
+        // 🆕 Reset Spinner bei Validation-Fehler
+        isPhase2Running = false;
+        phase2Toast = '';
+        
         const formattedError = `❌ Struktur-Validierung fehlgeschlagen:\n${validation.error || 'Unbekannter Fehler'}\n\nBitte versuchen Sie erneut.`;
         chatStore.addMessage(
           `⚠️ Versuch ${structureRetries}: ${formattedError}`,
@@ -276,7 +286,7 @@ Jetzt generiere JSON für den Lerninhalt:`;
       }
       
       // Parse und execute actions
-      const proposal = parseStructureProposal(jsonResponse);
+      const proposal = parseStructureProposal(validation.data);
       if (!proposal) {
         throw new Error('Failed to parse structure proposal');
       }
@@ -294,6 +304,10 @@ Jetzt generiere JSON für den Lerninhalt:`;
       structureGenerationError = errorMsg;
       
       console.error(`❌ Generation error (Attempt ${structureRetries}):`, err);
+      
+      // 🆕 Reset Spinner bei Fehler
+      isPhase2Running = false;
+      phase2Toast = '';
       
       if (structureRetries < MAX_STRUCTURE_RETRIES) {
         chatStore.addMessage(
@@ -831,6 +845,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   
   /**
    * Execute AI action via boardStore
+   * 🆕 FIXED: Unterstützt jetzt details-Struktur UND flache Struktur (Backward Compatibility)
    */
   function executeAction(action: AIAction) {
     console.log('🤖 Executing action:', action);
@@ -838,7 +853,8 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     try {
       switch (action.type) {
         case 'add_column': {
-          const colName = (action as any).columnName || 'Neue Spalte';
+          // 🆕 Support both: action.details.name AND action.columnName (backward compat)
+          const colName = (action as any).details?.name || (action as any).columnName || 'Neue Spalte';
           // Note: boardStore.createColumn() only accepts name parameter
           // color is always set to 'slate' internally
           const colId = boardStore.createColumn(colName);
@@ -856,20 +872,32 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         }
         
         case 'add_card': {
-          const heading = (action as any).heading || 'Neue Karte';
-          const content = (action as any).content || '';
+          // 🆕 Support both: action.details.heading AND action.heading (backward compat)
+          const heading = (action as any).details?.heading || (action as any).heading || 'Neue Karte';
+          const content = (action as any).details?.content || (action as any).content || '';
           
-          // Try to find columnId in two ways:
+          // Try to find columnId in three ways:
           // 1. Direct columnId (if already mapped)
-          // 2. Look up via columnName in our mapping
+          // 2. Look up via details.columnName in our mapping
+          // 3. Look up via columnName in our mapping (backward compat)
           let columnId = (action as any).columnId;
           
-          if (!columnId && (action as any).columnName) {
-            columnId = columnNameToIdMap[(action as any).columnName];
+          const columnNameFromDetails = (action as any).details?.columnName;
+          const columnNameDirect = (action as any).columnName;
+          
+          if (!columnId && columnNameFromDetails) {
+            columnId = columnNameToIdMap[columnNameFromDetails];
+            console.log(`📌 Column ID gefunden via details.columnName: ${columnNameFromDetails} → ${columnId}`);
+          }
+          
+          if (!columnId && columnNameDirect) {
+            columnId = columnNameToIdMap[columnNameDirect];
+            console.log(`📌 Column ID gefunden via columnName: ${columnNameDirect} → ${columnId}`);
           }
           
           if (!columnId) {
-            throw new Error(`Spalten-ID fehlt (columnName: "${(action as any).columnName}")`);
+            const colName = columnNameFromDetails || columnNameDirect;
+            throw new Error(`Spalten-ID fehlt (columnName: "${colName}")`);
           }
           
           const cardId = boardStore.createCard(columnId, heading, content);
