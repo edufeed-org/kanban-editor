@@ -212,9 +212,13 @@ export class ChatSession {
 	getTopMemories(limit: number = 5): Memory[] {
 		return this.memories
 			.sort((a, b) => {
-				const scoreA = a.importance * (1 / (Date.now() - a.lastAccessed));
-				const scoreB = b.importance * (1 / (Date.now() - b.lastAccessed));
-				return scoreB - scoreA;
+				// Sortiere zuerst nach importance (absteigend)
+				// Bei gleicher importance: sortiere nach lastAccessed (neuere zuerst)
+				if (a.importance !== b.importance) {
+					return b.importance - a.importance;
+				}
+				// Gleiche importance → neuere Memories zuerst
+				return b.lastAccessed - a.lastAccessed;
 			})
 			.slice(0, limit);
 	}
