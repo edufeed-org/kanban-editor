@@ -985,11 +985,89 @@ Input verschwindet, Titel im readonly-Mode angezeigt
 4. **Array Reassignments** — `array = [...]` statt `.push()`
 5. **$effect für Auto-Sync** — Beobacht `boardStore.uiData`, nicht granulare Werte
 6. **Prop-Änderungen über Store** — `boardStore.updateCard()`, nicht Props direkt
+7. **Singleton Testing via Proxy Pattern** — `$state()` proxies behalten interne Referenzen
 
 ---
 
-## 🔗 Verwandte Dokumentation
+## IX. Testing Pattern: Global Singletons mit $state()
+
+### � RULE #7: Singleton Testing erfordert Recreation via Proxy Pattern
+
+**Problem:** Svelte 5 `$state()` proxies behalten interne Referenzen über Test-Runs hinweg.
+
+**Symptom:**
+```typescript
+beforeEach(() => {
+    localStorage.clear();
+    myStore.clear(); // FUNKTIONIERT NICHT!
+});
+
+test('should start empty', () => {
+    const data = myStore.getData();
+    expect(data).toBeEmpty(); // ❌ FAILS! Hat Daten vom vorherigen Test
+});
+```
+
+**Grund:** `$state()` erstellt einen Proxy mit internen Referenzen die **keine Mutation löschen kann**.
+
+### ✅ Die Lösung: Proxy Pattern mit Factory Function
+
+```typescript
+// myStore.svelte.ts
+
+// Internal mutable instance (NOT exported)
+let _instance: MyStore = new MyStore();
+
+/**
+ * Factory function to recreate singleton (for testing)
+ */
+export function resetMyStore(): void {
+    _instance = new MyStore();
+    // Fresh $state() proxy without old references!
+}
+
+/**
+ * Export constant Proxy that forwards to _instance
+ */
+export const myStore = new Proxy({} as MyStore, {
+    get(_, prop: string | symbol) {
+        return _instance[prop as keyof MyStore];
+    }
+});
+```
+
+**Warum das funktioniert:**
+1. ES6 Module Exports sind read-only (even `let` declarations)
+2. `_instance` ist NICHT exportiert → kann reassigned werden
+3. Proxy leitet alle Property-Accesses an `_instance` weiter
+4. `resetMyStore()` erstellt neue Instance mit fresh `$state()` proxy
+
+**Test-Integration:**
+```typescript
+import { myStore, resetMyStore } from './myStore.svelte.js';
+
+beforeEach(() => {
+    localStorage.clear();
+    resetMyStore(); // ← Factory function!
+});
+
+test('should start empty', () => {
+    const data = myStore.getData();
+    expect(data).toBeEmpty(); // ✅ PASSES!
+});
+```
+
+**📚 Vollständige Dokumentation:** [`docs/TESTING/SVELTE5_SINGLETON_TESTING.md`](../TESTING/SVELTE5_SINGLETON_TESTING.md)
+- Die 9 gescheiterten Lösungsversuche
+- ES6 Module Constraints
+- Proxy Pattern Implementation Guide
+- Test Pattern Best Practices
+
+---
+
+## �🔗 Verwandte Dokumentation
 
 - [`STORES.md`](./STORES.md) — State Management Deep Dive
 - [`AGENTS.md`](../../AGENTS.md) — Core Data Model
 - [`UX-RULES.md`](./UX-RULES.md) — Component Architecture
+- [`TESTING/SVELTE5_SINGLETON_TESTING.md`](../TESTING/SVELTE5_SINGLETON_TESTING.md) ⭐ **NEU** — Testing Global Singletons

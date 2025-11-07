@@ -60,7 +60,7 @@ export interface BoardProps {
 }
 
 export interface AIAction {
-    type: 'add_card' | 'update_card' | 'move_card' | 'split_card';
+    type: 'add_card' | 'update_card' | 'move_card' | 'split_card' | 'add_column' | 'delete_card';
     [key: string]: any;
 }
 

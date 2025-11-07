@@ -590,6 +590,14 @@ class AuthStoreWrapper {
     return this.instance;
   }
 
+  /**
+   * Sichere Getter-Methode für SSR-Context
+   * Gibt null zurück statt Error zu werfen
+   */
+  static getInstanceSafe(): AuthStore | null {
+    return this.instance;
+  }
+
   static initialize(ndk: NDK): AuthStore {
     if (!this.instance) {
       this.instance = new AuthStore(ndk);
@@ -651,6 +659,19 @@ class AuthStoreProxy {
   }
   getUserName() {
     return AuthStoreWrapper.getInstance().getUserName();
+  }
+  
+  /**
+   * Sichere Getter für SSR-Context (gibt null statt Error)
+   */
+  getPubkeySafe(): string | null {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getPubkey() : null;
+  }
+  
+  getUserNameSafe(): string | null {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getUserName() : null;
   }
   updateProfile(profile: Partial<UserSession['profile']>) {
     return AuthStoreWrapper.getInstance().updateProfile(profile);

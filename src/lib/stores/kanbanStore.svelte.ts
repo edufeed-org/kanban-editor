@@ -2,9 +2,11 @@
 
 import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
+import { initializeLearningManager, boardLearningManager } from './boardLearningManager.svelte.js';
 import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
+import { userPreferencesStore, type LearnResult } from './userPreferencesStore.svelte.js';
 import { getSyncManager, initializeSyncManager } from './syncManager.svelte.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../utils/nostrEvents.js';
 import type NDK from '@nostr-dev-kit/ndk';
@@ -81,26 +83,79 @@ export class BoardStore {
             
             // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
             this.exposeCurrentBoardIdToWindow();
+            
+            // 🎓 LEARNING MANAGER: Initialisiere wenn in config.json aktiviert
+            this.initializeLearningManagerIfEnabled();
         }
     }
     
     /**
      * Plant die Aktualisierung des Board-Authors nach Auth-Initialisierung
+     * 
+     * Wird sofort aufgerufen - wenn authStore später authentifiziert wird,
+     * wird updateBoardAuthor() via authStore.svelte.ts aufgerufen
      */
     private scheduleAuthorFix(): void {
-        // Warte kurz bis authStore initialisiert ist, dann fixe anonymous boards
-        setTimeout(() => {
-            this.fixAnonymousBoardAuthor();
-        }, 500); // 500ms sollten reichen für Auth-Init in +layout.svelte
+        // AuthStore wird in +layout.svelte initialisiert
+        // Wenn hier schon authentifiziert: sofort fixen
+        this.fixAnonymousBoardAuthor();
+        
+        // Falls später authentifiziert: updateBoardAuthor() wird manuell aufgerufen
+        // (z.B. von SettingsPanel.svelte nach Login)
+    }
+    
+    /**
+     * Initialisiert den BoardLearningManager wenn in config.json aktiviert
+     */
+    private async initializeLearningManagerIfEnabled(): Promise<void> {
+        try {
+            // Lade config.json
+            const response = await fetch('/config.json');
+            if (!response.ok) {
+                console.log('ℹ️ config.json nicht gefunden, LearningManager nicht initialisiert');
+                return;
+            }
+            
+            const config = await response.json();
+            const useLearning = config.learning?.useLearningManager ?? false;
+            
+            if (useLearning) {
+                initializeLearningManager(this);
+                console.log('✅ BoardLearningManager aktiviert (via config.json)');
+            } else {
+                console.log('ℹ️ BoardLearningManager deaktiviert (config.learning.useLearningManager = false)');
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Laden von config.json für LearningManager:', error);
+        }
     }
     
     /**
      * Aktualisiert Board-Author wenn er 'anonymous' ist aber User eingeloggt ist
+     * 
+     * WICHTIG: authStore muss bereits von +layout.svelte initialisiert sein!
+     * Falls nicht initialisiert → gibt Error aus, nicht kritisch
+     * Die Funktion wird später via updateBoardAuthor() nach Login erneut aufgerufen
      */
     private fixAnonymousBoardAuthor(): void {
         try {
-            const pubkey = authStore?.getPubkey();
-            const isAuth = authStore?.isAuthenticated;
+            // ⚠️ DEFENSIV: authStore könnte noch nicht initialisiert sein (early import)
+            // Prüfe ob authStore überhaupt verfügbar ist
+            if (!authStore) {
+                console.warn('⚠️ authStore nicht verfügbar (noch nicht von +layout.svelte initialisiert)');
+                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
+                return;
+            }
+            
+            // Prüfe ob authStore.getPubkey() Funktion hat (könnte auch nicht vollständig initialisiert sein)
+            if (typeof authStore.getPubkey !== 'function') {
+                console.warn('⚠️ authStore.getPubkey() nicht verfügbar (authStore nicht vollständig initialisiert)');
+                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
+                return;
+            }
+            
+            const pubkey = authStore.getPubkey();
+            const isAuth = authStore.isAuthenticated;
             
             console.log('🔍 fixAnonymousBoardAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
             
@@ -126,6 +181,7 @@ export class BoardStore {
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
+            console.log('ℹ️ Dieser Fehler ist nicht kritisch - Board-Author wird später aktualisiert');
         }
     }
 
@@ -435,25 +491,30 @@ export class BoardStore {
     
     /**
      * Hilfsmethode: Gibt Author sicher zurück (auch wenn authStore noch nicht initialisiert)
+     * 
+     * WICHTIG: Während SSR ist authStore noch nicht verfügbar!
+     * Der Store wird erst im Browser via +layout.svelte initialisiert.
      */
     private getSafeAuthor(): string {
         try {
-            const pubkey = authStore?.getPubkey();
-            const isAuth = authStore?.isAuthenticated;
+            // SSR Check: authStore existiert nur im Browser
+            if (typeof window === 'undefined') {
+                return 'anonymous';
+            }
             
-            console.log('🔍 getSafeAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
+            // Nutze sichere Methode die null zurückgibt statt Error zu werfen
+            const pubkey = authStore?.getPubkeySafe();
             
             if (pubkey) {
                 console.log('✅ Author gefunden:', pubkey.slice(0, 16) + '...');
                 return pubkey;
             }
             
-            console.warn('⚠️ Kein pubkey verfügbar, nutze "anonymous" als Author');
+            console.warn('⚠️ authStore nicht initialisiert oder kein User eingeloggt, nutze "anonymous"');
             return 'anonymous';
         } catch (error) {
-            // authStore noch nicht initialisiert
-            console.error('❌ authStore Fehler:', error);
-            console.warn('⚠️ authStore noch nicht verfügbar, nutze "anonymous" als Author');
+            // Fallback für unerwartete Fehler
+            console.error('❌ Unerwarteter Fehler in getSafeAuthor():', error);
             return 'anonymous';
         }
     }
@@ -1025,7 +1086,6 @@ export class BoardStore {
         };
         
         const card = this.addCard(columnId, cardProps);
-        console.log('✅ Karte erstellt:', card.id, 'mit author:', author, 'authorName:', authorName, 'Board hat jetzt', this.board.columns.flatMap(c => c.cards).length, 'Karten');
 
         return card.id;
     }
@@ -1848,6 +1908,133 @@ export class BoardStore {
         // Legacy-Methode: Nur für interne Tests
         if (data && data.columns) {
             console.log('Legacy importData() aufgerufen. Nutze stattdessen importBoardFromJson()');
+        }
+    }
+
+    // ============================================================================
+    // LEARNING METHODS - DELEGATED TO BOARDLEARNINGMANAGER (Phase 3.1B)
+    // ============================================================================
+    
+    /**
+     * 🎓 LEARNING INTERFACE: Lernt die Kartenstruktur einer Spalte
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * Wenn LearningManager deaktiviert: Gibt Error zurück
+     * 
+     * @param columnId - ID der zu lernenden Spalte
+     * @returns Lern-Ergebnis mit Status und Konfidenz
+     * 
+     * @see BoardLearningManager.learnColumnStructure()
+     * 
+     * @example
+     * // Nach dem Erstellen einer "Einstieg"-Spalte mit 4 Standard-Karten:
+     * boardStore.learnColumnStructure('column-123');
+     * // → Delegiert an: boardLearningManager.learnColumnStructure('column-123')
+     */
+    public learnColumnStructure(columnId: string): LearnResult | { success: false; error: string } {
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            return { 
+                success: false, 
+                error: 'LearningManager nicht aktiviert (config.learning.useLearningManager = false)' 
+            };
+        }
+        
+        return boardLearningManager.learnColumnStructure(columnId) as any;
+    }
+
+    /**
+     * 🎓 LEARNING INTERFACE: Lernt die Struktur aller Spalten im Board
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * 
+     * @returns Array von Lern-Ergebnissen pro Spalte
+     * 
+     * @see BoardLearningManager.learnBoardStructure()
+     * 
+     * @example
+     * // Nach dem Finalisieren eines typischen Unterrichts-Boards:
+     * const results = boardStore.learnBoardStructure();
+     * // → Delegiert an: boardLearningManager.learnBoardStructure()
+     */
+    public learnBoardStructure(): Array<{ columnName: string; result: LearnResult | { success: false; error: string } }> {
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            return [];
+        }
+        
+        return boardLearningManager.learnBoardStructure();
+    }
+
+    /**
+     * 🎓 LEARNING INTERFACE: Erstellt Spalte mit gelerntem Template
+     * 
+     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
+     * Falls LearningManager deaktiviert: Erstellt Spalte ohne Template
+     * 
+     * @param columnName - Name der neuen Spalte
+     * @param applyTemplate - Ob gelernte Karten automatisch hinzugefügt werden sollen
+     * @param minConfidence - Minimale Konfidenz für Template-Anwendung (default: 0.7)
+     * @returns Objekt mit columnId und optional templateApplied + cardIds
+     * 
+     * @see BoardLearningManager.createColumnWithTemplate()
+     * 
+     * @example
+     * // Erstellt "Einstieg"-Spalte MIT Template (wenn gelernt):
+     * const result = boardStore.createColumnWithTemplate('Einstieg', true);
+     * // → Delegiert an: boardLearningManager.createColumnWithTemplate('Einstieg', true, 0.7)
+     */
+    public createColumnWithTemplate(
+        columnName: string,
+        applyTemplate: boolean = false,
+        minConfidence: number = 0.7
+    ): {
+        columnId: string;
+        templateApplied?: boolean;
+        cardIds?: string[];
+        confidence?: number;
+    } {
+        // Fallback: Wenn LearningManager nicht verfügbar → erstelle einfache Spalte
+        if (!boardLearningManager || !boardLearningManager.isEnabled) {
+            const columnId = this.createColumn(columnName);
+            return { columnId, templateApplied: false };
+        }
+        
+        // Delegation an LearningManager
+        return boardLearningManager.createColumnWithTemplate(columnName, applyTemplate, minConfidence);
+    }
+
+    /**
+     * Aktualisiert den Author des aktuellen Boards
+     * 
+     * Wird von +layout.svelte nach erfolgreichem Login aufgerufen,
+     * um "anonymous" durch den echten User zu ersetzen.
+     * 
+     * @returns true wenn erfolgreich aktualisiert
+     */
+    public updateBoardAuthor(): boolean {
+        try {
+            const pubkey = authStore?.getPubkeySafe();
+            
+            if (!pubkey) {
+                console.warn('⚠️ Kein Pubkey verfügbar, Author bleibt unverändert');
+                return false;
+            }
+            
+            // Nur updaten wenn aktueller Author "anonymous" ist
+            if (this.board.author === 'anonymous') {
+                console.log('🔄 Aktualisiere Board-Author von "anonymous" zu:', pubkey.slice(0, 16) + '...');
+                this.board.author = pubkey;
+                this.triggerUpdate();
+                this.publishToNostr();
+                return true;
+            }
+            
+            // Board-Author ist bereits gesetzt
+            const currentAuthor = this.board.author || 'unknown';
+            console.log('✅ Board-Author ist bereits gesetzt:', currentAuthor.length > 16 ? currentAuthor.slice(0, 16) + '...' : currentAuthor);
+            return false;
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren des Board-Authors:', error);
+            return false;
         }
     }
 }

@@ -25,7 +25,7 @@
     import WifiIcon from "@lucide/svelte/icons/wifi";
     import Loader2Icon from "@lucide/svelte/icons/loader-2";
     import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
-    import SettingsPanel from './SettingsPanel.svelte';
+    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
@@ -350,10 +350,10 @@
             <Dialog.Root bind:open={dialogOpen}>
                 {#if authStore.isAuthenticated }
                 <Dialog.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground" 
                     title="Board-Einstellungen"
                 >
-                    <EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
+                    <EllipsisVerticalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
                 {/if}
                 <Dialog.Content class="max-w-md">
@@ -473,8 +473,21 @@
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-2">
-            <!-- Settings Panel -->
-            <SettingsPanel />
+            <!-- Settings Dialog -->
+            <Dialog.Root>
+                <Dialog.Trigger
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground"
+                    title="Einstellungen"
+                >
+                    <SlidersHorizontalIcon class="h-4 w-4" />
+                </Dialog.Trigger>
+                <Dialog.Content class="max-w-5xl max-h-[90vh] overflow-y-auto">
+                    <Dialog.Header>
+                        <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
+                    </Dialog.Header>
+                    <SettingsPanel />
+                </Dialog.Content>
+            </Dialog.Root>
 
             <!-- Backup All Boards Button -->
             <Button 

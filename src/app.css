@@ -42,6 +42,7 @@
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.606 0.25 292.717);
   --column-border: oklch(82.443% 0.05459 254.539);
+  --button: oklch(67.64% 0.00008 271.152);
   
   /* Card Colors for Color Picker */
   --color-slate: oklch(88.734% 0.02327 285.861 / 0.945);
@@ -86,6 +87,7 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.541 0.281 293.009);
   --column-border: oklch(39.123% 0.02512 257.554);
+  --button: oklch(59.987% 0.00007 271.152);
   
   /* Card Colors for Color Picker - Dark Mode */
   --color-slate: oklch(32.579% 0.00353 286.054 / 0.945);
@@ -139,6 +141,25 @@
   .border-muted{
     border-color: var(--muted)!important;
   }
+  button[data-slot="button"] {
+    background-color: var(--button);
+  }
+  button[data-slot="switch"] {
+    background-color: var(--button);
+    border: 1px solid var(--border);
+  }
+  button[data-state="unchecked"] span{
+    background-color: var(--muted);
+    border: 1px solid black;
+  }
+  button[data-state="checked"] span{
+    background-color: var(--color-green);
+    border: 1px solid black;
+  }
+  button:active, button:focus-visible, button:hover {
+    background-color: var(--accent);
+  }
+
 }
 
 /* Button Hover Effects - Specific to shadcn-svelte variants */
@@ -195,6 +216,10 @@ button.bg-destructive:hover {
 
 .text-destructive-foreground {
   color: var(--destructive-foreground);
+}
+
+.card-content button {
+  background-color: var(--primary);
 }
 
 @layer base {
