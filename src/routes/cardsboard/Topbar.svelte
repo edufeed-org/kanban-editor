@@ -21,9 +21,14 @@
     import BotIcon from "@lucide/svelte/icons/bot";
     import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
     import TrashIcon from "@lucide/svelte/icons/trash";
+    import WifiOffIcon from "@lucide/svelte/icons/wifi-off";
+    import WifiIcon from "@lucide/svelte/icons/wifi";
+    import Loader2Icon from "@lucide/svelte/icons/loader-2";
+    import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
     import SettingsPanel from './SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
+    import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
 	
@@ -58,6 +63,17 @@
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+    
+    // 🔥 Sync Status - reactive derived from SyncManager with initialization check
+    let syncStatus = $derived.by(() => {
+        try {
+            const syncManager = getSyncManager();
+            return syncManager?.status || { isOnline: true, isSyncing: false, queuedEvents: 0 };
+        } catch (error) {
+            // SyncManager not initialized yet - return default status
+            return { isOnline: true, isSyncing: false, queuedEvents: 0 };
+        }
+    });
     
     // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
     $effect(() => {
@@ -136,7 +152,6 @@
     // Beim Mount: Theme initialisieren und Systemänderungen überwachen
     import { onMount } from 'svelte';
     import * as Field from "$lib/components/ui/field/index.js";
-    import SheetDescription from '$lib/components/ui/sheet/sheet-description.svelte';
     import LinkIcon from "@lucide/svelte/icons/link";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";
@@ -309,6 +324,27 @@
             
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
             <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
+            
+            <!-- 🟢 Sync Status Indicator -->
+            <div class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50">
+                {#if syncStatus.isSyncing}
+                    <!-- Syncing: Show spinner -->
+                    <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />
+                    <span class="text-muted-foreground">Syncing...</span>
+                {:else if syncStatus.queuedEvents > 0}
+                    <!-- Queued: Show queued count -->
+                    <div class="h-2 w-2 rounded-full bg-amber-500"></div>
+                    <span class="text-muted-foreground">{syncStatus.queuedEvents} queued</span>
+                {:else if syncStatus.isOnline}
+                    <!-- Online: Show checkmark -->
+                    <CheckCircle2Icon class="h-3 w-3 text-green-500" />
+                    <span class="text-muted-foreground">Online</span>
+                {:else}
+                    <!-- Offline: Show warning -->
+                    <WifiOffIcon class="h-3 w-3 text-red-500" />
+                    <span class="text-muted-foreground">Offline</span>
+                {/if}
+            </div>
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>
