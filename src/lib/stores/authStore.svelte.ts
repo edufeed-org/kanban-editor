@@ -5,6 +5,7 @@ import type { NDKUser } from "@nostr-dev-kit/ndk";
 import { get } from 'svelte/store'
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { settingsStore } from "./settingsStore.svelte.js";
+import { getSyncManager } from "./syncManager.svelte.js";
 
 export interface UserSession {
   pubkey: string;
@@ -56,6 +57,14 @@ export class AuthStore {
       this.currentUser.profile = await user.fetchProfile() || undefined
 
       await this.saveSession(user, "nip07");
+      
+      // 🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after NIP-07 login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -88,6 +97,19 @@ export class AuthStore {
       this.currentUser = user;
 
       await this.saveSession(user, "nsec");
+      
+      // � WICHTIG: nsec temporär in sessionStorage speichern (für Reload-Recovery)
+      // ⚠️ ACHTUNG: sessionStorage wird bei Tab-Schließung geleert (=sicher für Development)
+      sessionStorage.setItem("nostr-nsec-temp", nsec);
+      console.log("💾 nsec temporarily stored in sessionStorage (cleared on tab close)");
+      
+      // �🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after nsec login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -127,6 +149,14 @@ export class AuthStore {
       this.currentUser = user;
 
       await this.saveSession(user, "nsec");
+      
+      // 🔄 Update SyncManager with new signer
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after OIDC login');
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
 
       return user;
     } catch (error) {
@@ -145,6 +175,17 @@ export class AuthStore {
     this.ndk.signer = undefined;
 
     this.sessionStore.set(null);
+    
+    // � Clear nsec from sessionStorage on logout (security)
+    sessionStorage.removeItem("nostr-nsec-temp");
+    
+    // �🔄 Clear SyncManager signer on logout
+    try {
+      getSyncManager().updateSigner(undefined);
+      console.log('✅ SyncManager signer cleared after logout');
+    } catch (error) {
+      console.warn('⚠️ SyncManager signer clear warning:', error);
+    }
 
     console.log("🚪 User logged out");
   }
@@ -178,7 +219,7 @@ export class AuthStore {
   /**
    * Restore Session or stay logged out
    * 🎯 NEUES VERHALTEN:
-   * - Existierende Session? → Restore
+   * - Existierende Session? → Restore + Signer rekonstruieren
    * - Keine Session? → Bleibe ausgeloggt (User kann explizit Demo starten)
    * - Demo nur wenn config.allow_demo_session.enabled = true
    */
@@ -193,6 +234,65 @@ export class AuthStore {
           this.sessionStore.set(null);
           this.currentUser = null;
           return;
+        }
+
+        // 🔑 KRITISCH: Signer rekonstruieren basierend auf signerType
+        let signer: any = null;
+        
+        if (stored.signerType === "nip07") {
+          console.log("🔄 Rekonstruiere NIP-07 Signer nach Page Reload...");
+          try {
+            signer = new NDKNip07Signer();
+            this.ndk.signer = signer;
+            
+            // Verify signer is accessible
+            const signerUser = await signer.user();
+            if (signerUser.pubkey !== stored.pubkey) {
+              throw new Error("NIP-07 pubkey mismatch - extension changed?");
+            }
+            console.log("✅ NIP-07 Signer successfully reconnected!");
+            
+            // 🔄 Update SyncManager
+            try {
+              getSyncManager().updateSigner(signer);
+              console.log('✅ SyncManager signer updated after NIP-07 restore');
+            } catch (e) {
+              console.warn('⚠️ SyncManager update on restore:', e);
+            }
+          } catch (error) {
+            console.warn("⚠️ NIP-07 Signer rekonstruktion fehlgeschlagen:", error);
+            // Fall back to demo if NIP-07 fails
+            signer = null;
+          }
+        } else if (stored.signerType === "nsec") {
+          // 🔑 nsec-Restore: Nur wenn es noch im sessionStorage ist (Development only)
+          console.log("🔄 Versuch nsec-Signer nach Page Reload zu rekonstruieren...");
+          const savedNsec = sessionStorage.getItem("nostr-nsec-temp");
+          if (savedNsec) {
+            try {
+              signer = new NDKPrivateKeySigner(savedNsec);
+              this.ndk.signer = signer;
+              
+              const signerUser = await signer.user();
+              if (signerUser.pubkey !== stored.pubkey) {
+                throw new Error("nsec pubkey mismatch");
+              }
+              console.log("✅ nsec Signer successfully reconnected!");
+              
+              // 🔄 Update SyncManager
+              try {
+                getSyncManager().updateSigner(signer);
+                console.log('✅ SyncManager signer updated after nsec restore');
+              } catch (e) {
+                console.warn('⚠️ SyncManager update on restore:', e);
+              }
+            } catch (error) {
+              console.warn("⚠️ nsec Signer rekonstruktion fehlgeschlagen:", error);
+              signer = null;
+            }
+          } else {
+            console.log("⚠️ nsec not found in sessionStorage - user needs to login again");
+          }
         }
 
         // Für Demo-Sessions: Nicht neu laden, einfach direkt set
@@ -223,11 +323,7 @@ export class AuthStore {
           `🔄 Session restored for ${stored.profile.name || "Anonymous"}`
         );
 
-        // Try to restore signer (only for NIP-07)
-        if (stored.signerType === "nip07" && window.nostr) {
-          const signer = new NDKNip07Signer();
-          this.ndk.signer = signer;
-        }
+        // ✅ Signer wurde bereits oben rekonstruiert!
         return;
       }
 

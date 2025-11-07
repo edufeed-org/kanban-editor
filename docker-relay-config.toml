@@ -1,0 +1,19 @@
+# Server settings
+[server]
+host = "0.0.0.0"
+port = 8080
+
+# Relay info
+[info]
+name = "Dev Nostr Relay"
+description = "A minimal public Nostr relay"
+pubkey = ""
+contact = "you@example.com"
+
+# Database
+[database]
+data_directory = "/usr/src/app/db"
+
+# Logging
+[logging]
+level = "info"
