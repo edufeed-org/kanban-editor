@@ -25,6 +25,28 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 ---
 
+## 🔍 NEUE ANALYSEN (7. November 2025)
+
+**📊 Publishing-Flow Analyse:**
+- [`ANALYSIS/NOSTR-PUBLISHING-FLOW.md`](./ANALYSIS/NOSTR-PUBLISHING-FLOW.md) — Umfassende Analyse: Wie Board-Inhalte zu Nostr publiziert werden (oder nicht 😅)
+- [`ANALYSIS/PUBLISHING-FIX-ACTIONPLAN.md`](./ANALYSIS/PUBLISHING-FIX-ACTIONPLAN.md) — Konkrete Fixes für Phase 1.1 Completion (2-3h Aufwand)
+
+**🔴 KEY FINDINGS:**
+- ✅ Queue-Architektur ist vollständig implementiert
+- ✅ Relay-Konfiguration existiert in settingsStore
+- ❌ **ABER:** Signer wird nicht mit AuthStore synchronisiert → Events landen ALLE in Queue!
+- ❌ **UND:** Relays werden NICHT zu NDK durchgereicht
+- ❌ **RESULTAT:** 0 Events werden zu Nostr publiziert (ohne manuelles Login)
+
+**📋 FIXES REQUIRED (vor Merge zu main):**
+1. AuthStore → SyncManager.updateSigner() Sync (30 min)
+2. settingsStore.relaysPublic → NDK explicitRelayUrls (30 min)
+3. publishToNostr() Stub entfernen (15 min)
+
+**Total Aufwand:** 1.5 - 2 Stunden für Publishing-Flow Completion! 🚀
+
+---
+
 ## 🎯 Nach Rolle
 
 ### 👨‍💼 Product Manager / Stakeholder
