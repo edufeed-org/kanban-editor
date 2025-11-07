@@ -66,6 +66,18 @@ export class AuthStore {
         console.warn('⚠️ SyncManager signer update warning:', error);
       }
 
+      // 🔗 Nach erfolgreichem Login: Boards aus Nostr laden & Live-Subscription starten
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        // Board-Author ggf. aktualisieren
+        boardStore.updateBoardAuthor?.();
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-07 login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after NIP-07 login:', error);
+      }
+
       return user;
     } catch (error) {
       console.error("NIP-07 login failed:", error);
@@ -156,6 +168,17 @@ export class AuthStore {
         console.log('✅ SyncManager signer updated after OIDC login');
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+
+      // 🔗 Nach OIDC-Login: Boards aus Nostr laden & Live-Subscription starten
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        boardStore.updateBoardAuthor?.();
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after OIDC login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after OIDC login:', error);
       }
 
       return user;
@@ -259,6 +282,17 @@ export class AuthStore {
             } catch (e) {
               console.warn('⚠️ SyncManager update on restore:', e);
             }
+
+            // 🔗 Nach erfolgreicher NIP-07-Restore: Boards aus Nostr laden & subscriben
+            try {
+              const { boardStore } = await import('./kanbanStore.svelte.js');
+              boardStore.updateBoardAuthor?.();
+              await boardStore.loadBoardsFromNostrForCurrentUser?.();
+              boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+              console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-07 restore');
+            } catch (err) {
+              console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after NIP-07 restore:', err);
+            }
           } catch (error) {
             console.warn("⚠️ NIP-07 Signer rekonstruktion fehlgeschlagen:", error);
             // Fall back to demo if NIP-07 fails
@@ -285,6 +319,17 @@ export class AuthStore {
                 console.log('✅ SyncManager signer updated after nsec restore');
               } catch (e) {
                 console.warn('⚠️ SyncManager update on restore:', e);
+              }
+
+              // 🔗 Nach erfolgreicher nsec-Restore: Boards aus Nostr laden & subscriben
+              try {
+                const { boardStore } = await import('./kanbanStore.svelte.js');
+                boardStore.updateBoardAuthor?.();
+                await boardStore.loadBoardsFromNostrForCurrentUser?.();
+                boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+                console.log('[AuthStore] ✅ Boards synced from Nostr after nsec restore');
+              } catch (err) {
+                console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after nsec restore:', err);
               }
             } catch (error) {
               console.warn("⚠️ nsec Signer rekonstruktion fehlgeschlagen:", error);

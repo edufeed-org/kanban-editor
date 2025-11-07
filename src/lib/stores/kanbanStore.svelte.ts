@@ -58,8 +58,11 @@ export class BoardStore {
     // PUBLIC: Wird von Components gelesen als $derived-Abhängigkeit
     public updateTrigger = $state(0);
     
-    // ⭐ NEU: NDK für Nostr Publishing
+    // ⭐ NEU: NDK für Nostr Publishing & Loading
     private ndk?: NDK;
+
+    // 🔄 Live-Subscription für Board-Events (Kind 30301)
+    private boardSubscription: any | null = null;
 
     constructor() {
         // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
@@ -265,18 +268,340 @@ export class BoardStore {
     // ============================================================================
 
     /**
-     * Initialisiere Nostr Publishing mit NDK
-     * Wird in +layout.ts aufgerufen nach NDK.connect()
+     * Initialisiere Nostr Integration mit NDK
+     * - Konfiguriert SyncManager (Writes)
+     * - Startet optional sofortiges Laden & Subscriben (Reads), falls User bekannt
+     * Wird in +layout.svelte aufgerufen nach ndk.connect()
      */
     public async initializeNostr(ndk: NDK): Promise<void> {
         this.ndk = ndk;
-        
-        // Initialisiere auch den SyncManager
-        // Der Signer wird später von AuthStore aktualisiert
+
+        // Initialisiere SyncManager für alle Write-Operationen
+        // Signer wird von AuthStore via getSyncManager().updateSigner(...) gesetzt
         initializeSyncManager(ndk, undefined);
-        
-        console.log('✅ Nostr initialized - SyncManager ready');
-        console.log(`📡 Publishing NDK configured`);
+
+        console.log('[BoardStore] ✅ Nostr initialized - SyncManager ready');
+
+        // Wenn bereits ein User authentifiziert ist, sofort Boards aus Nostr laden
+        try {
+            const hasPubkey =
+                typeof authStore?.getPubkeySafe === 'function'
+                    ? !!authStore.getPubkeySafe()
+                    : typeof authStore?.getPubkey === 'function'
+                        ? !!authStore.getPubkey()
+                        : false;
+
+            if (hasPubkey) {
+                console.log('[BoardStore] 🛰️ User detected on Nostr init - loading boards from Nostr...');
+                await this.loadBoardsFromNostrForCurrentUser();
+                this.subscribeToBoardUpdatesForCurrentUser();
+            } else {
+                console.log('[BoardStore] ℹ️ No authenticated user on Nostr init - skipping initial Nostr board loading');
+            }
+        } catch (error) {
+            console.warn('[BoardStore] ⚠️ Error during initial Nostr loading:', error);
+        }
+    }
+
+    /**
+     * Lädt alle verfügbaren Boards (Kind 30301) des aktuellen Users aus Nostr
+     * und integriert sie in localStorage + boardIds.
+     *
+     * Regeln:
+     * - Nutzt NDK.fetchEvents (Reads sind unabhängig vom SyncManager).
+     * - Liest nur Boards, für die der aktuelle Pubkey Author ist (MVP).
+     * - Optional erweiterbar für Maintainer-Boards via p-Tag / #p-Filter.
+     * - Respektiert MRU-Logik: überschreibt aktuelles Board nur, wenn dieses
+     *   offensichtlich ein leeres/anonymes Default-Board ist.
+     */
+    public async loadBoardsFromNostrForCurrentUser(): Promise<void> {
+        if (!this.ndk) {
+            console.log('[BoardStore] ℹ️ Nostr not initialized, skip loadBoardsFromNostrForCurrentUser');
+            return;
+        }
+
+        // Pubkey des aktuellen Users bestimmen
+        const pubkey =
+            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
+            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
+            null;
+
+        if (!pubkey) {
+            console.log('[BoardStore] ℹ️ No pubkey available, skipping Nostr board loading');
+            return;
+        }
+
+        try {
+            console.log('[BoardStore] 🛰️ Fetching boards from Nostr for pubkey:', pubkey);
+
+            // MVP: Nur Boards, bei denen der User Author ist
+            // NDKFilter darf nicht readonly sein → kein "as const"
+            const filter = {
+                kinds: [30301],
+                authors: [pubkey]
+            };
+
+            const events = await this.ndk.fetchEvents(filter as any);
+
+            if (!events || events.size === 0) {
+                console.log('[BoardStore] ℹ️ No boards found on Nostr for current user');
+                return;
+            }
+
+            for (const event of events) {
+                if (event.kind !== 30301) continue;
+
+                try {
+                    // Mapping via nostrEvents.ts
+                    const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+                    const boardProps = nostrEventToBoard(event);
+                    const board = new Board(boardProps);
+
+                    const storageKey = `kanban-${board.id}`;
+                    const existingRaw = typeof window !== 'undefined'
+                        ? window.localStorage.getItem(storageKey)
+                        : null;
+
+                    // Last-Write-Wins: vergleiche event.created_at mit lokalem updatedAt/createdAt
+                    let acceptRemote = true;
+                    if (existingRaw) {
+                        try {
+                            const existing = JSON.parse(existingRaw);
+                            const localTs = existing.updatedAt
+                                ? new Date(existing.updatedAt).getTime()
+                                : existing.createdAt
+                                    ? new Date(existing.createdAt).getTime()
+                                    : 0;
+                            const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
+                            if (localTs && localTs > remoteTs) {
+                                acceptRemote = false;
+                            }
+                        } catch {
+                            // bei Fehler: remote akzeptieren
+                            acceptRemote = true;
+                        }
+                    }
+
+                    if (!acceptRemote) {
+                        console.log(`[BoardStore] ↩️ Keep newer local board for ${board.id}, skip remote version`);
+                        // Stelle sicher, dass boardIds den Eintrag enthält
+                        if (!this.boardIds.includes(board.id)) {
+                            this.boardIds = [...this.boardIds, board.id];
+                            this.saveBoardIds();
+                        }
+                        continue;
+                    }
+
+                    if (typeof window !== 'undefined') {
+                        // Persistiere Remote-Board
+                        const context = board.getContextData(true) as any;
+                        // Ergänze Zeitstempel aus Event, falls nicht vorhanden
+                        const remoteCreated = event.created_at
+                            ? new Date(event.created_at * 1000).toISOString()
+                            : context.createdAt || new Date().toISOString();
+                        context.createdAt = context.createdAt || remoteCreated;
+                        context.updatedAt = context.updatedAt || remoteCreated;
+
+                        window.localStorage.setItem(storageKey, JSON.stringify(context));
+                        console.log('[BoardStore] 💾 Stored Nostr board from remote:', storageKey);
+                    }
+
+                    // boardIds pflegen
+                    if (!this.boardIds.includes(board.id)) {
+                        this.boardIds = [...this.boardIds, board.id];
+                        this.saveBoardIds();
+                    }
+                } catch (err) {
+                    console.error('[BoardStore] ❌ Failed to import Nostr board event:', err);
+                }
+            }
+
+            // MRU/Default-Board-Heuristik:
+            // Wenn aktuelles Board noch ein anonymes Default-Board ist und wir nun echte Boards haben,
+            // dann wähle das jüngste Nostr-Board als aktives Board.
+            if (typeof window !== 'undefined') {
+                const currentIsAnonymous =
+                    !this.board.author ||
+                    this.board.author === 'anonymous';
+
+                if (currentIsAnonymous && this.boardIds.length > 0) {
+                    let bestId: string | null = null;
+                    let bestTs = 0;
+
+                    for (const id of this.boardIds) {
+                        const raw = window.localStorage.getItem(`kanban-${id}`);
+                        if (!raw) continue;
+                        try {
+                            const data = JSON.parse(raw);
+                            const ts = data.updatedAt
+                                ? new Date(data.updatedAt).getTime()
+                                : data.createdAt
+                                    ? new Date(data.createdAt).getTime()
+                                    : 0;
+                            if (ts > bestTs) {
+                                bestTs = ts;
+                                bestId = id;
+                            }
+                        } catch {
+                            // ignore corrupted entries
+                        }
+                    }
+
+                    if (bestId) {
+                        const raw = window.localStorage.getItem(`kanban-${bestId}`);
+                        if (raw) {
+                            try {
+                                const data = JSON.parse(raw);
+                                this.board = this.reconstructBoard(data);
+                                this._columnOrder = this.board.columns.map((c) => c.id);
+                                this.updateTrigger++;
+                                console.log('[BoardStore] ✅ Switched active board to newest Nostr board:', bestId);
+                            } catch (err) {
+                                console.warn('[BoardStore] ⚠️ Failed to switch active board to Nostr board:', err);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('[BoardStore] ❌ Error while loading boards from Nostr:', error);
+        }
+    }
+
+    /**
+     * Startet oder erneuert eine Live-Subscription für Board-Events (Kind 30301)
+     * für den aktuellen User.
+     *
+     * - Nutzt NDK.subscribe direkt.
+     * - Aktualisiert localStorage + boardIds bei neuen/aktualisierten Events.
+     * - Wendet Last-Write-Wins auf Basis von created_at an.
+     */
+    public subscribeToBoardUpdatesForCurrentUser(): void {
+        if (!this.ndk) {
+            console.log('[BoardStore] ℹ️ Nostr not initialized, skip subscribeToBoardUpdatesForCurrentUser');
+            return;
+        }
+
+        const pubkey =
+            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
+            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
+            null;
+
+        if (!pubkey) {
+            console.log('[BoardStore] ℹ️ No pubkey available, skip board subscription');
+            return;
+        }
+
+        // Bestehende Subscription schließen
+        if (this.boardSubscription && typeof this.boardSubscription.stop === 'function') {
+            try {
+                this.boardSubscription.stop();
+            } catch {
+                // ignore
+            }
+        }
+
+        console.log('[BoardStore] 🛰️ Subscribing to board updates for pubkey:', pubkey);
+
+        const sub = this.ndk.subscribe(
+            {
+                kinds: [30301] as number[],
+                authors: [pubkey]
+                // Optional: später #p: [pubkey] für Maintainer-Boards
+            } as any,
+            { closeOnEose: false }
+        );
+
+        sub.on('event', async (event: any) => {
+            if (event.kind !== 30301) return;
+
+            try {
+                const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+                const boardProps = nostrEventToBoard(event);
+                const boardId = boardProps.id;
+                const storageKey = `kanban-${boardId}`;
+
+                let acceptRemote = true;
+                let mergedSource: any = boardProps;
+
+                if (typeof window !== 'undefined') {
+                    const existingRaw = window.localStorage.getItem(storageKey);
+                    if (existingRaw) {
+                        try {
+                            const existing = JSON.parse(existingRaw);
+                            const localTs = existing.updatedAt
+                                ? new Date(existing.updatedAt).getTime()
+                                : existing.createdAt
+                                    ? new Date(existing.createdAt).getTime()
+                                    : 0;
+                            const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
+
+                            if (localTs && localTs > remoteTs) {
+                                acceptRemote = false;
+                                mergedSource = existing;
+                            }
+                        } catch {
+                            // bei Fehler remote akzeptieren
+                            acceptRemote = true;
+                        }
+                    }
+                }
+
+                if (!acceptRemote) {
+                    // Nur sicherstellen, dass ID registriert ist
+                    if (boardId && !this.boardIds.includes(boardId)) {
+                        this.boardIds = [...this.boardIds, boardId];
+                        this.saveBoardIds();
+                    }
+                    return;
+                }
+
+                // Persistiere oder update Board in localStorage
+                if (typeof window !== 'undefined') {
+                    const contextBoard = new Board(boardProps);
+                    const context = contextBoard.getContextData(true) as any;
+                    const remoteCreated = event.created_at
+                        ? new Date(event.created_at * 1000).toISOString()
+                        : context.createdAt || new Date().toISOString();
+                    context.createdAt = context.createdAt || remoteCreated;
+                    context.updatedAt = context.updatedAt || remoteCreated;
+
+                    window.localStorage.setItem(storageKey, JSON.stringify(context));
+                    console.log('[BoardStore] 💾 Updated local board from Nostr subscription:', storageKey);
+                }
+
+                // boardIds pflegen
+                if (boardId && !this.boardIds.includes(boardId)) {
+                    this.boardIds = [...this.boardIds, boardId];
+                    this.saveBoardIds();
+                }
+
+                // Aktives Board aktualisieren, falls betroffen
+                if (this.board.id === boardId) {
+                    try {
+                        const effectiveData =
+                            mergedSource && mergedSource.columns
+                                ? mergedSource
+                                : (typeof window !== 'undefined'
+                                      ? JSON.parse(window.localStorage.getItem(storageKey) || 'null')
+                                      : null);
+
+                        if (effectiveData) {
+                            this.board = this.reconstructBoard(effectiveData);
+                            this._columnOrder = this.board.columns.map((c) => c.id);
+                            this.updateTrigger++;
+                            console.log('[BoardStore] 🔄 Active board updated from Nostr subscription:', boardId);
+                        }
+                    } catch (err) {
+                        console.warn('[BoardStore] ⚠️ Failed to update active board from subscription:', err);
+                    }
+                }
+            } catch (err) {
+                console.error('[BoardStore] ❌ Error processing Nostr board subscription event:', err);
+            }
+        });
+
+        this.boardSubscription = sub;
     }
 
     /**
