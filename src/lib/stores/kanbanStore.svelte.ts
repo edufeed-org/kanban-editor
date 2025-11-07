@@ -9,6 +9,7 @@ import { settingsStore } from './settingsStore.svelte.js';
 import { userPreferencesStore, type LearnResult } from './userPreferencesStore.svelte.js';
 import { getSyncManager, initializeSyncManager } from './syncManager.svelte.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../utils/nostrEvents.js';
+import { getTargetRelays } from '../utils/relaySelection.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
@@ -1388,19 +1389,32 @@ export class BoardStore {
     }
 
     // ============================================================================
-    // NOSTR-INTEGRATION (STUB)
+    // NOSTR-INTEGRATION
     // ============================================================================
 
+    /**
+     * ✅ REFACTORED: Publiziert Board-Änderungen zu Nostr
+     * 
+     * Diese Methode wird nach jeder Board-Änderung aufgerufen (via triggerUpdate).
+     * Sie delegiert an publishBoardAsync() für die tatsächliche Nostr-Publikation.
+     * 
+     * Non-blocking: Führt publishing im Hintergrund aus ohne auf Ergebnis zu warten.
+     */
     private publishToNostr(): void {
         // ✅ AUTHORIZATION CHECK: Bereits in addCard() und upsertCard() durchgeführt!
         // Diese Methode wird nur aufgerufen wenn Validierung erfolgreich war
         
-        // Hier würde die tatsächliche Nostr-Publikation erfolgen
-        // z.B. über eine WebSocket-Verbindung oder HTTP-API
-        console.log('Publishing board state to Nostr...', this.board.getContextData(true));
-        
-        // Lokale Persistierung als Fallback
+        // Lokale Persistierung (synchron)
         this.saveToStorage();
+        
+        // Nostr Publishing (async, non-blocking)
+        if (this.ndk) {
+            this.publishBoardAsync().catch(error => {
+                console.error('⚠️ Background board publishing failed:', error);
+            });
+        } else {
+            console.warn('⚠️ NDK not initialized, skipping Nostr publishing');
+        }
     }
 
     // ============================================================================
@@ -1428,11 +1442,28 @@ export class BoardStore {
             // Serialize card to Nostr event (Kind 30302)
             const event = cardToNostrEvent(card, column.name, columnIndex, boardRef, this.ndk);
 
+            // NEW: Determine target relays based on Card's PublishState
+            const publishState = card.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
+
             // Queue for publishing (handles signing + retry logic)
             const syncManager = getSyncManager();
 
             console.log(`✅ Card ${cardId} queued for publishing`);
-            await syncManager.publishOrQueue(event, 'card', 'normal');
+            await syncManager.publishOrQueue(
+                event, 
+                'card', 
+                'normal',
+                normalizedState,
+                targetRelays
+            );
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
@@ -1449,9 +1480,27 @@ export class BoardStore {
             // Serialize board to Nostr event (Kind 30301)
             const event = boardToNostrEvent(this.board, this.ndk);
 
-            // Queue for publishing
+            // NEW: Determine target relays based on PublishState
+            // Note: 'archived' is treated as 'private' for relay selection
+            const publishState = this.board.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
+
+            // Queue for publishing with target relays
             const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(event, 'board', 'normal');
+            await syncManager.publishOrQueue(
+                event, 
+                'board', 
+                'normal',
+                normalizedState,
+                targetRelays
+            );
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
         }
@@ -1460,6 +1509,11 @@ export class BoardStore {
     /**
      * Publishes a comment to Nostr via SyncManager
      * Non-blocking: executes in background
+     * 
+     * Comments inherit the PublishState of their parent Card:
+     * - Draft card → Comment goes to private relays (based on draftPublishingMode)
+     * - Published card → Comment goes to public relays
+     * - Private/Archived card → Comment goes to private relays
      */
     private async publishCommentAsync(cardId: string, commentId: string): Promise<void> {
         if (!this.ndk) return;
@@ -1482,11 +1536,28 @@ export class BoardStore {
             const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
             const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
 
-            // Queue for publishing
-            const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(event, 'comment', 'normal');
+            // NEW: Comments inherit relay selection from their parent Card
+            const publishState = card.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
 
-            console.log(`✅ Comment ${commentId} queued for publishing`);
+            // Queue for publishing with inherited relay selection
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                event, 
+                'comment', 
+                'normal',
+                normalizedState,
+                targetRelays
+            );
+
+            console.log(`✅ Comment ${commentId} queued for publishing (inherits card's ${publishState} state)`);
         } catch (error) {
             console.error(`❌ Error publishing comment:`, error);
         }
