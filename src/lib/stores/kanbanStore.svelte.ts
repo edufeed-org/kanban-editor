@@ -7,6 +7,9 @@ import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { userPreferencesStore, type LearnResult } from './userPreferencesStore.svelte.js';
+import { getSyncManager, initializeSyncManager } from './syncManager.svelte.js';
+import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../utils/nostrEvents.js';
+import type NDK from '@nostr-dev-kit/ndk';
 
 // UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
 export type CardItem = {
@@ -53,6 +56,9 @@ export class BoardStore {
     // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
     // PUBLIC: Wird von Components gelesen als $derived-Abhängigkeit
     public updateTrigger = $state(0);
+    
+    // ⭐ NEU: NDK für Nostr Publishing
+    private ndk?: NDK;
 
     constructor() {
         // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
@@ -252,6 +258,38 @@ export class BoardStore {
         description: this.board.description,
         trigger: this.updateTrigger  // Auch updateTrigger als Fallback-Dependency
     });
+
+    // ============================================================================
+    // ⭐ NOSTR INTEGRATION (Phase 1.2)
+    // ============================================================================
+
+    /**
+     * Initialisiere Nostr Publishing mit NDK
+     * Wird in +layout.ts aufgerufen nach NDK.connect()
+     */
+    public async initializeNostr(ndk: NDK): Promise<void> {
+        this.ndk = ndk;
+        
+        // Initialisiere auch den SyncManager
+        // Der Signer wird später von AuthStore aktualisiert
+        initializeSyncManager(ndk, undefined);
+        
+        console.log('✅ Nostr initialized - SyncManager ready');
+        console.log(`📡 Publishing NDK configured`);
+    }
+
+    /**
+     * Cleanup bei App-Exit
+     */
+    public dispose(): void {
+        try {
+            const syncManager = getSyncManager();
+            if (syncManager) syncManager.dispose();
+            console.log('✅ SyncManager disposed');
+        } catch (error) {
+            console.warn('⚠️ SyncManager dispose warning:', error);
+        }
+    }
 
     // ============================================================================
     // PRIVATE HELPER
@@ -810,8 +848,19 @@ export class BoardStore {
             throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
         }
 
+        const oldState = this.board.publishState
+        console.log({oldState})
         this.board.setPublishState(state);
         this.triggerUpdate();
+        
+        if (state === 'published') {
+            this.publishBoardAsync().catch(err => {
+                this.board.setPublishState(oldState);
+                console.log('this.board', this.board)
+                this.triggerUpdate();
+                console.error('⚠️ Async board publishing failed:', err);
+            });
+        }
     }
 
     public addColumn(props: ColumnProps) {
@@ -870,7 +919,6 @@ export class BoardStore {
         if (column) {
             const card = column.addCard(props);
             this.triggerUpdate(); // Trigger Reaktivität
-            this.publishToNostr();
             return card;
         }
         throw new Error(`Column with id ${columnId} not found`);
@@ -917,6 +965,11 @@ export class BoardStore {
             result.card.update(updates);
             this.triggerUpdate(); // Trigger Reaktivität
             this.publishToNostr();
+            
+            // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
+            this.publishCardAsync(cardId).catch(err => 
+                console.error('⚠️ Async card publishing failed:', err)
+            );
         } else {
             throw new Error(`Card with id ${cardId} not found`);
         }
@@ -928,6 +981,9 @@ export class BoardStore {
             result.column.deleteCard(cardId);
             this.triggerUpdate(); // Trigger Reaktivität
             this.publishToNostr();
+            
+            // 🔄 Trigger async deletion publishing to Nostr (non-blocking)
+            // TODO: Implement createDeletionEvent in nostrEvents.ts if needed
         } else {
             throw new Error(`Card with id ${cardId} not found`);
         }
@@ -939,6 +995,11 @@ export class BoardStore {
             result.card.setPublishState(state);
             this.triggerUpdate(); // ← CRITICAL FIX: Trigger Reaktivität + localStorage!
             this.publishToNostr();
+            
+            // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
+            this.publishCardAsync(cardId).catch(err => 
+                console.error('⚠️ Async card publishing failed:', err)
+            );
         } else {
             throw new Error(`Card with id ${cardId} not found`);
         }
@@ -1025,8 +1086,7 @@ export class BoardStore {
         };
         
         const card = this.addCard(columnId, cardProps);
-        
-        // publishToNostr() wird bereits in addCard() aufgerufen
+
         return card.id;
     }
 
@@ -1341,6 +1401,95 @@ export class BoardStore {
         
         // Lokale Persistierung als Fallback
         this.saveToStorage();
+    }
+
+    // ============================================================================
+    // ASYNC NOSTR PUBLISHING (via SyncManager)
+    // ============================================================================
+
+    /**
+     * Publishes a card update to Nostr via SyncManager
+     * Non-blocking: executes in background, doesn't wait for result
+     */
+    private async publishCardAsync(cardId: string): Promise<void> {
+        if (!this.ndk) return;
+
+        try {
+            const result = this.board.findCardAndColumn(cardId);
+            if (!result) {
+                console.warn(`⚠️ Card ${cardId} not found for publishing`);
+                return;
+            }
+
+            const { card, column } = result;
+            const columnIndex = this.board.columns.indexOf(column);
+            const boardRef = `30302:${this.board.author || 'unknown'}:${this.board.id}`;
+
+            // Serialize card to Nostr event (Kind 30302)
+            const event = cardToNostrEvent(card, column.name, columnIndex, boardRef, this.ndk);
+
+            // Queue for publishing (handles signing + retry logic)
+            const syncManager = getSyncManager();
+
+            console.log(`✅ Card ${cardId} queued for publishing`);
+            await syncManager.publishOrQueue(event, 'card', 'normal');
+        } catch (error) {
+            console.error(`❌ Error publishing card ${cardId}:`, error);
+        }
+    }
+
+    /**
+     * Publishes board metadata to Nostr via SyncManager
+     * Non-blocking: executes in background
+     */
+    private async publishBoardAsync(): Promise<void> {
+        if (!this.ndk) return;
+
+        try {
+            // Serialize board to Nostr event (Kind 30301)
+            const event = boardToNostrEvent(this.board, this.ndk);
+
+            // Queue for publishing
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(event, 'board', 'normal');
+        } catch (error) {
+            console.error(`❌ Error publishing board:`, error);
+        }
+    }
+
+    /**
+     * Publishes a comment to Nostr via SyncManager
+     * Non-blocking: executes in background
+     */
+    private async publishCommentAsync(cardId: string, commentId: string): Promise<void> {
+        if (!this.ndk) return;
+
+        try {
+            const result = this.board.findCardAndColumn(cardId);
+            if (!result) {
+                console.warn(`⚠️ Card ${cardId} not found for comment publishing`);
+                return;
+            }
+
+            const { card } = result;
+            const comment = card.comments?.find(c => c.id === commentId);
+            if (!comment) {
+                console.warn(`⚠️ Comment ${commentId} not found`);
+                return;
+            }
+
+            // Create comment event (Kind 1)
+            const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
+            const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
+
+            // Queue for publishing
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(event, 'comment', 'normal');
+
+            console.log(`✅ Comment ${commentId} queued for publishing`);
+        } catch (error) {
+            console.error(`❌ Error publishing comment:`, error);
+        }
     }
 
     // ============================================================================

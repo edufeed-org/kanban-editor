@@ -8,6 +8,7 @@
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
   import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
+  import { boardStore } from '$lib/stores/kanbanStore.svelte';
 
 
   const { children } = $props();
@@ -24,7 +25,15 @@
 
   const authStore = initializeAuth(ndk);
 
-	onMount(async () => {
+  onMount(async () => {
+    // Initialize BoardStore with NDK for Nostr publishing
+    try {
+      boardStore.initializeNostr(ndk);
+      console.log('✅ BoardStore initialized with NDK - publishing ready');
+    } catch (error) {
+      console.error('⚠️ Failed to initialize BoardStore:', error);
+    }
+
     const oidcUserManager = await initializeOidcUserManager(window.location.href)
     // Only process OIDC callback if URL contains 'code' and 'state' parameters
     const urlParams = new URLSearchParams(window.location.search);

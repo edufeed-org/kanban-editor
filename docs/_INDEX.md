@@ -292,7 +292,7 @@ docs/
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (10 Dateien)
+### ARCHITECTURE/ (8 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -309,7 +309,6 @@ docs/
 | [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (29.10.) |
 | [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (29.10.) |
 | [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (29.10.) |
-| [`STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | KI-Chatbot Integration (TODO Phase 3) | ✅ Neu (29.10.) |
 | [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (29.10.) |
 | [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
 | [`STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) | 🆕 **NEU (06.11.)**: Chat-Session Persistence per Board mit Memory & Summaries (Phase 3.0) | ✅ Neu (06.11.) |
