@@ -559,21 +559,76 @@ export class BoardStore {
                 // ⚠️ KRITISCH: Merge-Strategie für Board-Updates
                 // Problem: boardProps.columns hat cards: [] (Karten sind Kind 30302 Events, nicht im Board-Event!)
                 // Lösung: Nur Spalten-Metadaten aktualisieren, Karten-Inhalte behalten
+                
+                // 🔴 WICHTIG: mergedProps außerhalb des if-Blocks deklarieren (wird später genutzt)
+                let mergedProps: any = boardProps;
+                
                 if (typeof window !== 'undefined') {
-                    const existingData = mergedSource || JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+                    // 🔴 CRITICAL FIX: Board Events (Kind 30301) enthalten KEINE Card-Daten!
+                    // Cards kommen separat via Card Events (Kind 30302).
+                    // Daher: Für Cards IMMER localStorage nutzen (aktuellster Stand mit allen Cards)!
+                    // Nur für Board-Metadaten (name, description, columns-struktur) nutze Remote Event.
+                    
+                    // IMMER localStorage für Card-Daten verwenden (enthält alle lokalen Änderungen)
+                    const storedData = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+                    
+                    // 🔍 DEBUG: Wie viele Karten hat localStorage JETZT?
+                    if (this.board.id === boardId) {
+                        console.log('[BoardStore] 🔍 LOCALSTORAGE STATE:', {
+                            boardId: this.board.id,
+                            columnsCount: storedData.columns?.length,
+                            cardsPerColumn: storedData.columns?.map((col: any) => ({
+                                id: col.id,
+                                name: col.name,
+                                cardCount: col.cards?.length || 0,
+                                cardIds: col.cards?.map((c: any) => c.id) || []
+                            }))
+                        });
+                    }
+                    
+                    // 🔴 WICHTIG: IMMER localStorage für Cards nutzen (nie $state Board!)
+                    // Grund: Board Event (Kind 30301) hat KEINE Card-Daten, nur Metadaten
+                    const existingData = storedData;
                     
                     // MERGE: Ersetze nur Spalten-Metadaten (name, color, order)
                     // aber BEHALTE lokale Karten!
                     const remoteColumns = boardProps.columns || [];
-                    const mergedColumns = remoteColumns.map((remoteCol, idx) => {
-                        const existingCol = existingData.columns?.[idx];
+                    
+                    // 🔍 DEBUG: Was haben wir?
+                    console.log('[BoardStore] 🔍 MERGE DEBUG:', {
+                        remoteColumnsCount: remoteColumns.length,
+                        existingColumnsCount: existingData.columns?.length,
+                        remoteColumnIds: remoteColumns.map((c: any) => c.id),
+                        existingColumnIds: existingData.columns?.map((c: any) => c.id),
+                        existingCardsPerColumn: existingData.columns?.map((c: any) => ({
+                            id: c.id,
+                            name: c.name,
+                            cardCount: c.cards?.length || 0
+                        }))
+                    });
+                    
+                    const mergedColumns = remoteColumns.map((remoteCol) => {
+                        // 🔴 KRITISCH: Match by ID, NICHT by Index!
+                        // (Spalten-Reihenfolge kann zwischen local/remote unterschiedlich sein)
+                        const existingCol = existingData.columns?.find((col: any) => col.id === remoteCol.id);
+                        
+                        console.log('[BoardStore] 🔍 Column merge:', {
+                            remoteColId: remoteCol.id,
+                            remoteColName: remoteCol.name,
+                            existingColFound: !!existingCol,
+                            existingColName: existingCol?.name,
+                            existingCardsCount: existingCol?.cards?.length || 0,
+                            mergedCardsCount: (existingCol?.cards || []).length
+                        });
+                        
                         return {
-                            ...remoteCol,  // Neue Spalten-Metadaten (name, color, id)
+                            ...remoteCol,  // Neue Spalten-Metadaten (name, color, order)
                             cards: existingCol?.cards || [],  // 🔴 KRITISCH: Behalte lokale Karten!
                         };
                     });
                     
-                    const mergedProps = {
+                    // 🔴 WICHTIG: Reassign mergedProps (außerhalb deklariert)
+                    mergedProps = {
                         ...boardProps,
                         columns: mergedColumns,  // Mit erhaltenen Karten
                     };
@@ -599,12 +654,9 @@ export class BoardStore {
                 // Aktives Board aktualisieren, falls betroffen
                 if (this.board.id === boardId) {
                     try {
-                        const effectiveData =
-                            mergedSource && mergedSource.columns
-                                ? mergedSource
-                                : (typeof window !== 'undefined'
-                                      ? JSON.parse(window.localStorage.getItem(storageKey) || 'null')
-                                      : null);
+                        // 🔴 KRITISCH: Nutze mergedProps (mit erhaltenen Karten), NICHT mergedSource oder localStorage!
+                        // mergedProps wurde oben erstellt mit: remoteColumns + existingCol?.cards
+                        const effectiveData = mergedProps;
 
                         if (effectiveData) {
                             this.board = this.reconstructBoard(effectiveData);
@@ -1263,8 +1315,27 @@ export class BoardStore {
         
         const column = this.board.findColumn(columnId);
         if (column) {
+            console.log('[BoardStore] 🔍 BEFORE addCard:', {
+                columnId,
+                currentCardsCount: column.cards.length
+            });
+            
             const card = column.addCard(props);
+            
+            console.log('[BoardStore] 🔍 AFTER addCard:', {
+                columnId,
+                cardId: card.id,
+                newCardsCount: column.cards.length,
+                allCardIds: column.cards.map(c => c.id)
+            });
+            
             this.triggerUpdate(); // Trigger Reaktivität
+            
+            // ✅ CRITICAL: Publish card to Nostr as Kind 30302 event
+            this.publishCardAsync(card.id).catch(err => 
+                console.error('⚠️ Async card publishing failed:', err)
+            );
+            
             return card;
         }
         throw new Error(`Column with id ${columnId} not found`);
@@ -1432,6 +1503,11 @@ export class BoardStore {
         };
         
         const card = this.addCard(columnId, cardProps);
+        
+        // ✅ CRITICAL: Publish card to Nostr as Kind 30302 event
+        this.publishCardAsync(card.id).catch(err => 
+            console.error('⚠️ Async card publishing failed:', err)
+        );
 
         return card.id;
     }
