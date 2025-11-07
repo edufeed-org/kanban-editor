@@ -556,9 +556,29 @@ export class BoardStore {
                     return;
                 }
 
-                // Persistiere oder update Board in localStorage
+                // ⚠️ KRITISCH: Merge-Strategie für Board-Updates
+                // Problem: boardProps.columns hat cards: [] (Karten sind Kind 30302 Events, nicht im Board-Event!)
+                // Lösung: Nur Spalten-Metadaten aktualisieren, Karten-Inhalte behalten
                 if (typeof window !== 'undefined') {
-                    const contextBoard = new Board(boardProps);
+                    const existingData = mergedSource || JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+                    
+                    // MERGE: Ersetze nur Spalten-Metadaten (name, color, order)
+                    // aber BEHALTE lokale Karten!
+                    const remoteColumns = boardProps.columns || [];
+                    const mergedColumns = remoteColumns.map((remoteCol, idx) => {
+                        const existingCol = existingData.columns?.[idx];
+                        return {
+                            ...remoteCol,  // Neue Spalten-Metadaten (name, color, id)
+                            cards: existingCol?.cards || [],  // 🔴 KRITISCH: Behalte lokale Karten!
+                        };
+                    });
+                    
+                    const mergedProps = {
+                        ...boardProps,
+                        columns: mergedColumns,  // Mit erhaltenen Karten
+                    };
+                    
+                    const contextBoard = new Board(mergedProps);
                     const context = contextBoard.getContextData(true) as any;
                     const remoteCreated = event.created_at
                         ? new Date(event.created_at * 1000).toISOString()
@@ -567,7 +587,7 @@ export class BoardStore {
                     context.updatedAt = context.updatedAt || remoteCreated;
 
                     window.localStorage.setItem(storageKey, JSON.stringify(context));
-                    console.log('[BoardStore] 💾 Updated local board from Nostr subscription:', storageKey);
+                    console.log('[BoardStore] 💾 Updated local board from Nostr subscription (Karten behalten):', storageKey);
                 }
 
                 // boardIds pflegen

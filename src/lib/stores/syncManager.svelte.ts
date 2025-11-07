@@ -582,6 +582,16 @@ export function initializeSyncManager(
   signer: NDKSigner | undefined,
   config?: SyncConfig
 ): SyncManager {
+  // Guard: Wenn schon initialisiert, nur Signer updaten (idempotent)
+  if (syncManager) {
+    console.log('[SyncManager] Already initialized, updating signer if provided');
+    if (signer) {
+      syncManager.updateSigner(signer);
+    }
+    return syncManager;
+  }
+  
+  // Erste Initialisierung
   syncManager = new SyncManager(ndk, signer, config);
   return syncManager;
 }

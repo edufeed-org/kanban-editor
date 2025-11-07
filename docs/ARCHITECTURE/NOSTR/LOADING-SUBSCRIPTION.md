@@ -1,290 +1,466 @@
-Architektur-Plan für das automatische Laden vorhandener Boards des angemeldeten Users aus Nostr (Kind 30301) beim App-Start
+# Nostr Board Loading & Subscription Implementation Guide
 
-Ziel:
-Die bestehende Nostr-Pipeline (publish via SyncManager) wird um einen klar definierten Read-Path erweitert:
-- Beim App-Start und Login werden alle relevanten Board-Events (Kind 30301) des Users aus den Relays geladen.
-- Diese Events werden mit nostrEventToBoard in BoardModel-Instanzen gemappt.
-- Die Boards werden im BoardStore als auswählbare Liste geführt und in localStorage gecached.
-- Live-Updates via Nostr-Subscription aktualisieren den BoardStore laufend.
-- Offline-First bleibt erhalten: Fallback auf localStorage, Last-Write-Wins über Nostr created_at.
+Status: Phase 1 - Board-Metadaten wird geladen. Karten-Persistierung noch nicht implementiert. (🐛 Bug Fixed 07.11.2025 - siehe BUG-FIX-CARD-DELETION-ON-SUBSCRIPTION.md)  
+Scope: Automatisches Laden und Live-Aktualisieren von Board-Metadaten (Kind 30301) des angemeldeten Users aus Nostr, integriert mit BoardStore, AuthStore, NDK und SyncManager. **Wichtig:** Karten (Kind 30302) sind architektonisch separate Events - diese Phase behandelt nur Board-Struktur.
 
-Die folgenden Punkte sind so formuliert, dass ein Code-Mode sie direkt implementieren kann.
+## ⚠️ KRITISCHER ARCHITEKTUR-HINWEIS
 
-1. Verantwortlichkeiten und Konsistenz zu bestehenden Docs
+**Problem Phase 1:** Board-Karten werden in `nostrEvents.ts` deserialisiert, aber:
+- Kind 30302 (Card) Events sind **separate Events** (nicht im Board-Event 30301 enthalten!)
+- `nostrEventToBoard()` erzeugt `columns: [{ cards: [] }]` - **alle Karten werden gelöscht**
+- Wenn Subscription das Board aktualisiert → lokale Karten verschwinden
 
-- SyncManager (src/lib/stores/syncManager.svelte.ts:62-572)
-  - Bleibt primär für:
-    - publishOrQueue (Write-Pfad, Queue, Signing, Retry, Relay-Auswahl).
-  - Für das Lesen/Abonnieren wird KEIN schwerer Logikteil in SyncManager verschoben.
-  - Optional: kleine Utility-Hilfen für Status, aber Nostr-Reads passieren im BoardStore (oder separatem Reader), um AGENTS.md (Trennung Model/Store/Sync) konsistent zu halten.
+**Lösung Phase 1 (AKTUELL):**
+- ✅ Board-Metadaten (Spalten-Name, Spalten-Ordnung, Board-Name) werden von Nostr synced
+- ❌ Karten-Inhalte bleiben **lokal** (nicht via Nostr - noch)
+- 🔄 Karten werden NICHT überschrieben durch Subscription (Design)
 
-- nostrEvents (src/lib/utils/nostrEvents.ts:27-317)
-  - Liefert bereits:
-    - boardToNostrEvent(board, ndk)
-    - nostrEventToBoard(event)
-    - cardToNostrEvent / nostrEventToCard
-  - Damit ist das Mapping für Board-Discovery vollständig vorbereitet.
-  - Wird direkt im BoardStore verwendet.
+**Zukünftig Phase 1.2+:**
+- Implementierung von Card-Event-Loading (Kind 30302)
+- Separate Subscription pro Karte
+- Synchronisierung von Karten-Änderungen
 
-- BoardStore (src/lib/stores/kanbanStore.svelte.ts)
-  - Ist schon:
-    - Multi-Board-fähig (boardIds, getAllBoards, loadBoard, createBoard).
-    - Nostr-Publishing-fähig (publishBoardAsync, publishCardAsync, publishCommentAsync via SyncManager).
-  - Erweiterung:
-    - Verantwortlich für Discovery, Import und Auswahl von Boards aus Nostr.
-    - Nutzt nostrEvents.nostrEventToBoard und NDK Filter.
+Zielsetzung dieser Phase
 
-Diese Aufteilung folgt AGENTS.md und BOARDSTORE.md:
-- Write-Pfad: BoardStore → nostrEvents → SyncManager → Relays.
-- Read-Pfad: BoardStore → NDK (Filter/Subscribe) → nostrEvents → BoardModel → BoardStore State.
+Diese Anleitung beschreibt präzise, wie die **Board-Metadaten-Synchronisierung** (Kind 30301) konkret im Code umgesetzt wird.
 
-2. Öffentliche API-Erweiterungen im BoardStore
+Fokus:
 
-Ziel: Boards beim App-Start automatisch aus Nostr laden und dem UI zur Auswahl bereitstellen.
+- Beim App-Start und bei Login:
+  - Boards (Kind 30301) des Users aus Nostr laden.
+  - In `BoardModel`/`BoardStore` übernehmen und in localStorage cachen.
+- Laufend:
+  - Per Nostr-Subscription auf Board-Updates reagieren.
+  - Last-Write-Wins anwenden.
+  - Offline-First Verhalten beibehalten.
+- Architekturtreue:
+  - Write/Queue: SyncManager.
+  - Read/Subscribe: BoardStore + NDK + nostrEvents.
 
-Vorgeschlagene Erweiterungen (konzeptionell, nicht als Code):
+Wichtig:
 
-- boardStore.initializeNostr(ndk: NDK)
-  - Existiert bereits (271-280).
-  - Ergänzung:
-    - Nach ndk-Set:
-      - Wenn User authentifiziert:
-        - loadBoardsFromNostrForCurrentUser() aufrufen.
-        - subscribeToBoardUpdatesForCurrentUser() starten.
+- Diese Datei ist die verbindliche Implementierungsreferenz.
+- Alle Code-Änderungen müssen mit [`docs/ARCHITECTURE/STORES/BOARDSTORE.md`](../STORES/BOARDSTORE.md), [`docs/ARCHITECTURE/STORES/SYNCMANAGER.md`](../STORES/SYNCMANAGER.md) und [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) konsistent sein.
 
-- boardStore.loadBoardsFromNostrForCurrentUser(): Promise<void>
-  - Aufgaben:
-    - Aktuellen User aus authStore holen:
-      - pubkey = authStore.getPubkey() oder getPubkeySafe()
-      - Falls kein pubkey: abbrechen, nur lokale Boards nutzen.
-    - NDK Query:
-      - Filter:
-        - kinds: [30301]
-        - authors: [pubkey] (eigene Boards)
-        - Optional: zusätzliche Filter auf p-Tags, um Boards zu finden, bei denen der User Maintainer ist.
-      - e.g. ndk.fetchEvents({ kinds: [30301], authors: [pubkey] })
-    - Für jedes Event:
-      - BoardProps via nostrEventToBoard(event).
-      - In Board-Instanz umwandeln (new Board(BoardProps)).
-      - In localStorage persistieren:
-        - Key: kanban-{board.id}
-        - boardIds aktualisieren (wenn neu).
-      - created_at / updatedAt aus event.created_at ableiten.
-    - Danach:
-      - Falls aktuelles this.board noch leer oder nur Default:
-        - Wähle ein Board als aktives:
-          - Priorität: zuletzt verwendetes aus localStorage (MRU) falls kompatibel,
-          - sonst das jüngste Nostr-Board (höchster created_at).
-        - this.board = ausgewähltes Board, _columnOrder setzen, triggerUpdate.
+---
 
-- boardStore.getRemoteBoards()
-  - Optional: read-only Liste aller aus Nostr geladenen Boards für UI.
-  - Kann auf getAllBoards() aufsetzen, da Nostr-Boards beim Import gleich behandelt werden.
+## 1. Verantwortlichkeiten
 
-- boardStore.subscribeToBoardUpdatesForCurrentUser(): void
-  - Aufgaben:
-    - Startet eine dauerhafte NDK-Subscription auf:
-      - Board-Events (Kind 30301) für den aktuellen User:
-        - authors: [pubkey]
-      - Optional: Boards, bei denen der User via p-Tag als Maintainer referenziert ist.
-    - On event:
-      - Ereignis via nostrEventToBoard(Event) in BoardProps wandeln.
-      - Local Merge:
-        - Falls Board-ID unbekannt:
-          - Neues Board registrieren (localStorage + boardIds).
-        - Falls bekannt:
-          - Last-Write-Wins:
-            - Vergleiche event.created_at mit lokalem updatedAt/lastSyncTimestamp.
-            - Nur übernehmen, wenn neuer.
-          - Board im storage aktualisieren und ggf. aktives Board, falls betroffen.
-      - triggerUpdate, damit UI (BoardsList, aktuelles Board) reaktiv aktualisiert.
+High-Level Zuordnung:
 
-3. Nostr Board Discovery: Filter und Mapping
+- BoardStore (`src/lib/stores/kanbanStore.svelte.ts`):
+  - Verwaltung aller Boards (lokal + Nostr).
+  - Laden von Board-Events aus Nostr.
+  - Starten von Subscriptions auf Board-Events.
+  - Auswahl und Aktualisierung des aktiven Boards.
+- SyncManager (`src/lib/stores/syncManager.svelte.ts`):
+  - Unverändert primär für Writes:
+    - `publishOrQueue`
+    - Signing
+    - Retry
+    - Queue-Persistenz.
+  - Keine komplexe Read-Logik hier einbauen.
+- nostrEvents (`src/lib/utils/nostrEvents.ts`):
+  - Serialisierung/Deserialisierung:
+    - `boardToNostrEvent`, `nostrEventToBoard`
+    - `cardToNostrEvent`, `nostrEventToCard`
+  - Basis für Mapping von Nostr-Events zu internen Modellen.
+- AuthStore (`src/lib/stores/authStore.svelte.ts`):
+  - Liefert:
+    - `getPubkey()` / `getPubkeySafe()`
+    - `isAuthenticated`
+    - Info, wann ein User angemeldet ist.
+  - Triggert nach Login relevante Initialisierungen.
 
-Discovery-Strategie für vorhandene Boards:
+Prinzip:
 
-- Primär: eigene Boards
-  - Filter:
-    - kinds: [30301]
-    - authors: [userPubkey]
-  - Alle Events dieses Autors sind Kandidaten für Boards, die der User besitzt.
+- Reads (Loading, Subscribe) passieren im BoardStore.
+- Writes (Publish, Queue) passieren via BoardStore → nostrEvents → SyncManager.
 
-- Optional: Boards, bei denen User Maintainer/Co-Editor ist
-  - Zwei Optionen:
-    - a) Clientside Filter:
-      - Events für relevante Relays abrufen,
-      - in Tags alle p-Tags auswerten,
-      - wenn p == userPubkey → Board als Co-Maintainer hinzufügen.
-    - b) Selektive Filter (wenn Relays unterstützen):
-      - NDK-Filter mit "#p": [userPubkey] zusätzlich testen.
-  - Empfehlung: Start mit einfacher Variante:
-    - fetchEvents({ kinds: [30301], authors: [userPubkey] })
-    - Erweiterung für p-Tag Matching in einem zweiten Schritt.
+---
 
-Mapping mit nostrEvents.nostrEventToBoard:
+## 2. Neue/erweiterte BoardStore-APIs
 
-- boardId:
-  - Wird aus d-Tag oder event.id gewonnen.
-- columns:
-  - Kommen als col-Tags (id, name, order, color).
-  - Karten werden separat per 30302 Events geladen (Phase 2).
-- publishState, tags, ccLicense, maintainers:
-  - Direkt aus den entsprechenden Tags.
+Die folgenden Methoden werden im `BoardStore` implementiert bzw. erweitert. Pfad: [`src/lib/stores/kanbanStore.svelte.ts`](../../src/lib/stores/kanbanStore.svelte.ts).
 
-BoardStore Import-Regeln (konzeptionell):
+### 2.1 `initializeNostr(ndk: NDK)`
 
-- Beim Import eines Nostr-Boards:
-  - localStorage:
-    - Speichern unter kanban-{board.id}.
-  - boardIds:
-    - Append, wenn nicht vorhanden.
-  - Kein sofortiger UI-Switch:
-    - UI wählt explizit oder folgt MRU-Regel.
+Ziel: NDK im BoardStore hinterlegen und die Nostr-Read-/Subscribe-Logik starten.
 
-4. Startup-Sequenz (App-Start automatisches Laden)
+Implementationsvorgaben:
 
-Ziel: Automatisch Boards aus Nostr laden, wenn ein User angemeldet ist.
+- Erweitere die bestehende Methode:
 
-Konzeptuelle Sequenz:
+- Speichere `this.ndk = ndk`.
+- Stelle sicher, dass `initializeSyncManager(ndk, signer?)` aufgerufen wird (wie vorhanden).
+- Wenn ein User bereits authentifiziert ist (`authStore.isAuthenticated` und `authStore.getPubkeySafe()` liefert Wert):
 
-- +layout.svelte / +layout.js
-  1. AuthStore initialisieren:
-     - authStore lädt Session (z.B. aus localStorage oder NIP07).
-  2. NDK initialisieren:
-     - ndk.connect() mit konfigurierten Relays.
-  3. SyncManager initialisieren:
-     - initializeSyncManager(ndk, initialSigner?).
-  4. BoardStore initialisieren (Singleton existiert bereits).
-  5. boardStore.initializeNostr(ndk):
-     - ndk speichern.
-     - SyncManager (bereits via initializeSyncManager) ist bereit.
-     - Wenn authStore.isAuthenticated:
-       - boardStore.loadBoardsFromNostrForCurrentUser().
-       - boardStore.subscribeToBoardUpdatesForCurrentUser().
+  - Rufe `this.loadBoardsFromNostrForCurrentUser()` (neu, s.u.).
+  - Rufe `this.subscribeToBoardUpdatesForCurrentUser()` (neu, s.u.).
 
-- Login-Änderungen:
-  - AuthStore ruft bei Login:
-    - getSyncManager().updateSigner(newSigner).
-    - boardStore.updateBoardAuthor() falls nötig.
-    - boardStore.loadBoardsFromNostrForCurrentUser() erneut:
-      - Stellt sicher, dass nach Login die aktuellen Nostr-Boards eingebunden sind.
+- Logging:
+  - Präzise Logs, z.B.: `[BoardStore] Nostr initialized, starting board loading for user ...`.
 
-5. Live-Subscription Architektur
+### 2.2 `loadBoardsFromNostrForCurrentUser(): Promise<void>`
 
-Ziel: Board-Änderungen von anderen Sessions/Devices in Echtzeit reflektieren.
+Ziel: Alle relevanten Kind-30301-Boards des aktuellen Users laden und in BoardStore + localStorage integrieren.
 
-Konzept:
+Implementationsdetails:
 
-- In boardStore.subscribeToBoardUpdatesForCurrentUser():
-  - NDK Subscription:
-    - kinds: [30301]
-    - authors: [userPubkey] (und optional #p: [userPubkey]).
-    - closeOnEose: false.
-  - Handler:
-    - Für jedes eingehende Event:
-      - boardProps = nostrEventToBoard(event).
-      - existiert lokales Board mit boardProps.id?
-        - Wenn nein:
-          - Board neu anlegen (wie beim initialen Import).
-        - Wenn ja:
-          - Last-Write-Wins anhand event.created_at:
-            - Wenn neuer:
-              - lokales Board überschreiben (merge mit lokalen Metadaten nur, wenn nötig und definiert).
-      - boardIds pflegen.
-      - Wenn aktuelles Board betroffen:
-        - this.board ersetzen, _columnOrder aktualisieren, triggerUpdate.
+1. Pre-Checks:
 
-- Karten-Subscription (Kind 30302):
-  - Geplante Erweiterung (Phase 2), nicht zwingend für jetzige Aufgabe.
-  - Architektur bereits angelegt durch nostrEventToCard und upsertCard.
+- Falls `!this.ndk`: früh abbrechen mit Log (`Nostr not initialized`).
+- Hole sicheren Pubkey:
+  - `const pubkey = authStore.getPubkeySafe?.() || authStore.getPubkey?.();`
+- Wenn kein Pubkey:
+  - Log: `[BoardStore] No pubkey available, skipping Nostr board loading`.
+  - Früh return.
 
-6. Konflikt- und Fallback-Strategie
+2. Events laden:
+
+- Verwende NDK (direkt, nicht SyncManager):
+
+  - Filter (MVP):
+
+    - `kinds: [30301]`
+    - `authors: [pubkey]`
+
+  - Optionaler Zusatz (später):
+
+    - Boards, in denen User per `p`-Tag als Maintainer auftaucht:
+      - Dazu kann ein zweiter Fetch mit `kinds: [30301], "#p": [pubkey]` erfolgen, falls der NDK das unterstützt.
+
+- Nutze `await this.ndk.fetchEvents(filter)` oder die projektkonforme Variante.
+
+3. Mapping pro Event:
+
+Für jedes gefundene Event:
+
+- Validiere:
+
+  - kind == 30301.
+  - `nostrEvents.validateEventTags(event, EVENT_KINDS.BOARD)` falls gewünscht.
+
+- In BoardProps umwandeln:
+
+  - `const boardProps = nostrEventToBoard(event);`
+
+- In `Board` Modell umwandeln:
+
+  - `const board = new Board(boardProps);`
+
+- Persistenz:
+
+  - Schreibe nach localStorage unter:
+
+    - Key: `kanban-${board.id}`
+
+  - Füge `board.id` zu `this.boardIds` hinzu, falls noch nicht enthalten.
+  - Nutze das bestehende Pattern:
+    - IDs immer über `this.boardIds` + `saveBoardIds()` pflegen.
+
+- Zeitinformation:
+
+  - Nutze `event.created_at` (Unix) als Fallback für:
+
+    - `createdAt`
+    - `updatedAt`
+    - Oder speichere separat im persistierten JSON, falls bereits Struktur definiert.
+
+4. Aktives Board wählen (nur, wenn sinnvoll):
+
+- Wenn aktuelles `this.board`:
+
+  - Schon aus localStorage geladen ist und konsistent:
+    - Nicht ungefragt überschreiben.
+- Falls `this.board` ein leeres Default-Board ist (Heuristik, z.B. keine echten Daten oder `author === 'anonymous'`):
+
+  - Wähle das jüngste Nostr-Board (höchstes `created_at`) als aktives Board:
+    - `this.board = board;`
+    - `this._columnOrder = board.columns.map(c => c.id);`
+    - `this.updateTrigger++;`
+- MRU-Logik mit `lastAccessedAt` beibehalten:
+  - Falls bereits Boards in storage existieren, bevorzuge weiterhin das zuletzt verwendete Board.
+  - Nostr-Boards werden in dieses MRU-Schema integriert.
+
+5. Fehlerhandling:
+
+- Keine Exceptions nach oben werfen (außer in Tests explizit erwartet).
+- Sauber loggen:
+  - `[BoardStore] Error while loading boards from Nostr: ...`
+- Fallback:
+  - Bei Fehlern einfach bei lokalen Boards bleiben.
+
+### 2.3 `subscribeToBoardUpdatesForCurrentUser(): void`
+
+Ziel: Live-Updates für Board-Metadaten (Kind 30301) aus Nostr abonnieren und in BoardStore spiegeln. **Wichtig:** Nur Metadaten (Spalten-Namen, Spalten-Reihenfolge), NICHT Karten-Inhalte.
+
+Implementationsdetails:
+
+1. Pre-Checks:
+
+- Wenn `!this.ndk`: abbrechen mit Log.
+- Wenn kein Pubkey: abbrechen mit Log.
+- Subscription-Instanz referenzieren:
+
+  - In `BoardStore` eine private Variable einführen, z.B.:
+
+    - `private boardSubscription: any | null = null;`
+
+  - Bei erneutem Aufruf bestehende Subscription stoppen.
+
+2. Subscription erstellen:
+
+- Filter (MVP):
+
+  - `kinds: [30301]`
+  - `authors: [pubkey]`
+  - `closeOnEose: false`
+
+- Optional:
+
+  - Ein zweiter Filter für Boards, in denen der User via `p`-Tag Maintainer ist.
+  - Kann später ergänzt werden.
+
+3. Event-Handler - **KRITISCH: Karten-Handling**
+
+Für jedes eingehende Event:
+
+- Via `nostrEventToBoard(event)` in BoardProps umwandeln.
+  - ⚠️ **Achtung:** Dies gibt `columns: [{ cards: [] }]` zurück (Karten sind separate Kind 30302 Events!)
+  - **NICHT** direkt in `this.board` setzen, da lokale Karten verloren gehen würden!
+
+- **Merge-Strategie:**
+  
+  1. Hole lokales Board aus localStorage:
+     ```typescript
+     const localData = localStorage.getItem(`kanban-${boardProps.id}`);
+     const local = localData ? JSON.parse(localData) : null;
+     ```
+  
+  2. Vergleiche Timestamps (Last-Write-Wins):
+     ```typescript
+     const remoteCreatedAt = event.created_at 
+         ? new Date(event.created_at * 1000).getTime() 
+         : 0;
+     const localUpdatedAt = local?.updatedAt 
+         ? new Date(local.updatedAt).getTime() 
+         : 0;
+     
+     if (remoteCreatedAt <= localUpdatedAt) {
+         // Lokal neuer: behalte lokale Version
+         return;
+     }
+     ```
+  
+  3. **Nur Spalten-Metadaten mergen** (nicht Karten!):
+     ```typescript
+     const merged = {
+         ...local,  // Behalte lokale Daten (z.B. Karten!)
+         ...boardProps,  // Update nur Spalten-Metadaten
+         columns: boardProps.columns.map((col, idx) => {
+             const localCol = local?.columns?.[idx];
+             return {
+                 ...col,  // Neue Spalten-Metadaten
+                 cards: localCol?.cards || [],  // ← KRITISCH: Behalte lokale Karten!
+             };
+         }),
+     };
+     ```
 
 - Last-Write-Wins:
-  - Replaceable Events (30301/30302) folgen Nostr-Semantik:
-    - Höchster created_at gewinnt.
-  - BoardStore:
-    - Beim Import/Update:
-      - Vergleicht event.created_at mit lokalem updatedAt (falls vorhanden).
-      - Nur aktualisieren, wenn event neuer ist.
 
-- Offline-Fallback:
-  - Wenn keine NDK-Verbindung oder kein Signer:
-    - Nur lokale Boards aus localStorage nutzen (bestehende BoardStore-Logik).
-    - loadBoardsFromNostrForCurrentUser() bricht früh ab.
-  - Beim Wechsel zu online + authentifiziert:
-    - loadBoardsFromNostrForCurrentUser() erneut ausführen.
-    - MRU/Merge-Regeln anwenden.
+  - Ermittle `remoteTimestamp` aus `event.created_at`.
+  - Hole lokalen Zustand (falls vorhanden) aus localStorage:
+    - `kanban-${boardProps.id}`.
+    - Vergleiche `remoteTimestamp` mit lokalem `updatedAt`/`createdAt`.
+  - Wenn `remoteTimestamp` > lokal:
+    - **Nur Spalten-Metadaten** aus Nostr aktualisieren (siehe Merge-Strategie oben)
+  - Wenn lokal neuer ist:
+    - Lokale Version behalten (keine Änderung).
 
-7. Testspezifikation (High-Level)
+- Aktualisierung des aktiven Boards:
 
-Zu ergänzende Tests (in Einklang mit docs/TESTS/STATUS.md):
+  - Wenn das aktualisierte Board das aktuell geladene `this.board.id` ist:
+    - `this.board = new Board(mergedProps);` (nicht `boardProps` direkt!)
+    - `this._columnOrder = this.board.columns.map(c => c.id);`
+    - `this.updateTrigger++;`
 
-- syncManager.svelte.spec.ts:
-  - Bereits: Queue, Retry, Signing, Offline/Online.
-  - Ergänzend (leicht):
-    - Sicherstellen, dass updateSigner() korrekt reagiert.
-    - Kein direkter Read-Flow nötig, da Boards-Loading im BoardStore liegt.
+4. Cleanup:
 
-- Neuer Test: boardStore.nostr-loading.spec.ts (oder Erweiterung bestehender BoardStore Tests)
-  - Szenarien:
-    - Bei vorhandenem User-Pubkey:
-      - Mock NDK.fetchEvents für 30301.
-      - Prüfen:
-        - nostrEventToBoard wird aufgerufen.
-        - boardIds enthält importierte IDs.
-        - localStorage Keys kanban-{id} existieren.
-    - Last-Write-Wins:
-      - Zwei Events für dasselbe Board mit unterschiedlichem created_at.
-      - Prüfen, dass die neuere Version im BoardStore landet.
-    - Fallback:
-      - Kein Pubkey: loadBoardsFromNostrForCurrentUser() ändert nichts.
-      - Offline: keine Nostr-Abfragen.
+- Bei Logout oder NDK-Reset:
+  - Subscription stoppen und `boardSubscription = null` setzen.
+  - Diese Logik kann in AuthStore- oder Layout-Hooks integriert werden.
 
-8. UX-Fluss
+---
 
-- BoardsList.svelte:
-  - Nutzt boardStore.getAllBoards() (bereits implementiert).
-  - Nach Integration von Nostr-Lade-Logik:
-    - Liste enthält:
-      - Lokale Boards.
-      - Aus Nostr importierte Boards.
-  - Beim App-Start:
-    - MRU-Regel: automatisch das zuletzt genutzte/aktuelle Board aktiv.
-- Loading/Fehler:
-  - Optional:
-    - Kurzer Loading-State während initialem Nostr-Laden.
-    - Debug-Anzeige über SyncManager.status.
+## 3. Karten (Kind 30302) – Optionale Erweiterung
 
-9. Dokumentations- und DoD-Hinweise
+Für spätere Phasen (nicht zwingend jetzt umzusetzen, aber architektonisch festgelegt):
 
-Für eine saubere Umsetzung gemäß AGENTS.md und DOCUMENTATION-RULES-v3:
+### 3.1 Laden von Card-Events pro Board
 
-- BOARDSTORE.md:
-  - Abschnitt "Nostr Integration" erweitern:
-    - loadBoardsFromNostrForCurrentUser()
-    - subscribeToBoardUpdatesForCurrentUser()
-    - Startup-Sequenz.
-- SYNCMANAGER.md:
-  - Klarstellen: Fokus auf Publish/Queue, Read/Subscribe im BoardStore.
-- ROADMAP.md:
-  - Phase 1.2 / 1.3 aktualisieren: Read-Path implementiert.
-- TESTS/STATUS.md:
-  - Neue Specs für BoardStore-Nostr-Loading dokumentieren.
-- CHANGELOG.md:
-  - Eintrag: Nostr Board-Discovery + Auto-Loading.
+- Nach dem Laden eines Boards (30301):
+  - Optional Card-Events (30302) für dieses Board abrufen:
 
-10. Empfehlung für Implementation-Phase
+    - Filter:
 
-Für die nächste Phase (Code-Mode):
+      - `kinds: [30302]`
+      - `#a: [\`30301:${board.author}:${board.id}\`]`
 
-- Implementation Steps:
-  - loadBoardsFromNostrForCurrentUser() im BoardStore ergänzen (unter Nutzung von nostrEvents.nostrEventToBoard).
-  - subscribeToBoardUpdatesForCurrentUser() implementieren.
-  - initializeNostr(ndk) so erweitern, dass bei vorhandenem User automatisch geladen und subscribed wird.
-  - AuthStore-Login Flow so ergänzen, dass nach erfolgreichem Login:
-    - SyncManager.updateSigner() aufgerufen wird.
-    - boardStore.loadBoardsFromNostrForCurrentUser() erneut ausgeführt wird.
-  - Tests für diese Pfade hinzufügen.
+- Mapping:
 
-Damit ist der Architektur-Plan abgeschlossen, konsistent mit AGENTS.md, den Stores-Dokumenten und der bestehenden Codebasis, und direkt umsetzbar für das automatische Laden vorhandener Boards des angemeldeten Users aus Nostr beim App-Start.
+  - `nostrEventToCard(event)` → `CardProps`.
+  - Nutzung von:
+
+    - `Board.upsertCard(targetColumnId, CardProps)` im Model.
+    - Oder `boardStore.upsertCard(targetColumnId, CardProps)` als Store-API.
+
+- Last-Write-Wins:
+  - Wieder über `event.created_at`.
+
+### 3.2 Subscription für Karten
+
+- Analog zu Boards:
+  - Subscription auf 30302 Events für aktuelles Board.
+  - Bei Event:
+    - `nostrEventToCard` → Upsert ins Board.
+    - `triggerUpdate()` aufrufen.
+
+Diese Schritte werden separat spezifiziert, sobald 30301-Flow stabil ist.
+
+---
+
+## 4. Startup- und Login-Sequenz
+
+Verbindliche Abfolge (zu implementieren in Layout/Auth-Integration):
+
+1. App-Start:
+
+- AuthStore initialisiert (Session, NIP-07, etc.).
+- NDK wird erstellt und `await ndk.connect()` aufgerufen.
+- SyncManager initialisiert:
+  - `initializeSyncManager(ndk, initialSigner?)`.
+- BoardStore Singleton existiert bereits:
+  - `import { boardStore } from '$lib/stores/kanbanStore.svelte';`
+- Nostr-Integration im BoardStore:
+
+  - `await boardStore.initializeNostr(ndk);`
+  - Diese Methode:
+    - Startet SyncManager (bereits vorhanden).
+    - Startet `loadBoardsFromNostrForCurrentUser` / `subscribeToBoardUpdatesForCurrentUser`, falls User bekannt.
+
+2. Login (oder Signer-Wechsel):
+
+- AuthStore aktualisiert Signer und Pubkey.
+- Ruft:
+
+  - `getSyncManager().updateSigner(newSigner);`
+  - `boardStore.updateBoardAuthor();` (für aktuelles Board, wenn `anonymous`).
+  - `boardStore.loadBoardsFromNostrForCurrentUser();`
+  - `boardStore.subscribeToBoardUpdatesForCurrentUser();`
+
+3. Logout:
+
+- AuthStore setzt Signer/Pubkey zurück.
+- Mögliche Actions:
+  - `getSyncManager().updateSigner(undefined);`
+  - `boardStore` kann optional:
+    - Nostr-Subscriptions schließen.
+    - Auf lokale Boards beschränken.
+
+---
+
+## 5. Konfliktstrategie
+
+Verbindliche Regeln:
+
+- Replaceable Events (30301/30302):
+  - Last-Write-Wins nach `created_at`.
+- Lokal vs. Remote:
+
+  - Wenn lokale Daten neuer (z.B. Board offline geändert, noch nicht publiziert):
+    - Lokale Version behalten.
+    - SyncManager sorgt später für Publish.
+  - Wenn Nostr-Event neuer:
+    - Lokale Version überschreiben.
+
+- Keine komplexe Merge-Logik in dieser Phase.
+- Alle Entscheidungen in BoardStore kapseln, nicht in UI.
+
+---
+
+## 6. Tests (Implementierungshinweise)
+
+Erweiterungen an der Test-Suite (hohe Priorität):
+
+1. Neuer Spec: `src/lib/stores/kanbanStore.nostr-loading.spec.ts`
+
+- Mock-NDK mit:
+  - `fetchEvents` für 30301.
+  - Optional: Subscription-Mock.
+- Tests:
+
+  - `loadBoardsFromNostrForCurrentUser`:
+    - Lädt Events und erzeugt `kanban-{id}` Einträge.
+    - Aktualisiert `boardIds`.
+  - Last-Write-Wins:
+    - Zwei Events für dasselbe Board → neueres gewinnt.
+  - Kein Pubkey:
+    - Funktion beendet sich ohne Änderungen.
+
+2. `syncManager.svelte.spec.ts` (bereits vorhanden):
+
+- Optional verifizieren:
+  - `updateSigner` Verhalten im Zusammenspiel mit BoardStore (über Mocks).
+
+3. Dokumentation:
+
+- [`docs/TESTS/STATUS.md`](../TESTS/STATUS.md) aktualisieren:
+  - Neue Testszenarien für Nostr-Loading & Subscription.
+
+---
+
+## 7. UX-Integration (Kurz)
+
+- `BoardsList.svelte`:
+
+  - Nutzt `boardStore.getAllBoards()` als Datenquelle.
+  - Nostr-Boards erscheinen automatisch, sobald:
+    - `loadBoardsFromNostrForCurrentUser` ausgeführt wurde.
+  - Ladezustand:
+    - Optional: einfacher Loading-State basierend auf Flag im BoardStore (kann bei Bedarf ergänzt werden).
+
+- `cardsboard/+page.svelte`:
+
+  - Stellt sicher, dass:
+    - NDK/BoardStore-Initialisierung bereits im Layout erfolgt.
+    - Keine direkte Nostr-Logik in der Page implementiert wird.
+
+---
+
+## 8. DoD (Definition of Done) für diese Architektur
+
+Die Implementierung gilt als abgeschlossen, wenn:
+
+- Code:
+  - `BoardStore` enthält:
+    - `initializeNostr(ndk)`
+    - `loadBoardsFromNostrForCurrentUser()`
+    - `subscribeToBoardUpdatesForCurrentUser()`
+  - Nostr-Boards werden:
+    - beim App-Start (bei bekanntem User) geladen,
+    - bei Login nachgeladen,
+    - via Subscription aktualisiert.
+- Tests:
+  - Unit-Tests für Loading und (mindestens rudimentäre) Subscription vorhanden.
+- Docs:
+  - Diese Implementierungsdatei ist konsistent mit:
+    - [`BOARDSTORE.md`](../STORES/BOARDSTORE.md)
+    - [`SYNCMANAGER.md`](../STORES/SYNCMANAGER.md)
+    - ROADMAP & TEST-Status aktualisiert.
+- UX:
+  - BoardsList zeigt Nostr-Boards.
+  - Keine Regression im Offline-First Verhalten.
+
+Diese Anleitung ist die direkte Handlungsgrundlage für den Code-Mode zur Umsetzung des Nostr-Board-Loading- und Subscription-Flows.
