@@ -1,258 +1,245 @@
-# 📝 Draft Publishing Strategy - Proposal
+# 📝 Draft Publishing Strategy - Implementation
 
-**Datum:** 7. November 2025  
-**Status:** 🟡 **PROPOSAL - Benötigt Entscheidung**  
-**Context:** PublishState 'draft' Handling für Boards/Cards
 
----
+### Drei PublishStates:
+- `'published'` - **Public + Private Relays** (vollständiges Backup!)
+- `'draft'` - **Abhängig von draftPublishingMode** (siehe unten)
+- `'private'` - **Nur Private Relays** (oder local-only)
 
-## 🎯 Problem Statement
-
-Aktuell haben wir 3 PublishStates:
-- `'published'` - Öffentlich sichtbar
-- `'draft'` - Work in Progress
-- `'private'` - Privat (nur für User)
-
-**Frage:** Wie sollen Draft-Events behandelt werden?
-
-Derzeit:
+### Aktueller Stand:
 - ✅ relaysPublic und relaysPrivate sind in settingsStore konfigurierbar
-- ❌ Keine Logik für unterschiedliche Publishing basierend auf PublishState
-- ❌ Alles wird gleich behandelt (an alle Relays)
+- ✅ **NEUE** Relay Selection Logik basierend auf PublishState
+- ✅ **NEUE** draftPublishingMode Setting (3 Modi)
+- ✅ **NEUE** Smart Fallbacks bei fehlenden Relays
+- ✅ Umfassende Console-Logs für Debugging
+- ✅ Alle Tests bestanden ✅
 
 ---
 
-## 💡 Drei Optionen im Detail
+## Implementierte Relay Selection Rules
 
-### Option A: Draft → Private Relays (wenn vorhanden) ⭐ **EMPFOHLEN**
+### Rule 1: 'published' → Public + Private Relays ✅
 
 **Konzept:**
 ```typescript
-if (publishState === 'draft') {
-  if (relaysPrivate.length > 0) {
-    // Publish nur zu Private Relays
-    publishToRelays(relaysPrivate);
-  } else {
-    // Fallback: Nur localStorage (kein Nostr)
-    saveToLocalStorageOnly();
-  }
-} else if (publishState === 'published') {
-  // Publish zu Public Relays
-  publishToRelays(relaysPublic);
-} else if (publishState === 'private') {
-  if (relaysPrivate.length > 0) {
-    publishToRelays(relaysPrivate);
-  } else {
-    saveToLocalStorageOnly();
-  }
-}
-```
-
-**Vorteile:**
-- ✅ Flexibel: User entscheidet via Settings
-- ✅ Privacy: Drafts bleiben privat wenn gewünscht
-- ✅ Collaboration: Team-Drafts über Private Relay möglich
-- ✅ Fallback: Funktioniert auch ohne Private Relay (localStorage)
-
-**Nachteile:**
-- ⚠️ Komplexer: Zusätzliche Logik nötig
-- ⚠️ Settings-Abhängig: User muss Private Relays konfigurieren
-
-**Use Cases:**
-- 🎓 **Lehrkraft alleine:** Keine Private Relays → Draft bleibt lokal
-- 👥 **Team:** Private Relay konfiguriert → Drafts werden geteilt
-- 🏫 **Schule:** Gemeinsamer Private Relay für Fachgruppe
-
----
-
-### Option B: Draft → Nur localStorage (NIEMALS Nostr)
-
-**Konzept:**
-```typescript
-if (publishState === 'draft') {
-  // NIEMALS zu Nostr publishen
-  saveToLocalStorageOnly();
-  console.log('📦 Draft saved locally only');
-} else {
-  // Alle anderen States zu Nostr
-  publishToNostr(relaysPublic);
-}
-```
-
-**Vorteile:**
-- ✅ Einfach: Klare Regel, keine Konfiguration nötig
-- ✅ Privacy: Drafts sind GARANTIERT lokal
-- ✅ Performance: Kein Netzwerk-Traffic für Drafts
-
-**Nachteile:**
-- ❌ Keine Collaboration: Drafts können nicht geteilt werden
-- ❌ Kein Backup: Drafts gehen verloren bei Browser-Datenverlust
-- ❌ Kein Multi-Device: Drafts nur auf einem Gerät
-
-**Use Cases:**
-- 📝 **Personal Notes:** Ideensammlung, private Gedanken
-- 🔒 **Sensitive Content:** Absolut vertrauliche Inhalte
-
----
-
-### Option C: Draft → IMMER zu Nostr (wie 'published')
-
-**Konzept:**
-```typescript
-// PublishState wird ignoriert für Relay-Auswahl
-publishToNostr(relaysPublic);
-```
-
-**Vorteile:**
-- ✅ Sehr einfach: Keine Sonderlogik
-- ✅ Backup: Alles auf Nostr gesichert
-- ✅ Multi-Device: Funktioniert überall
-
-**Nachteile:**
-- ❌ KEINE Privacy: Drafts sind öffentlich sichtbar!
-- ❌ Spam: Viele unfertige Entwürfe in Relays
-- ❌ Confusion: Was ist der Unterschied zu 'published'?
-
-**Use Cases:**
-- 🤷 Keiner sinnvoll - PublishState wäre bedeutungslos
-
----
-
-## 🎯 Empfehlung: **Option A + Settings-Toggle**
-
-Ich empfehle **Option A** mit zusätzlichem Settings-Toggle für Flexibilität:
-
-### Neue Settings-Felder:
-
-```typescript
-export interface SettingsState {
-  // ... existing fields ...
+if (publishState === 'published') {
+  targetRelays = [...relaysPublic, ...relaysPrivate];
   
-  // 🆕 Draft Publishing Strategy
-  draftPublishingMode: 'private-relays' | 'local-only' | 'public-relays';
+  // Deduplizierung falls gleiche Relays in beiden Listen
+  uniqueRelays = [...new Set(targetRelays)];
   
-  // Alternativ als separate Booleans:
-  publishDraftsToPrivateRelays: boolean;  // Default: true
-  publishDraftsToPublicRelays: boolean;   // Default: false
+  // Smart Fallbacks:
+  if (uniqueRelays.length === 0) {
+    console.error('⚠️ CRITICAL: No relays configured! Event will be local-only.');
+    return [];
+  }
+  
+  if (relaysPublic.length === 0) {
+    console.warn('⚠️ No public relays! Published content only to private.');
+  }
+  
+  if (relaysPrivate.length === 0) {
+    console.warn('⚠️ No private relays! Published content has no backup.');
+  }
+  
+  return uniqueRelays; // Public + Private combined!
 }
 ```
 
-### Publishing-Logik:
+**Warum Public + Private?**
+- ✅ **Master Storage:** Private Relays enthalten ALLE Events (published + draft + private)
+- ✅ **Public Discovery:** Public Relays enthalten nur published Events
+- ✅ **Vollständiges Backup:** Wenn Public Relays ausfallen, sind Events noch auf Private
+- ✅ **Board Loading:** Alle Boards können von Private Relays geladen werden
+
+**Beispiel:**
+- relaysPublic: `['wss://relay.damus.io', 'wss://nos.lol']`
+- relaysPrivate: `['wss://private.edufeed.org']`
+- **Result:** `['wss://relay.damus.io', 'wss://nos.lol', 'wss://private.edufeed.org']`
+
+---
+
+### Rule 2: 'draft' → Abhängig von draftPublishingMode ✅
+
+**3 Modi verfügbar:**
+
+#### Mode: 'private-relays' (DEFAULT) ⭐
 
 ```typescript
-// In syncManager.svelte.ts oder nostrEvents.ts
+if (publishState === 'draft' && draftPublishingMode === 'private-relays') {
+  if (relaysPrivate.length === 0) {
+    console.warn('⚠️ No private relays configured! Draft will be local-only.');
+    return []; // Local-only Fallback
+  }
+  console.log('Draft → Using private relays');
+  return relaysPrivate;
+}
+```
 
-function getTargetRelays(publishState: PublishState, settings: SettingsState): string[] {
+**Use Cases:**
+- 👥 Team-Collaboration: Drafts werden über Private Relay geteilt
+- 🔄 Multi-Device: Drafts sind auf allen Geräten verfügbar
+- 💾 Backup: Drafts sind auf Nostr gesichert
+
+**Beispiel:**
+- relaysPrivate: `['wss://private.edufeed.org']`
+- **Result:** `['wss://private.edufeed.org']`
+
+#### Mode: 'local-only'
+
+```typescript
+if (publishState === 'draft' && draftPublishingMode === 'local-only') {
+  console.log('Draft → No Nostr publishing (local-only)');
+  return []; // NIEMALS zu Nostr publishen
+}
+```
+
+**Use Cases:**
+- 🔒 Privacy: Absolut vertrauliche Inhalte
+- 📝 Personal Notes: Nur für lokale Verwendung
+- 🚫 No Backup: User akzeptiert Datenverlust-Risiko
+
+**Beispiel:**
+- **Result:** `[]` (empty = don't publish to Nostr)
+
+#### Mode: 'public-relays' (NOT RECOMMENDED ⚠️)
+
+```typescript
+if (publishState === 'draft' && draftPublishingMode === 'public-relays') {
+  if (relaysPublic.length === 0) {
+    console.warn('⚠️ No public relays configured! Draft will be local-only.');
+    return [];
+  }
+  console.warn('⚠️ Using public relays for drafts (NOT RECOMMENDED for privacy!)');
+  return relaysPublic;
+}
+```
+
+**Use Cases:**
+- 🤷 Keiner sinnvoll - Drafts sollten nicht öffentlich sein!
+- ⚠️ Nur für Testing/Development
+
+**Beispiel:**
+- relaysPublic: `['wss://relay.damus.io']`
+- **Result:** `['wss://relay.damus.io']` (⚠️ Publicly visible draft!)
+
+---
+
+### Rule 3: 'private' → ALWAYS Private Relays ✅
+
+```typescript
+if (publishState === 'private') {
+  if (relaysPrivate.length === 0) {
+    console.error('⚠️ CRITICAL: No private relays for private content! Local-only.');
+    return [];
+  }
+  console.log('Private content → Using private relays');
+  return relaysPrivate;
+}
+```
+
+**Use Cases:**
+- 🔐 Sensitive Content: Nur für bestimmte User sichtbar
+- 👥 Team-Internal: Boards nur für Team-Mitglieder
+- 📊 Internal Planning: Nicht-öffentliche Strategien
+
+**Beispiel:**
+- relaysPrivate: `['wss://private.edufeed.org']`
+- **Result:** `['wss://private.edufeed.org']`
+
+---
+
+---
+
+## 🛠️ Implementierungs-Details
+
+### Datei 1: `src/lib/utils/relaySelection.ts` (277 lines)
+
+**Hauptfunktion:**
+```typescript
+export function getTargetRelays(options: RelaySelectionOptions): string[] {
+  const { publishState, draftPublishingMode, relaysPublic, relaysPrivate } = options;
+  
+  // Rule 1: 'published' → Public + Private (with deduplication)
   if (publishState === 'published') {
-    return settings.relaysPublic;
-  }
-  
-  if (publishState === 'draft') {
-    switch (settings.draftPublishingMode) {
-      case 'private-relays':
-        return settings.relaysPrivate.length > 0 
-          ? settings.relaysPrivate 
-          : []; // Empty = localStorage only
-          
-      case 'local-only':
-        return []; // Never publish drafts
-        
-      case 'public-relays':
-        return settings.relaysPublic; // Same as published
-        
-      default:
-        return []; // Safe default
+    const targetRelays = [...relaysPublic, ...relaysPrivate];
+    const uniqueRelays = [...new Set(targetRelays)];
+    
+    // Smart fallbacks with console warnings
+    if (uniqueRelays.length === 0) {
+      console.error('[RelaySelection] ⚠️ CRITICAL: No relays! Local-only.');
+      return [];
     }
+    
+    return uniqueRelays;
   }
   
+  // Rule 2: 'private' → Private relays only
   if (publishState === 'private') {
-    return settings.relaysPrivate.length > 0 
-      ? settings.relaysPrivate 
-      : []; // Empty = localStorage only
+    if (relaysPrivate.length === 0) {
+      console.error('[RelaySelection] ⚠️ CRITICAL: No private relays! Local-only.');
+      return [];
+    }
+    return relaysPrivate;
+  }
+  
+  // Rule 3: 'draft' → Depends on draftPublishingMode
+  if (publishState === 'draft') {
+    switch (draftPublishingMode) {
+      case 'private-relays':
+        return relaysPrivate.length > 0 ? relaysPrivate : [];
+      case 'local-only':
+        return [];
+      case 'public-relays':
+        return relaysPublic.length > 0 ? relaysPublic : [];
+      default:
+        return relaysPrivate.length > 0 ? relaysPrivate : [];
+    }
   }
   
   return [];
 }
 ```
 
-### UI in Settings Panel:
-
-```svelte
-<Field.Root>
-  <Label>Draft Publishing Strategy</Label>
-  <Select bind:value={draftPublishingMode}>
-    <option value="private-relays">
-      Private Relays (if configured, else local-only)
-    </option>
-    <option value="local-only">
-      Local-Only (never publish drafts to Nostr)
-    </option>
-    <option value="public-relays">
-      Public Relays (same as published - NOT RECOMMENDED)
-    </option>
-  </Select>
-  <Description>
-    Controls where draft boards/cards are published.
-    Private Relays allow team collaboration on drafts.
-  </Description>
-</Field.Root>
-```
+**Zusätzliche Funktionen:**
+- `shouldPublishToNostr(publishState, draftPublishingMode): boolean`
+- `getRelaySelectionDescription(options): string` - UI-friendly descriptions
 
 ---
 
-## 📊 Vergleichstabelle
+### Datei 2: `src/lib/stores/settingsStore.svelte.ts`
 
-| Aspekt | Option A | Option B | Option C |
-|--------|----------|----------|----------|
-| **Privacy** | ✅ Flexibel (User wählt) | ✅ Garantiert | ❌ Keine |
-| **Collaboration** | ✅ Möglich (Private Relay) | ❌ Nicht möglich | ✅ Möglich |
-| **Backup** | ✅ Wenn gewünscht | ❌ Nur lokal | ✅ Immer |
-| **Multi-Device** | ✅ Wenn gewünscht | ❌ Nicht möglich | ✅ Immer |
-| **Komplexität** | 🟡 Medium | ✅ Einfach | ✅ Sehr einfach |
-| **Settings UI** | 🟡 Toggle nötig | ✅ Keine Settings | ✅ Keine Settings |
-| **Use Cases** | ✅ Alle abgedeckt | 🟡 Nur Personal | ❌ Sinnlos |
-
----
-
-## 🛠️ Implementation Plan (für Option A)
-
-### Phase 1: Settings erweitern (15 Min)
-
+**Neue Settings-Felder:**
 ```typescript
-// src/lib/stores/settingsStore.svelte.ts
-
 export interface SettingsState {
-  // ... existing ...
+  // ... existing fields ...
   
-  // 🆕 Draft Publishing
+  // 🆕 Draft Publishing Strategy
   draftPublishingMode: 'private-relays' | 'local-only' | 'public-relays';
 }
 
 export const DEFAULT_SETTINGS: SettingsState = {
   // ... existing ...
-  draftPublishingMode: 'private-relays', // Default: Private if available
+  draftPublishingMode: 'private-relays', // DEFAULT: Private if available
 };
 ```
 
-### Phase 2: getTargetRelays() Funktion (20 Min)
-
+**Neue Methode:**
 ```typescript
-// src/lib/utils/nostrEvents.ts oder neue Datei publishingUtils.ts
-
-export function getTargetRelays(
-  publishState: PublishState, 
-  settings: SettingsState
-): string[] {
-  // Implementation wie oben
+public setDraftPublishingMode(mode: DraftPublishingMode): void {
+  this.settings.draftPublishingMode = mode;
+  this.saveSettings();
+  console.log(`[SettingsStore] Draft publishing mode set to: ${mode}`);
 }
 ```
 
-### Phase 3: SyncManager Integration (30 Min)
+---
 
+### Datei 3: `src/lib/stores/syncManager.svelte.ts`
+
+**Integration:**
 ```typescript
-// src/lib/stores/syncManager.svelte.ts
-
-import { getTargetRelays } from '$lib/utils/publishingUtils';
+import { getTargetRelays } from '$lib/utils/relaySelection';
 import { settingsStore } from './settingsStore.svelte';
 
 public async publishOrQueue(
@@ -261,130 +248,127 @@ public async publishOrQueue(
   priority: 'high' | 'normal' = 'normal'
 ): Promise<void> {
   
-  // 🆕 Extrahiere publishState aus Event tags
+  // Extrahiere publishState aus Event tags
   const stateTag = event.tags.find(t => t[0] === 'state');
   const publishState = (stateTag?.[1] || 'published') as PublishState;
   
-  // 🆕 Bestimme Ziel-Relays basierend auf State + Settings
-  const targetRelays = getTargetRelays(publishState, settingsStore.settings);
+  // Bestimme Ziel-Relays basierend auf State + Settings
+  const targetRelays = getTargetRelays({
+    publishState,
+    draftPublishingMode: settingsStore.settings.draftPublishingMode,
+    relaysPublic: settingsStore.settings.relaysPublic,
+    relaysPrivate: settingsStore.settings.relaysPrivate
+  });
   
   if (targetRelays.length === 0) {
-    console.log(`📦 ${type} with state '${publishState}' saved locally only (no relays configured)`);
+    console.log(`[SyncManager] ${type} with state '${publishState}' saved locally only (no relays)`);
     return; // Don't publish, only localStorage
   }
   
   // Publish zu den ermittelten Relays
-  // ... existing logic mit targetRelays statt all relays
+  await this.signAndPublish(event, targetRelays, type);
 }
 ```
 
-### Phase 4: Settings UI (45 Min)
+---
 
-```svelte
-<!-- src/routes/cardsboard/SettingsPanel.svelte -->
+### Datei 4: Test Suite (`src/lib/utils/nostrPublishingTest.ts`)
 
-<Tabs.Content value="nostr">
-  <div class="space-y-4">
-    
-    <!-- Existing Relay Configuration -->
-    <Field.Root>
-      <Label>Public Relays</Label>
-      <!-- ... existing ... -->
-    </Field.Root>
-    
-    <Field.Root>
-      <Label>Private Relays</Label>
-      <!-- ... existing ... -->
-    </Field.Root>
-    
-    <!-- 🆕 Draft Publishing Mode -->
-    <Field.Root>
-      <Label>Draft Publishing Strategy</Label>
-      <Select 
-        bind:value={draftPublishingMode}
-        onValueChange={(value) => settingsStore.setDraftPublishingMode(value)}
-      >
-        <Select.Trigger>
-          <Select.Value placeholder="Select strategy" />
-        </Select.Trigger>
-        <Select.Content>
-          <Select.Item value="private-relays">
-            📝 Private Relays (if configured)
-          </Select.Item>
-          <Select.Item value="local-only">
-            🔒 Local-Only (never publish)
-          </Select.Item>
-          <Select.Item value="public-relays">
-            🌐 Public Relays (not recommended)
-          </Select.Item>
-        </Select.Content>
-      </Select>
-      <Description>
-        {#if draftPublishingMode === 'private-relays'}
-          Drafts will be published to private relays if configured, 
-          otherwise saved locally only. Allows team collaboration on drafts.
-        {:else if draftPublishingMode === 'local-only'}
-          Drafts will NEVER be published to Nostr, only saved in browser.
-          Best for sensitive or personal content.
-        {:else}
-          Drafts will be published to public relays (same as 'published' state).
-          ⚠️ Not recommended - drafts will be publicly visible!
-        {/if}
-      </Description>
-    </Field.Root>
-    
-  </div>
-</Tabs.Content>
+**3 neue Test-Funktionen:**
+
+```typescript
+// Test 1: Normale Szenarien
+window.testRelaySelection = function() {
+  // Testet published, draft, private mit verschiedenen Modi
+}
+
+// Test 2: Edge Cases
+window.testRelaySelectionEdgeCases = function() {
+  // Testet: Keine Private, Keine Public, Beide leer, Deduplizierung
+}
+
+// Test 3: Vollständiger Test
+window.testRelaySelectionFull = function() {
+  // Kombiniert Test 1 + 2 + Summary
+}
 ```
 
+## ✅ Testing Results
+
+**Alle Tests erfolgreich bestanden!** ✅
+
+### Test 1: Relay Selection - Normale Fälle ✅
+
+```javascript
+window.testRelaySelection()
+```
+
+**Ergebnis:**
+- ✅ PUBLISHED → Public + Private Relays (dedupliziert)
+- ✅ DRAFT → Private Relays (mode='private-relays')
+- ✅ PRIVATE → Private Relays only
+
+### Test 2: Edge Cases ✅
+
+```javascript
+window.testRelaySelectionEdgeCases()
+```
+
+**Ergebnis:**
+- ✅ Keine Private Relays → local-only mit Warnung
+- ✅ Keine Public Relays → nur Private Backup
+- ✅ Beide leer → CRITICAL local-only
+- ✅ Deduplizierung funktioniert
+
+### Test 3: Vollständiger Test ✅
+
+```javascript
+window.testRelaySelectionFull()
+```
+
+**Ergebnis:**
+- ✅ Alle Normal Scenarios: PASS
+- ✅ Alle Edge Cases: PASS
+- ✅ Console Output korrekt
+- ✅ Smart Fallbacks aktiv
+
+### Manuelle Tests ✅
+
+- ✅ **Column Moving:** Event wird korrekt publiziert (keine Duplikate)
+- ✅ **Board Creation:** DRAFT geht zu Private Relays
+- ✅ **State Changes:** DRAFT → PUBLISHED wechselt Relays korrekt
+- ✅ **Stack Traces:** Nur 1 Call-Path, keine Reactive Loops
+
+**Dokumentation:** Siehe [`docs/TESTING/RELAY-SELECTION-TEST-GUIDE.md`](../../TESTING/RELAY-SELECTION-TEST-GUIDE.md)
+
 ---
 
-## ✅ Testing Checklist
 
-Nach Implementation:
+## 🎯 Nächste Schritte
 
-- [ ] **Test 1: Private Relays konfiguriert + Mode 'private-relays'**
-  - Draft Board erstellen → sollte zu Private Relays publishen
-  - Verifizieren: Event erscheint NUR in Private Relays, NICHT in Public
-  
-- [ ] **Test 2: Keine Private Relays + Mode 'private-relays'**
-  - Draft Board erstellen → sollte NUR localStorage nutzen
-  - Verifizieren: Kein Nostr Event publiziert
-  
-- [ ] **Test 3: Mode 'local-only'**
-  - Draft Board erstellen → NIEMALS zu Nostr
-  - Verifizieren: Nur localStorage, auch wenn Private Relays konfiguriert
-  
-- [ ] **Test 4: Mode 'public-relays' (nicht empfohlen)**
-  - Draft Board erstellen → zu Public Relays
-  - Verifizieren: Event erscheint in Public Relays
-  
-- [ ] **Test 5: State 'published'**
-  - Published Board → IMMER zu Public Relays (unabhängig von Draft Mode)
-  
-- [ ] **Test 6: State 'private'**
-  - Private Board → zu Private Relays (oder localStorage wenn keine vorhanden)
+### Phase 2: Settings UI (TODO)
+
+**Was fehlt noch:**
+- [ ] Visual Feedback für aktuelle Relay Selection (Toaster)
+- [ ] Help-Text & Tooltips für User-Guidance
+- [ ] Settings-Export/-Import Integration
+
 
 ---
 
-## 🎯 Entscheidung erforderlich
+## 📚 Referenzen
 
-**Welche Option soll implementiert werden?**
-
-- [ ] **Option A + Settings Toggle** ⭐ (Empfohlen - maximal flexibel)
-- [ ] **Option B** (Einfach - nur localStorage)
-- [ ] **Option C** (Nicht empfohlen)
-- [ ] **Andere Variante** (bitte beschreiben)
-
-**Geschätzter Aufwand für Option A:**
-- Settings: 15 Min
-- getTargetRelays(): 20 Min
-- SyncManager Integration: 30 Min
-- Settings UI: 45 Min
-- Testing: 30 Min
-**Total: ~2.5 Stunden**
+- **Test Guide:** [`docs/TESTING/RELAY-SELECTION-TEST-GUIDE.md`](../../TESTING/RELAY-SELECTION-TEST-GUIDE.md)
+- **Code Files:**
+  - `src/lib/utils/relaySelection.ts` (277 lines)
+  - `src/lib/stores/settingsStore.svelte.ts` (draftPublishingMode)
+  - `src/lib/stores/syncManager.svelte.ts` (integration)
+  - `src/lib/utils/nostrPublishingTest.ts` (test suite)
 
 ---
 
-**Status:** 🟡 **AWAITING DECISION**  
-**Nächster Schritt:** User-Feedback zu Option A/B/C
+**Status:** ✅ **COMPLETE & TESTED**  
+**Implementation Date:** 7. November 2025  
+**Last Updated:** 7. November 2025  
+**Branch:** fix-nostr-publishing-workflow  
+**Ready for:** Production merge nach Settings UI (Phase 2)
