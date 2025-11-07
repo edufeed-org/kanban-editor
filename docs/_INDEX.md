@@ -29,7 +29,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 
 **✅ Relay Selection Implementation COMPLETE:**
 - [`TESTING/RELAY-SELECTION-TEST-GUIDE.md`](./TESTING/RELAY-SELECTION-TEST-GUIDE.md) — Vollständiger Test-Guide mit Validierungs-Checkliste
-- [`FEATURE/RELAY-SELECTION-IMPLEMENTATION.md`](./FEATURE/RELAY-SELECTION-IMPLEMENTATION.md) — Implementation Summary
+- [`ARCHITECTURE/NOSTR/DRAFT-PUBLISHING-STRATEGY.md`](./ARCHITECTURE/NOSTR/DRAFT-PUBLISHING-STRATEGY.md) — ✅ **UPDATED:** Von "PROPOSAL" zu "IMPLEMENTED & TESTED"
 - ✅ **Alle Tests bestanden** - Stack trace validated single call path
 - ✅ **4 Bugs identifiziert & gefixt:**
   1. Duplicate console logs (removed)
@@ -327,6 +327,8 @@ docs/
 | [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
 | [`STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) | 🆕 **NEU (06.11.)**: Chat-Session Persistence per Board mit Memory & Summaries (Phase 3.0) | ✅ Neu (06.11.) |
 | [`STORES/USERPREFERENCESSTORE.md`](./ARCHITECTURE/STORES/USERPREFERENCESSTORE.md) | 🆕 **NEU (06.11.)**: Cross-Board Learning & User-Präferenzen (Phase 3.0) | ✅ Neu (06.11.) |
+| **NOSTR/** | **Nostr-spezifische Dokumentation** | |
+| [`NOSTR/DRAFT-PUBLISHING-STRATEGY.md`](./ARCHITECTURE/NOSTR/DRAFT-PUBLISHING-STRATEGY.md) | ✅ **UPDATED (07.11.)**: Relay Selection Strategie (Status: IMPLEMENTED & TESTED) | ✅ Updated (07.11.) |
 
 ### GUIDES/ (8 Dateien)
 
@@ -374,6 +376,7 @@ docs/
 | [`SHARELINK.md`](./FEATURE/SHARELINK.md) | Phase 1.5 - URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |
 | [`IMPORT-EXPORT.md`](./FEATURE/IMPORT-EXPORT.md) | Phase 1.5 - JSON-Export/Import mit 3 Modi (merge/new/overwrite) | ✅ Neu (31.10.) |
 | [`CARD-DESIGN.md`](./FEATURE/CARD-DESIGN.md) | 🆕 **NEU (06.11.)**: UI/UX Design für Card-Komponente mit Badges & Popover | ✅ Neu (06.11.) |
+| [`RELAY-SELECTION-IMPLEMENTATION.md`](./FEATURE/RELAY-SELECTION-IMPLEMENTATION.md) | ✅ Relay Selection Implementation Summary (referenziert von Test Guide) | ✅ |
 
 ### REFERENCE/ (1 Datei)
 
