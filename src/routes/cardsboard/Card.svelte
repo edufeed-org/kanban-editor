@@ -62,15 +62,20 @@
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
+	
+	// ✅ FIX: Lokale State für author-bezogene Felder (reaktiv!)
+	let localAuthor = $state(card.author);
+	let localAuthorName = $state(card.authorName);
+	let localAttendees = $state(card.attendees || []);
 
 	// Ensure minimum 1 attendee (author should always be included)
-	const attendees = $derived(card.attendees && card.attendees.length > 0
-		? card.attendees
-		: (card.authorName ? [card.authorName] : []));
+	const attendees = $derived(localAttendees && localAttendees.length > 0
+		? localAttendees
+		: (localAuthorName ? [localAuthorName] : []));
 
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components
-	let authors = $derived(card.author ? [card.author] : []);
+	let authors = $derived(localAuthor ? [localAuthor] : []);
 
 	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
@@ -115,6 +120,26 @@
 				if (commentsJSON !== localCommentsJSON) {
 					console.log('🔄 Card comments updated:', (updatedCard.comments || []).length, 'comments');
 					localComments = updatedCard.comments || [];
+				}
+				
+				// ✅ FIX: Aktualisiere author-bezogene Felder für sofortige Reaktivität
+				if (updatedCard.author !== localAuthor) {
+					console.log('🔄 Card author updated:', updatedCard.author);
+					localAuthor = updatedCard.author;
+				}
+				
+				if (updatedCard.authorName !== localAuthorName) {
+					console.log('🔄 Card authorName updated:', updatedCard.authorName);
+					localAuthorName = updatedCard.authorName;
+				}
+				
+				// Aktualisiere attendees (wenn vorhanden)
+				const attendeesJSON = JSON.stringify(updatedCard.attendees || []);
+				const localAttendeesJSON = JSON.stringify(localAttendees);
+				
+				if (attendeesJSON !== localAttendeesJSON) {
+					console.log('🔄 Card attendees updated:', (updatedCard.attendees || []).length, 'attendees');
+					localAttendees = updatedCard.attendees || [];
 				}
 				
 				break; // Karte gefunden, keine weitere Suche nötig

@@ -21,7 +21,32 @@
 | Store | Datei | Status | Phase | Dokumentation |
 |-------|-------|--------|-------|---------------|
 | **SyncManager** | `syncManager.ts` | ⏳ TODO | Phase 1.2 | [SYNCMANAGER.md](./SYNCMANAGER.md) |
-| **ChatBotStore** | `chatBotStore.svelte.ts` | ⏳ TODO | Phase 3.1-3.3 | [CHATBOTSTORE.md](./CHATBOTSTORE.md) |
+
+**⚠️ Agent-Features:** ChatStore, ChatBotStore, UserPreferencesStore wurden in den **`feature/agent-chatstore`** Branch verschoben.
+
+→ **Siehe Branch:** `feature/agent-chatstore` für AI-Agent-spezifische Store-Implementierungen
+
+---
+
+## 🎯 Store-Pattern Guide (NEU!)
+
+**⚠️ WICHTIG:** Nicht alle Stores verwenden dasselbe Persistierungs-Pattern!
+
+→ **Lese ZUERST:** [`GUIDES/STORE-PATTERNS.md`](../../GUIDES/STORE-PATTERNS.md) (20 min)
+
+**Schnell-Übersicht:**
+
+| Store | Persisten-Muster | Wann verwenden | Grund |
+|-------|------------------|-----------------|-------|
+| **AuthStore** | `persisted()` | ✅ Session-Daten | Statischer Key, einfache Daten |
+| **BoardStore** | Manual localStorage | ✅ Multi-Board | Dynamische Keys (`kanban-${id}`) |
+| **SettingsStore** | Manual localStorage | ✅ Config-Merge | Async config.json Integration |
+
+**Design-Entscheidung:**
+- ✅ **persisted()** = Simple Stores (AuthStore)
+- ✅ **Manual localStorage** = Complex Stores (BoardStore, SettingsStore)
+
+**Nicht automatisch alles zu persisted() konvertieren!** Lies Pattern-Guide für Details.
 
 ---
 
@@ -222,31 +247,18 @@ syncManager.status  // { isOnline, isSyncing, queuedEvents }
 
 ---
 
-### ChatBotStore (chatBotStore.svelte.ts) ⏳ TODO
+### Agent-Stores (Verschoben zu feature/agent-chatstore)
 
-**Zweck:** KI-Chatbot für Board-Management & Aufgaben-Splitting
+**ChatStore, ChatBotStore, UserPreferencesStore** wurden in einen separaten Feature-Branch verschoben für isolierte Entwicklung:
 
-**Kernfunktionen (Geplant):**
-- ⏳ Message-History (persistiert)
-- ⏳ Board/Card-Context-Sammlung
-- ⏳ AI-Actions (`split_card`, `add_card`, etc.)
-- ⏳ OpenAI-kompatible API-Integration
-- ⏳ Streaming-Support (optional)
+→ **Branch:** `feature/agent-chatstore`  
+→ **Dokumentation:** Siehe Branch für vollständige Specs:
+- `CHATSTORE.md` - Board-spezifische Memories
+- `CHATBOTSTORE.md` - LLM Integration, 11 AI-Actions
+- `USERPREFERENCESSTORE.md` - Cross-board Learning
+- `AGENT/` - AI-Collaborative-Generation, AI-Actions-Reference
 
-**API-Highlights (Geplant):**
-```typescript
-chatBotStore.sendMessage(prompt, context?): Promise<void>
-chatBotStore.clearHistory(): void
-
-chatBotStore.messages  // $derived → ChatMessage[]
-chatBotStore.isLoading  // $state → boolean
-```
-
-**Implementation:**
-- Phase 3.1-3.3 (ROADMAP.md)
-- Basis: `Chat`-Klasse aus `BoardModel.ts`
-
-**Siehe:** [CHATBOTSTORE.md](./CHATBOTSTORE.md)
+**Grund:** Isolierung experimenteller AI-Features von stabilen Core-Patterns
 
 ---
 

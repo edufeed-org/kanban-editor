@@ -4,6 +4,7 @@ import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type Publi
 import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
 import jsoncrush from 'jsoncrush';
 import { authStore } from './authStore.svelte.js';
+import { settingsStore } from './settingsStore.svelte.js';
 import { getSyncManager, initializeSyncManager } from './syncManager.svelte.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../utils/nostrEvents.js';
 import type NDK from '@nostr-dev-kit/ndk';
@@ -64,6 +65,9 @@ export class BoardStore {
             const currentBoardId = this.board.id;
             if (!this.boardIds.includes(currentBoardId)) {
                 console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
+                
+                // ✅ FIX: Speichere das Default Board
+                // Auth-Check wird in saveToStorage() gemacht (lazy evaluation)
                 this.boardIds = [...this.boardIds, currentBoardId];
                 this.saveBoardIds();
                 
@@ -71,8 +75,57 @@ export class BoardStore {
                 this.saveToStorage();
             }
             
+            // ✅ FIX: Nach Auth-Initialisierung prüfen ob Board-Author aktualisiert werden muss
+            // (Falls Board erstellt wurde bevor User eingeloggt war)
+            this.scheduleAuthorFix();
+            
             // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
             this.exposeCurrentBoardIdToWindow();
+        }
+    }
+    
+    /**
+     * Plant die Aktualisierung des Board-Authors nach Auth-Initialisierung
+     */
+    private scheduleAuthorFix(): void {
+        // Warte kurz bis authStore initialisiert ist, dann fixe anonymous boards
+        setTimeout(() => {
+            this.fixAnonymousBoardAuthor();
+        }, 500); // 500ms sollten reichen für Auth-Init in +layout.svelte
+    }
+    
+    /**
+     * Aktualisiert Board-Author wenn er 'anonymous' ist aber User eingeloggt ist
+     */
+    private fixAnonymousBoardAuthor(): void {
+        try {
+            const pubkey = authStore?.getPubkey();
+            const isAuth = authStore?.isAuthenticated;
+            
+            console.log('🔍 fixAnonymousBoardAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
+            
+            if (!isAuth || !pubkey) {
+                console.log('ℹ️ User nicht eingeloggt, überspringe Author-Fix');
+                return;
+            }
+            
+            // Prüfe ob aktuelles Board einen anonymous Author hat
+            if (this.board.author === 'anonymous' || !this.board.author) {
+                console.log('🔧 Fixe anonymous Board-Author:', this.board.id);
+                
+                // Aktualisiere Board-Author
+                this.board.author = pubkey;
+                this.board.maintainers = [pubkey];
+                
+                // Speichere das aktualisierte Board
+                this.saveToStorage();
+                
+                console.log('✅ Board-Author aktualisiert:', pubkey.slice(0, 16) + '...');
+            } else {
+                console.log('✅ Board hat bereits einen Author:', this.board.author.slice(0, 16) + '...');
+            }
+        } catch (error) {
+            console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
         }
     }
 
@@ -337,21 +390,83 @@ export class BoardStore {
     }
 
     private createDefaultBoard(): Board {
+        // ✅ FIX: Nutze defaultColumns aus Settings statt leere Spalten
+        const defaultColumnNames = settingsStore.settings.defaultColumns || ['To Do', 'In Progress', 'Done'];
+        
+        console.log('🆕 Erstelle Default Board mit Spalten:', defaultColumnNames);
+        
+        const columns = defaultColumnNames.map(name => ({ 
+            name, 
+            color: this.getDefaultColorForColumn(name) 
+        }));
+        
+        // ✅ FIX: Setze author für Berechtigungen!
+        // Auch beim Default Board muss der Author gesetzt sein
+        const author = this.getSafeAuthor();
+        
         return new Board({
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
-            columns: [
-                // { name: 'Spalte 1' },
-                // { name: 'To Do', color: 'blue' },
-                // { name: 'In Progress', color: 'orange' },
-                // { name: 'Done', color: 'green' },
-                // { name: 'Archive', color: 'red' }
-            ]
+            author: author,
+            maintainers: author !== 'anonymous' ? [author] : [],
+            columns
         });
+    }
+    
+    /**
+     * Hilfsmethode: Gibt Standard-Farbe basierend auf Spalten-Namen zurück
+     */
+    private getDefaultColorForColumn(name: string): string {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('to do') || lowerName.includes('todo') || lowerName.includes('backlog')) {
+            return 'blue';
+        }
+        if (lowerName.includes('progress') || lowerName.includes('working') || lowerName.includes('doing')) {
+            return 'orange';
+        }
+        if (lowerName.includes('done') || lowerName.includes('complete') || lowerName.includes('finished')) {
+            return 'green';
+        }
+        if (lowerName.includes('archive') || lowerName.includes('archived')) {
+            return 'red';
+        }
+        return 'slate'; // Default Farbe
+    }
+    
+    /**
+     * Hilfsmethode: Gibt Author sicher zurück (auch wenn authStore noch nicht initialisiert)
+     */
+    private getSafeAuthor(): string {
+        try {
+            const pubkey = authStore?.getPubkey();
+            const isAuth = authStore?.isAuthenticated;
+            
+            console.log('🔍 getSafeAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
+            
+            if (pubkey) {
+                console.log('✅ Author gefunden:', pubkey.slice(0, 16) + '...');
+                return pubkey;
+            }
+            
+            console.warn('⚠️ Kein pubkey verfügbar, nutze "anonymous" als Author');
+            return 'anonymous';
+        } catch (error) {
+            // authStore noch nicht initialisiert
+            console.error('❌ authStore Fehler:', error);
+            console.warn('⚠️ authStore noch nicht verfügbar, nutze "anonymous" als Author');
+            return 'anonymous';
+        }
     }
 
     private saveToStorage(): void {
         if (typeof window === 'undefined') return;
+        
+        // ✅ FIX: Prüfe ob Speichern erlaubt ist (lazy evaluation)
+        // authStore könnte noch nicht initialisiert sein beim ersten Aufruf
+        if (!this.canSaveToStorage()) {
+            console.warn('⚠️ Speichern nicht erlaubt (User nicht eingeloggt und anonymes Speichern deaktiviert)');
+            return;
+        }
         
         try {
             const data = this.board.getContextData(true);
@@ -363,6 +478,40 @@ export class BoardStore {
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
         }
+    }
+    
+    /**
+     * Prüft ob localStorage-Speicherung erlaubt ist
+     * - Wenn User eingeloggt: Immer erlaubt
+     * - Wenn nicht eingeloggt: Hängt von canUseLocalStorageAnonymously() ab
+     */
+    private canSaveToStorage(): boolean {
+        try {
+            // authStore könnte noch nicht initialisiert sein (z.B. beim ersten Import)
+            // In dem Fall: Erlaube Speicherung (Fallback zu anonymem Speichern)
+            const isAuthenticated = authStore?.isAuthenticated ?? false;
+            
+            if (isAuthenticated) {
+                return true; // User eingeloggt → immer erlauben
+            }
+            
+            // User nicht eingeloggt → prüfe ob anonymes Speichern erlaubt ist
+            return this.canUseLocalStorageAnonymously();
+        } catch (error) {
+            // authStore noch nicht initialisiert → Fallback zu anonymem Speichern
+            console.warn('⚠️ authStore noch nicht verfügbar, nutze Fallback-Logik');
+            return this.canUseLocalStorageAnonymously();
+        }
+    }
+    
+    /**
+     * Prüft ob localStorage für anonyme Nutzung erlaubt ist
+     * (z.B. für lokale Tests ohne Auth)
+     */
+    private canUseLocalStorageAnonymously(): boolean {
+        // TODO: Könnte aus Settings kommen (allowAnonymousStorage)
+        // Für jetzt: Erlaube localStorage auch ohne Auth (wie bisher)
+        return true; // Change to false to enforce auth requirement
     }
 
     private triggerUpdate(): void {
@@ -454,19 +603,21 @@ export class BoardStore {
     public createBoard(name: string = 'Neues Board'): string {
         // ✅ KRITISCH: author MUSS der Pubkey sein für Nostr-Kompatibilität & Authorisierung!
         // Display-Name ist nur für UI-Anzeige relevant, nicht für Vergleiche
-        const author = authStore.getPubkey() || 'anonymous';
+        const author = this.getSafeAuthor();
+        
+        // ✅ FIX: Nutze defaultColumns aus Settings statt hardcoded Spalten
+        const defaultColumnNames = settingsStore.settings.defaultColumns || ['To Do', 'In Progress', 'Done'];
+        const columns = defaultColumnNames.map(name => ({ 
+            name, 
+            color: this.getDefaultColorForColumn(name) 
+        }));
         
         const newBoard = new Board({
             name,
             description: '',
             author: author, // ✅ Pubkey für Nostr Events & Authorisierung
-            maintainers: [author], // ✅ NEU: Ich bin der einzige Maintainer
-            columns: [
-                { name: 'Material', color: 'slate' },
-                { name: 'Auswahl', color: 'green' },
-                { name: 'Einstieg', color: 'orange' }
-                
-            ]
+            maintainers: author !== 'anonymous' ? [author] : [], // ✅ NEU: Ich bin der einzige Maintainer
+            columns
         });
         
         // Board.id ist jetzt durch Board Constructor gesetzt (mit generateDTag('board'))

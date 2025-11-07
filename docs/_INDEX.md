@@ -19,7 +19,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 6. 🔴 **NEU:** Code → Docs Sync (11-Punkt DoD bei Code-Änderungen)
 7. 🔴 **NEU:** Docs → Code Sync (Audit bei Docs-Updates)
 
-**Migration:** [`archive/DOCUMENTATION-RULES-v2.md`](./archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+**Migration:** [`DOCUMENTATION-RULES-v2.md`](./DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
 
 **Nicht befolgen = PR REJECTED! 📖⚠️**
 
@@ -86,10 +86,19 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ### 🧠 KI / ML Developer
 **Ziel:** KI-Integration, Chat-Klasse, Kontext-Serialisierung
 
-**Learning Path:**
+**⚠️ WICHTIG:** Agent-spezifische Stores (ChatStore, ChatBotStore, UserPreferencesStore) wurden in den **`feature/agent-chatstore`** Branch verschoben für isolierte Entwicklung.
+
+**Learning Path (Main Branch):**
 1. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Abschnitt: Chat-Klasse, getContextData)
-2. **State Management:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md)
+2. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
 3. **Nostr Integration:** [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md)
+
+**Learning Path (feature/agent-chatstore Branch):**
+1. **🆕 AI Collaborative Generation (Pattern):** `ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md` (GitHub Copilot-ähnlicher Workflow)
+2. **ChatStore API:** `ARCHITECTURE/STORES/CHATSTORE.md` (Konversation speichern)
+3. **ChatBotStore Design:** `ARCHITECTURE/STORES/CHATBOTSTORE.md` (Board-Generierung, Phase 3.2-3.3)
+4. **UserPreferencesStore:** `ARCHITECTURE/STORES/USERPREFERENCESSTORE.md` (Cross-board Learning)
+5. **AI-Actions Reference:** `ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md` (11 Action Types)
 
 **Kritische Methoden:**
 - `Card.getContextData()` — KI-Kontext serialisieren
@@ -122,7 +131,9 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Auth UI-Komponenten** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) | 30 min |
 | **Settings & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
+| **🆕 AI Collaborative Generation** | [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) | 40 min | ✅ Neu (03.11.) - GitHub Copilot Pattern
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
+| **🆕 Store-Patterns Guide** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) | 20 min | ✅ Neu (02.11.) - persisted() vs Manual localStorage
 | **🆕 Dokumentations-Governance v3.0** | [`DOCUMENTATION-RULES-v3.md`](./DOCUMENTATION-RULES-v3.md) | 20 min | ✅ Neu (29.10.)
 | **Technical Spec** | [`AGENTS.md`](../AGENTS.md) | 90 min |
 | **Tests Status** | [`TESTS/STATUS.md`](./TESTS/STATUS.md) | 15 min |
@@ -143,8 +154,10 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | Learning Resource | Dokument |
 |---|---|
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
+| **🆕 Store-Patterns Guide (20 min)** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
 | **🆕 Theme Buttons & UI Guidelines (25 min)** | [`GUIDES/THEME-BUTTONS.md`](./GUIDES/THEME-BUTTONS.md) |
+| **🆕 AI Collaborative Generation (40 min)** | [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) |
 | **Store-Übersicht (30 min)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) |
 | **Authentifizierung Store (35 min)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) |
 | **Auth UI-Komponenten (30 min)** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) |
@@ -197,6 +210,7 @@ docs/
 │   ├── QUICK-START.md
 │   ├── SIDEBAR-LOGIN-DOCS-INDEX.md
 │   ├── SIDEBAR-LOGIN-INTEGRATION.md
+│   ├── STORE-PATTERNS.md               ← ✅ Neu (02.11.) - persisted() vs Manual!
 │   ├── TEST-RUNNER.md
 │   └── THEME-BUTTONS.md  ← ✅ Neu (30.10.)
 │
@@ -262,7 +276,7 @@ docs/
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (10 Dateien)
+### ARCHITECTURE/ (8 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -270,13 +284,20 @@ docs/
 | [`NDK.md`](./ARCHITECTURE/NDK.md) | Nostr Development Kit Integration | ✅ |
 | [`REACTIVITY.md`](./ARCHITECTURE/REACTIVITY.md) | ✅ Master File: Svelte 5 Runes + Verification | ✅ Master (25.10.) |
 | [`UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | shadcn-svelte UI Guidelines | ✅ |
-| **STORES/** | **Store-Architektur (6 Dateien)** | |
+| **STORES/** | **Store-Architektur (4 Dateien)** | |
 | [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (29.10.) |
 | [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (29.10.) |
 | [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (29.10.) |
-| [`STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | KI-Chatbot Integration (TODO Phase 3) | ✅ Neu (29.10.) |
 | [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (29.10.) |
 | [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
+
+**⚠️ Agent-Features verschoben:**
+- **AGENT/** Directory → **`feature/agent-chatstore`** Branch
+- **STORES/CHATSTORE.md** → **`feature/agent-chatstore`** Branch
+- **STORES/CHATBOTSTORE.md** → **`feature/agent-chatstore`** Branch
+- **STORES/USERPREFERENCESSTORE.md** → **`feature/agent-chatstore`** Branch
+
+→ Siehe Branch `feature/agent-chatstore` für AI-Agent-spezifische Implementierungen
 
 ### GUIDES/ (8 Dateien)
 

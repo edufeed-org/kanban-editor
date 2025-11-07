@@ -20,7 +20,6 @@
 
 **Schnell-Referenz:**
 - **Vollständige Regeln:** [`docs/DOCUMENTATION-RULES-v3.md`](../docs/DOCUMENTATION-RULES-v3.md)
-- **Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](../docs/archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
 - **ROADMAP:** [`docs/COLLABORATION/ROADMAP.md`](../docs/COLLABORATION/ROADMAP.md) v2.5
 
 **Bei jeder Code-Änderung:**
@@ -180,6 +179,21 @@ export class BoardStore {
 - ✅ Array-Reassignments: `array = [...array, item]` statt `.push()`
 - ✅ updateTrigger als Fallback-Dependency
 - ✅ `.svelte.ts` Datei-Endung NICHT optional!
+
+**🆕 WICHTIG:** Nicht alle Stores nutzen `persisted()`!
+
+→ **Siehe:** [`docs/GUIDES/STORE-PATTERNS.md`](../docs/GUIDES/STORE-PATTERNS.md)
+
+**Store-Persisten-Strategien:**
+
+| Store | Pattern | Grund |
+|-------|---------|-------|
+| **AuthStore** | `persisted()` | Single Key, einfache Session-Daten |
+| **BoardStore** | Manual localStorage | Dynamische Keys (`kanban-${id}`), Klassen |
+| **SettingsStore** | Manual localStorage | Async config.json merge, Smart-Merge |
+
+**Regel:** Nutze `persisted()` NUR für Simple Stores mit statischen Keys!
+Für Complex Stores (Multi-Board, Klassen, Async) → Manual localStorage ist richtig!
 
 ### 2. **BoardModel Klassen-Pattern**
 
