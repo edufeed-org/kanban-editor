@@ -267,6 +267,12 @@ export class BoardStore {
             return false;
         }
 
+        // 1. Board-Referenz speichern für Nostr-Löschung
+        const boardToDelete = (idToDelete === this.board.id) 
+            ? this.board 
+            : this.loadBoardById(idToDelete);
+
+        // 2. Auf anderes Board wechseln wenn aktuelles Board gelöscht wird
         if (this.board.id === idToDelete) {
             const otherBoardId = this.boardIds.find(id => id !== idToDelete);
             if (otherBoardId) {
@@ -274,12 +280,30 @@ export class BoardStore {
             }
         }
 
+        // 3. Lokal löschen
         BoardStorage.deleteBoard(idToDelete);
-        this.boardIds = this.boardIds.filter(id => id !== boardId);
+        this.boardIds = this.boardIds.filter(id => id !== idToDelete);
         BoardStorage.saveBoardIds(this.boardIds);
 
-        console.log(`✅ Board ${boardId} gelöscht`);
+        console.log(`✅ Board ${idToDelete} lokal gelöscht`);
+
+        // 4. Auf Nostr löschen (asynchron)
+        if (boardToDelete) {
+            this.nostrIntegration.deleteBoard(boardToDelete);
+        }
+
         return true;
+    }
+
+    private loadBoardById(boardId: string): Board | null {
+        try {
+            const data = BoardStorage.loadBoard(boardId);
+            if (!data) return null;
+            return BoardStorage.reconstructBoard(data);
+        } catch (error) {
+            console.error(`❌ Error loading board ${boardId}:`, error);
+            return null;
+        }
     }
 
     // ============================================================================
@@ -482,9 +506,19 @@ export class BoardStore {
     }
 
     public deleteCard(cardId: string): void {
+        // 1. Card-Referenz speichern für Nostr-Löschung
+        const result = this.board.findCardAndColumn(cardId);
+        const cardToDelete = result?.card;
+
+        // 2. Lokal löschen
         if (BoardOperations.deleteCard(this.board, cardId)) {
             this.triggerUpdate();
             this.publishBoardAsync();
+
+            // 3. Auf Nostr löschen (asynchron)
+            if (cardToDelete) {
+                this.nostrIntegration.deleteCard(cardToDelete);
+            }
         }
     }
 

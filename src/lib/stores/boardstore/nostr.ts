@@ -2,7 +2,7 @@
 // Nostr-Integration und Event-Publishing
 
 import type { Board, Card } from '../../classes/BoardModel.js';
-import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../../utils/nostrEvents.js';
+import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
@@ -387,6 +387,102 @@ export class NostrIntegration {
             console.log(`✅ Comment ${commentId} queued for publishing`);
         } catch (error) {
             console.error(`❌ Error publishing comment:`, error);
+        }
+    }
+
+    /**
+     * Löscht ein Board auf Nostr durch Senden eines NIP-09 Deletion Events
+     * @param board - Board das gelöscht werden soll
+     */
+    public async deleteBoard(board: Board): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] deleteBoard: NDK nicht initialisiert');
+            return;
+        }
+
+        try {
+            // 1. Bestimme die Event-ID des Board-Events
+            // Format für addressable events: "30301:<author-pubkey>:<d-tag>"
+            const boardEventId = `30301:${board.author || 'unknown'}:${board.id}`;
+            
+            console.log(`[NostrIntegration] 🗑️ Deleting board on Nostr: ${board.name} (${boardEventId})`);
+
+            // 2. Erstelle Deletion Event (Kind 5)
+            const deletionEvent = createDeletionEvent(
+                boardEventId,
+                `Board "${board.name}" deleted`,
+                this.ndk
+            );
+
+            // 3. Publiziere auf ALLEN Relays (sowohl public als private)
+            // Grund: Board könnte auf beiden Relay-Sets existieren
+            const allRelays = [
+                ...settingsStore.settings.relaysPublic,
+                ...settingsStore.settings.relaysPrivate
+            ].filter((v, i, a) => a.indexOf(v) === i); // Deduplizieren
+
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                deletionEvent,
+                'board',
+                'high', // Hohe Priorität für Löschungen
+                'published', // Lösch-Events immer auf published relays
+                allRelays
+            );
+
+            console.log(`✅ Board deletion event queued for ${allRelays.length} relay(s)`);
+        } catch (error) {
+            console.error(`❌ Error deleting board on Nostr:`, error);
+        }
+    }
+
+    /**
+     * Löscht eine Card auf Nostr durch Senden eines NIP-09 Deletion Events
+     * @param card - Card die gelöscht werden soll
+     */
+    public async deleteCard(card: Card): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] deleteCard: NDK nicht initialisiert');
+            return;
+        }
+
+        try {
+            // 1. Bestimme die Event-ID des Card-Events
+            // Format für addressable events: "30302:<author-pubkey>:<d-tag>"
+            const cardEventId = `30302:${card.author || 'unknown'}:${card.id}`;
+            
+            console.log(`[NostrIntegration] 🗑️ Deleting card on Nostr: ${card.heading} (${cardEventId})`);
+
+            // 2. Erstelle Deletion Event (Kind 5)
+            const deletionEvent = createDeletionEvent(
+                cardEventId,
+                `Card "${card.heading}" deleted`,
+                this.ndk
+            );
+
+            // 3. Bestimme Target-Relays basierend auf Card's publishState
+            const publishState = card.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
+
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                deletionEvent,
+                'card',
+                'high', // Hohe Priorität für Löschungen
+                normalizedState,
+                targetRelays
+            );
+
+            console.log(`✅ Card deletion event queued for ${targetRelays.length} relay(s)`);
+        } catch (error) {
+            console.error(`❌ Error deleting card on Nostr:`, error);
         }
     }
 
