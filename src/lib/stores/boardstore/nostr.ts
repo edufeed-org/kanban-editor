@@ -67,27 +67,82 @@ export class NostrIntegration {
         try {
             console.log('[BoardStore] 🛰️ Fetching boards from Nostr for pubkey:', pubkey);
 
-            const filter = {
+            // 1. Fetch Board Events (Kind 30301)
+            const boardFilter = {
                 kinds: [30301],
                 authors: [pubkey]
             };
 
-            const events = await this.ndk.fetchEvents(filter as any);
+            const boardEvents = await this.ndk.fetchEvents(boardFilter as any);
 
-            if (!events || events.size === 0) {
+            if (!boardEvents || boardEvents.size === 0) {
                 console.log('[BoardStore] ℹ️ No boards found on Nostr for current user');
                 return;
             }
 
+            // 2. Fetch Deletion Events (Kind 5) für diesen User
+            const deletionFilter = {
+                kinds: [5],
+                authors: [pubkey]
+            };
+
+            const deletionEvents = await this.ndk.fetchEvents(deletionFilter as any);
+
+            // 3. Erstelle Set mit gelöschten Board-IDs
+            const deletedBoardIds = new Set<string>();
+            
+            // 3a. Lade lokal gespeicherte Deletions (Fallback wenn Relay Kind 5 nicht unterstützt)
+            if (typeof window !== 'undefined') {
+                const localDeletions = localStorage.getItem('nostr-deleted-boards');
+                if (localDeletions) {
+                    try {
+                        const parsed = JSON.parse(localDeletions);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(id => deletedBoardIds.add(id));
+                            console.log('[BoardStore] 📋 Loaded', deletedBoardIds.size, 'locally tracked deletions');
+                        }
+                    } catch (e) {
+                        console.warn('[BoardStore] Failed to parse local deletions:', e);
+                    }
+                }
+            }
+            
+            // 3b. Füge Deletions vom Relay hinzu (wenn vorhanden)
+            if (deletionEvents && deletionEvents.size > 0) {
+                console.log('[BoardStore] 🗑️ Found', deletionEvents.size, 'deletion events on relay');
+                for (const delEvent of deletionEvents) {
+                    // Delete Event hat Tag: ['e', '30301:pubkey:board-id']
+                    const eTags = delEvent.tags.filter(t => t[0] === 'e');
+                    for (const eTag of eTags) {
+                        const eventId = eTag[1]; // z.B. "30301:pubkey:board-xxx"
+                        if (eventId && eventId.startsWith('30301:')) {
+                            // Extrahiere board-id (alles nach dem zweiten ":")
+                            const parts = eventId.split(':');
+                            if (parts.length >= 3) {
+                                const boardId = parts.slice(2).join(':'); // board-xxx
+                                deletedBoardIds.add(boardId);
+                                console.log('[BoardStore] 🗑️ Found deleted board:', boardId);
+                            }
+                        }
+                    }
+                }
+            }
+
             const loadedBoardIds = [...boardIds];
 
-            for (const event of events) {
+            for (const event of boardEvents) {
                 if (event.kind !== 30301) continue;
 
                 try {
                     const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
                     const boardProps = nostrEventToBoard(event);
                     const board = new (await import('../../classes/BoardModel.js')).Board(boardProps);
+
+                    // 4. Skip wenn Board gelöscht wurde
+                    if (deletedBoardIds.has(board.id)) {
+                        console.log('[BoardStore] ⏩ Skipping deleted board:', board.id);
+                        continue;
+                    }
 
                     const storageKey = `kanban-${board.id}`;
                     const existingRaw = typeof window !== 'undefined'
@@ -429,6 +484,25 @@ export class NostrIntegration {
                 'published', // Lösch-Events immer auf published relays
                 allRelays
             );
+
+            // 4. Speichere Board-ID lokal als gelöscht (Fallback wenn Relay Kind 5 nicht unterstützt)
+            if (typeof window !== 'undefined') {
+                const localDeletions = localStorage.getItem('nostr-deleted-boards');
+                let deletedIds: string[] = [];
+                if (localDeletions) {
+                    try {
+                        deletedIds = JSON.parse(localDeletions);
+                        if (!Array.isArray(deletedIds)) deletedIds = [];
+                    } catch (e) {
+                        deletedIds = [];
+                    }
+                }
+                if (!deletedIds.includes(board.id)) {
+                    deletedIds.push(board.id);
+                    localStorage.setItem('nostr-deleted-boards', JSON.stringify(deletedIds));
+                    console.log('[NostrIntegration] 📋 Board marked as deleted locally');
+                }
+            }
 
             console.log(`✅ Board deletion event queued for ${allRelays.length} relay(s)`);
         } catch (error) {
