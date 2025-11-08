@@ -423,6 +423,32 @@ export class NostrIntegration {
                 return;
             }
             
+            // ⚡ RACE CONDITION FIX: Filter recently deleted cards
+            // Problem: Deletion event arrives → Board event with old data arrives
+            // Solution: Remove cards that were just deleted
+            if (this.recentlyDeletedCards.size > 0 && boardProps.columns) {
+                let filteredCount = 0;
+                
+                for (const column of boardProps.columns) {
+                    if (column.cards && Array.isArray(column.cards)) {
+                        const originalLength = column.cards.length;
+                        column.cards = column.cards.filter(c => {
+                            if (!c.id) return true; // Keep cards without ID
+                            const isDeleted = this.recentlyDeletedCards.has(c.id);
+                            if (isDeleted) {
+                                console.log(`🛡️ Prevented restore of deleted card: ${c.id} in column "${column.name}"`);
+                            }
+                            return !isDeleted;
+                        });
+                        filteredCount += (originalLength - column.cards.length);
+                    }
+                }
+                
+                if (filteredCount > 0) {
+                    console.log(`🛡️ Filtered ${filteredCount} recently deleted card(s) from board update`);
+                }
+            }
+            
             // ⚡ RELAY FILTERT GELÖSCHTE BOARDS: Keine lokale Deletion-Prüfung nötig!
             // Relay gibt per NIP-09 nur nicht-gelöschte Events zurück
             
@@ -491,13 +517,24 @@ export class NostrIntegration {
         }
     }
 
+    // ⚠️ Track recently deleted cards (in-memory only, for this session)
+    // Prevents race condition: Deletion event arrives → Board event with old data arrives → Old data restored
+    private recentlyDeletedCards = new Set<string>();
+    
     /**
      * Handler für Deletion-Events (Kind 5)
      * 
      * Wird aufgerufen wenn ein Board ODER Card gelöscht wurde (via subscription).
-     * Entfernt das Element aus der Liste und speichert die Deletion lokal.
+     * Entfernt das Element aus der Liste UND cleared den localStorage-Cache!
      * 
      * NIP-09: Replaceable Events (Kind 30301/30302) werden via 'a' tags referenziert
+     * 
+     * ⚡ CACHE INVALIDATION STRATEGY:
+     * - Deletion event received → Clear from localStorage immediately
+     * - Track deleted card IDs in-memory (session only)
+     * - Board event handler checks deleted cards → won't restore them
+     * - Relay won't return deleted events on next fetch
+     * - Cache stays in sync with relay state
      */
     private async handleDeletionEvent(
         deletionEvent: any,
@@ -521,10 +558,20 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const boardId = parts.slice(2).join(':'); // board-xxx
                         
-                        console.log(`🗑️ Board ${boardId} wurde gelöscht - Relay handled es (NIP-09)`);
+                        console.log(`🗑️ Board ${boardId} wurde gelöscht - clearing cache...`);
                         
-                        // ⚡ NIP-09: Relay handled board deletion automatically
-                        // Keine lokale localStorage-Tracking mehr nötig!
+                        // ⚡ CACHE INVALIDATION: Clear localStorage for this board
+                        if (typeof window !== 'undefined') {
+                            const storageKey = `kanban-board-${boardId}`;
+                            const existed = localStorage.getItem(storageKey) !== null;
+                            
+                            if (existed) {
+                                localStorage.removeItem(storageKey);
+                                console.log(`🗑️✅ Cleared board cache: ${storageKey}`);
+                            } else {
+                                console.log(`🗑️ℹ️ Board cache already gone: ${storageKey}`);
+                            }
+                        }
                         
                         // Callback aufrufen um Board aus Liste zu entfernen
                         if (onBoardDeletion) {
@@ -540,14 +587,64 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const cardId = parts.slice(2).join(':'); // card-xxx
                         
-                        console.log(`🗑️ Card ${cardId} wurde gelöscht - speichere lokal`);
+                        console.log(`🗑️ Card ${cardId} wurde gelöscht - clearing cache...`);
                         
-                        // ⚡ NIP-09: Relay handled card deletion automatically
-                        // Keine lokale localStorage-Tracking mehr nötig!
-                        console.log(`🗑️ Card ${cardId} deletion wird vom Relay gehandhabt (NIP-09)`);
+                        // ⚡ Track deleted card ID (in-memory, session only)
+                        // Prevents race condition with Board events
+                        this.recentlyDeletedCards.add(cardId);
+                        console.log(`🗑️ Marked card ${cardId} as recently deleted (prevents restore)`);
+                        
+                        // ⚡ CACHE INVALIDATION: Clear card from ALL board caches
+                        // (Karte könnte theoretisch in mehreren Board-Caches sein)
+                        if (typeof window !== 'undefined') {
+                            const boardKeys = Object.keys(localStorage)
+                                .filter(k => k.startsWith('kanban-board-'));
+                            
+                            let clearedCount = 0;
+                            
+                            for (const key of boardKeys) {
+                                try {
+                                    const rawData = localStorage.getItem(key);
+                                    if (!rawData) continue;
+                                    
+                                    const boardData = JSON.parse(rawData);
+                                    
+                                    // Check if board has columns with cards
+                                    if (boardData.columns && Array.isArray(boardData.columns)) {
+                                        let modified = false;
+                                        
+                                        for (const column of boardData.columns) {
+                                            if (column.cards && Array.isArray(column.cards)) {
+                                                const originalLength = column.cards.length;
+                                                column.cards = column.cards.filter((c: any) => c.id !== cardId);
+                                                
+                                                if (column.cards.length < originalLength) {
+                                                    modified = true;
+                                                    console.log(`🗑️ Removed card ${cardId} from column "${column.name}" in board cache: ${key}`);
+                                                }
+                                            }
+                                        }
+                                        
+                                        // Wenn Cards entfernt wurden, speichere aktualisierte Version
+                                        if (modified) {
+                                            localStorage.setItem(key, JSON.stringify(boardData));
+                                            clearedCount++;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn(`⚠️ Failed to clean card cache from ${key}:`, e);
+                                }
+                            }
+                            
+                            if (clearedCount > 0) {
+                                console.log(`🗑️✅ Cleared card ${cardId} from ${clearedCount} board cache(s)`);
+                            } else {
+                                console.log(`🗑️ℹ️ Card ${cardId} not found in any board caches`);
+                            }
+                        }
                         
                         // Note: Card-Deletion wird vom kanbanStore via onCardUpdate gehandhabt
-                        // Der Card-Handler wird die Deletion beim nächsten Event checken
+                        // Der Cache ist jetzt bereits cleared!
                     }
                 }
             }
