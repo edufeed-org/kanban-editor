@@ -152,45 +152,80 @@ export class BoardOperations {
         columnOrder: string[],
         uiColumns: UIColumn[]
     ): { newColumnOrder: string[]; movedCardIds: string[] } {
-        // 1. Update column order
+        console.group('🔄 syncBoardState');
+        console.log('Input:', {
+            oldColumnCount: board.columns.length,
+            newColumnCount: uiColumns.length,
+            totalCardsInUI: uiColumns.reduce((sum, col) => sum + col.items.length, 0)
+        });
+
+        // 1. Build Map: Card-ID → Card Instance (SNAPSHOT bevor wir Columns modifizieren!)
+        const cardRegistry = new Map<string, { card: Card; oldColumnId: string }>();
+        for (const col of board.columns) {
+            for (const card of col.cards) {
+                cardRegistry.set(card.id, { card, oldColumnId: col.id });
+            }
+        }
+        console.log('Card registry:', cardRegistry.size, 'cards');
+
+        // 2. Update column order
         const newColumnOrder = uiColumns.map(c => c.id);
 
-        // 2. Reorder board.columns
+        // 3. Reorder board.columns UND rebuild card arrays
         const reorderedColumns: Column[] = [];
-        for (const uiCol of uiColumns) {
-            const col = board.columns.find(c => c.id === uiCol.id);
-            if (col) reorderedColumns.push(col);
-        }
-        board.columns = reorderedColumns;
-
-        // 3. Sync card positions (mit Cross-Column Move Support)
         const movedCardIds: string[] = [];
+        const processedCardIds = new Set<string>(); // Duplikate-Prevention
+
         for (const uiCol of uiColumns) {
             const col = board.columns.find(c => c.id === uiCol.id);
-            if (!col) continue;
+            if (!col) {
+                console.warn(`⚠️ Column ${uiCol.id} nicht gefunden`);
+                continue;
+            }
 
+            // Rebuild card array für diese Column
             const newCards: Card[] = [];
             for (const uiCard of uiCol.items) {
-                // Suche Card BOARD-WEIT (nicht nur in aktueller Column)
-                const cardId = String(uiCard.id); // Normalize zu string
-                const result = board.findCardAndColumn(cardId);
-                if (result) {
-                    const { card, column: oldColumn } = result;
+                const cardId = String(uiCard.id);
+                
+                // Duplikate vermeiden
+                if (processedCardIds.has(cardId)) {
+                    console.warn(`⚠️ DUPLIKAT ignoriert: Card ${cardId} bereits in anderer Column`);
+                    continue;
+                }
+                
+                // Hole Card aus SNAPSHOT (nicht aus board.columns!)
+                const snapshot = cardRegistry.get(cardId);
+                if (snapshot) {
+                    const { card, oldColumnId } = snapshot;
                     
-                    // Wenn Card in anderer Column ist → verschieben
-                    if (oldColumn.id !== col.id) {
-                        oldColumn.deleteCard(card.id);
+                    // Move Detection
+                    if (oldColumnId !== col.id) {
                         movedCardIds.push(card.id);
-                        console.log(`🔄 Card "${card.heading}" von "${oldColumn.name}" nach "${col.name}" verschoben`);
+                        console.log(`  ↗️ Card "${card.heading}" verschoben: "${oldColumnId}" → "${col.id}"`);
                     }
                     
                     newCards.push(card);
+                    processedCardIds.add(cardId);
+                } else {
+                    console.warn(`⚠️ Card ${cardId} nicht im Snapshot gefunden`);
                 }
             }
+            
+            console.log(`  Column "${col.name}": ${newCards.length} cards`);
             col.cards = newCards;
+            reorderedColumns.push(col);
         }
 
-        console.log('🔄 Board-State synchronisiert', movedCardIds.length > 0 ? `(${movedCardIds.length} Cards verschoben)` : '');
+        board.columns = reorderedColumns;
+
+        console.log('Result:', {
+            movedCards: movedCardIds.length,
+            totalCardsProcessed: processedCardIds.size,
+            finalColumnCount: board.columns.length
+        });
+        console.groupEnd();
+
         return { newColumnOrder, movedCardIds };
     }
 

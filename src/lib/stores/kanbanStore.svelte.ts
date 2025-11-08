@@ -723,22 +723,75 @@ export class BoardStore {
         this.publishBoardAsync();
     }
 
+    private syncInProgress = $state(false);
+    private pendingSyncData: UIColumn[] | null = null;
+    private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     public syncBoardState(uiColumns: UIColumn[]): boolean {
-        const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
-            this.board,
-            this._columnOrder,
-            uiColumns
-        );
-        this._columnOrder = newColumnOrder;
-        this.triggerUpdate();
-        this.publishBoardAsync();
+        // Debounce: Sammle schnelle Änderungen
+        this.pendingSyncData = uiColumns;
         
-        // Publiziere verschobene Cards
-        for (const cardId of movedCardIds) {
-            this.publishCardAsync(cardId);
+        if (this.syncDebounceTimer) {
+            clearTimeout(this.syncDebounceTimer);
+            console.log('⏱️ Sync debounced (waiting for more changes)');
         }
         
-        return true; // Immer erfolgreich, Permission wird in publishBoardAsync geprüft
+        this.syncDebounceTimer = setTimeout(() => {
+            this.executeSyncBoardState();
+        }, 150); // 150ms debounce
+        
+        return true;
+    }
+
+    private async executeSyncBoardState(): Promise<void> {
+        if (this.syncInProgress) {
+            console.log('⏳ Sync bereits in Arbeit, warte...');
+            return;
+        }
+        
+        if (!this.pendingSyncData) return;
+        
+        this.syncInProgress = true;
+        const uiColumns = this.pendingSyncData;
+        this.pendingSyncData = null;
+        
+        console.group('📦 executeSyncBoardState');
+        console.log('Processing columns:', uiColumns.length);
+        
+        try {
+            const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
+                this.board,
+                this._columnOrder,
+                uiColumns
+            );
+            this._columnOrder = newColumnOrder;
+            this.triggerUpdate();
+            
+            // Publishing sequentiell (nicht parallel) um Race Conditions zu vermeiden
+            console.log('📤 Publishing board...');
+            await this.publishBoardAsync();
+            
+            // Publiziere verschobene Cards
+            if (movedCardIds.length > 0) {
+                console.log(`📤 Publishing ${movedCardIds.length} moved cards...`);
+                for (const cardId of movedCardIds) {
+                    await this.publishCardAsync(cardId);
+                }
+            }
+            
+            console.log('✅ Sync complete');
+        } catch (error) {
+            console.error('❌ Sync failed:', error);
+        } finally {
+            this.syncInProgress = false;
+            console.groupEnd();
+            
+            // Falls während dem Sync neue Daten angekommen sind
+            if (this.pendingSyncData) {
+                console.log('🔄 Neue Änderungen vorhanden, starte erneut...');
+                this.executeSyncBoardState();
+            }
+        }
     }
 
     public async addComment(cardId: string, text: string, authorOverride?: string): Promise<void> {

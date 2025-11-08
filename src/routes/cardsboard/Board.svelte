@@ -109,12 +109,16 @@
        onFinalUpdate(finalItems);
      }
    }
-   	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
-  		columns[columnIdx].items = newItems;
-  		onFinalUpdate([...columns]);
-  	}
-
-  	function handleCardAction(cardId: string, action: string) {
+	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
+		// Immutable update: Erstelle neues columns Array
+		const updatedColumns = columns.map((col, idx) => 
+			idx === columnIdx 
+				? { ...col, items: newItems }
+				: col
+		);
+		columns = updatedColumns;
+		onFinalUpdate(updatedColumns);
+	}  	function handleCardAction(cardId: string, action: string) {
   		console.log('Card action:', cardId, action);
   		// Handle card actions like complete, edit, etc.
   	}
