@@ -159,11 +159,12 @@ export class BoardOperations {
             totalCardsInUI: uiColumns.reduce((sum, col) => sum + col.items.length, 0)
         });
 
-        // 1. Build Map: Card-ID → Card Instance (SNAPSHOT bevor wir Columns modifizieren!)
-        const cardRegistry = new Map<string, { card: Card; oldColumnId: string }>();
+        // 1. Build Map: Card-ID → Card Instance + old position (SNAPSHOT bevor wir Columns modifizieren!)
+        const cardRegistry = new Map<string, { card: Card; oldColumnId: string; oldRank: number }>();
         for (const col of board.columns) {
-            for (const card of col.cards) {
-                cardRegistry.set(card.id, { card, oldColumnId: col.id });
+            for (let i = 0; i < col.cards.length; i++) {
+                const card = col.cards[i];
+                cardRegistry.set(card.id, { card, oldColumnId: col.id, oldRank: i });
             }
         }
         console.log('Card registry:', cardRegistry.size, 'cards');
@@ -185,7 +186,8 @@ export class BoardOperations {
 
             // Rebuild card array für diese Column
             const newCards: Card[] = [];
-            for (const uiCard of uiCol.items) {
+            for (let newRank = 0; newRank < uiCol.items.length; newRank++) {
+                const uiCard = uiCol.items[newRank];
                 const cardId = String(uiCard.id);
                 
                 // Duplikate vermeiden
@@ -197,12 +199,19 @@ export class BoardOperations {
                 // Hole Card aus SNAPSHOT (nicht aus board.columns!)
                 const snapshot = cardRegistry.get(cardId);
                 if (snapshot) {
-                    const { card, oldColumnId } = snapshot;
+                    const { card, oldColumnId, oldRank } = snapshot;
                     
-                    // Move Detection
-                    if (oldColumnId !== col.id) {
+                    // Move Detection: Column ODER Position hat sich geändert
+                    const columnChanged = oldColumnId !== col.id;
+                    const positionChanged = oldRank !== newRank;
+                    
+                    if (columnChanged || positionChanged) {
                         movedCardIds.push(card.id);
-                        console.log(`  ↗️ Card "${card.heading}" verschoben: "${oldColumnId}" → "${col.id}"`);
+                        if (columnChanged) {
+                            console.log(`  ↗️ Card "${card.heading}" verschoben: "${oldColumnId}" → "${col.id}"`);
+                        } else {
+                            console.log(`  🔄 Card "${card.heading}" Position geändert: Rank ${oldRank} → ${newRank} (Column: "${col.name}")`);
+                        }
                     }
                     
                     newCards.push(card);

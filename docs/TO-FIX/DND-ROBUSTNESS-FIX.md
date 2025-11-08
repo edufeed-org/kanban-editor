@@ -132,6 +132,32 @@ export function syncBoardState(board: Board, uiColumns: UIColumn[], currentOrder
 - ✅ **No Side Effects**: Mutationen an `board.columns` beeinflussen `cardRegistry` nicht
 - ✅ **Duplikate-Prevention**: `processedCardIds` Set verhindert mehrfaches Hinzufügen
 - ✅ **Move-Detection**: Vergleich `oldColumnId !== col.id` funktioniert zuverlässig
+- ✅ **Position-Tracking**: `oldRank !== newRank` detectet auch Reihenfolge-Änderungen innerhalb einer Column
+
+**Erweitert (08.11.2025):** Position-Tracking für Intra-Column Moves
+```typescript
+// Snapshot speichert jetzt auch die alte Position
+const cardRegistry = new Map<string, { card: Card; oldColumnId: string; oldRank: number }>();
+for (const col of board.columns) {
+    for (let i = 0; i < col.cards.length; i++) {
+        const card = col.cards[i];
+        cardRegistry.set(card.id, { card, oldColumnId: col.id, oldRank: i });
+    }
+}
+
+// Detection: Column ODER Position geändert
+const columnChanged = oldColumnId !== col.id;
+const positionChanged = oldRank !== newRank;
+
+if (columnChanged || positionChanged) {
+    movedCardIds.push(card.id);
+    if (columnChanged) {
+        console.log(`↗️ Card verschoben: "${oldColumnId}" → "${col.id}"`);
+    } else {
+        console.log(`🔄 Card Position geändert: Rank ${oldRank} → ${newRank}`);
+    }
+}
+```
 
 ---
 
