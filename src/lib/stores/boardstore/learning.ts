@@ -38,6 +38,6 @@ export class BoardLearning {
             console.warn('⚠️ BoardLearningManager nicht verfügbar');
             return null;
         }
-        return boardLearningManager.createColumnWithTemplate(templateName, false);
+        return boardLearningManager.createColumnWithTemplate(templateName, true);
     }
 }
