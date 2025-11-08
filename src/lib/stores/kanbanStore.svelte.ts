@@ -469,12 +469,13 @@ export class BoardStore {
     }
 
     /**
-     * Startet oder erneuert eine Live-Subscription für Board-Events (Kind 30301)
+     * Startet oder erneuert eine Live-Subscription für Board-Events (Kind 30301) UND Card-Events (Kind 30302)
      * für den aktuellen User.
      *
      * - Nutzt NDK.subscribe direkt.
      * - Aktualisiert localStorage + boardIds bei neuen/aktualisierten Events.
      * - Wendet Last-Write-Wins auf Basis von created_at an.
+     * - ✅ NEU: Lädt auch alle Card-Events für jedes Board!
      */
     public subscribeToBoardUpdatesForCurrentUser(): void {
         if (!this.ndk) {
@@ -501,11 +502,12 @@ export class BoardStore {
             }
         }
 
-        console.log('[BoardStore] 🛰️ Subscribing to board updates for pubkey:', pubkey);
+        console.log('[BoardStore] 🛰️ Subscribing to board AND card updates for pubkey:', pubkey);
 
+        // ✅ SUBSCRIBE zu BEIDEN Event-Typen: Boards (30301) UND Cards (30302)!
         const sub = this.ndk.subscribe(
             {
-                kinds: [30301] as number[],
+                kinds: [30301, 30302] as number[],
                 authors: [pubkey]
                 // Optional: später #p: [pubkey] für Maintainer-Boards
             } as any,
@@ -513,163 +515,13 @@ export class BoardStore {
         );
 
         sub.on('event', async (event: any) => {
-            if (event.kind !== 30301) return;
-
-            try {
-                const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
-                const boardProps = nostrEventToBoard(event);
-                const boardId = boardProps.id;
-                const storageKey = `kanban-${boardId}`;
-
-                let acceptRemote = true;
-                let mergedSource: any = boardProps;
-
-                if (typeof window !== 'undefined') {
-                    const existingRaw = window.localStorage.getItem(storageKey);
-                    if (existingRaw) {
-                        try {
-                            const existing = JSON.parse(existingRaw);
-                            const localTs = existing.updatedAt
-                                ? new Date(existing.updatedAt).getTime()
-                                : existing.createdAt
-                                    ? new Date(existing.createdAt).getTime()
-                                    : 0;
-                            const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
-
-                            if (localTs && localTs > remoteTs) {
-                                acceptRemote = false;
-                                mergedSource = existing;
-                            }
-                        } catch {
-                            // bei Fehler remote akzeptieren
-                            acceptRemote = true;
-                        }
-                    }
-                }
-
-                if (!acceptRemote) {
-                    // Nur sicherstellen, dass ID registriert ist
-                    if (boardId && !this.boardIds.includes(boardId)) {
-                        this.boardIds = [...this.boardIds, boardId];
-                        this.saveBoardIds();
-                    }
-                    return;
-                }
-
-                // ⚠️ KRITISCH: Merge-Strategie für Board-Updates
-                // Problem: boardProps.columns hat cards: [] (Karten sind Kind 30302 Events, nicht im Board-Event!)
-                // Lösung: Nur Spalten-Metadaten aktualisieren, Karten-Inhalte behalten
-                
-                // 🔴 WICHTIG: mergedProps außerhalb des if-Blocks deklarieren (wird später genutzt)
-                let mergedProps: any = boardProps;
-                
-                if (typeof window !== 'undefined') {
-                    // 🔴 CRITICAL FIX: Board Events (Kind 30301) enthalten KEINE Card-Daten!
-                    // Cards kommen separat via Card Events (Kind 30302).
-                    // Daher: Für Cards IMMER localStorage nutzen (aktuellster Stand mit allen Cards)!
-                    // Nur für Board-Metadaten (name, description, columns-struktur) nutze Remote Event.
-                    
-                    // IMMER localStorage für Card-Daten verwenden (enthält alle lokalen Änderungen)
-                    const storedData = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
-                    
-                    // 🔍 DEBUG: Wie viele Karten hat localStorage JETZT?
-                    if (this.board.id === boardId) {
-                        console.log('[BoardStore] 🔍 LOCALSTORAGE STATE:', {
-                            boardId: this.board.id,
-                            columnsCount: storedData.columns?.length,
-                            cardsPerColumn: storedData.columns?.map((col: any) => ({
-                                id: col.id,
-                                name: col.name,
-                                cardCount: col.cards?.length || 0,
-                                cardIds: col.cards?.map((c: any) => c.id) || []
-                            }))
-                        });
-                    }
-                    
-                    // 🔴 WICHTIG: IMMER localStorage für Cards nutzen (nie $state Board!)
-                    // Grund: Board Event (Kind 30301) hat KEINE Card-Daten, nur Metadaten
-                    const existingData = storedData;
-                    
-                    // MERGE: Ersetze nur Spalten-Metadaten (name, color, order)
-                    // aber BEHALTE lokale Karten!
-                    const remoteColumns = boardProps.columns || [];
-                    
-                    // 🔍 DEBUG: Was haben wir?
-                    console.log('[BoardStore] 🔍 MERGE DEBUG:', {
-                        remoteColumnsCount: remoteColumns.length,
-                        existingColumnsCount: existingData.columns?.length,
-                        remoteColumnIds: remoteColumns.map((c: any) => c.id),
-                        existingColumnIds: existingData.columns?.map((c: any) => c.id),
-                        existingCardsPerColumn: existingData.columns?.map((c: any) => ({
-                            id: c.id,
-                            name: c.name,
-                            cardCount: c.cards?.length || 0
-                        }))
-                    });
-                    
-                    const mergedColumns = remoteColumns.map((remoteCol) => {
-                        // 🔴 KRITISCH: Match by ID, NICHT by Index!
-                        // (Spalten-Reihenfolge kann zwischen local/remote unterschiedlich sein)
-                        const existingCol = existingData.columns?.find((col: any) => col.id === remoteCol.id);
-                        
-                        console.log('[BoardStore] 🔍 Column merge:', {
-                            remoteColId: remoteCol.id,
-                            remoteColName: remoteCol.name,
-                            existingColFound: !!existingCol,
-                            existingColName: existingCol?.name,
-                            existingCardsCount: existingCol?.cards?.length || 0,
-                            mergedCardsCount: (existingCol?.cards || []).length
-                        });
-                        
-                        return {
-                            ...remoteCol,  // Neue Spalten-Metadaten (name, color, order)
-                            cards: existingCol?.cards || [],  // 🔴 KRITISCH: Behalte lokale Karten!
-                        };
-                    });
-                    
-                    // 🔴 WICHTIG: Reassign mergedProps (außerhalb deklariert)
-                    mergedProps = {
-                        ...boardProps,
-                        columns: mergedColumns,  // Mit erhaltenen Karten
-                    };
-                    
-                    const contextBoard = new Board(mergedProps);
-                    const context = contextBoard.getContextData(true) as any;
-                    const remoteCreated = event.created_at
-                        ? new Date(event.created_at * 1000).toISOString()
-                        : context.createdAt || new Date().toISOString();
-                    context.createdAt = context.createdAt || remoteCreated;
-                    context.updatedAt = context.updatedAt || remoteCreated;
-
-                    window.localStorage.setItem(storageKey, JSON.stringify(context));
-                    console.log('[BoardStore] 💾 Updated local board from Nostr subscription (Karten behalten):', storageKey);
-                }
-
-                // boardIds pflegen
-                if (boardId && !this.boardIds.includes(boardId)) {
-                    this.boardIds = [...this.boardIds, boardId];
-                    this.saveBoardIds();
-                }
-
-                // Aktives Board aktualisieren, falls betroffen
-                if (this.board.id === boardId) {
-                    try {
-                        // 🔴 KRITISCH: Nutze mergedProps (mit erhaltenen Karten), NICHT mergedSource oder localStorage!
-                        // mergedProps wurde oben erstellt mit: remoteColumns + existingCol?.cards
-                        const effectiveData = mergedProps;
-
-                        if (effectiveData) {
-                            this.board = this.reconstructBoard(effectiveData);
-                            this._columnOrder = this.board.columns.map((c) => c.id);
-                            this.updateTrigger++;
-                            console.log('[BoardStore] 🔄 Active board updated from Nostr subscription:', boardId);
-                        }
-                    } catch (err) {
-                        console.warn('[BoardStore] ⚠️ Failed to update active board from subscription:', err);
-                    }
-                }
-            } catch (err) {
-                console.error('[BoardStore] ❌ Error processing Nostr board subscription event:', err);
+            // ✅ HANDLE BOTH Board Events (30301) AND Card Events (30302)!
+            if (event.kind === 30301) {
+                // ========== BOARD EVENT HANDLER ==========
+                await this.handleBoardEvent(event);
+            } else if (event.kind === 30302) {
+                // ========== CARD EVENT HANDLER ==========
+                await this.handleCardEvent(event);
             }
         });
 
@@ -677,6 +529,272 @@ export class BoardStore {
     }
 
     /**
+     * ✅ NEU: Verarbeitet Card Events (Kind 30302) aus der Subscription
+     * - Extrahiert boardId aus dem 'a' tag
+     * - Updated Card im entsprechenden Board via upsertCard()
+     * - Speichert zu localStorage
+     */
+    private async handleCardEvent(event: any): Promise<void> {
+        try {
+            const { nostrEventToCard } = await import('../utils/nostrEvents.js');
+            const cardProps = nostrEventToCard(event);
+            
+            // Extrahiere Board-ID aus 'a' tag: "30302:pubkey:board-id"
+            const aTag = event.tags.find((t: any) => t[0] === 'a');
+            if (!aTag) {
+                console.warn('[BoardStore] ⚠️ Card event without "a" tag, skipping:', event.id);
+                return;
+            }
+            
+            const boardRef = aTag[1]; // "30302:pubkey:board-id"
+            const boardId = boardRef.split(':')[2]; // "board-..."
+            
+            if (!boardId) {
+                console.warn('[BoardStore] ⚠️ Could not extract board ID from a-tag:', boardRef);
+                return;
+            }
+            
+            console.log('[BoardStore] 📨 Received card event:', {
+                cardId: cardProps.id,
+                boardId,
+                heading: cardProps.heading
+            });
+            
+            // Lade Board aus localStorage
+            const storageKey = `kanban-${boardId}`;
+            const storedRaw = typeof window !== 'undefined' 
+                ? window.localStorage.getItem(storageKey) 
+                : null;
+            
+            if (!storedRaw) {
+                console.warn('[BoardStore] ⚠️ Board not found for card:', boardId);
+                return;
+            }
+            
+            const storedData = JSON.parse(storedRaw);
+            
+            // Extrahiere Ziel-Spalte aus 's' tag oder finde erste Spalte
+            const sTag = event.tags.find((t: any) => t[0] === 's');
+            const targetColumnName = sTag ? sTag[1] : null;
+            
+            let targetColumnId: string | null = null;
+            
+            if (targetColumnName) {
+                const col = storedData.columns?.find((c: any) => c.name === targetColumnName);
+                targetColumnId = col?.id || null;
+            }
+            
+            if (!targetColumnId && storedData.columns?.length > 0) {
+                // Fallback: Erste Spalte
+                targetColumnId = storedData.columns[0].id;
+                console.warn('[BoardStore] ⚠️ Using fallback column for card:', targetColumnId);
+            }
+            
+            if (!targetColumnId) {
+                console.warn('[BoardStore] ⚠️ No target column found for card');
+                return;
+            }
+            
+            // Upsert Card in Board-Daten (ohne Board zu laden)
+            const targetColumn = storedData.columns.find((c: any) => c.id === targetColumnId);
+            if (!targetColumn) {
+                console.warn('[BoardStore] ⚠️ Target column not found:', targetColumnId);
+                return;
+            }
+            
+            // Prüfe ob Card bereits existiert (Update) oder neu ist (Insert)
+            const existingCardIndex = targetColumn.cards?.findIndex((c: any) => c.id === cardProps.id) ?? -1;
+            
+            if (existingCardIndex >= 0) {
+                // UPDATE: Ersetze existierende Card
+                targetColumn.cards[existingCardIndex] = cardProps;
+                console.log('[BoardStore] ✅ Card updated in localStorage:', cardProps.id);
+            } else {
+                // INSERT: Neue Card hinzufügen
+                if (!targetColumn.cards) targetColumn.cards = [];
+                targetColumn.cards.push(cardProps);
+                console.log('[BoardStore] ✅ Card inserted in localStorage:', cardProps.id);
+            }
+            
+            // Speichere aktualisiertes Board zurück
+            window.localStorage.setItem(storageKey, JSON.stringify(storedData));
+            
+            // Wenn dies das AKTIVE Board ist: Trigger Reload!
+            if (this.board.id === boardId) {
+                console.log('[BoardStore] 🔄 Active board detected, reloading...');
+                this.board = this.reconstructBoard(storedData);
+                this._columnOrder = this.board.columns.map((c) => c.id);
+                this.updateTrigger++;
+            }
+            
+        } catch (error) {
+            console.error('[BoardStore] ❌ Error handling card event:', error);
+        }
+    }
+
+    /**
+     * Verarbeitet Board Events (Kind 30301) aus der Subscription
+     * (ursprüngliche Logik aus sub.on('event', ...))
+     */
+    private async handleBoardEvent(event: any): Promise<void> {
+        try {
+            const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+            const boardProps = nostrEventToBoard(event);
+            const boardId = boardProps.id;
+            const storageKey = `kanban-${boardId}`;
+
+            // Last-Write-Wins Check
+            let acceptRemote = true;
+            let mergedSource: any = boardProps;
+
+            if (typeof window !== 'undefined') {
+                const existingRaw = window.localStorage.getItem(storageKey);
+                if (existingRaw) {
+                    try {
+                        const existing = JSON.parse(existingRaw);
+                        const localTs = existing.updatedAt
+                            ? new Date(existing.updatedAt).getTime()
+                            : existing.createdAt
+                                ? new Date(existing.createdAt).getTime()
+                                : 0;
+                        const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
+
+                        if (localTs && localTs > remoteTs) {
+                            acceptRemote = false;
+                            mergedSource = existing;
+                        }
+                    } catch {
+                        // bei Fehler remote akzeptieren
+                        acceptRemote = true;
+                    }
+                }
+            }
+
+            if (!acceptRemote) {
+                // Nur sicherstellen, dass ID registriert ist
+                if (boardId && !this.boardIds.includes(boardId)) {
+                    this.boardIds = [...this.boardIds, boardId];
+                    this.saveBoardIds();
+                }
+                return;
+            }
+
+            // ⚠️ KRITISCH: Merge-Strategie für Board-Updates
+            // Problem: boardProps.columns hat cards: [] (Karten sind Kind 30302 Events, nicht im Board-Event!)
+            // Lösung: Nur Spalten-Metadaten aktualisieren, Karten-Inhalte behalten
+            
+            // 🔴 WICHTIG: mergedProps außerhalb des if-Blocks deklarieren (wird später genutzt)
+            let mergedProps: any = boardProps;
+            
+            if (typeof window !== 'undefined') {
+                // 🔴 CRITICAL FIX: Board Events (Kind 30301) enthalten KEINE Card-Daten!
+                // Cards kommen separat via Card Events (Kind 30302).
+                // Daher: Für Cards IMMER localStorage nutzen (aktuellster Stand mit allen Cards)!
+                // Nur für Board-Metadaten (name, description, columns-struktur) nutze Remote Event.
+                
+                // IMMER localStorage für Card-Daten verwenden (enthält alle lokalen Änderungen)
+                const storedData = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+                
+                // 🔍 DEBUG: Wie viele Karten hat localStorage JETZT?
+                if (this.board.id === boardId) {
+                    console.log('[BoardStore] 🔍 LOCALSTORAGE STATE:', {
+                        boardId: this.board.id,
+                        columnsCount: storedData.columns?.length,
+                        cardsPerColumn: storedData.columns?.map((col: any) => ({
+                            id: col.id,
+                            name: col.name,
+                            cardCount: col.cards?.length || 0,
+                            cardIds: col.cards?.map((c: any) => c.id) || []
+                        }))
+                    });
+                }
+                
+                // 🔴 WICHTIG: IMMER localStorage für Cards nutzen (nie $state Board!)
+                // Grund: Board Event (Kind 30301) hat KEINE Card-Daten, nur Metadaten
+                const existingData = storedData;
+                
+                // MERGE: Ersetze nur Spalten-Metadaten (name, color, order)
+                // aber BEHALTE lokale Karten!
+                const remoteColumns = boardProps.columns || [];
+                
+                // 🔍 DEBUG: Was haben wir?
+                console.log('[BoardStore] 🔍 MERGE DEBUG:', {
+                    remoteColumnsCount: remoteColumns.length,
+                    existingColumnsCount: existingData.columns?.length,
+                    remoteColumnIds: remoteColumns.map((c: any) => c.id),
+                    existingColumnIds: existingData.columns?.map((c: any) => c.id),
+                    existingCardsPerColumn: existingData.columns?.map((c: any) => ({
+                        id: c.id,
+                        name: c.name,
+                        cardCount: c.cards?.length || 0
+                    }))
+                });
+                
+                const mergedColumns = remoteColumns.map((remoteCol) => {
+                    // 🔴 KRITISCH: Match by ID, NICHT by Index!
+                    // (Spalten-Reihenfolge kann zwischen local/remote unterschiedlich sein)
+                    const existingCol = existingData.columns?.find((col: any) => col.id === remoteCol.id);
+                    
+                    console.log('[BoardStore] 🔍 Column merge:', {
+                        remoteColId: remoteCol.id,
+                        remoteColName: remoteCol.name,
+                        existingColFound: !!existingCol,
+                        existingColName: existingCol?.name,
+                        existingCardsCount: existingCol?.cards?.length || 0,
+                        mergedCardsCount: (existingCol?.cards || []).length
+                    });
+                    
+                    return {
+                        ...remoteCol,  // Neue Spalten-Metadaten (name, color, order)
+                        cards: existingCol?.cards || [],  // 🔴 KRITISCH: Behalte lokale Karten!
+                    };
+                });
+                
+                // 🔴 WICHTIG: Reassign mergedProps (außerhalb deklariert)
+                mergedProps = {
+                    ...boardProps,
+                    columns: mergedColumns,  // Mit erhaltenen Karten
+                };
+                
+                const contextBoard = new Board(mergedProps);
+                const context = contextBoard.getContextData(true) as any;
+                const remoteCreated = event.created_at
+                    ? new Date(event.created_at * 1000).toISOString()
+                    : context.createdAt || new Date().toISOString();
+                context.createdAt = context.createdAt || remoteCreated;
+                context.updatedAt = context.updatedAt || remoteCreated;
+
+                window.localStorage.setItem(storageKey, JSON.stringify(context));
+                console.log('[BoardStore] 💾 Updated local board from Nostr subscription (Karten behalten):', storageKey);
+            }
+
+            // boardIds pflegen
+            if (boardId && !this.boardIds.includes(boardId)) {
+                this.boardIds = [...this.boardIds, boardId];
+                this.saveBoardIds();
+            }
+
+            // Aktives Board aktualisieren, falls betroffen
+            if (this.board.id === boardId) {
+                try {
+                    // 🔴 KRITISCH: Nutze mergedProps (mit erhaltenen Karten), NICHT mergedSource oder localStorage!
+                    // mergedProps wurde oben erstellt mit: remoteColumns + existingCol?.cards
+                    const effectiveData = mergedProps;
+
+                    if (effectiveData) {
+                        this.board = this.reconstructBoard(effectiveData);
+                        this._columnOrder = this.board.columns.map((c) => c.id);
+                        this.updateTrigger++;
+                        console.log('[BoardStore] 🔄 Active board updated from Nostr subscription:', boardId);
+                    }
+                } catch (err) {
+                    console.warn('[BoardStore] ⚠️ Failed to update active board from subscription:', err);
+                }
+            }
+        } catch (err) {
+            console.error('[BoardStore] ❌ Error processing Nostr board subscription event:', err);
+        }
+    }    /**
      * Cleanup bei App-Exit
      */
     public dispose(): void {
@@ -1100,6 +1218,23 @@ export class BoardStore {
                 
                 // 🔥 WICHTIG: Triggere updateTrigger damit $derived.by() in BoardsList neu berechnet wird!
                 this.updateTrigger++;
+                
+                // ✅ CRITICAL FIX: Publish Board to Nostr (Kind 30301 Event)
+                // Dies muss nach updateTrigger++ passieren, damit this.board aktuell ist
+                if (newBoard.publishState !== 'draft') {
+                    // Temporär das neue Board als aktives Board setzen für Publishing
+                    const previousBoard = this.board;
+                    this.board = newBoard;
+                    
+                    this.publishBoardAsync().catch(err => {
+                        console.error('⚠️ Async board publishing failed:', err);
+                    }).finally(() => {
+                        // Restore previous board (if user didn't load the new one yet)
+                        if (this.board.id === newBoardId) {
+                            this.board = previousBoard;
+                        }
+                    });
+                }
                 
             } catch (error) {
                 console.error('❌ Fehler beim Speichern des neuen Boards:', error);
