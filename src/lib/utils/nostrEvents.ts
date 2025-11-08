@@ -322,6 +322,10 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
   // Column-ID (MUSS Column-ID sein, NICHT Name!)
   const sTag = tags.find(t => t[0] === 's');
   const columnId = sTag ? sTag[1] : undefined;
+  
+  // Column-Name (Fallback für Spalten-Matching wenn ID nicht passt)
+  const colLabelTag = tags.find(t => t[0] === 'col_label');
+  const columnName = colLabelTag ? colLabelTag[1] : undefined;
 
   // Position in der Spalte
   const rankTag = tags.find(t => t[0] === 'rank');
@@ -340,6 +344,8 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     boardRef,
     columnId,
     rank,
+    // @ts-ignore - columnName ist nicht in CardProps, aber wir brauchen es für Fallback-Matching
+    columnName,
   };
 }
 

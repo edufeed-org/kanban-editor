@@ -338,6 +338,11 @@ export class BoardStore {
         await this.nostrIntegration.initialize(ndk, async () => {
             await this.loadBoardsFromNostr();
         });
+        
+        // ✅ KRITISCH: Subscription für Live-Updates SOFORT starten
+        // Damit auch ohne Login neue Boards in anderen Browsern sichtbar werden
+        this.subscribeToNostrUpdates();
+        console.log('[BoardStore] ✅ Live subscription started - ready for multi-browser sync');
     }
 
     public async loadBoardsFromNostr(): Promise<void> {
@@ -361,7 +366,52 @@ export class BoardStore {
         this.nostrIntegration.subscribeToUpdates(
             async (boardEvent) => {
                 console.log('📥 Board-Event erhalten:', boardEvent.id);
-                // Handle board update
+                
+                try {
+                    // Deserialisiere Board-Event
+                    const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+                    const boardProps = nostrEventToBoard(boardEvent);
+                    
+                    // Validierung: Board muss eine ID haben
+                    if (!boardProps.id) {
+                        console.warn('⚠️ Board-Event hat keine ID - skip');
+                        return;
+                    }
+                    
+                    // Prüfe ob dieses Board schon in der Liste ist
+                    if (this.boardIds.includes(boardProps.id)) {
+                        console.log(`✅ Board ${boardProps.id} already in list - skipping`);
+                        
+                        // ABER: Wenn es das aktive Board ist, sollten wir es aktualisieren
+                        if (this.board.id === boardProps.id) {
+                            console.log(`🔄 Updating active board from Nostr...`);
+                            const updatedBoard = new Board(boardProps);
+                            this.board = updatedBoard;
+                            this._columnOrder = updatedBoard.columns.map(c => c.id);
+                            this.triggerUpdate();
+                            console.log(`✅ Active board updated from Nostr`);
+                        }
+                        return;
+                    }
+                    
+                    // Neues Board! Zur Liste hinzufügen
+                    console.log(`✨ New board detected: ${boardProps.name}`);
+                    
+                    // 1. Board in localStorage speichern
+                    const newBoard = new Board(boardProps);
+                    BoardStorage.saveBoard(newBoard);
+                    
+                    // 2. Zur Board-Liste hinzufügen
+                    this.boardIds = [...this.boardIds, newBoard.id];
+                    BoardStorage.saveBoardIds(this.boardIds);
+                    
+                    // 3. Trigger Update um UI zu aktualisieren
+                    this.triggerUpdate();
+                    
+                    console.log(`✅ Board ${boardProps.name} added to list - now visible in sidebar`);
+                } catch (error) {
+                    console.error(`❌ Error processing board event:`, error);
+                }
             },
             async (cardEvent) => {
                 console.log('📥 Card-Event erhalten:', cardEvent.id);
@@ -383,6 +433,40 @@ export class BoardStore {
                     if (!cardProps.columnId) {
                         console.error(`❌ Card ${cardProps.id} hat keine columnId!`);
                         return;
+                    }
+                    
+                    // 🔍 Prüfe ob die Zielspalte existiert
+                    let targetColumn = this.board.findColumn(cardProps.columnId);
+                    
+                    if (!targetColumn) {
+                        console.warn(`⚠️ Target column ${cardProps.columnId} not found on this board`);
+                        
+                        // Fallback: Versuche Spalte anhand des Namens zu finden (wenn col_label vorhanden)
+                        const columnName = (cardProps as any).columnName;
+                        if (columnName) {
+                            targetColumn = this.board.columns.find(col => 
+                                col.name.toLowerCase() === columnName.toLowerCase()
+                            );
+                            
+                            if (targetColumn) {
+                                console.log(`✅ Found column by name: "${columnName}" (${targetColumn.id})`);
+                                // Aktualisiere columnId für korrekte Zuordnung
+                                cardProps.columnId = targetColumn.id;
+                            }
+                        }
+                        
+                        // Letzter Fallback: Erste Spalte nutzen
+                        if (!targetColumn && this.board.columns.length > 0) {
+                            targetColumn = this.board.columns[0];
+                            console.log(`⚠️ Using first column as fallback: "${targetColumn.name}" (${targetColumn.id})`);
+                            cardProps.columnId = targetColumn.id;
+                        }
+                        
+                        // Wenn immer noch keine Spalte gefunden: Skip
+                        if (!targetColumn) {
+                            console.error(`❌ No columns available on board - cannot add card ${cardProps.id}`);
+                            return;
+                        }
                     }
                     
                     // ⚠️ Upsert mit rank-Position

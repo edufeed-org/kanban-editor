@@ -283,12 +283,12 @@ export class NostrIntegration {
 
         console.log('[BoardStore] 🛰️ Subscribing to board AND card updates (collaborative mode)');
 
-        // ⚠️ FIX: Keine authors-Filter! Wir wollen Events von ALLEN Kollaboratoren
-        // Client-seitige Filterung erfolgt in onBoardEvent/onCardEvent (boardRef-Check)
+        // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
+        // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
         const sub = this.ndk.subscribe(
             {
                 kinds: [30301, 30302] as number[],
-                // ⚠️ authors: [pubkey] ENTFERNT - zu restriktiv für Collaboration!
+                authors: [pubkey] // Boards und Cards die dieser User erstellt hat
             } as any,
             { closeOnEose: false }
         );
