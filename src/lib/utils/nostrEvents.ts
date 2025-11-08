@@ -189,7 +189,8 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *   tags: [
  *     ["d", "card-id"],  // d-tag: unique identifier
  *     ["a", "30301:board-author:board-id"],  // Reference to board
- *     ["s", "Column Name"],  // Section/Column name
+ *     ["s", "column-id"],  // PRIMARY: Column-ID (laut Kanban-NIP)
+ *     ["col_label", "Column Name"],  // SECONDARY: Human-readable name
  *     ["title", "Card Title"],
  *     ["description", "..."],
  *     ["state", "draft|published|archived"],
@@ -201,10 +202,15 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *   content: "", // Full description as markdown
  * }
  * ```
+ * 
+ * ⚠️ WICHTIG: columnId UND columnName müssen übergeben werden!
+ * - columnId → s-Tag (PRIMARY, für eindeutige Zuordnung)
+ * - columnName → col_label-Tag (SECONDARY, für Anzeige)
  */
 export function cardToNostrEvent(
   card: Card,
-  columnName: string,
+  columnId: string,    // ⚠️ GEÄNDERT: War vorher columnName
+  columnName: string,  // ⚠️ NEU: Für col_label Tag
   rank: number,
   boardRef: string, // Format: "30301:author-pubkey:board-id"
   ndk: NDK
@@ -215,7 +221,8 @@ export function cardToNostrEvent(
   const tags: string[][] = [
     ['d', card.id],
     ['a', boardRef], // Reference to board
-    ['s', columnName], // Section/Column
+    ['s', columnId], // PRIMARY: Column-ID (laut Kanban-NIP!)
+    ['col_label', columnName], // SECONDARY: Human-readable name
     ['title', card.heading],
     ['rank', String(rank)],
   ];
@@ -265,6 +272,9 @@ export function cardToNostrEvent(
 
 /**
  * Konvertiert ein Nostr Event zurück zu CardProps
+ * 
+ * ⚠️ WICHTIG: Gibt auch Nostr-Metadaten zurück (rank, columnId, boardRef)
+ * Diese sind KRITISCH für Echtzeit-Synchronisation!
  */
 export function nostrEventToCard(event: NDKEvent): CardProps {
   const tags = event.tags || [];
@@ -304,6 +314,19 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     title: t[2] || '',
   }));
 
+  // ⚠️ NEU: Extract Nostr-Metadaten für Synchronisation
+  // Board-Referenz (Format: "30301:pubkey:board-id")
+  const aTag = tags.find(t => t[0] === 'a');
+  const boardRef = aTag ? aTag[1] : undefined;
+
+  // Column-ID (MUSS Column-ID sein, NICHT Name!)
+  const sTag = tags.find(t => t[0] === 's');
+  const columnId = sTag ? sTag[1] : undefined;
+
+  // Position in der Spalte
+  const rankTag = tags.find(t => t[0] === 'rank');
+  const rank = rankTag ? parseInt(rankTag[1], 10) : undefined;
+
   return {
     id,
     heading,
@@ -313,6 +336,10 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     links: links.length > 0 ? links : undefined,
     publishState,
     author,
+    // ⚠️ NOSTR-METADATEN: Für Echtzeit-Sync
+    boardRef,
+    columnId,
+    rank,
   };
 }
 

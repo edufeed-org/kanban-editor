@@ -194,6 +194,10 @@ export class NostrIntegration {
 
     /**
      * Subscribed zu Board- und Card-Updates
+     * 
+     * ⚠️ WICHTIG: Für kollaborative Boards - empfange Events von ALLEN Teilnehmern!
+     * - Board-Events (Kind 30301): Von author + maintainers
+     * - Card-Events (Kind 30302): Alle mit #a-Tag auf dieses Board
      */
     public subscribeToUpdates(
         onBoardEvent: (event: any) => Promise<void>,
@@ -222,20 +226,24 @@ export class NostrIntegration {
             }
         }
 
-        console.log('[BoardStore] 🛰️ Subscribing to board AND card updates for pubkey:', pubkey);
+        console.log('[BoardStore] 🛰️ Subscribing to board AND card updates (collaborative mode)');
 
+        // ⚠️ FIX: Keine authors-Filter! Wir wollen Events von ALLEN Kollaboratoren
+        // Client-seitige Filterung erfolgt in onBoardEvent/onCardEvent (boardRef-Check)
         const sub = this.ndk.subscribe(
             {
                 kinds: [30301, 30302] as number[],
-                authors: [pubkey]
+                // ⚠️ authors: [pubkey] ENTFERNT - zu restriktiv für Collaboration!
             } as any,
             { closeOnEose: false }
         );
 
         sub.on('event', async (event: any) => {
             if (event.kind === 30301) {
+                // Board-Event: Client-seitige Filterung in Handler
                 await onBoardEvent(event);
             } else if (event.kind === 30302) {
+                // Card-Event: Client-seitige Filterung (boardRef-Check)
                 await onCardEvent(event);
             }
         });
@@ -276,6 +284,11 @@ export class NostrIntegration {
 
     /**
      * Publiziert Card zu Nostr
+     * 
+     * ⚠️ WICHTIG: Sendet Column-ID UND Name (laut Kanban-NIP)
+     * - s-Tag: Column-ID (PRIMARY)
+     * - col_label-Tag: Column-Name (SECONDARY)
+     * - rank: Position in der Spalte
      */
     public async publishCard(board: Board, cardId: string): Promise<void> {
         if (!this.ndk) return;
@@ -288,10 +301,23 @@ export class NostrIntegration {
             }
 
             const { card, column } = result;
-            const columnIndex = board.columns.indexOf(column);
-            const boardRef = `30302:${board.author || 'unknown'}:${board.id}`;
+            
+            // ⚠️ FIX: rank ist die Position der Karte IN der Spalte (nicht columnIndex!)
+            const rank = column.cards.indexOf(card);
+            
+            // ⚠️ FIX: boardRef muss Kind 30301 sein (nicht 30302!)
+            const boardRef = `30301:${board.author || 'unknown'}:${board.id}`;
 
-            const event = cardToNostrEvent(card, column.name, columnIndex, boardRef, this.ndk);
+            // ⚠️ GEÄNDERT: Jetzt columnId UND columnName übergeben
+            const event = cardToNostrEvent(
+                card, 
+                column.id,      // ⚠️ Column-ID (nicht Name!)
+                column.name,    // ⚠️ Column-Name (für Display)
+                rank,           // ⚠️ Position in Spalte
+                boardRef, 
+                this.ndk
+            );
+            
             const publishState = card.publishState || 'draft';
             const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
             

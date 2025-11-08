@@ -37,6 +37,10 @@ export interface CardProps {
     publishState?: PublishState;
     author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
     authorName?: string; // ← NEU: Lesbar Display Name für UI (z.B. "Johan Amos Comenius")
+    // ⚠️ NOSTR-SPECIFIC: Metadaten für Echtzeit-Synchronisation
+    rank?: number; // Position in der Spalte (aus Nostr Event "rank"-Tag)
+    columnId?: string; // Spalten-ID (aus Nostr Event "s"-Tag - muss Column-ID sein, nicht Name!)
+    boardRef?: string; // Board-Referenz (aus "a"-Tag, Format: "30301:pubkey:board-id")
 }
 
 export interface ColumnProps {
@@ -357,13 +361,18 @@ export class Board {
 
     /**
      * Upsert-Operation: Fügt Karte hinzu ODER aktualisiert sie, wenn sie bereits existiert
-     * Spaltenübergreifend! Wenn die Karte woanders existiert, wird sie nicht verschoben.
+     * Spaltenübergreifend! Unterstützt jetzt auch Spalten- und Positionswechsel.
+     * 
+     * ⚠️ WICHTIG: Für Nostr-Synchronisation!
+     * - Wenn Karte existiert: Update (Position/Spalte KANN geändert werden)
+     * - Wenn Karte neu: Insert (an rank-Position oder am Ende)
      * 
      * @param targetColumnId - Spalte, in die die Karte aufgenommen wird
      * @param cardProps - Die Kartendaten
+     * @param rank - Optional: Position in der Spalte (0-basiert). Wenn undefined, wird am Ende eingefügt.
      * @returns Die neue oder aktualisierte Karte
      */
-    upsertCard(targetColumnId: string, cardProps: CardProps): Card {
+    upsertCard(targetColumnId: string, cardProps: CardProps, rank?: number): Card {
         const targetColumn = this.findColumn(targetColumnId);
         if (!targetColumn) {
             throw new Error(`Target column ${targetColumnId} not found`);
@@ -373,14 +382,44 @@ export class Board {
         const existing = this.findCardById(cardProps.id!);
         
         if (existing) {
-            // ✅ UPDATE: Karte existiert bereits - nur Daten aktualisieren
-            // Die Karte BLEIBT in ihrer aktuellen Spalte!
-            existing.card.update(cardProps);
-            return existing.card;
+            // ✅ UPDATE: Karte existiert bereits
+            const { card, column: currentColumn } = existing;
+            
+            // Update Kartendaten
+            card.update(cardProps);
+            
+            // ⚠️ NEU: Prüfe ob Spalte oder Position geändert wurde
+            if (currentColumn.id !== targetColumnId || (rank !== undefined && currentColumn.cards.indexOf(card) !== rank)) {
+                // Karte aus alter Spalte entfernen
+                currentColumn.cards = currentColumn.cards.filter(c => c.id !== card.id);
+                
+                // Karte in neue Spalte an rank-Position einfügen
+                if (rank !== undefined && rank >= 0 && rank <= targetColumn.cards.length) {
+                    // Einfügen an spezifischer Position
+                    const newCards = [...targetColumn.cards];
+                    newCards.splice(rank, 0, card);
+                    targetColumn.cards = newCards;
+                } else {
+                    // Am Ende einfügen
+                    targetColumn.cards = [...targetColumn.cards, card];
+                }
+            }
+            
+            return card;
         } else {
             // ✅ INSERT: Neue Karte - zu Zielspalte hinzufügen
             const newCard = new Card(cardProps);
-            targetColumn.cards = [...targetColumn.cards, newCard];
+            
+            if (rank !== undefined && rank >= 0 && rank <= targetColumn.cards.length) {
+                // Einfügen an spezifischer Position
+                const newCards = [...targetColumn.cards];
+                newCards.splice(rank, 0, newCard);
+                targetColumn.cards = newCards;
+            } else {
+                // Am Ende einfügen
+                targetColumn.cards = [...targetColumn.cards, newCard];
+            }
+            
             return newCard;
         }
     }

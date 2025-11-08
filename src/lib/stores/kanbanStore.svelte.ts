@@ -6,6 +6,7 @@ import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
+import { nostrEventToCard } from '../utils/nostrEvents.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
 // Module imports
@@ -320,7 +321,36 @@ export class BoardStore {
             },
             async (cardEvent) => {
                 console.log('📥 Card-Event erhalten:', cardEvent.id);
-                // Handle card update
+                
+                try {
+                    // ⚠️ Deserialisiere Card-Event
+                    const cardProps = nostrEventToCard(cardEvent);
+                    
+                    // ⚠️ Validierung: Gehört die Karte zu diesem Board?
+                    if (cardProps.boardRef) {
+                        const expectedBoardRef = `30301:${this.board.author}:${this.board.id}`;
+                        if (cardProps.boardRef !== expectedBoardRef) {
+                            console.warn(`⚠️ Card ${cardProps.id} gehört zu anderem Board: ${cardProps.boardRef}`);
+                            return;
+                        }
+                    }
+                    
+                    // ⚠️ columnId ist KRITISCH - ohne geht nichts!
+                    if (!cardProps.columnId) {
+                        console.error(`❌ Card ${cardProps.id} hat keine columnId!`);
+                        return;
+                    }
+                    
+                    // ⚠️ Upsert mit rank-Position
+                    this.board.upsertCard(cardProps.columnId, cardProps, cardProps.rank);
+                    
+                    // ⚠️ Triggere Update für UI
+                    this.triggerUpdate();
+                    
+                    console.log(`✅ Card ${cardProps.id} synchronized to column ${cardProps.columnId} at rank ${cardProps.rank}`);
+                } catch (error) {
+                    console.error(`❌ Error processing card event:`, error);
+                }
             }
         );
     }

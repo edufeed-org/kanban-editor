@@ -469,6 +469,8 @@ export class SyncManager {
         retries: e.retries,
         type: e.type,
         priority: e.priority || 'normal',
+        publishState: e.publishState, // ⚠️ FIX: publishState persistieren!
+        targetRelays: e.targetRelays, // ⚠️ FIX: targetRelays persistieren!
       }));
 
       localStorage.setItem('nostr-event-queue', JSON.stringify(queueData));
