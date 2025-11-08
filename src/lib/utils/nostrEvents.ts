@@ -407,7 +407,8 @@ export function createDeletionEvent(
   targetIdentifier: string,
   isReplaceableEvent: boolean = false,
   reason?: string,
-  ndk?: NDK
+  ndk?: NDK,
+  eventId?: string  // ← NEU: Optionale tatsächliche Event-ID
 ): NDKEvent {
   const event = new NDKEvent(ndk);
   event.kind = EVENT_KINDS.DELETION;
@@ -415,8 +416,24 @@ export function createDeletionEvent(
   // NIP-09: Für replaceable events 'a' tags nutzen, für regular events 'e' tags
   if (isReplaceableEvent) {
     event.tags = [['a', targetIdentifier]];
+    
+    // ⚠️ NIP-09: 'k' tag für den Kind des zu löschenden Events SOLLTE hinzugefügt werden
+    // Format: "30302:pubkey:d-tag" → Kind ist "30302"
+    const kind = targetIdentifier.split(':')[0];
+    if (kind) {
+      event.tags.push(['k', kind]);
+    }
+    
+    // ⚠️ FIX: Manche Relays brauchen AUCH die Event-ID ('e' tag)
+    // für replaceable events, um sie zu löschen!
+    if (eventId) {
+      event.tags.push(['e', eventId]);
+    }
   } else {
     event.tags = [['e', targetIdentifier]];
+    
+    // Für regular events ist der Kind nicht aus der ID extrahierbar
+    // (müsste separat übergeben werden)
   }
   
   event.content = reason || 'Event deleted';

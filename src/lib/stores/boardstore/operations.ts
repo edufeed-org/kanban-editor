@@ -4,6 +4,7 @@
 import { Board, Column, Card, type CardProps, type ColumnProps } from '../../classes/BoardModel.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
+import type { NostrIntegration } from './nostr.js';
 
 export class BoardOperations {
     /**
@@ -56,18 +57,31 @@ export class BoardOperations {
     /**
      * Löscht eine Card
      */
-    public static deleteCard(
+    public static async deleteCard(
         board: Board,
-        cardId: string
-    ): boolean {
+        cardId: string,
+        nostrIntegration?: NostrIntegration
+    ): Promise<boolean> {
         const result = board.findCardAndColumn(cardId);
         if (!result) {
             console.error(`❌ Karte ${cardId} nicht gefunden`);
             return false;
         }
 
+        // 1. Lokal löschen
         result.column.deleteCard(cardId);
         console.log(`✅ Karte gelöscht: ${cardId}`);
+        
+        // 2. Auf Nostr löschen (NIP-09 Deletion Event)
+        if (nostrIntegration && result.card) {
+            try {
+                await nostrIntegration.deleteCard(result.card);
+                console.log(`🛰️ Card deletion event published to Nostr`);
+            } catch (error) {
+                console.error('❌ Fehler beim Publizieren des Card-Deletion-Events:', error);
+            }
+        }
+        
         return true;
     }
 

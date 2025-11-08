@@ -715,20 +715,17 @@ export class BoardStore {
         }
     }
 
-    public deleteCard(cardId: string): void {
-        // 1. Card-Referenz speichern für Nostr-Löschung
-        const result = this.board.findCardAndColumn(cardId);
-        const cardToDelete = result?.card;
-
-        // 2. Lokal löschen
-        if (BoardOperations.deleteCard(this.board, cardId)) {
+    public async deleteCard(cardId: string): Promise<void> {
+        // Lösche Card lokal UND auf Nostr (via BoardOperations)
+        const success = await BoardOperations.deleteCard(
+            this.board, 
+            cardId, 
+            this.nostrIntegration
+        );
+        
+        if (success) {
             this.triggerUpdate();
             this.publishBoardAsync();
-
-            // 3. Auf Nostr löschen (asynchron)
-            if (cardToDelete) {
-                this.nostrIntegration.deleteCard(cardToDelete);
-            }
         }
     }
 
