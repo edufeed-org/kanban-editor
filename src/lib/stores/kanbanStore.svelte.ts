@@ -215,6 +215,15 @@ export class BoardStore {
         // ⚡ WICHTIG: Metadata aus localStorage lesen
         const boards = BoardStorage.getAllBoardsMetadata(this.boardIds);
         
+        // ⚡ DEBUG: Duplikate-Check
+        const boardIdsInList = boards.map(b => b.id);
+        const duplicates = boardIdsInList.filter((id, index) => boardIdsInList.indexOf(id) !== index);
+        if (duplicates.length > 0) {
+            console.error(`🔴 DUPLIKATE in getAllBoards() gefunden:`, duplicates);
+            console.log('  boardIds:', this.boardIds);
+            console.log('  boards:', boards.map(b => ({ id: b.id, name: b.name })));
+        }
+        
         // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
         const currentBoardIndex = boards.findIndex(b => b.id === this.board.id);
         if (currentBoardIndex !== -1) {
@@ -251,8 +260,15 @@ export class BoardStore {
         });
 
         BoardStorage.saveBoard(board);
-        this.boardIds = [...this.boardIds, board.id];
-        BoardStorage.saveBoardIds(this.boardIds);
+        
+        // ⚡ FIX: Duplikate vermeiden! Nur hinzufügen wenn nicht bereits in Liste
+        if (!this.boardIds.includes(board.id)) {
+            this.boardIds = [...this.boardIds, board.id];
+            BoardStorage.saveBoardIds(this.boardIds);
+            console.log(`✅ Board ${board.name} added to list - now visible in sidebar`);
+        } else {
+            console.warn(`⚠️ Board ${board.id} bereits in boardIds-Liste - DUPLIKAT vermieden`);
+        }
 
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
@@ -354,8 +370,10 @@ export class BoardStore {
             this.boardIds,
             this.board,
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
-                this.boardIds = updatedBoardIds;
+                // ⚡ FIX: Duplikate vermeiden via Set-Deduplication
+                this.boardIds = [...new Set([...this.boardIds, ...updatedBoardIds])];
                 BoardStorage.saveBoardIds(this.boardIds);
+                console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
                 
                 if (switched && newBoard) {
                     this.board = newBoard;
@@ -432,11 +450,16 @@ export class BoardStore {
                     const newBoard = new Board(boardProps);
                     BoardStorage.saveBoard(newBoard);
                     
-                    this.boardIds = [...this.boardIds, newBoard.id];
-                    BoardStorage.saveBoardIds(this.boardIds);
+                    // ⚡ FIX: Duplikate vermeiden
+                    if (!this.boardIds.includes(newBoard.id)) {
+                        this.boardIds = [...this.boardIds, newBoard.id];
+                        BoardStorage.saveBoardIds(this.boardIds);
+                        console.log(`✅ Board ${boardProps.name} added to list - now visible in sidebar`);
+                    } else {
+                        console.warn(`⚠️ Board ${newBoard.id} bereits in Liste - DUPLIKAT vermieden`);
+                    }
                     
                     this.triggerUpdate();
-                    console.log(`✅ Board ${boardProps.name} added to list - now visible in sidebar`);
                 } else {
                     // ===== AKTIVES BOARD UPDATE =====
                     console.log(`🔄 Updating active board metadata...`);
@@ -828,13 +851,15 @@ export class BoardStore {
     }
 
     public saveImportedBoard(board: Board, overwriteExisting = false): string {
+        // ⚡ FIX: Duplikate vermeiden mit Set
         if (overwriteExisting) {
-            const existingIdx = this.boardIds.indexOf(board.id);
-            if (existingIdx === -1) {
+            if (!this.boardIds.includes(board.id)) {
                 this.boardIds = [...this.boardIds, board.id];
             }
         } else {
-            this.boardIds = [...this.boardIds, board.id];
+            if (!this.boardIds.includes(board.id)) {
+                this.boardIds = [...this.boardIds, board.id];
+            }
         }
 
         BoardStorage.saveBoardIds(this.boardIds);
