@@ -147,7 +147,8 @@ export function getTargetRelays(options: RelaySelectionOptions): string[] {
     switch (draftPublishingMode) {
       case 'private-relays':
         if (relaysPrivate.length === 0) {
-          console.warn('[RelaySelection] ⚠️ No private relays configured! Draft will be local-only.');
+          // ⚠️ SICHERHEIT: KEIN Fallback zu public relays für Drafts!
+          console.error('[RelaySelection] 🔒 SECURITY: No private relays configured! Draft will be local-only to prevent leaking private content.');
           return [];
         }
         console.log('[RelaySelection] publishState=draft + mode=private-relays → Using private relays');

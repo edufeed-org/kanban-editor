@@ -9,6 +9,7 @@ import { settingsStore } from '../settingsStore.svelte.js';
 import { authStore } from '../authStore.svelte.js';
 import { BoardStorage } from './storage.js';
 import type NDK from '@nostr-dev-kit/ndk';
+import { toast } from 'svelte-sonner';
 
 export class NostrIntegration {
     private ndk?: NDK;
@@ -327,8 +328,10 @@ export class NostrIntegration {
      * - Card-Events (Kind 30302): Alle mit #a-Tag auf dieses Board
      */
     public subscribeToUpdates(
-        onBoardEvent: (event: any) => Promise<void>,
-        onCardEvent: (event: any) => Promise<void>
+        currentBoard: Board,
+        boardIds: string[],
+        onBoardUpdate: (boardProps: any, isNewBoard: boolean) => void,
+        onCardUpdate: (cardProps: any) => void
     ): void {
         if (!this.ndk) {
             console.log('[BoardStore] ℹ️ Nostr not initialized, skip subscribe');
@@ -367,15 +370,99 @@ export class NostrIntegration {
 
         sub.on('event', async (event: any) => {
             if (event.kind === 30301) {
-                // Board-Event: Client-seitige Filterung in Handler
-                await onBoardEvent(event);
+                // ===== BOARD-EVENT HANDLER =====
+                await this.handleBoardEvent(event, currentBoard, boardIds, onBoardUpdate);
             } else if (event.kind === 30302) {
-                // Card-Event: Client-seitige Filterung (boardRef-Check)
-                await onCardEvent(event);
+                // ===== CARD-EVENT HANDLER =====
+                await this.handleCardEvent(event, currentBoard, onCardUpdate);
             }
         });
 
         this.boardSubscription = sub;
+    }
+
+    /**
+     * Handler für Board-Events (Kind 30301)
+     */
+    private async handleBoardEvent(
+        boardEvent: any,
+        currentBoard: Board,
+        boardIds: string[],
+        onBoardUpdate: (boardProps: any, isNewBoard: boolean) => void
+    ): Promise<void> {
+        console.log('📥 Board-Event erhalten:', boardEvent.id);
+        
+        try {
+            // Deserialisiere Board-Event
+            const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
+            const boardProps = nostrEventToBoard(boardEvent);
+            
+            // Validierung: Board muss eine ID haben
+            if (!boardProps.id) {
+                console.warn('⚠️ Board-Event hat keine ID - skip');
+                return;
+            }
+            
+            // Prüfe ob dieses Board schon in der Liste ist
+            const isExisting = boardIds.includes(boardProps.id);
+            const isActiveBoard = currentBoard.id === boardProps.id;
+            
+            if (isExisting) {
+                console.log(`✅ Board ${boardProps.id} already in list`);
+                
+                if (isActiveBoard) {
+                    console.log(`🔄 Updating active board metadata from Nostr...`);
+                    // Callback für Update (nicht für neues Board)
+                    onBoardUpdate(boardProps, false);
+                }
+                return;
+            }
+            
+            // Neues Board! 
+            console.log(`✨ New board detected: ${boardProps.name}`);
+            onBoardUpdate(boardProps, true);
+            
+        } catch (error) {
+            console.error(`❌ Error processing board event:`, error);
+        }
+    }
+
+    /**
+     * Handler für Card-Events (Kind 30302)
+     */
+    private async handleCardEvent(
+        cardEvent: any,
+        currentBoard: Board,
+        onCardUpdate: (cardProps: any) => void
+    ): Promise<void> {
+        console.log('📥 Card-Event erhalten:', cardEvent.id);
+        
+        try {
+            // Deserialisiere Card-Event
+            const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
+            const cardProps = nostrEventToCard(cardEvent);
+            
+            // Validierung: Gehört die Karte zu diesem Board?
+            if (cardProps.boardRef) {
+                const expectedBoardRef = `30301:${currentBoard.author}:${currentBoard.id}`;
+                if (cardProps.boardRef !== expectedBoardRef) {
+                    console.warn(`⚠️ Card ${cardProps.id} gehört zu anderem Board: ${cardProps.boardRef}`);
+                    return;
+                }
+            }
+            
+            // columnId ist KRITISCH - ohne geht nichts!
+            if (!cardProps.columnId) {
+                console.error(`❌ Card ${cardProps.id} hat keine columnId!`);
+                return;
+            }
+            
+            // Callback mit den Card-Props
+            onCardUpdate(cardProps);
+            
+        } catch (error) {
+            console.error(`❌ Error processing card event:`, error);
+        }
     }
 
     /**
@@ -395,6 +482,20 @@ export class NostrIntegration {
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
+
+            // ⚠️ SICHERHEITS-CHECK: Warne wenn Draft nicht publiziert werden kann
+            if (normalizedState === 'draft' && targetRelays.length === 0) {
+                const mode = settingsStore.settings.draftPublishingMode;
+                
+                if (mode === 'private-relays') {
+                    toast.warning('🔒 Keine privaten Relays konfiguriert', {
+                        description: 'Board-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
+                        duration: 6000
+                    });
+                    console.warn('[NostrIntegration] 🔒 Draft board cannot be published - no private relays configured');
+                }
+                // Falls local-only: Kein Toast (das ist erwartetes Verhalten)
+            }
 
             const syncManager = getSyncManager();
             await syncManager.publishOrQueue(
@@ -454,6 +555,19 @@ export class NostrIntegration {
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
+
+            // ⚠️ SICHERHEITS-CHECK: Warne wenn Draft nicht publiziert werden kann
+            if (normalizedState === 'draft' && targetRelays.length === 0) {
+                const mode = settingsStore.settings.draftPublishingMode;
+                
+                if (mode === 'private-relays') {
+                    toast.warning('🔒 Keine privaten Relays konfiguriert', {
+                        description: 'Karten-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
+                        duration: 6000
+                    });
+                    console.warn('[NostrIntegration] 🔒 Draft card cannot be published - no private relays configured');
+                }
+            }
 
             const syncManager = getSyncManager();
             await syncManager.publishOrQueue(
