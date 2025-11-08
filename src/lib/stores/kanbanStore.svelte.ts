@@ -276,6 +276,10 @@ export class BoardStore {
 
         ChatIntegration.reset();
         console.log(`✅ Board geladen: ${board.name}`);
+        
+        // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
+        this.loadCardsFromNostr(board);
+        
         return true;
     }
 
@@ -362,6 +366,60 @@ export class BoardStore {
         );
     }
 
+    private async loadCardsFromNostr(board: Board): Promise<void> {
+        await this.nostrIntegration.loadCardsForBoard(
+            board,
+            (cardProps: any) => {
+                console.log('🃏 Card vom Relay geladen:', cardProps.id, 'für Spalte:', cardProps.columnId);
+                
+                try {
+                    // Prüfe ob Card bereits existiert (Duplikate vermeiden!)
+                    const existing = this.board.findCardById(cardProps.id);
+                    if (existing) {
+                        console.log('✅ Card bereits vorhanden, skip:', cardProps.id);
+                        return;
+                    }
+                    
+                    // Finde Zielspalte
+                    let targetColumn = this.board.findColumn(cardProps.columnId);
+                    
+                    // Fallback: Name-basiertes Matching
+                    if (!targetColumn && (cardProps as any).columnName) {
+                        targetColumn = this.board.columns.find(col => 
+                            col.name.toLowerCase() === ((cardProps as any).columnName || '').toLowerCase()
+                        );
+                        if (targetColumn) {
+                            console.log(`✅ Column matched by name: "${(cardProps as any).columnName}"`);
+                            cardProps.columnId = targetColumn.id;
+                        }
+                    }
+                    
+                    // Letzter Fallback: Erste Spalte
+                    if (!targetColumn && this.board.columns.length > 0) {
+                        targetColumn = this.board.columns[0];
+                        console.log(`⚠️ Using first column as fallback: "${targetColumn.name}"`);
+                        cardProps.columnId = targetColumn.id;
+                    }
+                    
+                    if (!targetColumn) {
+                        console.error(`❌ No column found for card ${cardProps.id}`);
+                        return;
+                    }
+                    
+                    // Card via upsert hinzufügen (mit rank-Position)
+                    this.board.upsertCard(cardProps.columnId, cardProps, cardProps.rank);
+                    
+                } catch (error) {
+                    console.error(`❌ Error loading card from Nostr:`, error);
+                }
+            }
+        );
+        
+        // Nach dem Laden aller Cards: UI aktualisieren
+        this.triggerUpdate();
+        console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
+    }
+
     public subscribeToNostrUpdates(): void {
         this.nostrIntegration.subscribeToUpdates(
             async (boardEvent) => {
@@ -399,6 +457,11 @@ export class BoardStore {
                             
                             // 2. Spalten aktualisieren (aber Cards beibehalten!)
                             if (boardProps.columns && boardProps.columns.length > 0) {
+                                // ⚠️ WICHTIG: Spalten-Reihenfolge synchronisieren!
+                                const newColumnOrder = boardProps.columns
+                                    .map(c => c.id)
+                                    .filter((id): id is string => !!id);
+                                
                                 // Für jede Spalte im Event: Update oder Create
                                 for (const newColProps of boardProps.columns) {
                                     const existingCol = this.board.findColumn(newColProps.id || '');
@@ -415,8 +478,29 @@ export class BoardStore {
                                     }
                                 }
                                 
-                                // ⚠️ OPTIONAL: Spalten die im Event fehlen löschen?
-                                // Das könnte zu Datenverlust führen, daher erstmal NICHT implementiert
+                                // ⚠️ NEU: Spalten-Reihenfolge aktualisieren!
+                                // Reorder this.board.columns array basierend auf newColumnOrder
+                                const reorderedColumns = [];
+                                for (const colId of newColumnOrder) {
+                                    const col = this.board.findColumn(colId);
+                                    if (col) {
+                                        reorderedColumns.push(col);
+                                    }
+                                }
+                                
+                                // Füge Spalten hinzu, die nicht in newColumnOrder sind (sollte nicht passieren, aber sicher ist sicher)
+                                for (const col of this.board.columns) {
+                                    if (!newColumnOrder.includes(col.id)) {
+                                        console.warn(`⚠️ Column ${col.id} not in remote order - appending at end`);
+                                        reorderedColumns.push(col);
+                                    }
+                                }
+                                
+                                // Aktualisiere board.columns UND _columnOrder
+                                this.board.columns = reorderedColumns;
+                                this._columnOrder = newColumnOrder;
+                                
+                                console.log(`✅ Column order synchronized:`, this._columnOrder);
                             }
                             
                             // 3. UI aktualisieren (aber NICHT triggerUpdate - würde wieder zu Nostr publishen!)

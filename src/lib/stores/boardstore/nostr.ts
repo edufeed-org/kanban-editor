@@ -248,6 +248,78 @@ export class NostrIntegration {
     }
 
     /**
+     * Lädt alle Cards für ein bestimmtes Board vom Relay
+     * 
+     * ⚠️ WICHTIG: Wird beim initialen Board-Load aufgerufen, um alle existierenden Cards zu laden
+     */
+    public async loadCardsForBoard(
+        board: Board,
+        onCardLoaded: (cardProps: any) => void
+    ): Promise<void> {
+        if (!this.ndk) {
+            console.log('[BoardStore] ℹ️ Nostr not initialized, skip loadCardsForBoard');
+            return;
+        }
+
+        const pubkey =
+            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
+            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
+            null;
+
+        if (!pubkey || !board.author) {
+            console.log('[BoardStore] ℹ️ No pubkey or board author, skip loadCardsForBoard');
+            return;
+        }
+
+        try {
+            // Baue die a-tag Referenz: "30301:pubkey:board-id"
+            const boardRef = `30301:${board.author}:${board.id}`;
+            
+            console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
+
+            // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
+            const cardFilter = {
+                kinds: [30302],
+                '#a': [boardRef]
+            };
+
+            const cardEvents = await this.ndk.fetchEvents(cardFilter as any);
+
+            if (!cardEvents || cardEvents.size === 0) {
+                console.log('[BoardStore] ℹ️ No cards found on Nostr for board:', board.id);
+                return;
+            }
+
+            console.log('[BoardStore] 🃏 Found', cardEvents.size, 'card(s) on relay for board:', board.name);
+
+            // Deserialisiere alle Card-Events
+            const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
+            
+            for (const cardEvent of cardEvents) {
+                try {
+                    const cardProps = nostrEventToCard(cardEvent);
+                    
+                    // Validiere dass Card zum richtigen Board gehört
+                    if (cardProps.boardRef !== boardRef) {
+                        console.warn('[BoardStore] ⚠️ Card boardRef mismatch:', cardProps.boardRef, 'expected:', boardRef);
+                        continue;
+                    }
+                    
+                    // Callback mit den Card-Props aufrufen
+                    onCardLoaded(cardProps);
+                    
+                } catch (err) {
+                    console.error('[BoardStore] ❌ Failed to deserialize card event:', err);
+                }
+            }
+
+            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name);
+        } catch (error) {
+            console.error('[BoardStore] ❌ Error while loading cards from Nostr:', error);
+        }
+    }
+
+    /**
      * Subscribed zu Board- und Card-Updates
      * 
      * ⚠️ WICHTIG: Für kollaborative Boards - empfange Events von ALLEN Teilnehmern!
