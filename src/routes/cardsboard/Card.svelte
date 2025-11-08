@@ -202,8 +202,8 @@
 	function handleEditSave(cardId: string, updates: any) {
 		// Speichere die Änderungen im BoardStore
 		boardStore.editCard(cardId, {
-			name: updates.heading,
-			description: updates.content,
+			heading: updates.heading,
+			content: updates.content,
 			image: updates.image,
 			color: updates.color,
 			labels: updates.labels
@@ -222,7 +222,7 @@
 		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
 		if (editName !== card.name) {
 			console.log('📝 Card name changed:', { old: card.name, new: editName });
-			boardStore.editCard(String(card.id), { name: editName });
+			boardStore.editCard(String(card.id), { heading: editName });
 		}
 	}
 

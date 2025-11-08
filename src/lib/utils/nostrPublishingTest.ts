@@ -133,9 +133,9 @@ export function simulateCardUpdate(): void {
     // 4. Update card (triggers publishing)
     const testDescription = `[TEST UPDATE ${new Date().toISOString()}] This card was updated via nostrPublishingTest.ts`;
     
-    console.log('🔄 Updating card description...');
+    console.log('🔄 Updating card content...');
     boardStore.editCard(firstCard.id, {
-        description: testDescription
+        content: testDescription
     });
     
     console.log('✅ Card updated!');
