@@ -724,10 +724,20 @@ export class BoardStore {
     }
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
-        const newOrder = BoardOperations.syncBoardState(this.board, this._columnOrder, uiColumns);
-        this._columnOrder = newOrder;
+        const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
+            this.board,
+            this._columnOrder,
+            uiColumns
+        );
+        this._columnOrder = newColumnOrder;
         this.triggerUpdate();
         this.publishBoardAsync();
+        
+        // Publiziere verschobene Cards
+        for (const cardId of movedCardIds) {
+            this.publishCardAsync(cardId);
+        }
+        
         return true; // Immer erfolgreich, Permission wird in publishBoardAsync geprüft
     }
 

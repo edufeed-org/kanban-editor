@@ -151,7 +151,7 @@ export class BoardOperations {
         board: Board,
         columnOrder: string[],
         uiColumns: UIColumn[]
-    ): string[] {
+    ): { newColumnOrder: string[]; movedCardIds: string[] } {
         // 1. Update column order
         const newColumnOrder = uiColumns.map(c => c.id);
 
@@ -163,21 +163,35 @@ export class BoardOperations {
         }
         board.columns = reorderedColumns;
 
-        // 3. Sync card positions
+        // 3. Sync card positions (mit Cross-Column Move Support)
+        const movedCardIds: string[] = [];
         for (const uiCol of uiColumns) {
             const col = board.columns.find(c => c.id === uiCol.id);
             if (!col) continue;
 
             const newCards: Card[] = [];
             for (const uiCard of uiCol.items) {
-                const card = col.cards.find(c => c.id === uiCard.id);
-                if (card) newCards.push(card);
+                // Suche Card BOARD-WEIT (nicht nur in aktueller Column)
+                const cardId = String(uiCard.id); // Normalize zu string
+                const result = board.findCardAndColumn(cardId);
+                if (result) {
+                    const { card, column: oldColumn } = result;
+                    
+                    // Wenn Card in anderer Column ist → verschieben
+                    if (oldColumn.id !== col.id) {
+                        oldColumn.deleteCard(card.id);
+                        movedCardIds.push(card.id);
+                        console.log(`🔄 Card "${card.heading}" von "${oldColumn.name}" nach "${col.name}" verschoben`);
+                    }
+                    
+                    newCards.push(card);
+                }
             }
             col.cards = newCards;
         }
 
-        console.log('🔄 Board-State synchronisiert');
-        return newColumnOrder;
+        console.log('🔄 Board-State synchronisiert', movedCardIds.length > 0 ? `(${movedCardIds.length} Cards verschoben)` : '');
+        return { newColumnOrder, movedCardIds };
     }
 
     /**
