@@ -382,14 +382,48 @@ export class BoardStore {
                     if (this.boardIds.includes(boardProps.id)) {
                         console.log(`✅ Board ${boardProps.id} already in list - skipping`);
                         
-                        // ABER: Wenn es das aktive Board ist, sollten wir es aktualisieren
+                        // ABER: Wenn es das aktive Board ist, sollten wir die Metadaten aktualisieren
                         if (this.board.id === boardProps.id) {
-                            console.log(`🔄 Updating active board from Nostr...`);
-                            const updatedBoard = new Board(boardProps);
-                            this.board = updatedBoard;
-                            this._columnOrder = updatedBoard.columns.map(c => c.id);
-                            this.triggerUpdate();
-                            console.log(`✅ Active board updated from Nostr`);
+                            console.log(`🔄 Updating active board metadata from Nostr...`);
+                            
+                            // ⚠️ KRITISCH: Board-Events enthalten KEINE Cards!
+                            // Wir müssen die existierenden Cards BEIBEHALTEN und nur Metadaten aktualisieren
+                            
+                            // 1. Metadaten aktualisieren (Name, Beschreibung, etc.)
+                            this.board.name = boardProps.name || this.board.name;
+                            this.board.description = boardProps.description;
+                            this.board.publishState = boardProps.publishState || this.board.publishState;
+                            this.board.maintainers = boardProps.maintainers || this.board.maintainers;
+                            this.board.tags = boardProps.tags || this.board.tags;
+                            this.board.ccLicense = boardProps.ccLicense || this.board.ccLicense;
+                            
+                            // 2. Spalten aktualisieren (aber Cards beibehalten!)
+                            if (boardProps.columns && boardProps.columns.length > 0) {
+                                // Für jede Spalte im Event: Update oder Create
+                                for (const newColProps of boardProps.columns) {
+                                    const existingCol = this.board.findColumn(newColProps.id || '');
+                                    
+                                    if (existingCol) {
+                                        // Spalte existiert → Name/Color aktualisieren, Cards BEIBEHALTEN
+                                        existingCol.name = newColProps.name;
+                                        existingCol.color = newColProps.color;
+                                        // existingCol.cards bleibt unverändert! ✅
+                                    } else if (newColProps.id) {
+                                        // Neue Spalte → Hinzufügen (mit leeren Cards)
+                                        const newCol = this.board.addColumn(newColProps);
+                                        console.log(`➕ New column added from Nostr: ${newColProps.name}`);
+                                    }
+                                }
+                                
+                                // ⚠️ OPTIONAL: Spalten die im Event fehlen löschen?
+                                // Das könnte zu Datenverlust führen, daher erstmal NICHT implementiert
+                            }
+                            
+                            // 3. UI aktualisieren (aber NICHT triggerUpdate - würde wieder zu Nostr publishen!)
+                            this.updateTrigger++;
+                            this.saveToStorage();
+                            
+                            console.log(`✅ Active board metadata updated from Nostr (Cards preserved)`);
                         }
                         return;
                     }
