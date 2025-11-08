@@ -209,7 +209,27 @@ export class BoardStore {
     // ============================================================================
     
     public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> {
-        return BoardStorage.getAllBoardsMetadata(this.boardIds);
+        // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
+        this.updateTrigger;
+        
+        // ⚡ WICHTIG: Metadata aus localStorage lesen
+        const boards = BoardStorage.getAllBoardsMetadata(this.boardIds);
+        
+        // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
+        const currentBoardIndex = boards.findIndex(b => b.id === this.board.id);
+        if (currentBoardIndex !== -1) {
+            boards[currentBoardIndex] = {
+                id: this.board.id,
+                name: this.board.name,
+                description: this.board.description,
+                createdAt: new Date(this.board.createdAt).getTime(),
+                updatedAt: this.board.updatedAt 
+                    ? new Date(this.board.updatedAt).getTime() 
+                    : new Date(this.board.createdAt).getTime()
+            };
+        }
+        
+        return boards;
     }
 
     public createBoard(name: string, description?: string): string {
