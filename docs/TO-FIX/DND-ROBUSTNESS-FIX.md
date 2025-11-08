@@ -26,7 +26,116 @@ Beim mehrfachen schnellen Verschieben von Cards:
 
 ## ✅ Implementierte Fixes
 
-### Fix 1: Robuste syncBoardState-Logik
+### Fix 1: 🎯 **Snapshot-Basierte Sync-Logik** (KRITISCHER FIX!)
+
+**Problem:** Cards verschwanden beim Verschieben von links nach rechts, aber NICHT umgekehrt!
+
+**Datei:** `src/lib/stores/boardstore/operations.ts`
+
+**Warum scheiterten left-to-right Moves?**
+```typescript
+// ❌ ALTE LOGIK (Mutation während Iteration):
+board.columns = reorderedColumns;  // Mutation HIER!
+
+for (const uiCol of uiColumns) {   // Iteration left → right
+    for (const uiCard of uiCol.items) {
+        // Sucht in BEREITS MUTIERTEN columns!
+        const result = board.findCardAndColumn(cardId);
+        if (result) {
+            newCards.push(result.card);
+        }
+    }
+    col.cards = newCards;  // Card aus linker Column entfernt
+}
+
+// Beispiel: Card von Column A (links) → Column B (rechts)
+// 1. Column A wird zuerst verarbeitet → col.cards = newCards (Card entfernt!)
+// 2. Column B wird danach verarbeitet → findCardAndColumn(cardId)
+// 3. findCardAndColumn sucht in board.columns → Card NICHT in Column A (schon entfernt!)
+// 4. Card NICHT gefunden → null → wird NICHT zu Column B hinzugefügt
+// 5. Card ist VERSCHWUNDEN! ❌
+
+// Warum funktionierte right-to-left?
+// 1. Column A (links) wird zuerst verarbeitet → findCardAndColumn(cardId)
+// 2. Card ist NOCH in Column B (rechts) - Column B noch nicht verarbeitet!
+// 3. Card gefunden ✅ → wird zu Column A hinzugefügt
+// 4. Column B wird danach verarbeitet → col.cards = newCards (Card entfernt)
+// 5. Card ist in Column A! ✅ Funktioniert!
+```
+
+**Lösung: Immutable Snapshot VOR jeder Mutation**
+```typescript
+// ✅ NEUE LOGIK (Snapshot-basiert):
+export function syncBoardState(board: Board, uiColumns: UIColumn[], currentOrder: string[]) {
+    console.group('🔄 syncBoardState');
+    
+    // 1️⃣ SNAPSHOT: Alle Cards erfassen BEVOR irgendetwas geändert wird
+    const cardRegistry = new Map<string, { card: Card; oldColumnId: string }>();
+    for (const col of board.columns) {
+        for (const card of col.cards) {
+            cardRegistry.set(card.id, { card, oldColumnId: col.id });
+        }
+    }
+    console.log('📦 Card registry:', cardRegistry.size, 'cards');
+    
+    const processedCardIds = new Set<string>();
+    const movedCardIds: string[] = [];
+    
+    // 2️⃣ Column-Reihenfolge synchronisieren
+    const reorderedColumns = uiColumns
+        .map(uiCol => board.columns.find(c => c.id === uiCol.id))
+        .filter((c): c is Column => c !== undefined);
+    
+    board.columns = reorderedColumns;
+    
+    // 3️⃣ Card-Positionen synchronisieren (mit Snapshot-Reads!)
+    for (const uiCol of uiColumns) {
+        const col = board.columns.find(c => c.id === uiCol.id);
+        if (!col) continue;
+        
+        const newCards: Card[] = [];
+        
+        for (const uiCard of uiCol.items) {
+            if (processedCardIds.has(uiCard.id)) continue;
+            
+            // 🎯 KRITISCH: Lesen aus SNAPSHOT, nicht aus board.columns!
+            const snapshot = cardRegistry.get(uiCard.id);
+            
+            if (snapshot) {
+                const { card, oldColumnId } = snapshot;
+                
+                if (oldColumnId !== col.id) {
+                    console.log(`↗️ Card '${card.heading}' verschoben: '${oldColumnId}' → '${col.id}'`);
+                    movedCardIds.push(card.id);
+                }
+                
+                newCards.push(card);
+                processedCardIds.add(card.id);
+            } else {
+                console.warn(`⚠️ Card ${uiCard.id} nicht im Snapshot gefunden`);
+            }
+        }
+        
+        col.cards = newCards;  // Mutation ist jetzt SAFE (Snapshot ist immutable)
+        console.log(`📍 Column '${col.name}': ${newCards.length} cards`);
+    }
+    
+    console.groupEnd();
+    return { newColumnOrder: board.columns.map(c => c.id), movedCardIds };
+}
+```
+
+**Warum funktioniert das jetzt in ALLE Richtungen?**
+- ✅ **Snapshot vor Mutation**: `cardRegistry` wird KOMPLETT befüllt bevor IRGENDEINE Column verändert wird
+- ✅ **Immutable Read**: `cardRegistry.get(cardId)` liest IMMER vom ursprünglichen Zustand
+- ✅ **Direction-Agnostic**: Egal ob left→right oder right→left, der Snapshot bleibt gleich
+- ✅ **No Side Effects**: Mutationen an `board.columns` beeinflussen `cardRegistry` nicht
+- ✅ **Duplikate-Prevention**: `processedCardIds` Set verhindert mehrfaches Hinzufügen
+- ✅ **Move-Detection**: Vergleich `oldColumnId !== col.id` funktioniert zuverlässig
+
+---
+
+### Fix 2: Robuste syncBoardState-Logik (DEPRECATED - siehe Fix 1)
 **Datei:** `src/lib/stores/boardstore/operations.ts`
 
 **Vorher:** Board-Zustand wurde überschrieben, während durch alte Referenzen iteriert wurde
