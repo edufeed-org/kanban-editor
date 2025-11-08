@@ -557,6 +557,34 @@ export class BoardStore {
                 this.triggerUpdate();
                 
                 console.log(`✅ Card ${cardProps.id} synchronized to column ${cardProps.columnId}`);
+            },
+            (boardId: string) => {
+                // ===== BOARD DELETION =====
+                console.log(`🗑️ Board ${boardId} wurde gelöscht - entferne aus Liste`);
+                
+                // Entferne aus boardIds
+                const oldLength = this.boardIds.length;
+                this.boardIds = this.boardIds.filter(id => id !== boardId);
+                
+                if (this.boardIds.length < oldLength) {
+                    BoardStorage.saveBoardIds(this.boardIds);
+                    this.triggerUpdate();
+                    console.log(`✅ Board ${boardId} aus Liste entfernt`);
+                    
+                    // Wenn das aktive Board gelöscht wurde, wechsle zum ersten verfügbaren
+                    if (this.board.id === boardId && this.boardIds.length > 0) {
+                        const firstBoardId = this.boardIds[0];
+                        const raw = BoardStorage.loadBoard(firstBoardId);
+                        if (raw) {
+                            this.board = BoardStorage.reconstructBoard(raw);
+                            this._columnOrder = this.board.columns.map(c => c.id);
+                            this.triggerUpdate();
+                            console.log(`🔄 Switched to board: ${this.board.name}`);
+                        }
+                    }
+                } else {
+                    console.warn(`⚠️ Board ${boardId} war nicht in Liste`);
+                }
             }
         );
     }

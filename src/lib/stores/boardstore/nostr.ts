@@ -109,41 +109,81 @@ export class NostrIntegration {
             }
             
             // 3b. Füge Deletions vom Relay hinzu (wenn vorhanden)
+            // NIP-09: Replaceable Events (Kind 30301) werden via 'a' tags referenziert
             if (deletionEvents && deletionEvents.size > 0) {
                 console.log('[BoardStore] 🗑️ Found', deletionEvents.size, 'deletion events on relay');
                 for (const delEvent of deletionEvents) {
-                    // Delete Event hat Tag: ['e', '30301:pubkey:board-id']
-                    const eTags = delEvent.tags.filter(t => t[0] === 'e');
-                    for (const eTag of eTags) {
-                        const eventId = eTag[1]; // z.B. "30301:pubkey:board-xxx"
-                        if (eventId && eventId.startsWith('30301:')) {
+                    // NIP-09: Parse 'a' tags für replaceable events
+                    // Format: ['a', '30301:pubkey:board-id']
+                    const aTags = delEvent.tags.filter(t => t[0] === 'a');
+                    for (const aTag of aTags) {
+                        const eventRef = aTag[1]; // z.B. "30301:pubkey:board-xxx"
+                        if (eventRef && eventRef.startsWith('30301:')) {
                             // Extrahiere board-id (alles nach dem zweiten ":")
-                            const parts = eventId.split(':');
+                            const parts = eventRef.split(':');
                             if (parts.length >= 3) {
                                 const boardId = parts.slice(2).join(':'); // board-xxx
+                                const wasAlreadyDeleted = deletedBoardIds.has(boardId);
                                 deletedBoardIds.add(boardId);
-                                console.log('[BoardStore] 🗑️ Found deleted board:', boardId);
+                                if (!wasAlreadyDeleted) {
+                                    console.log('[BoardStore] 🗑️ Found deleted board:', boardId);
+                                }
                             }
                         }
                     }
                 }
+                console.log('[BoardStore] 🗑️ Total unique deleted boards:', deletedBoardIds.size);
+                console.log('[BoardStore] 🗑️ Deleted board IDs:', Array.from(deletedBoardIds).map(id => id.substring(0, 20) + '...'));
             }
 
-            const loadedBoardIds = [...boardIds];
+            // 4. PRE-CLEANUP: Lösche gelöschte Boards AUS localStorage BEVOR wir sie laden!
+            if (typeof window !== 'undefined' && deletedBoardIds.size > 0) {
+                let preCleanedCount = 0;
+                for (const deletedId of deletedBoardIds) {
+                    const key = `kanban-${deletedId}`;
+                    if (localStorage.getItem(key)) {
+                        localStorage.removeItem(key);
+                        preCleanedCount++;
+                        console.log('[BoardStore] 🗑️ Pre-cleanup: Removed deleted board from localStorage:', deletedId);
+                    }
+                }
+            if (preCleanedCount > 0) {
+                console.log(`[BoardStore] ✅ Pre-cleanup: Removed ${preCleanedCount} deleted board(s) from localStorage`);
+            }
+        }
 
-            for (const event of boardEvents) {
+        // 5. Initialisiere loadedBoardIds - filtere gelöschte Boards AUS!
+        const loadedBoardIds = boardIds.filter(id => !deletedBoardIds.has(id));
+        console.log('[BoardStore] 🔍 Initial boardIds from store:', boardIds.length, boardIds.map(id => id.substring(0, 20) + '...'));
+        console.log('[BoardStore] 🔍 After filtering deleted:', loadedBoardIds.length, loadedBoardIds.map(id => id.substring(0, 20) + '...'));
+        if (loadedBoardIds.length < boardIds.length) {
+            console.log(`[BoardStore] 🗑️ Filtered ${boardIds.length - loadedBoardIds.length} deleted board(s) from initial board list`);
+        }
+        
+        // 6. Sammle Board-IDs die auf dem Relay existieren
+        const relayBoardIds = new Set<string>();            for (const event of boardEvents) {
                 if (event.kind !== 30301) continue;
 
                 try {
+                    // Check ob Board mit deleted=true Tag markiert ist
+                    const deletedTag = event.tags.find((t: any) => t[0] === 'deleted' && t[1] === 'true');
+                    if (deletedTag) {
+                        console.log('[BoardStore] ⏩ Skipping board marked as deleted (deleted tag)');
+                        continue;
+                    }
+
                     const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
                     const boardProps = nostrEventToBoard(event);
                     const board = new (await import('../../classes/BoardModel.js')).Board(boardProps);
 
-                    // 4. Skip wenn Board gelöscht wurde
+                    // 6a. Skip wenn Board gelöscht wurde (sollte schon aus loadedBoardIds gefiltert sein)
                     if (deletedBoardIds.has(board.id)) {
                         console.log('[BoardStore] ⏩ Skipping deleted board:', board.id);
                         continue;
                     }
+                    
+                    // 6b. Merke dass dieses Board auf dem Relay existiert (NUR nicht-gelöschte!)
+                    relayBoardIds.add(board.id);
 
                     const storageKey = `kanban-${board.id}`;
                     const existingRaw = typeof window !== 'undefined'
@@ -170,8 +210,12 @@ export class NostrIntegration {
 
                     if (!acceptRemote) {
                         console.log(`[BoardStore] ↩️ Keep newer local board for ${board.id}, skip remote version`);
-                        if (!loadedBoardIds.includes(board.id)) {
+                        // NUR hinzufügen wenn NICHT gelöscht!
+                        if (!loadedBoardIds.includes(board.id) && !deletedBoardIds.has(board.id)) {
                             loadedBoardIds.push(board.id);
+                            console.log('[BoardStore] ✅ Added local board to loadedBoardIds:', board.id);
+                        } else if (deletedBoardIds.has(board.id)) {
+                            console.log('[BoardStore] 🗑️ NOT adding deleted board to loadedBoardIds:', board.id);
                         }
                         continue;
                     }
@@ -188,8 +232,12 @@ export class NostrIntegration {
                         console.log('[BoardStore] 💾 Stored Nostr board from remote:', storageKey);
                     }
 
-                    if (!loadedBoardIds.includes(board.id)) {
+                    // NUR hinzufügen wenn NICHT gelöscht!
+                    if (!loadedBoardIds.includes(board.id) && !deletedBoardIds.has(board.id)) {
                         loadedBoardIds.push(board.id);
+                        console.log('[BoardStore] ✅ Added remote board to loadedBoardIds:', board.id);
+                    } else if (deletedBoardIds.has(board.id)) {
+                        console.log('[BoardStore] 🗑️ NOT adding deleted remote board to loadedBoardIds:', board.id);
                     }
                 } catch (err) {
                     console.error('[BoardStore] ❌ Failed to import Nostr board event:', err);
@@ -243,6 +291,46 @@ export class NostrIntegration {
             }
 
             onBoardsLoaded(loadedBoardIds, false);
+
+            // 7. POST-CLEANUP: Lösche lokale Boards die nicht mehr auf dem Relay existieren
+            //    (Boards die auf Relay gelöscht wurden, sind durch Pre-Cleanup & Filter schon weg)
+            if (typeof window !== 'undefined') {
+                // Nur Board-Daten Keys (nicht config, board-ids, etc.)
+                const boardDataKeys = Object.keys(localStorage).filter(k => {
+                    // Skip non-board keys
+                    if (k === 'kanban-config') return false;
+                    if (k === 'kanban-board-ids') return false;
+                    if (k === 'nostr-deleted-boards') return false;
+                    
+                    // Nur Keys die wie "kanban-board-xxx" aussehen
+                    return k.startsWith('kanban-') && k.includes('board-');
+                });
+                
+                let cleanedCount = 0;
+                
+                for (const key of boardDataKeys) {
+                    const boardId = key.replace('kanban-', '');
+                    
+                    // Skip wenn:
+                    // - Board ist auf dem Relay (relayBoardIds)
+                    // - Board ist aktuell aktiv (currentBoard.id)
+                    // - Board ist in der boardIds Liste (wurde gerade geladen)
+                    if (relayBoardIds.has(boardId) || 
+                        boardId === currentBoard.id ||
+                        loadedBoardIds.includes(boardId)) {
+                        continue;
+                    }
+                    
+                    // Board existiert nicht mehr auf Relay → löschen
+                    localStorage.removeItem(key);
+                    cleanedCount++;
+                    console.log('[BoardStore] 🧹 Post-cleanup: Removed orphaned board:', boardId);
+                }
+                
+                if (cleanedCount > 0) {
+                    console.log(`[BoardStore] ✅ Post-cleanup: Removed ${cleanedCount} orphaned local board(s)`);
+                }
+            }
         } catch (error) {
             console.error('[BoardStore] ❌ Error while loading boards from Nostr:', error);
         }
@@ -293,12 +381,39 @@ export class NostrIntegration {
 
             console.log('[BoardStore] 🃏 Found', cardEvents.size, 'card(s) on relay for board:', board.name);
 
+            // Lade gelöschte Card-IDs aus localStorage
+            let deletedCardIds = new Set<string>();
+            if (typeof window !== 'undefined') {
+                const localCardDeletions = localStorage.getItem('nostr-deleted-cards');
+                if (localCardDeletions) {
+                    try {
+                        const deletedIds = JSON.parse(localCardDeletions);
+                        if (Array.isArray(deletedIds)) {
+                            deletedCardIds = new Set(deletedIds);
+                            console.log('[BoardStore] 🗑️ Found', deletedCardIds.size, 'deleted card(s) in localStorage');
+                        }
+                    } catch (e) {
+                        console.warn('[BoardStore] Failed to parse deleted cards:', e);
+                    }
+                }
+            }
+
             // Deserialisiere alle Card-Events
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
+            
+            let loadedCount = 0;
+            let skippedCount = 0;
             
             for (const cardEvent of cardEvents) {
                 try {
                     const cardProps = nostrEventToCard(cardEvent);
+                    
+                    // 🗑️ SKIP: Wenn Card gelöscht wurde
+                    if (cardProps.id && deletedCardIds.has(cardProps.id)) {
+                        console.log('[BoardStore] 🗑️ Skipping deleted card:', cardProps.heading);
+                        skippedCount++;
+                        continue;
+                    }
                     
                     // Validiere dass Card zum richtigen Board gehört
                     if (cardProps.boardRef !== boardRef) {
@@ -308,13 +423,14 @@ export class NostrIntegration {
                     
                     // Callback mit den Card-Props aufrufen
                     onCardLoaded(cardProps);
+                    loadedCount++;
                     
                 } catch (err) {
                     console.error('[BoardStore] ❌ Failed to deserialize card event:', err);
                 }
             }
 
-            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name);
+            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded, ${skippedCount} skipped)`);
         } catch (error) {
             console.error('[BoardStore] ❌ Error while loading cards from Nostr:', error);
         }
@@ -331,7 +447,8 @@ export class NostrIntegration {
         currentBoard: Board,
         boardIds: string[],
         onBoardUpdate: (boardProps: any, isNewBoard: boolean) => void,
-        onCardUpdate: (cardProps: any) => void
+        onCardUpdate: (cardProps: any) => void,
+        onBoardDeletion?: (boardId: string) => void
     ): void {
         if (!this.ndk) {
             console.log('[BoardStore] ℹ️ Nostr not initialized, skip subscribe');
@@ -356,13 +473,13 @@ export class NostrIntegration {
             }
         }
 
-        console.log('[BoardStore] 🛰️ Subscribing to board AND card updates (collaborative mode)');
+        console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (collaborative mode)');
 
         // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
         // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
         const sub = this.ndk.subscribe(
             {
-                kinds: [30301, 30302] as number[],
+                kinds: [30301, 30302, 5] as number[], // ← FIX: Kind 5 hinzugefügt!
                 authors: [pubkey] // Boards und Cards die dieser User erstellt hat
             } as any,
             { closeOnEose: false }
@@ -375,6 +492,9 @@ export class NostrIntegration {
             } else if (event.kind === 30302) {
                 // ===== CARD-EVENT HANDLER =====
                 await this.handleCardEvent(event, currentBoard, onCardUpdate);
+            } else if (event.kind === 5) {
+                // ===== DELETION-EVENT HANDLER =====
+                await this.handleDeletionEvent(event, boardIds, onBoardDeletion);
             }
         });
 
@@ -400,6 +520,28 @@ export class NostrIntegration {
             // Validierung: Board muss eine ID haben
             if (!boardProps.id) {
                 console.warn('⚠️ Board-Event hat keine ID - skip');
+                return;
+            }
+            
+            // 🗑️ KRITISCH: Prüfe ob Board gelöscht wurde BEVOR wir es hinzufügen!
+            let deletedBoardIds = new Set<string>();
+            if (typeof window !== 'undefined') {
+                const localDeletions = localStorage.getItem('nostr-deleted-boards');
+                if (localDeletions) {
+                    try {
+                        const deletedIds = JSON.parse(localDeletions);
+                        if (Array.isArray(deletedIds)) {
+                            deletedBoardIds = new Set(deletedIds);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+            
+            // Skip wenn Board gelöscht wurde!
+            if (deletedBoardIds.has(boardProps.id)) {
+                console.log(`🗑️ SKIP: Board ${boardProps.name} ist gelöscht - wird NICHT hinzugefügt`);
                 return;
             }
             
@@ -442,6 +584,28 @@ export class NostrIntegration {
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
             const cardProps = nostrEventToCard(cardEvent);
             
+            // 🗑️ KRITISCH: Prüfe ob Card gelöscht wurde BEVOR wir sie verarbeiten!
+            let deletedCardIds = new Set<string>();
+            if (typeof window !== 'undefined') {
+                const localCardDeletions = localStorage.getItem('nostr-deleted-cards');
+                if (localCardDeletions) {
+                    try {
+                        const deletedIds = JSON.parse(localCardDeletions);
+                        if (Array.isArray(deletedIds)) {
+                            deletedCardIds = new Set(deletedIds);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+            
+            // Skip wenn Card gelöscht wurde!
+            if (cardProps.id && deletedCardIds.has(cardProps.id)) {
+                console.log(`🗑️ SKIP: Card ${cardProps.heading} ist gelöscht - wird NICHT verarbeitet`);
+                return;
+            }
+            
             // Validierung: Gehört die Karte zu diesem Board?
             if (cardProps.boardRef) {
                 const expectedBoardRef = `30301:${currentBoard.author}:${currentBoard.id}`;
@@ -462,6 +626,103 @@ export class NostrIntegration {
             
         } catch (error) {
             console.error(`❌ Error processing card event:`, error);
+        }
+    }
+
+    /**
+     * Handler für Deletion-Events (Kind 5)
+     * 
+     * Wird aufgerufen wenn ein Board ODER Card gelöscht wurde (via subscription).
+     * Entfernt das Element aus der Liste und speichert die Deletion lokal.
+     * 
+     * NIP-09: Replaceable Events (Kind 30301/30302) werden via 'a' tags referenziert
+     */
+    private async handleDeletionEvent(
+        deletionEvent: any,
+        boardIds: string[],
+        onBoardDeletion?: (boardId: string) => void
+    ): Promise<void> {
+        console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
+        
+        try {
+            // NIP-09: Parse 'a' tags für replaceable events
+            // Format: ['a', '30301:pubkey:board-id'] oder ['a', '30302:pubkey:card-id']
+            const aTags = deletionEvent.tags.filter((t: any) => t[0] === 'a');
+            
+            for (const aTag of aTags) {
+                const eventRef = aTag[1]; // z.B. "30301:pubkey:board-xxx" oder "30302:pubkey:card-xxx"
+                
+                // ===== BOARD DELETION =====
+                if (eventRef && eventRef.startsWith('30301:')) {
+                    // Extrahiere board-id (alles nach dem zweiten ":")
+                    const parts = eventRef.split(':');
+                    if (parts.length >= 3) {
+                        const boardId = parts.slice(2).join(':'); // board-xxx
+                        
+                        console.log(`🗑️ Board ${boardId} wurde gelöscht - entferne aus Liste`);
+                        
+                        // Speichere Deletion lokal (für Offline-Persistenz)
+                        if (typeof window !== 'undefined') {
+                            const localDeletions = localStorage.getItem('nostr-deleted-boards');
+                            let deletedIds: string[] = [];
+                            
+                            if (localDeletions) {
+                                try {
+                                    deletedIds = JSON.parse(localDeletions);
+                                } catch {
+                                    deletedIds = [];
+                                }
+                            }
+                            
+                            if (!deletedIds.includes(boardId)) {
+                                deletedIds.push(boardId);
+                                localStorage.setItem('nostr-deleted-boards', JSON.stringify(deletedIds));
+                            }
+                        }
+                        
+                        // Callback aufrufen um Board aus Liste zu entfernen
+                        if (onBoardDeletion) {
+                            onBoardDeletion(boardId);
+                        }
+                    }
+                }
+                
+                // ===== CARD DELETION =====
+                else if (eventRef && eventRef.startsWith('30302:')) {
+                    // Extrahiere card-id (alles nach dem zweiten ":")
+                    const parts = eventRef.split(':');
+                    if (parts.length >= 3) {
+                        const cardId = parts.slice(2).join(':'); // card-xxx
+                        
+                        console.log(`🗑️ Card ${cardId} wurde gelöscht - speichere lokal`);
+                        
+                        // Speichere Card-Deletion lokal (für Offline-Persistenz)
+                        if (typeof window !== 'undefined') {
+                            const localCardDeletions = localStorage.getItem('nostr-deleted-cards');
+                            let deletedCardIds: string[] = [];
+                            
+                            if (localCardDeletions) {
+                                try {
+                                    deletedCardIds = JSON.parse(localCardDeletions);
+                                } catch {
+                                    deletedCardIds = [];
+                                }
+                            }
+                            
+                            if (!deletedCardIds.includes(cardId)) {
+                                deletedCardIds.push(cardId);
+                                localStorage.setItem('nostr-deleted-cards', JSON.stringify(deletedCardIds));
+                                console.log(`🗑️ Card ${cardId} zur Deletion-Liste hinzugefügt`);
+                            }
+                        }
+                        
+                        // Note: Card-Deletion wird vom kanbanStore via onCardUpdate gehandhabt
+                        // Der Card-Handler wird die Deletion beim nächsten Event checken
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`❌ Error processing deletion event:`, error);
         }
     }
 
@@ -649,8 +910,10 @@ export class NostrIntegration {
             console.log(`[NostrIntegration] 🗑️ Deleting board on Nostr: ${board.name} (${boardEventId})`);
 
             // 2. Erstelle Deletion Event (Kind 5)
+            // NIP-09: Replaceable events (Kind 30301) brauchen 'a' tags, nicht 'e' tags
             const deletionEvent = createDeletionEvent(
                 boardEventId,
+                true, // isReplaceableEvent = true für Kind 30301
                 `Board "${board.name}" deleted`,
                 this.ndk
             );
@@ -714,8 +977,10 @@ export class NostrIntegration {
             console.log(`[NostrIntegration] 🗑️ Deleting card on Nostr: ${card.heading} (${cardEventId})`);
 
             // 2. Erstelle Deletion Event (Kind 5)
+            // NIP-09: Replaceable events (Kind 30302) brauchen 'a' tags, nicht 'e' tags
             const deletionEvent = createDeletionEvent(
                 cardEventId,
+                true, // isReplaceableEvent = true für Kind 30302
                 `Card "${card.heading}" deleted`,
                 this.ndk
             );

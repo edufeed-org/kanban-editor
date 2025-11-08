@@ -396,16 +396,29 @@ export function createCommentEvent(
 /**
  * Erstellt einen Deletions-Event (Kind 5 - NIP-09)
  * Wird verwendet um Kommentare oder Cards zu löschen
+ * 
+ * @param targetIdentifier - Für regular events (Kind 1): die Event-ID
+ *                          - Für replaceable events (Kind 30301/30302): "kind:pubkey:d-tag"
+ * @param isReplaceableEvent - true für Kind 30301/30302 (nutzt 'a' tags), false für Kind 1 (nutzt 'e' tags)
+ * @param reason - Optional: Grund für die Löschung
+ * @param ndk - NDK instance
  */
 export function createDeletionEvent(
-  targetEventId: string,
+  targetIdentifier: string,
+  isReplaceableEvent: boolean = false,
   reason?: string,
   ndk?: NDK
 ): NDKEvent {
   const event = new NDKEvent(ndk);
   event.kind = EVENT_KINDS.DELETION;
 
-  event.tags = [['e', targetEventId]];
+  // NIP-09: Für replaceable events 'a' tags nutzen, für regular events 'e' tags
+  if (isReplaceableEvent) {
+    event.tags = [['a', targetIdentifier]];
+  } else {
+    event.tags = [['e', targetIdentifier]];
+  }
+  
   event.content = reason || 'Event deleted';
 
   return event;
