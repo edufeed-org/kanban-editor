@@ -15,6 +15,13 @@ export class NostrIntegration {
     private ndk?: NDK;
     private boardSubscription: any | null = null;
 
+    // ⚡ NEU (v2.0): Event-Deduplication für Event-Driven Architecture
+    private processedEvents = new Set<string>();
+    
+    // ⚡ NEU (v2.0): Deletion-Timestamp-Tracking für Out-of-Order Events
+    private cardDeletionTimestamps = new Map<string, number>();
+    private boardDeletionTimestamps = new Map<string, number>();
+
     /**
      * Initialisiert Nostr Integration
      */
@@ -337,18 +344,18 @@ export class NostrIntegration {
     }
 
     /**
-     * Subscribed zu Board- und Card-Updates
+     * Subscribed zu Board-, Card- und Deletion-Updates
+     * 
+     * ⚡ v2.0: Event-Driven Architecture mit Store-Referenz
      * 
      * ⚠️ WICHTIG: Für kollaborative Boards - empfange Events von ALLEN Teilnehmern!
      * - Board-Events (Kind 30301): Von author + maintainers
      * - Card-Events (Kind 30302): Alle mit #a-Tag auf dieses Board
+     * - Deletion-Events (Kind 5): Alle gelöschten Boards/Cards
      */
     public subscribeToUpdates(
         currentBoard: Board,
-        boardIds: string[],
-        onBoardUpdate: (boardProps: any, isNewBoard: boolean) => void,
-        onCardUpdate: (cardProps: any) => void,
-        onBoardDeletion?: (boardId: string) => void
+        boardStore: any // ⚡ v2.0: Store-Referenz statt Callbacks!
     ): void {
         if (!this.ndk) {
             console.log('[BoardStore] ℹ️ Nostr not initialized, skip subscribe');
@@ -373,13 +380,13 @@ export class NostrIntegration {
             }
         }
 
-        console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (collaborative mode)');
+        console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Event-Driven v2.0)');
 
         // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
         // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
         const sub = this.ndk.subscribe(
             {
-                kinds: [30301, 30302, 5] as number[], // ← FIX: Kind 5 hinzugefügt!
+                kinds: [30301, 30302, 5] as number[], // Board, Card, Deletion
                 authors: [pubkey] // Boards und Cards die dieser User erstellt hat
             } as any,
             { closeOnEose: false }
@@ -388,13 +395,13 @@ export class NostrIntegration {
         sub.on('event', async (event: any) => {
             if (event.kind === 30301) {
                 // ===== BOARD-EVENT HANDLER =====
-                await this.handleBoardEvent(event, currentBoard, boardIds, onBoardUpdate);
+                await this.handleBoardEvent(event, currentBoard, boardStore);
             } else if (event.kind === 30302) {
                 // ===== CARD-EVENT HANDLER =====
-                await this.handleCardEvent(event, currentBoard, onCardUpdate);
+                await this.handleCardEvent(event, currentBoard, boardStore);
             } else if (event.kind === 5) {
                 // ===== DELETION-EVENT HANDLER =====
-                await this.handleDeletionEvent(event, boardIds, onBoardDeletion);
+                await this.handleDeletionEvent(event, boardStore);
             }
         });
 
@@ -403,14 +410,23 @@ export class NostrIntegration {
 
     /**
      * Handler für Board-Events (Kind 30301)
+     * 
+     * ⚡ v2.0: Event-Driven Architecture mit upsertBoardFromNostr()
      */
     private async handleBoardEvent(
         boardEvent: any,
         currentBoard: Board,
-        boardIds: string[],
-        onBoardUpdate: (boardProps: any, isNewBoard: boolean) => void
+        boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
         console.log('📥 Board-Event erhalten:', boardEvent.id);
+        
+        // ⚡ v2.0: Event-Deduplication
+        if (this.processedEvents.has(boardEvent.id)) {
+            console.log('⏩ Board-Event already processed, skip');
+            return;
+        }
+        
+        this.processedEvents.add(boardEvent.id);
         
         try {
             // Deserialisiere Board-Event
@@ -423,93 +439,20 @@ export class NostrIntegration {
                 return;
             }
             
-            // ⚡ RACE CONDITION FIX v2: Fetch aktuelle Cards vom Relay
-            // Problem: Board-Event enthält alte Card-Daten (vor Deletion)
-            // Lösung: Prüfe für jede Card ob sie wirklich auf dem Relay existiert
-            console.log(`🛡️ Validating cards with relay... (checking ${boardProps.columns?.reduce((sum, col) => sum + (col.cards?.length || 0), 0) || 0} cards)`);
-            
-            if (this.ndk && boardProps.columns && boardProps.author) {
-                const boardRef = `30301:${boardProps.author}:${boardProps.id}`;
-                
-                try {
-                    // Fetch alle aktuell existierenden Card-Events für dieses Board vom Relay
-                    const cardFilter = {
-                        kinds: [30302],
-                        '#a': [boardRef]
-                    };
-                    
-                    const existingCardEvents = await this.ndk.fetchEvents(cardFilter as any);
-                    const existingCardIds = new Set(
-                        Array.from(existingCardEvents || [])
-                            .map((evt: any) => {
-                                const dTag = evt.tags.find((t: any) => t[0] === 'd');
-                                return dTag ? dTag[1] : null;
-                            })
-                            .filter((id: any) => id !== null)
-                    );
-                    
-                    console.log(`🛡️ Relay has ${existingCardIds.size} card(s) for this board`);
-                    console.log(`🛡️ Existing card IDs:`, Array.from(existingCardIds));
-                    
-                    // Filter Cards: Nur die behalten, die wirklich auf dem Relay existieren
-                    let filteredCount = 0;
-                    for (const column of boardProps.columns) {
-                        if (column.cards && Array.isArray(column.cards)) {
-                            const originalLength = column.cards.length;
-                            
-                            column.cards = column.cards.filter(c => {
-                                if (!c.id) {
-                                    console.log(`🛡️ ⚠️ Card without ID found - keeping it`);
-                                    return true;
-                                }
-                                
-                                const exists = existingCardIds.has(c.id);
-                                if (!exists) {
-                                    console.log(`🛡️ ❌ Card ${c.id} not on relay - filtering out (deleted)`);
-                                    filteredCount++;
-                                }
-                                return exists;
-                            });
-                            
-                            const removed = originalLength - column.cards.length;
-                            if (removed > 0) {
-                                console.log(`🛡️ Removed ${removed} deleted card(s) from column "${column.name}"`);
-                            }
-                        }
-                    }
-                    
-                    if (filteredCount > 0) {
-                        console.log(`🛡️✅ Filtered ${filteredCount} deleted card(s) via relay validation`);
-                    } else {
-                        console.log(`🛡️ℹ️ All cards exist on relay - no filtering needed`);
-                    }
-                } catch (fetchError) {
-                    console.warn(`🛡️ ⚠️ Failed to validate cards with relay:`, fetchError);
-                    // Fallback: Continue with Board-Event data
+            // ⚡ v2.0: Timestamp-Based Conflict Resolution
+            // Prüfe ob Board später gelöscht wurde
+            const deleteTime = this.boardDeletionTimestamps.get(boardProps.id);
+            if (deleteTime) {
+                const boardTime = boardEvent.created_at * 1000;
+                if (boardTime < deleteTime) {
+                    console.log(`�️ Board ${boardProps.id} was deleted after this update, skip`);
+                    return;
                 }
             }
             
-            // ⚡ RELAY FILTERT GELÖSCHTE BOARDS: Keine lokale Deletion-Prüfung nötig!
-            // Relay gibt per NIP-09 nur nicht-gelöschte Events zurück
-            
-            // Prüfe ob dieses Board schon in der Liste ist
-            const isExisting = boardIds.includes(boardProps.id);
-            const isActiveBoard = currentBoard.id === boardProps.id;
-            
-            if (isExisting) {
-                console.log(`✅ Board ${boardProps.id} already in list`);
-                
-                if (isActiveBoard) {
-                    console.log(`🔄 Updating active board metadata from Nostr...`);
-                    // Callback für Update (nicht für neues Board)
-                    onBoardUpdate(boardProps, false);
-                }
-                return;
-            }
-            
-            // Neues Board! 
-            console.log(`✨ New board detected: ${boardProps.name}`);
-            onBoardUpdate(boardProps, true);
+            // ⚡ v2.0: Direkte Store-API (SECONDARY action)
+            // Unterstützt UPDATE (aktuelles Board) UND INSERT (neues Board)
+            boardStore.upsertBoardFromNostr(boardProps);
             
         } catch (error) {
             console.error(`❌ Error processing board event:`, error);
@@ -518,21 +461,28 @@ export class NostrIntegration {
 
     /**
      * Handler für Card-Events (Kind 30302)
+     * 
+     * ⚡ v2.0: Event-Driven Architecture mit direkter Store-API
      */
     private async handleCardEvent(
         cardEvent: any,
         currentBoard: Board,
-        onCardUpdate: (cardProps: any) => void
+        boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
         console.log('📥 Card-Event erhalten:', cardEvent.id);
+        
+        // ⚡ v2.0: Event-Deduplication
+        if (this.processedEvents.has(cardEvent.id)) {
+            console.log('⏩ Card-Event already processed, skip');
+            return;
+        }
+        
+        this.processedEvents.add(cardEvent.id);
         
         try {
             // Deserialisiere Card-Event
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
             const cardProps = nostrEventToCard(cardEvent);
-            
-            // ⚡ RELAY FILTERT GELÖSCHTE CARDS: Keine lokale Deletion-Prüfung nötig!
-            // Relay gibt per NIP-09 nur nicht-gelöschte Events zurück
             
             // Validierung: Gehört die Karte zu diesem Board?
             if (cardProps.boardRef) {
@@ -543,14 +493,27 @@ export class NostrIntegration {
                 }
             }
             
+            // ⚡ v2.0: Timestamp-Based Conflict Resolution
+            // Prüfe ob Card später gelöscht wurde
+            const deleteTime = this.cardDeletionTimestamps.get(cardProps.id!);
+            if (deleteTime) {
+                // ⚠️ Card-Event hat keine updatedAt - nutze Event created_at
+                const cardTime = cardEvent.created_at * 1000; // Millisekunden
+                
+                if (cardTime < deleteTime) {
+                    console.log(`🗑️ Card ${cardProps.id} was deleted after this update (${new Date(deleteTime).toISOString()}), skip`);
+                    return;
+                }
+            }
+            
             // columnId ist KRITISCH - ohne geht nichts!
             if (!cardProps.columnId) {
                 console.error(`❌ Card ${cardProps.id} hat keine columnId!`);
                 return;
             }
             
-            // Callback mit den Card-Props
-            onCardUpdate(cardProps);
+            // ⚡ v2.0: Direkte Store-API (SECONDARY action)
+            boardStore.upsertCardFromNostr(cardProps);
             
         } catch (error) {
             console.error(`❌ Error processing card event:`, error);
@@ -559,138 +522,71 @@ export class NostrIntegration {
 
     // ⚠️ Track recently deleted cards (in-memory only, for this session)
     // Prevents race condition: Deletion event arrives → Board event with old data arrives → Old data restored
-    private recentlyDeletedCards = new Set<string>();
+    // ❌ DEPRECATED v2.0: Ersetzt durch Timestamp-Based Tracking (cardDeletionTimestamps)
+    // private recentlyDeletedCards = new Set<string>();
     
     /**
      * Handler für Deletion-Events (Kind 5)
      * 
+     * ⚡ v2.0: Event-Driven Architecture mit Timestamp-Tracking
+     * 
      * Wird aufgerufen wenn ein Board ODER Card gelöscht wurde (via subscription).
-     * Entfernt das Element aus der Liste UND cleared den localStorage-Cache!
+     * Trackt Deletion-Timestamps für Out-of-Order Event-Handling.
      * 
      * NIP-09: Replaceable Events (Kind 30301/30302) werden via 'a' tags referenziert
-     * 
-     * ⚡ CACHE INVALIDATION STRATEGY:
-     * - Deletion event received → Clear from localStorage immediately
-     * - Track deleted card IDs in-memory (session only)
-     * - Board event handler checks deleted cards → won't restore them
-     * - Relay won't return deleted events on next fetch
-     * - Cache stays in sync with relay state
      */
     private async handleDeletionEvent(
         deletionEvent: any,
-        boardIds: string[],
-        onBoardDeletion?: (boardId: string) => void
+        boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
         console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
+        
+        // ⚡ v2.0: Event-Deduplication
+        if (this.processedEvents.has(deletionEvent.id)) {
+            console.log('⏩ Deletion-Event already processed, skip');
+            return;
+        }
+        
+        this.processedEvents.add(deletionEvent.id);
         
         try {
             // NIP-09: Parse 'a' tags für replaceable events
             // Format: ['a', '30301:pubkey:board-id'] oder ['a', '30302:pubkey:card-id']
             const aTags = deletionEvent.tags.filter((t: any) => t[0] === 'a');
+            const deleteTime = deletionEvent.created_at * 1000; // Millisekunden
             
             for (const aTag of aTags) {
                 const eventRef = aTag[1]; // z.B. "30301:pubkey:board-xxx" oder "30302:pubkey:card-xxx"
                 
                 // ===== BOARD DELETION =====
                 if (eventRef && eventRef.startsWith('30301:')) {
-                    // Extrahiere board-id (alles nach dem zweiten ":")
                     const parts = eventRef.split(':');
                     if (parts.length >= 3) {
-                        const boardId = parts.slice(2).join(':'); // board-xxx
+                        const boardId = parts.slice(2).join(':');
                         
-                        console.log(`🗑️ Board ${boardId} wurde gelöscht - clearing cache...`);
+                        // Track deletion timestamp (für Ordering)
+                        this.boardDeletionTimestamps.set(boardId, deleteTime);
+                        console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                         
-                        // ⚡ CACHE INVALIDATION: Clear localStorage for this board
-                        if (typeof window !== 'undefined') {
-                            const storageKey = `kanban-board-${boardId}`;
-                            const existed = localStorage.getItem(storageKey) !== null;
-                            
-                            if (existed) {
-                                localStorage.removeItem(storageKey);
-                                console.log(`🗑️✅ Cleared board cache: ${storageKey}`);
-                            } else {
-                                console.log(`🗑️ℹ️ Board cache already gone: ${storageKey}`);
-                            }
-                        }
-                        
-                        // Callback aufrufen um Board aus Liste zu entfernen
-                        if (onBoardDeletion) {
-                            onBoardDeletion(boardId);
-                        }
+                        // ⚡ v2.0: Direkte Store-API (SECONDARY action)
+                        // boardStore.deleteBoardFromNostr(boardId);
+                        // TODO: Implementation in Phase 2b
+                        console.log(`🗑️ TODO: Call boardStore.deleteBoardFromNostr(${boardId})`);
                     }
                 }
                 
                 // ===== CARD DELETION =====
                 else if (eventRef && eventRef.startsWith('30302:')) {
-                    // Extrahiere card-id (alles nach dem zweiten ":")
                     const parts = eventRef.split(':');
                     if (parts.length >= 3) {
-                        const cardId = parts.slice(2).join(':'); // card-xxx
+                        const cardId = parts.slice(2).join(':');
                         
-                        console.log(`🗑️ Card ${cardId} wurde gelöscht - clearing cache...`);
+                        // Track deletion timestamp (für Ordering)
+                        this.cardDeletionTimestamps.set(cardId, deleteTime);
+                        console.log(`🗑️ Tracked deletion timestamp for card ${cardId}: ${new Date(deleteTime).toISOString()}`);
                         
-                        // ⚡ Track deleted card ID (in-memory, session only)
-                        // Prevents race condition with Board events
-                        this.recentlyDeletedCards.add(cardId);
-                        console.log(`🗑️ Marked card ${cardId} as recently deleted (prevents restore)`);
-                        
-                        // ⚡ Clear from tracking after 5 seconds (enough time for race condition window)
-                        setTimeout(() => {
-                            this.recentlyDeletedCards.delete(cardId);
-                            console.log(`⏱️ Cleared ${cardId} from recently deleted tracking (after 5s)`);
-                        }, 5000);
-                        
-                        // ⚡ CACHE INVALIDATION: Clear card from ALL board caches
-                        // (Karte könnte theoretisch in mehreren Board-Caches sein)
-                        if (typeof window !== 'undefined') {
-                            const boardKeys = Object.keys(localStorage)
-                                .filter(k => k.startsWith('kanban-board-'));
-                            
-                            let clearedCount = 0;
-                            
-                            for (const key of boardKeys) {
-                                try {
-                                    const rawData = localStorage.getItem(key);
-                                    if (!rawData) continue;
-                                    
-                                    const boardData = JSON.parse(rawData);
-                                    
-                                    // Check if board has columns with cards
-                                    if (boardData.columns && Array.isArray(boardData.columns)) {
-                                        let modified = false;
-                                        
-                                        for (const column of boardData.columns) {
-                                            if (column.cards && Array.isArray(column.cards)) {
-                                                const originalLength = column.cards.length;
-                                                column.cards = column.cards.filter((c: any) => c.id !== cardId);
-                                                
-                                                if (column.cards.length < originalLength) {
-                                                    modified = true;
-                                                    console.log(`🗑️ Removed card ${cardId} from column "${column.name}" in board cache: ${key}`);
-                                                }
-                                            }
-                                        }
-                                        
-                                        // Wenn Cards entfernt wurden, speichere aktualisierte Version
-                                        if (modified) {
-                                            localStorage.setItem(key, JSON.stringify(boardData));
-                                            clearedCount++;
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.warn(`⚠️ Failed to clean card cache from ${key}:`, e);
-                                }
-                            }
-                            
-                            if (clearedCount > 0) {
-                                console.log(`🗑️✅ Cleared card ${cardId} from ${clearedCount} board cache(s)`);
-                            } else {
-                                console.log(`🗑️ℹ️ Card ${cardId} not found in any board caches`);
-                            }
-                        }
-                        
-                        // Note: Card-Deletion wird vom kanbanStore via onCardUpdate gehandhabt
-                        // Der Cache ist jetzt bereits cleared!
+                        // ⚡ v2.0: Direkte Store-API (SECONDARY action)
+                        boardStore.deleteCardFromNostr(cardId);
                     }
                 }
             }

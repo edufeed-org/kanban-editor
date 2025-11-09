@@ -359,4 +359,232 @@ export class BoardOperations {
         
         console.log('✅ Board-Metadaten aktualisiert');
     }
+
+    // ========================================
+    // SECONDARY ACTIONS (Nostr Event-Driven)
+    // ========================================
+
+    /**
+     * ⚡ SEKUNDÄR: Card von Nostr-Event erstellen/updaten
+     * KEIN Publish zu Nostr (wird von triggerUpdate mit publish: false aufgerufen)
+     * 
+     * @param board - Aktuelles Board
+     * @param cardProps - Card-Daten aus nostrEventToCard()
+     * @returns true wenn erfolgreich
+     */
+    public static upsertCardFromNostr(
+        board: Board,
+        cardProps: CardProps
+    ): boolean {
+        console.log(`📥 upsertCardFromNostr: ${cardProps.heading || cardProps.id}`);
+        
+        // 1. Find target column
+        // cardProps sollte columnId haben (aus Event deserialisiert)
+        const columnId = (cardProps as any).columnId;
+        if (!columnId) {
+            console.warn(`⚠️ Card ${cardProps.id} hat keine columnId - skip`);
+            return false;
+        }
+        
+        const column = board.findColumn(columnId);
+        if (!column) {
+            console.warn(`⚠️ Column ${columnId} not found for card ${cardProps.id}`);
+            return false;
+        }
+        
+        // 2. Check if card exists
+        const existingCard = column.findCard(cardProps.id!);
+        
+        if (existingCard) {
+            // Update existing card
+            existingCard.update(cardProps);
+            console.log(`🔄 Updated card ${cardProps.id} from Nostr`);
+        } else {
+            // Create new card
+            column.addCard(cardProps);
+            console.log(`✨ Created new card ${cardProps.id} from Nostr`);
+        }
+        
+        return true;
+    }
+
+    /**
+     * ⚡ SEKUNDÄR: Card von Nostr-Event löschen
+     * KEIN Publish zu Nostr (wird von triggerUpdate mit publish: false aufgerufen)
+     * 
+     * @param board - Aktuelles Board
+     * @param cardId - ID der zu löschenden Card
+     * @returns true wenn Card gefunden und gelöscht
+     */
+    public static deleteCardFromNostr(
+        board: Board,
+        cardId: string
+    ): boolean {
+        console.log(`🗑️ deleteCardFromNostr: ${cardId}`);
+        
+        for (const column of board.columns) {
+            const card = column.findCard(cardId);
+            
+            if (card) {
+                column.deleteCard(cardId);
+                console.log(`✅ Deleted card ${cardId} from Nostr event`);
+                return true;
+            }
+        }
+        
+        console.warn(`⚠️ Card ${cardId} not found in any column`);
+        return false;
+    }
+
+    /**
+     * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
+     * KEIN Publish zu Nostr (wird von triggerUpdate mit publish: false aufgerufen)
+     * 
+     * @param boardId - ID des zu löschenden Boards
+     * @returns true wenn Board aus Liste entfernt wurde
+     */
+    public static deleteBoardFromNostr(boardId: string): boolean {
+        if (typeof window === 'undefined') {
+            console.warn('⚠️ localStorage not available (SSR?)');
+            return false;
+        }
+        
+        console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
+        
+        // Lade Board-Liste aus localStorage
+        const boardListKey = 'kanban-boards-metadata';
+        const stored = localStorage.getItem(boardListKey);
+        
+        if (!stored) {
+            console.warn(`⚠️ No board metadata list found in localStorage`);
+            return false;
+        }
+        
+        try {
+            const boardList = JSON.parse(stored);
+            const initialLength = boardList.length;
+            
+            // Filter Board aus Liste
+            const newBoardList = boardList.filter((b: any) => b.id !== boardId);
+            
+            if (newBoardList.length < initialLength) {
+                // Board wurde gefunden und entfernt
+                localStorage.setItem(boardListKey, JSON.stringify(newBoardList));
+                console.log(`✅ Board ${boardId} removed from metadata list`);
+                return true;
+            } else {
+                console.warn(`⚠️ Board ${boardId} not found in metadata list`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`❌ Error deleting board from metadata list:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * ⚡ SEKUNDÄR: Board von Nostr-Event erstellen/updaten
+     * KEIN Publish zu Nostr
+     * 
+     * Wird aufgerufen für:
+     * - Neue Boards von anderen Usern (kollaboratives Erstellen) ✨
+     * - Updates auf Board-Metadaten (Name, Description, Tags) 📝
+     * 
+     * @param currentBoard - Aktuell geladenes Board
+     * @param boardProps - Board-Daten aus nostrEventToBoard()
+     * @returns true wenn UPDATE, false wenn INSERT (neues Board)
+     */
+    public static upsertBoardFromNostr(
+        currentBoard: Board,
+        boardProps: { 
+            id: string; 
+            name: string; 
+            description?: string; 
+            tags?: string[];
+            author?: string;
+            publishState?: string;
+            updatedAt?: string;
+        }
+    ): boolean {
+        console.log(`📥 upsertBoardFromNostr: ${boardProps.name || boardProps.id}`);
+        
+        // 1. Prüfe: Ist das Board bereits geladen?
+        const isCurrentBoard = currentBoard.id === boardProps.id;
+        
+        if (isCurrentBoard) {
+            // UPDATE: Nur Metadaten des aktuellen Boards
+            console.log(`📝 Updating current board metadata: ${boardProps.name}`);
+            currentBoard.name = boardProps.name;
+            currentBoard.description = boardProps.description || '';
+            currentBoard.tags = boardProps.tags || [];
+            
+            return true; // = UPDATE
+        } else {
+            // INSERT: Neues Board zur Liste hinzufügen
+            console.log(`✨ New board detected from Nostr: ${boardProps.name}`);
+            
+            // Speichere Board-Metadaten in localStorage
+            // (NICHT das komplette Board laden - das passiert bei loadBoard())
+            const metadata = {
+                id: boardProps.id,
+                name: boardProps.name,
+                description: boardProps.description || '',
+                lastAccessed: boardProps.updatedAt || new Date().toISOString(),
+                author: boardProps.author || '',
+                publishState: boardProps.publishState || 'draft'
+            };
+            
+            // Füge zur Board-Liste hinzu
+            BoardOperations.addBoardToMetadataList(metadata);
+            
+            // Optional: Toast-Notification für User
+            console.log(`🔔 Neues Board verfügbar: "${boardProps.name}"`);
+            
+            return false; // = INSERT
+        }
+    }
+
+    /**
+     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
+     * OHNE das komplette Board zu laden
+     * 
+     * @param metadata - Board-Metadaten (für Sidebar-Liste)
+     */
+    private static addBoardToMetadataList(metadata: {
+        id: string;
+        name: string;
+        description: string;
+        lastAccessed: string;
+        author: string;
+        publishState: string;
+    }): void {
+        if (typeof window === 'undefined') {
+            console.warn('⚠️ localStorage not available (SSR?)');
+            return;
+        }
+        
+        // Lade aktuelle Board-Liste aus localStorage
+        const boardListKey = 'kanban-boards-metadata';
+        const stored = localStorage.getItem(boardListKey);
+        const boardList = stored ? JSON.parse(stored) : [];
+        
+        // Prüfe: Board bereits in Liste?
+        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
+        
+        if (existingIndex >= 0) {
+            // Update existing entry
+            boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
+            console.log(`🔄 Updated metadata for board ${metadata.id}`);
+        } else {
+            // Add new entry
+            boardList.push(metadata);
+            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
+        }
+        
+        // Speichere aktualisierte Liste
+        localStorage.setItem(boardListKey, JSON.stringify(boardList));
+        
+        // UI wird via separate Subscription für Board-Liste aktualisiert
+        // (Kein triggerUpdate nötig - nur Metadaten-Liste)
+    }
 }
