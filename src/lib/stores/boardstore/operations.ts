@@ -606,9 +606,13 @@ export class BoardOperations {
             return;
         }
         
-        // Lade aktuelle Board-Liste aus localStorage
-        const boardListKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(boardListKey);
+        // ⚡ KRITISCH: Es gibt ZWEI localStorage-Keys!
+        // 1. 'kanban-boards-metadata' - Vollständige Metadaten
+        // 2. 'kanban-boards-list' - Nur IDs (für boardIds Array)
+        
+        // === 1. Update Metadata-Liste ===
+        const metadataKey = 'kanban-boards-metadata';
+        const stored = localStorage.getItem(metadataKey);
         const boardList = stored ? JSON.parse(stored) : [];
         
         // Prüfe: Board bereits in Liste?
@@ -624,10 +628,20 @@ export class BoardOperations {
             console.log(`➕ Added new board to metadata list: ${metadata.name}`);
         }
         
-        // Speichere aktualisierte Liste
-        localStorage.setItem(boardListKey, JSON.stringify(boardList));
+        // Speichere aktualisierte Metadata-Liste
+        localStorage.setItem(metadataKey, JSON.stringify(boardList));
         
-        // UI wird via separate Subscription für Board-Liste aktualisiert
-        // (Kein triggerUpdate nötig - nur Metadaten-Liste)
+        // === 2. Update Board-IDs-Liste ===
+        // ⚡ FIX: MUSS auch 'kanban-boards-list' aktualisieren!
+        const idsKey = 'kanban-boards-list';
+        const storedIds = localStorage.getItem(idsKey);
+        let boardIds: string[] = storedIds ? JSON.parse(storedIds) : [];
+        
+        // Füge ID hinzu, falls nicht vorhanden
+        if (!boardIds.includes(metadata.id)) {
+            boardIds.push(metadata.id);
+            localStorage.setItem(idsKey, JSON.stringify(boardIds));
+            console.log(`➕ Added board ID to list: ${metadata.id}`);
+        }
     }
 }

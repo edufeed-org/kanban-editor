@@ -675,7 +675,14 @@ subscribeToUpdates() empfängt Event
     → console.log('🔔 Neues Board verfügbar: "Team Sprint Planning"')
   
 // ===== UI UPDATE (Browser B) =====
-// Sidebar aktualisiert sich automatisch (localStorage-Trigger)
+// ⚡ KRITISCH: addBoardToMetadataList() aktualisiert BEIDE localStorage-Keys:
+//   1. 'kanban-boards-metadata' - Vollständige Metadaten
+//   2. 'kanban-boards-list' - Nur IDs (für boardIds Array)
+// → boardStore lädt IDs neu: this.boardIds = BoardStorage.loadBoardIds();
+// → triggerUpdate({ publish: false }) inkrementiert updateTrigger
+// → BoardsList.svelte $derived.by() liest getAllBoards()
+// → getAllBoards() liest updateTrigger → Neuberechnung!
+// → Sidebar aktualisiert sich automatisch ✅
 // User B sieht neues Board in Liste! 🎉
 // KEIN App-Reload nötig! ✅
 ```
