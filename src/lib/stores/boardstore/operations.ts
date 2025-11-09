@@ -489,6 +489,7 @@ export class BoardOperations {
      * Wird aufgerufen für:
      * - Neue Boards von anderen Usern (kollaboratives Erstellen) ✨
      * - Updates auf Board-Metadaten (Name, Description, Tags) 📝
+     * - Updates auf Spalten-Struktur (Reihenfolge, Namen, Farben) 🔄
      * 
      * @param currentBoard - Aktuell geladenes Board
      * @param boardProps - Board-Daten aus nostrEventToBoard()
@@ -501,6 +502,7 @@ export class BoardOperations {
             name: string; 
             description?: string; 
             tags?: string[];
+            columns?: Array<{ id: string; name: string; color?: string }>;
             author?: string;
             publishState?: string;
             updatedAt?: string;
@@ -512,11 +514,52 @@ export class BoardOperations {
         const isCurrentBoard = currentBoard.id === boardProps.id;
         
         if (isCurrentBoard) {
-            // UPDATE: Nur Metadaten des aktuellen Boards
-            console.log(`📝 Updating current board metadata: ${boardProps.name}`);
+            // UPDATE: Metadaten + Spalten-Struktur des aktuellen Boards
+            console.log(`📝 Updating current board from Nostr: ${boardProps.name}`);
+            
+            // 1. Update Board-Metadaten
             currentBoard.name = boardProps.name;
             currentBoard.description = boardProps.description || '';
             currentBoard.tags = boardProps.tags || [];
+            
+            // ⚡ KRITISCH: Author MUSS synchronisiert werden!
+            // Sonst stimmt boardRef nicht (30301:author:id)
+            if (boardProps.author) {
+                currentBoard.author = boardProps.author;
+            }
+            
+            // 2. ⚡ NEU: Spalten-Synchronisation (Reihenfolge + Metadaten)
+            if (boardProps.columns && boardProps.columns.length > 0) {
+                // Erstelle Map: columnId → Column-Instanz
+                const existingColumnsMap = new Map(
+                    currentBoard.columns.map(c => [c.id, c])
+                );
+                
+                // Reorder columns basierend auf boardProps
+                const newColumnOrder: Column[] = [];
+                
+                for (const colProps of boardProps.columns) {
+                    const existingCol = existingColumnsMap.get(colProps.id);
+                    
+                    if (existingCol) {
+                        // Spalte existiert → Update Metadaten (Name, Farbe)
+                        existingCol.name = colProps.name;
+                        existingCol.color = colProps.color || existingCol.color;
+                        newColumnOrder.push(existingCol);
+                    } else {
+                        // Spalte existiert nicht → Neue Spalte erstellen
+                        // (Sollte selten vorkommen - neue Spalten via separates Event)
+                        const newCol = new Column(colProps);
+                        newColumnOrder.push(newCol);
+                        console.log(`➕ New column added from Nostr: ${colProps.name}`);
+                    }
+                }
+                
+                // 3. Ersetze columns-Array (Reihenfolge + Metadaten)
+                currentBoard.columns = newColumnOrder;
+                
+                console.log(`🔄 Synchronized ${newColumnOrder.length} columns from Nostr`);
+            }
             
             return true; // = UPDATE
         } else {

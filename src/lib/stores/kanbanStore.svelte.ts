@@ -993,17 +993,27 @@ export class BoardStore {
             return;
         }
         
+        // ⚡ Konvertiere ColumnProps zu kompaktem Format
+        const columns = boardProps.columns?.map(c => ({
+            id: c.id || '',
+            name: c.name,
+            color: c.color
+        }));
+        
         const isUpdate = BoardOperations.upsertBoardFromNostr(this.board, {
             id: boardProps.id,
             name: boardProps.name,
             description: boardProps.description,
             tags: boardProps.tags,
+            columns, // ⚡ NEU: Spalten-Sync
             author: boardProps.author,
             publishState: boardProps.publishState
         });
         
         if (isUpdate) {
-            // Board-Metadaten wurden aktualisiert
+            // Board-Metadaten + Spalten wurden aktualisiert
+            // ⚡ CRITICAL: _columnOrder muss synchronisiert werden!
+            this._columnOrder = this.board.columns.map(c => c.id);
             this.triggerUpdate({ publish: false });
         } else {
             // Neues Board wurde zur Liste hinzugefügt

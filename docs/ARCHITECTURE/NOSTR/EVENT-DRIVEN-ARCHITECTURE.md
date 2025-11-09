@@ -216,6 +216,55 @@ public deleteCardFromNostr(cardId: string): void {
 }
 
 /**
+ * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
+ * KEIN Publish zu Nostr (publish: false)
+ * 
+ * Wird aufgerufen wenn ein Deletion-Event (Kind 5) für ein Board empfangen wird.
+ * Entfernt das Board aus der Metadaten-Liste.
+ * 
+ * @param boardId - ID des zu löschenden Boards
+ * @returns true wenn Board erfolgreich gelöscht wurde
+ */
+public deleteBoardFromNostr(boardId: string): boolean {
+    if (typeof window === 'undefined') {
+        console.warn('⚠️ localStorage not available (SSR?)');
+        return false;
+    }
+    
+    console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
+    
+    // Lade Board-Liste aus localStorage
+    const boardListKey = 'kanban-boards-metadata';
+    const stored = localStorage.getItem(boardListKey);
+    
+    if (!stored) {
+        console.warn(`⚠️ No board metadata list found in localStorage`);
+        return false;
+    }
+    
+    try {
+        const boardList = JSON.parse(stored);
+        const initialLength = boardList.length;
+        
+        // Filter Board aus Liste
+        const newBoardList = boardList.filter((b: any) => b.id !== boardId);
+        
+        if (newBoardList.length < initialLength) {
+            // Board wurde gefunden und entfernt
+            localStorage.setItem(boardListKey, JSON.stringify(newBoardList));
+            console.log(`✅ Board ${boardId} removed from metadata list`);
+            return true;
+        } else {
+            console.warn(`⚠️ Board ${boardId} not found in metadata list`);
+            return false;
+        }
+    } catch (error) {
+        console.error(`❌ Error deleting board from metadata list:`, error);
+        return false;
+    }
+}
+
+/**
  * ⚡ SEKUNDÄR: Board von Nostr-Event erstellen/updaten
  * KEIN Publish zu Nostr (publish: false)
  * 
@@ -230,11 +279,55 @@ public upsertBoardFromNostr(boardProps: BoardProps): void {
     const isCurrentBoard = this.board.id === boardProps.id;
     
     if (isCurrentBoard) {
-        // UPDATE: Nur Metadaten des aktuellen Boards
-        console.log(`📝 Updating current board metadata: ${boardProps.name}`);
+        // UPDATE: Metadaten + Spalten-Struktur des aktuellen Boards
+        console.log(`📝 Updating current board from Nostr: ${boardProps.name}`);
+        
+        // 1. Update Board-Metadaten
         this.board.name = boardProps.name;
         this.board.description = boardProps.description || '';
         this.board.tags = boardProps.tags || [];
+        
+        // ⚡ KRITISCH: Author MUSS synchronisiert werden!
+        // Sonst stimmt boardRef nicht (30301:author:id)
+        if (boardProps.author) {
+            this.board.author = boardProps.author;
+        }
+        
+        // 2. ⚡ NEU: Spalten-Synchronisation (Reihenfolge + Metadaten)
+        if (boardProps.columns && boardProps.columns.length > 0) {
+            // Erstelle Map: columnId → Column-Instanz
+            const existingColumnsMap = new Map(
+                this.board.columns.map(c => [c.id, c])
+            );
+            
+            // Reorder columns basierend auf boardProps
+            const newColumnOrder: Column[] = [];
+            
+            for (const colProps of boardProps.columns) {
+                const existingCol = existingColumnsMap.get(colProps.id);
+                
+                if (existingCol) {
+                    // Spalte existiert → Update Metadaten (Name, Farbe)
+                    existingCol.name = colProps.name;
+                    existingCol.color = colProps.color || existingCol.color;
+                    newColumnOrder.push(existingCol);
+                } else {
+                    // Spalte existiert nicht → Neue Spalte erstellen
+                    // (Sollte selten vorkommen - neue Spalten via separates Event)
+                    const newCol = new Column(colProps);
+                    newColumnOrder.push(newCol);
+                    console.log(`➕ New column added from Nostr: ${colProps.name}`);
+                }
+            }
+            
+            // 3. Ersetze columns-Array (Reihenfolge + Metadaten)
+            this.board.columns = newColumnOrder;
+            
+            // 4. Update _columnOrder für UI-Sync
+            this._columnOrder = newColumnOrder.map(c => c.id);
+            
+            console.log(`🔄 Synchronized ${newColumnOrder.length} columns from Nostr`);
+        }
         
         // ⚠️ CRITICAL: publish: false
         this.triggerUpdate({ publish: false });
@@ -438,7 +531,7 @@ private async handleDeletionEvent(
                     console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                     
                     // ⚡ DIREKT: Store-API aufrufen
-                    // (boardStore.deleteBoardFromNostr() - zu implementieren)
+                    boardStore.deleteBoardFromNostr(boardId); // ✅ IMPLEMENTIERT (9. Nov 2025)
                 }
             }
         }
@@ -686,20 +779,27 @@ if (typeof window !== 'undefined') {
 ### Phase 2: Implementation
 - [x] **kanbanStore.svelte.ts**: `triggerUpdate({ publish })` erweitert ✅
 - [x] **kanbanStore.svelte.ts**: Zentrale `publishToNostr()` Methode erstellt ✅
-- [ ] **operations.ts**: Neue Secondary Actions implementieren:
-  - [ ] `upsertCardFromNostr(cardProps)`
-  - [ ] `deleteCardFromNostr(cardId)`
-  - [ ] `upsertBoardFromNostr(boardProps)` ← ⚡ ERSETZT updateBoardMetadataFromNostr()
-    - [ ] Logik für UPDATE: Aktuelles Board-Metadaten
-    - [ ] Logik für INSERT: Neues Board zu Liste hinzufügen
-    - [ ] Helper-Methode: `addBoardToMetadataList(metadata)`
-- [ ] **nostr.ts**: Event-Handler refactoren:
-  - [ ] Event-ID Deduplication hinzufügen
-  - [ ] Deletion-Timestamp-Tracking hinzufügen
-  - [ ] `handleCardEvent()` vereinfachen
-  - [ ] `handleDeletionEvent()` vereinfachen
-  - [ ] `handleBoardEvent()` vereinfachen
-  - [ ] `subscribeToUpdates()` API ändern (Store-Referenz statt Callbacks)
+- [x] **operations.ts**: Neue Secondary Actions implementieren: ✅
+  - [x] `upsertCardFromNostr(cardProps)` ✅
+  - [x] `deleteCardFromNostr(cardId)` ✅
+  - [x] `deleteBoardFromNostr(boardId)` ✅ (NEU: 9. Nov 2025)
+  - [x] `upsertBoardFromNostr(boardProps)` ✅ ← ⚡ ERSETZT updateBoardMetadataFromNostr()
+    - [x] Logik für UPDATE: Aktuelles Board-Metadaten ✅
+    - [x] Logik für INSERT: Neues Board zu Liste hinzufügen ✅
+    - [x] Helper-Methode: `addBoardToMetadataList(metadata)` ✅
+- [x] **kanbanStore.svelte.ts**: Wrapper-Methoden implementieren: ✅
+  - [x] `upsertCardFromNostr(cardProps)` ✅
+  - [x] `deleteCardFromNostr(cardId)` ✅
+  - [x] `deleteBoardFromNostr(boardId)` ✅ (NEU: 9. Nov 2025)
+  - [x] `upsertBoardFromNostr(boardProps)` ✅
+  - [x] `subscribeToNostrUpdates()` vereinfacht (151 → 13 Zeilen, -91%) ✅
+- [x] **nostr.ts**: Event-Handler refactoren: ✅
+  - [x] Event-ID Deduplication hinzufügen ✅
+  - [x] Deletion-Timestamp-Tracking hinzufügen ✅
+  - [x] `handleCardEvent()` vereinfachen ✅
+  - [x] `handleDeletionEvent()` vereinfachen ✅
+  - [x] `handleBoardEvent()` vereinfachen ✅
+  - [x] `subscribeToUpdates()` API ändern (Store-Referenz statt Callbacks) ✅
 
 ### Phase 3: Cleanup
 - [ ] **nostr.ts**: Alten Code entfernen:
