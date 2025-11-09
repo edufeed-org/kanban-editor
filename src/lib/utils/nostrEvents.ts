@@ -337,6 +337,7 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
 
   return {
     id,
+    eventId: event.id, // ← NEU: Actual event ID from Nostr
     heading,
     content,
     color,

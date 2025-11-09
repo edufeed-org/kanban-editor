@@ -640,6 +640,13 @@ export class NostrIntegration {
             if (publishedEvent?.id) {
                 board.eventId = publishedEvent.id;
                 console.log(`[NostrIntegration] 🔑 Board Event-ID captured: ${board.eventId}`);
+                
+                // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
+                // Grund: saveBoard() wurde bereits vor publishBoard() aufgerufen
+                // → eventId muss nachträglich gespeichert werden
+                const { BoardStorage } = await import('./storage.js');
+                await BoardStorage.saveBoard(board);
+                console.log(`[NostrIntegration] 💾 Board with eventId saved to localStorage`);
             } else {
                 console.log(`[NostrIntegration] ⚠️ Board Event-ID not available (event queued or local-only)`);
             }
@@ -708,13 +715,26 @@ export class NostrIntegration {
             }
 
             const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(
+            const publishedEvent = await syncManager.publishOrQueue(
                 event, 
                 'card', 
                 'normal',
                 normalizedState,
                 targetRelays
             );
+
+            // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
+            if (publishedEvent?.id) {
+                card.eventId = publishedEvent.id;
+                console.log(`[NostrIntegration] 🔑 Card Event-ID captured: ${card.eventId}`);
+                
+                // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
+                const { BoardStorage } = await import('./storage.js');
+                await BoardStorage.saveBoard(board);
+                console.log(`[NostrIntegration] 💾 Card with eventId saved to localStorage`);
+            } else {
+                console.log(`[NostrIntegration] ⚠️ Card Event-ID not available (event queued or local-only)`);
+            }
 
             console.log(`✅ Card ${cardId} queued for publishing`);
         } catch (error) {

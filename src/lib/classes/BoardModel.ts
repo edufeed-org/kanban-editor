@@ -26,6 +26,7 @@ export interface Link extends NostrElement {
 
 export interface CardProps {
     id?: string;
+    eventId?: string; // ← NEU: Actual Nostr event ID (für Deletion via NIP-09)
     heading: string;
     content?: string;
     color?: string;
@@ -75,6 +76,7 @@ export interface AIAction {
 
 export class Card {
     public id: string;
+    public eventId?: string; // ← NEU: Actual Nostr event ID
     public heading: string;
     public content?: string;
     public color?: string;
@@ -91,6 +93,7 @@ export class Card {
 
     constructor(props: CardProps) {
         this.id = props.id || generateDTag('card');
+        this.eventId = props.eventId; // ← NEU: eventId laden
         this.heading = props.heading;
         this.content = props.content;
         this.color = props.color;
@@ -147,6 +150,7 @@ export class Card {
     } {
         return {
             id: this.id,
+            eventId: this.eventId, // ← NEU: eventId serialisieren!
             heading: this.heading,
             content: this.content,
             color: this.color,
