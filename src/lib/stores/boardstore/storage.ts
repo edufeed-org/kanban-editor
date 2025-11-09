@@ -128,6 +128,7 @@ export class BoardStorage {
             maintainers: data.maintainers || [],
             tags: data.tags || [],
             ccLicense: data.ccLicense || 'cc-by-4.0',
+            updatedAt: data.updatedAt, // ← KRITISCH: Timestamp MUSS aus localStorage kommen!
             columns: data.columns?.map((colData: any) => ({
                 id: colData.id,
                 name: colData.name,

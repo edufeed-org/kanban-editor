@@ -460,9 +460,33 @@ export class NostrIntegration {
             if (deleteTime) {
                 const boardTime = boardEvent.created_at * 1000;
                 if (boardTime < deleteTime) {
-                    console.log(`�️ Board ${boardProps.id} was deleted after this update, skip`);
+                    console.log(`⏭️ Board ${boardProps.id} was deleted after this update, skip`);
                     return;
                 }
+            }
+            
+            // ⚡ v4.0: Last-Write-Wins Conflict Resolution
+            // Vergleiche Event-Timestamp mit localStorage um stale data zu verhindern
+            const { BoardStorage } = await import('./storage.js');
+            const localBoard = BoardStorage.loadBoard(boardProps.id);
+            
+            if (localBoard && localBoard.updatedAt) {
+                // Parse ISO timestamp zu Number für Vergleich
+                const localTime = new Date(localBoard.updatedAt).getTime();
+                const eventTime = boardEvent.created_at * 1000; // Nostr timestamps sind in Sekunden
+                
+                if (eventTime <= localTime) {
+                    console.log(`⏭️ LWW: Skip older/equal event`);
+                    console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
+                    console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
+                    console.log(`  Diff: ${Math.round((localTime - eventTime) / 1000)}s newer in localStorage`);
+                    return; // Don't overwrite newer local data with stale event
+                }
+                
+                console.log(`✅ LWW: Apply newer event`);
+                console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
+                console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
+                console.log(`  Diff: ${Math.round((eventTime - localTime) / 1000)}s newer from Nostr`);
             }
             
             // ⚡ v2.0: Direkte Store-API (SECONDARY action)
@@ -514,13 +538,23 @@ export class NostrIntegration {
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
             const cardProps = nostrEventToCard(cardEvent);
             
-            // Validierung: Gehört die Karte zu diesem Board?
+            // ⚡ v3.0: BACKGROUND BOARD SYNC FIX
+            // Parse boardRef to get target board ID
+            // Format: "30301:pubkey:board-id"
+            let targetBoardId: string | null = null;
+            
             if (cardProps.boardRef) {
-                const expectedBoardRef = `30301:${currentBoard.author}:${currentBoard.id}`;
-                if (cardProps.boardRef !== expectedBoardRef) {
-                    console.warn(`⚠️ Card ${cardProps.id} gehört zu anderem Board: ${cardProps.boardRef}`);
+                const parts = cardProps.boardRef.split(':');
+                if (parts.length === 3 && parts[0] === '30301') {
+                    targetBoardId = parts[2];
+                    console.log(`📦 Card ${cardProps.id} gehört zu Board: ${targetBoardId}`);
+                } else {
+                    console.warn(`⚠️ Invalid boardRef format: ${cardProps.boardRef}`);
                     return;
                 }
+            } else {
+                console.warn(`⚠️ Card ${cardProps.id} has no boardRef`);
+                return;
             }
             
             // ⚡ v2.0: Timestamp-Based Conflict Resolution
@@ -542,8 +576,16 @@ export class NostrIntegration {
                 return;
             }
             
-            // ⚡ v2.0: Direkte Store-API (SECONDARY action)
-            boardStore.upsertCardFromNostr(cardProps);
+            // ⚡ v3.0: CRITICAL - Support Background Board Sync
+            // Wenn Card für aktuelles Board → normale Verarbeitung
+            // Wenn Card für Background Board → speichere direkt in localStorage
+            if (targetBoardId === currentBoard.id) {
+                console.log(`✅ Card ${cardProps.id} ist für aktuelles Board - normale Verarbeitung`);
+                boardStore.upsertCardFromNostr(cardProps);
+            } else {
+                console.log(`🔄 Card ${cardProps.id} ist für Background Board ${targetBoardId} - direkter localStorage Update`);
+                boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
+            }
             
         } catch (error) {
             console.error(`❌ Error processing card event:`, error);

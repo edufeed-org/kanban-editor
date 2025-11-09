@@ -328,10 +328,12 @@ export class BoardStore {
         this._columnOrder = board.columns.map(c => c.id);
         BoardStorage.updateLastAccessed(boardId);
         
-        // ⚡ KRITISCH: loadBoard ist KEIN Publish-Trigger!
-        // Nur lokale Updates (publish: false)
-        this.triggerUpdate({ publish: false });
-
+        // ⚡ v4.1: KEIN saveToStorage beim Laden!
+        // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
+        // Das würde neuere Nostr-Daten überschreiben!
+        // Aber: updateTrigger++ damit $derived neu berechnet wird
+        this.updateTrigger++;
+        
         ChatIntegration.reset();
         console.log(`✅ Board geladen: ${board.name}`);
         
@@ -1034,6 +1036,52 @@ export class BoardStore {
     public upsertCardFromNostr(cardProps: CardProps): void {
         BoardOperations.upsertCardFromNostr(this.board, cardProps);
         this.triggerUpdate({ publish: false });
+    }
+
+    /**
+     * ⚡ v3.0: BACKGROUND BOARD SYNC
+     * 
+     * Card von Nostr-Event in BACKGROUND-Board einfügen/updaten
+     * (Board ist NICHT aktuell geöffnet)
+     * 
+     * Wird aufgerufen wenn:
+     * - Browser A hat Board 1 offen
+     * - Browser B hat Board 2 offen
+     * - Browser A fügt Card zu Board 1 hinzu
+     * - Browser B empfängt Card-Event für Board 1 (Background-Board)
+     * 
+     * KEIN Publish zu Nostr (publish: false)
+     * KEIN triggerUpdate (kein UI-Update, da Board nicht geöffnet)
+     */
+    public upsertCardToBackgroundBoard(boardId: string, cardProps: CardProps): void {
+        console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        
+        // 1. Lade Board aus localStorage
+        const storageKey = `kanban-${boardId}`;
+        const stored = localStorage.getItem(storageKey);
+        
+        if (!stored) {
+            console.warn(`⚠️ Background Board ${boardId} not found in localStorage - skip card update`);
+            return;
+        }
+        
+        try {
+            const boardData = JSON.parse(stored);
+            
+            // 2. Rekonstruiere Board-Instanz (ohne Reaktivität!)
+            const tempBoard = BoardStorage.reconstructBoard(boardData);
+            
+            // 3. Füge/Update Card in tempBoard
+            BoardOperations.upsertCardFromNostr(tempBoard, cardProps);
+            
+            // 4. Speichere Board zurück zu localStorage
+            BoardStorage.saveBoard(tempBoard);
+            
+            console.log(`✅ Card ${cardProps.id} saved to background board ${boardId}`);
+            
+        } catch (error) {
+            console.error(`❌ Error updating background board ${boardId}:`, error);
+        }
     }
 
     /**

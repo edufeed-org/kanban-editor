@@ -528,6 +528,13 @@ export class BoardOperations {
                 currentBoard.author = boardProps.author;
             }
             
+            // ⚡ v4.0: CRITICAL: updatedAt synchronisieren!
+            // Für Last-Write-Wins Vergleich muss Timestamp aktualisiert werden
+            if (boardProps.updatedAt) {
+                currentBoard.updatedAt = boardProps.updatedAt;
+                console.log(`📅 Updated timestamp from Nostr: ${boardProps.updatedAt}`);
+            }
+            
             // 2. ⚡ NEU: Spalten-Synchronisation (Reihenfolge + Metadaten)
             if (boardProps.columns && boardProps.columns.length > 0) {
                 // Erstelle Map: columnId → Column-Instanz

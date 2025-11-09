@@ -165,6 +165,11 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const licenseTag = tags.find(t => t[0] === 'license');
   const ccLicense = licenseTag ? licenseTag[1] : 'cc-by-4.0';
 
+  // ⚡ v4.0: Extract event timestamp for Last-Write-Wins
+  // Nostr created_at ist in Sekunden, wir brauchen ISO string
+  const eventTimestamp = event.created_at || Math.floor(Date.now() / 1000);
+  const updatedAt = new Date(eventTimestamp * 1000).toISOString();
+
   return {
     id,
     eventId, // ← NEU: Event-ID zurückgeben!
@@ -176,6 +181,8 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
     maintainers: maintainers.length > 0 ? maintainers : undefined,
     tags: boardTags,
     ccLicense,
+    createdAt: eventTimestamp, // ⚡ v4.0: Timestamp als number
+    updatedAt, // ⚡ v4.0: ISO string für Board-Klasse
   };
 }
 
