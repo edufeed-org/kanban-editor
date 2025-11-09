@@ -289,6 +289,49 @@ export class BoardStorage {
         if (typeof window === 'undefined') return [];
         
         try {
+            // ⚡ FIX: Lade Metadaten aus 'kanban-boards-metadata' statt einzelne Board-Keys!
+            // Grund: Neue Boards von Nostr haben nur Metadaten, nicht vollständige Board-Daten
+            const metadataKey = 'kanban-boards-metadata';
+            const storedMetadata = localStorage.getItem(metadataKey);
+            
+            if (storedMetadata) {
+                try {
+                    const allMetadata = JSON.parse(storedMetadata);
+                    
+                    // Filter: Nur Boards die in boardIds sind
+                    const boards = allMetadata
+                        .filter((meta: any) => boardIds.includes(meta.id))
+                        .map((meta: any) => {
+                            // Parse timestamps
+                            const lastAccessed = meta.lastAccessed 
+                                ? (typeof meta.lastAccessed === 'string' 
+                                    ? new Date(meta.lastAccessed).getTime()
+                                    : meta.lastAccessed)
+                                : Date.now();
+                            
+                            const createdAt = meta.createdAt 
+                                ? (typeof meta.createdAt === 'string'
+                                    ? new Date(meta.createdAt).getTime()
+                                    : meta.createdAt)
+                                : lastAccessed;
+                            
+                            return {
+                                id: meta.id,
+                                name: meta.name || 'Unbenanntes Board',
+                                description: meta.description || '',
+                                createdAt,
+                                updatedAt: lastAccessed
+                            };
+                        });
+                    
+                    // Sortiere nach updatedAt (neueste zuerst)
+                    return boards.sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                } catch (e) {
+                    console.warn('⚠️ Fehler beim Parsen von Board-Metadaten:', e);
+                }
+            }
+            
+            // Fallback: Alte Logik (einzelne Board-Keys) für Legacy-Boards
             const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> = [];
             
             for (const boardId of boardIds) {

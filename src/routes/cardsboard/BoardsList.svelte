@@ -20,8 +20,12 @@
 
     // Abgeleitete Boards-Liste (mit Filterung)
     let filteredBoards = $derived.by(() => {
+        // ⚡ KRITISCH: updateTrigger für Reaktivität!
+        // Ohne dies wird die Liste nicht aktualisiert bei neuen Boards von Nostr
+        const trigger = boardStore.updateTrigger;
+        
         const results = boardStore.filterBoards(searchQuery);
-        console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}")`);
+        console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}", trigger: ${trigger})`);
         return results;
     });
 

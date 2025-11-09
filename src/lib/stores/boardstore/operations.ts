@@ -583,6 +583,11 @@ export class BoardOperations {
             // Optional: Toast-Notification für User
             console.log(`🔔 Neues Board verfügbar: "${boardProps.name}"`);
             
+            // ⚡ KRITISCH: Reaktivität triggern!
+            // 1. Board-IDs neu laden (wurde von addBoardToMetadataList aktualisiert)
+            // 2. triggerUpdate() für UI-Update
+            // (Wird im Wrapper kanbanStore.upsertBoardFromNostr() gemacht)
+            
             return false; // = INSERT
         }
     }
