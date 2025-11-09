@@ -214,7 +214,10 @@ export class BoardStore {
         
         // NUR bei Primary Actions zu Nostr publishen (Default: true)
         if (options?.publish !== false) {
+            console.log('🚀 triggerUpdate: Publishing to Nostr (publish=' + (options?.publish ?? 'undefined (default true)') + ')');
             this.publishToNostr();
+        } else {
+            console.log('⏭️ triggerUpdate: SKIP publish to Nostr (publish=false)');
         }
     }
 
@@ -717,7 +720,10 @@ export class BoardStore {
                 uiColumns
             );
             this._columnOrder = newColumnOrder;
-            this.triggerUpdate();
+            
+            // ⚡ CRITICAL: triggerUpdate mit publish=false
+            // Grund: Wir publishen selbst weiter unten sequentiell!
+            this.triggerUpdate({ publish: false });
             
             // Publishing sequentiell (nicht parallel) um Race Conditions zu vermeiden
             console.log('📤 Publishing board...');

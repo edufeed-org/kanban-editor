@@ -57,6 +57,10 @@ export class SyncManager {
   private config: Required<SyncConfig>;
   private syncIntervalId: NodeJS.Timeout | undefined;
   private retryTimeoutId: NodeJS.Timeout | undefined;
+  
+  // ⚡ CRITICAL: Tracke eigene publizierte Events (Echo-Prevention)
+  // Key: Event-ID, Value: Timestamp wann getrackt
+  private myPublishedEvents = $state(new Set<string>());
 
   constructor(private ndk: NDK, initialSigner: NDKSigner | undefined, config: SyncConfig = {}) {
     this.signer = initialSigner;
@@ -99,7 +103,7 @@ export class SyncManager {
           if (targetRelays && targetRelays.length > 0) {
             console.log(`[SyncManager] Using ${targetRelays.length} target relay(s) for PublishState: ${publishState}`);
           }
-          const relays = await this.signAndPublish(event, targetRelays);
+          const relays = await this.signAndPublish(event, targetRelays, type);
           if (relays && relays.size > 0) {
             console.log(`[SyncManager] ✅ Event published to ${relays.size} relay(s)`);
             console.log(`[SyncManager] 🔑 Event ID: ${event.id}`); // ← NEU: Log Event-ID!
@@ -126,7 +130,7 @@ export class SyncManager {
     }
   }
 
-  private async signAndPublish(event: NDKEvent, targetRelays?: string[]): Promise<Set<any>> {
+  private async signAndPublish(event: NDKEvent, targetRelays?: string[], type?: 'board' | 'card' | 'comment'): Promise<Set<any>> {
     if (!this.signer) {
       throw new Error('No signer available - cannot sign event');
     }
@@ -141,6 +145,14 @@ export class SyncManager {
         throw new Error('Event signing failed - no signature generated');
       }
       console.log('[SyncManager] Event signed');
+      
+      // ⚡ CRITICAL: Tracke Event-ID SOFORT nach Signierung!
+      // Verhindert Echo-Loop (eigenes Event wird beim Empfangen erkannt & geskipt)
+      if (event.id) {
+        this.myPublishedEvents.add(event.id);
+        console.log(`[SyncManager] 📌 Tracking own event: ${event.id.substring(0, 30)}...`);
+      }
+      
       const maxAttempts = 3;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
@@ -334,6 +346,26 @@ export class SyncManager {
       case 'high': return 3;
       case 'low': return 1;
       default: return 2;
+    }
+  }
+
+  /**
+   * ⚡ ECHO-PREVENTION: Prüft ob Event-ID zu eigenen publizierten Events gehört
+   * @param eventId Die zu prüfende Event-ID
+   * @returns true wenn eigenes Event (→ skip processing!)
+   */
+  public isMyEvent(eventId: string): boolean {
+    return this.myPublishedEvents.has(eventId);
+  }
+
+  /**
+   * ⚡ CLEANUP: Entfernt Event-ID aus Tracking-Liste (nach erfolgreichem Skip)
+   * @param eventId Die Event-ID die aus Tracking entfernt werden soll
+   */
+  public clearMyEvent(eventId: string): void {
+    const deleted = this.myPublishedEvents.delete(eventId);
+    if (deleted) {
+      console.log(`[SyncManager] 🗑️ Cleared own event tracking: ${eventId.substring(0, 30)}...`);
     }
   }
 

@@ -59,13 +59,15 @@
    // Lokaler State für dndzone: Wird von dndzone mutiert
    let columns = $state([...columns_inner]);
    let isDragging = $state(false);
+   let isLocalDnD = $state(false);  // ← NEU: Flag für lokale DnD-Operationen
    
    // WICHTIG: Synchronisiere columns mit columns_inner (vom Parent)
    // Das ist essentiell für die Reaktivität!
    // Wenn Parent columns_inner ändert (z.B. neue Spalte), muss columns aktualisiert werden
    $effect(() => {
-     // Wenn nicht gerade Dragging, synchronisiere mit Parent-Änderungen
-     if (!isDragging) {
+     // ⚡ Nur während DnD blockieren (isDragging ODER isLocalDnD)
+     // Sobald isLocalDnD = false → Parent-Änderungen werden wieder synchronisiert
+     if (!isDragging && !isLocalDnD) {
        // Vergleiche ob sich die Spalten-Reihenfolge oder IDs geändert haben
        const parentIds = columns_inner.map(c => c.id).join(',');
        const localIds = columns.map(c => c.id).join(',');
@@ -75,7 +77,7 @@
            parentIds,
            localIds
          });
-         // Aktualisiere mit Spalten vom Parent (aber in lokaler Reihenfolge)
+         // Aktualisiere mit Spalten vom Parent (neue Reihenfolge ODER neue/gelöschte Spalten)
          columns = [...columns_inner];
        }
      }
@@ -83,6 +85,7 @@
 
 	function handleDndConsiderColumns(e: any) {
      isDragging = true;
+     isLocalDnD = true;  // ← NEU: Markiere lokale DnD-Operation
      columns = e.detail.items;
    }
    function handleDndFinalizeColumns(e: any) {
@@ -108,6 +111,17 @@
        columns = finalItems;
        onFinalUpdate(finalItems);
      }
+     
+     // ⚡ CRITICAL: Warte auf Nostr-Roundtrip, dann erlaube wieder Parent-Sync
+     // Grund: onFinalUpdate() → executeSyncBoardState() → publishToNostr() → Echo zurück
+     // → triggerUpdate() → uiData neu → würde $effect triggern!
+     // Nostr-Roundtrip + delayed cleanup (5s) kann länger dauern
+     // In Browser A: Blockiert $effect während eigener Roundtrip
+     // In Browser B: Kein isLocalDnD, akzeptiert sofort fremde Updates ✅
+     setTimeout(() => {
+       isLocalDnD = false;
+       console.log('🔓 Board.svelte: isLocalDnD = false (allow parent sync again)');
+     }, 2000);  // ← Erhöht auf 2 Sekunden für sicheren Roundtrip
    }
 	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
 		// Immutable update: Erstelle neues columns Array

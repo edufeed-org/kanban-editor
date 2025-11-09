@@ -428,6 +428,21 @@ export class NostrIntegration {
         
         this.processedEvents.add(boardEvent.id);
         
+        // ⚡ CRITICAL: Skip eigene Events (Echo-Loop Prevention!)
+        const { getSyncManager } = await import('../syncManager.svelte.js');
+        const syncManager = getSyncManager();
+        if (syncManager.isMyEvent(boardEvent.id)) {
+            console.log(`⏭️ Eigenes Board-Event erkannt - SKIP: ${boardEvent.id.substring(0, 30)}...`);
+            
+            // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
+            setTimeout(() => {
+                syncManager.clearMyEvent(boardEvent.id);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
+            }, 5000);
+            
+            return;
+        }
+        
         try {
             // Deserialisiere Board-Event
             const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
@@ -478,6 +493,21 @@ export class NostrIntegration {
         }
         
         this.processedEvents.add(cardEvent.id);
+        
+        // ⚡ CRITICAL: Skip eigene Events (Echo-Loop Prevention!)
+        const { getSyncManager } = await import('../syncManager.svelte.js');
+        const syncManager = getSyncManager();
+        if (syncManager.isMyEvent(cardEvent.id)) {
+            console.log(`⏭️ Eigenes Card-Event erkannt - SKIP: ${cardEvent.id.substring(0, 30)}...`);
+            
+            // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
+            setTimeout(() => {
+                syncManager.clearMyEvent(cardEvent.id);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${cardEvent.id.substring(0, 30)}...`);
+            }, 5000);
+            
+            return;
+        }
         
         try {
             // Deserialisiere Card-Event

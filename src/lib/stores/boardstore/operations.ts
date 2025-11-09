@@ -535,6 +535,11 @@ export class BoardOperations {
                     currentBoard.columns.map(c => [c.id, c])
                 );
                 
+                // ⚡ CRITICAL: Prüfe ob Reihenfolge bereits gleich ist
+                const currentOrder = currentBoard.columns.map(c => c.id);
+                const nostrOrder = boardProps.columns.map(c => c.id);
+                const isSameOrder = JSON.stringify(currentOrder) === JSON.stringify(nostrOrder);
+                
                 // Reorder columns basierend auf boardProps
                 const newColumnOrder: Column[] = [];
                 
@@ -555,10 +560,15 @@ export class BoardOperations {
                     }
                 }
                 
-                // 3. Ersetze columns-Array (Reihenfolge + Metadaten)
-                currentBoard.columns = newColumnOrder;
-                
-                console.log(`🔄 Synchronized ${newColumnOrder.length} columns from Nostr`);
+                // ⚡ CRITICAL: Nur reassignieren wenn Reihenfolge geändert!
+                // Sonst triggert unnötige UI-Update (Double-Move Bug)
+                if (!isSameOrder) {
+                    currentBoard.columns = newColumnOrder;
+                    console.log(`🔄 Synchronized ${newColumnOrder.length} columns from Nostr`);
+                } else {
+                    // ⚡ Spalten gleich, aber Metadaten (Name, Farbe) könnte geändert sein
+                    console.log(`✅ Columns already in correct order, skip reassignment (metadata only)`);
+                }
             }
             
             return true; // = UPDATE
