@@ -470,6 +470,8 @@ export class NostrIntegration {
             const { BoardStorage } = await import('./storage.js');
             const localBoard = BoardStorage.loadBoard(boardProps.id);
             
+            console.log(`🔍 LWW Check: localBoard exists?`, !!localBoard, localBoard ? `updatedAt: ${localBoard.updatedAt}` : 'null');
+            
             if (localBoard && localBoard.updatedAt) {
                 // Parse ISO timestamp zu Number für Vergleich
                 const localTime = new Date(localBoard.updatedAt).getTime();
@@ -487,6 +489,8 @@ export class NostrIntegration {
                 console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
                 console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
                 console.log(`  Diff: ${Math.round((eventTime - localTime) / 1000)}s newer from Nostr`);
+            } else {
+                console.log(`✅ LWW: No local board, apply event unconditionally`);
             }
             
             // ⚡ v2.0: Direkte Store-API (SECONDARY action)

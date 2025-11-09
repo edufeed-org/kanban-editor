@@ -270,9 +270,28 @@ export class Board {
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
-        this.createdAt = generateTimestamp();
+        
+        // ⚡ v4.3: FIX - Verwende props.createdAt falls vorhanden (von Nostr), sonst NOW
+        // createdAt als number (Sekunden) → konvertiere zu ISO string
+        if (props.createdAt !== undefined) {
+            this.createdAt = typeof props.createdAt === 'number'
+                ? new Date(props.createdAt * 1000).toISOString()
+                : props.createdAt;
+        } else {
+            this.createdAt = generateTimestamp();
+        }
+        
         // ⚡ v4.0: Verwende updatedAt aus Props (falls von Nostr), sonst neu generieren
         this.updatedAt = props.updatedAt || this.createdAt;
+        
+        // ⚡ v4.2: DEBUG - Timestamp tracking
+        if (props.updatedAt || props.createdAt) {
+            console.log(`🔍 Board Constructor DEBUG:`);
+            console.log(`  props.createdAt:`, props.createdAt);
+            console.log(`  props.updatedAt:`, props.updatedAt);
+            console.log(`  this.createdAt:`, this.createdAt);
+            console.log(`  this.updatedAt:`, this.updatedAt);
+        }
     }
 
     setPublishState(state: PublishState): void {

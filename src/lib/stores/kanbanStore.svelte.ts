@@ -1107,6 +1107,14 @@ export class BoardStore {
             return;
         }
         
+        // ⚡ v4.2: DEBUG - Was kommt an?
+        console.log(`🔍 upsertBoardFromNostr DEBUG:`, {
+            id: boardProps.id,
+            name: boardProps.name,
+            updatedAt: boardProps.updatedAt,
+            updatedAtType: typeof boardProps.updatedAt
+        });
+        
         // ⚡ Konvertiere ColumnProps zu kompaktem Format
         const columns = boardProps.columns?.map(c => ({
             id: c.id || '',
@@ -1141,6 +1149,7 @@ export class BoardStore {
             // User soll es in der Board-Liste UND beim Öffnen sehen können
             // KRITISCH: Nutze updatedAt vom Event, nicht NOW!
             console.log(`📦 upsertBoardFromNostr: Neues Board ${boardProps.id}, erstelle & speichere`);
+            console.log(`🔍 DEBUG: boardProps.updatedAt =`, boardProps.updatedAt);
             
             // 1. Erstelle vollständiges Board-Objekt aus boardProps
             const newBoard = new Board({
@@ -1154,6 +1163,8 @@ export class BoardStore {
                 updatedAt: boardProps.updatedAt,  // ⚡ v4.2: Timestamp vom Event!
                 columns: boardProps.columns
             });
+            
+            console.log(`🔍 DEBUG: newBoard.updatedAt AFTER construction =`, newBoard.updatedAt);
             
             // 2. Speichere vollständiges Board zu localStorage
             // (Board hat jetzt den korrekten updatedAt-Timestamp vom Event)
