@@ -1121,19 +1121,49 @@ export class BoardStore {
             tags: boardProps.tags,
             columns, // ⚡ NEU: Spalten-Sync
             author: boardProps.author,
-            publishState: boardProps.publishState
+            publishState: boardProps.publishState,
+            updatedAt: boardProps.updatedAt  // ⚡ v4.1: Timestamp MUSS weitergegeben werden!
         });
         
         if (isUpdate) {
             // Board-Metadaten + Spalten wurden aktualisiert
             // ⚡ CRITICAL: _columnOrder muss synchronisiert werden!
             this._columnOrder = this.board.columns.map(c => c.id);
-            this.triggerUpdate({ publish: false });
+            
+            // ⚡ v4.1: KEIN saveToStorage bei Updates von Nostr!
+            // Grund: Board existiert bereits in localStorage
+            // Update wird erst beim nächsten User-Edit gespeichert
+            // Das verhindert Race Conditions mit LWW
+            this.updateTrigger++;  // ← NUR trigger update, KEIN save!
         } else {
-            // Neues Board wurde zur Liste hinzugefügt
-            // Board-Liste muss neu geladen werden
+            // ⚡ v4.2: NEUES Board - Erstelle VOLLSTÄNDIGES Board-Objekt!
+            // Grund: Board existiert noch nicht in localStorage
+            // User soll es in der Board-Liste UND beim Öffnen sehen können
+            // KRITISCH: Nutze updatedAt vom Event, nicht NOW!
+            console.log(`📦 upsertBoardFromNostr: Neues Board ${boardProps.id}, erstelle & speichere`);
+            
+            // 1. Erstelle vollständiges Board-Objekt aus boardProps
+            const newBoard = new Board({
+                id: boardProps.id,
+                eventId: boardProps.eventId,
+                name: boardProps.name,
+                description: boardProps.description,
+                tags: boardProps.tags,
+                author: boardProps.author,
+                publishState: boardProps.publishState,
+                updatedAt: boardProps.updatedAt,  // ⚡ v4.2: Timestamp vom Event!
+                columns: boardProps.columns
+            });
+            
+            // 2. Speichere vollständiges Board zu localStorage
+            // (Board hat jetzt den korrekten updatedAt-Timestamp vom Event)
+            BoardStorage.saveBoard(newBoard);
+            
+            // 3. Board-Liste muss neu geladen werden
             this.boardIds = BoardStorage.loadBoardIds();
-            this.triggerUpdate({ publish: false });
+            
+            // 4. Trigger update für UI
+            this.updateTrigger++;
         }
     }
     
