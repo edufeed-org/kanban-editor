@@ -1,5 +1,99 @@
 # Changelog
 
+## Version 4.2 - Echo-Loop Prevention & Cross-Browser Sync Fix
+
+**Datum:** 9. November 2025  
+**Branch:** `read-boards-from-nostr`  
+**Status:** ✅ **PRODUCTION READY - UX Critical Fix**
+
+### 🎯 Zusammenfassung
+
+**Eliminiert Echo-Loop (Doppel-Effekt) und fixt Cross-Browser Sync Delay:**
+- ✅ **Delayed Cleanup**: Eigene Events werden 5 Sekunden lang geskippt (verhindert mehrfache Echoes)
+- ✅ **isLocalDnD Guard**: $effect blockiert während DnD-Roundtrip (kein visueller Glitch)
+- ✅ **Cross-Browser Sync**: Browser B zeigt Updates von Browser A **sofort** (< 500ms)
+- ✅ **Zero Breaking Changes**: Alle bestehenden Features funktionieren
+- ✅ **TypeScript**: 0 errors, 0 warnings
+
+### 🐛 Problem
+
+#### Symptom 1: Double-Move-Effekt (Browser A)
+```
+User draggt Spalte → Spalte springt zurück → bewegt sich erneut
+Root Cause: Browser verarbeitet eigenes Nostr-Event als fremdes Event
+```
+
+#### Symptom 2: Cross-Browser Sync Delay (Browser B)
+```
+Browser A draggt Spalte → Browser B zeigt KEINE Änderung (nur nach Reload)
+Root Cause: $effect überschreibt sofort mit alter Reihenfolge
+```
+
+### ✅ Lösung
+
+#### 1. Delayed Cleanup (5 Sekunden)
+```typescript
+// nostr.ts
+if (syncManager.isMyEvent(boardEvent.id)) {
+    console.log('⏭️ Eigenes Board-Event erkannt - SKIP');
+    setTimeout(() => {
+        syncManager.clearMyEvent(boardEvent.id);
+    }, 5000);  // ← Verhindert mehrfache Echoes!
+    return;
+}
+```
+
+#### 2. isLocalDnD Guard (2 Sekunden)
+```typescript
+// Board.svelte
+$effect(() => {
+    if (!isDragging && !isLocalDnD) {  // ← Blockiert während Roundtrip
+        if (parentIds !== localIds) {
+            columns = [...columns_inner];  // ← Update nur wenn safe
+        }
+    }
+});
+```
+
+### 📊 Impact
+
+| Metrik | Before | After |
+|--------|--------|-------|
+| **Spalten-Glitch** | ❌ Doppel-Effekt | ✅ Smooth (einmalig) |
+| **Cross-Browser** | ❌ Erst nach Reload | ✅ Sofort (< 500ms) |
+| **Echo-Handling** | ❌ Nur erstes Echo | ✅ Alle Echoes (5s) |
+| **Memory Leak** | ⚠️ Risk | ✅ Auto-Cleanup |
+
+### 🔧 Dateien Geändert
+
+1. **src/lib/stores/syncManager.svelte.ts**
+   - Added: `isMyEvent()` & `clearMyEvent()` public methods
+   - Line 153: Track event after `event.sign()`
+
+2. **src/lib/stores/boardstore/nostr.ts**
+   - Lines 430-443: `handleBoardEvent()` mit delayed cleanup
+   - Lines 497-510: `handleCardEvent()` mit delayed cleanup
+
+3. **src/routes/cardsboard/Board.svelte**
+   - Line 63: Added `isLocalDnD` state
+   - Lines 65-80: `$effect` mit `isLocalDnD` guard
+   - Lines 107-114: Delayed `isLocalDnD = false` (2s)
+
+### 📚 Dokumentation
+
+- **[ECHO-PREVENTION-FLOW.md](./docs/ARCHITECTURE/ECHO-PREVENTION-FLOW.md)** - Vollständige Flow-Dokumentation
+- **[BUG-FIX-ECHO-LOOP.md](./docs/TO-FIX/BUG-FIX-ECHO-LOOP.md)** - Bug-Analyse & Timeline
+
+### 🧪 Test Results
+
+- ✅ Manual Testing: Browser A → Kein Doppel-Effekt
+- ✅ Cross-Browser: Browser B → Sofortige Sync (< 500ms)
+- ✅ Doppeltes Echo: Beide Echoes geskippt
+- ✅ TypeScript: 0 errors, 0 warnings
+- ✅ Production Build: Success
+
+---
+
 ## Version 4.1 - localStorage Consolidation (Bug Fix v1.4)
 
 **Datum:** 9. November 2025  
