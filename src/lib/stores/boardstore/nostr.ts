@@ -569,9 +569,8 @@ export class NostrIntegration {
                         console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
-                        // boardStore.deleteBoardFromNostr(boardId);
-                        // TODO: Implementation in Phase 2b
-                        console.log(`🗑️ TODO: Call boardStore.deleteBoardFromNostr(${boardId})`);
+                        boardStore.deleteBoardFromNostr(boardId);
+                        console.log(`✅ Called boardStore.deleteBoardFromNostr(${boardId})`);
                     }
                 }
                 

@@ -313,7 +313,10 @@ export class BoardStore {
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         BoardStorage.updateLastAccessed(boardId);
-        this.triggerUpdate();
+        
+        // ⚡ KRITISCH: loadBoard ist KEIN Publish-Trigger!
+        // Nur lokale Updates (publish: false)
+        this.triggerUpdate({ publish: false });
 
         ChatIntegration.reset();
         console.log(`✅ Board geladen: ${board.name}`);
