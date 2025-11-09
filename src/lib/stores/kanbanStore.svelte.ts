@@ -199,9 +199,34 @@ export class BoardStore {
         BoardStorage.saveBoard(this.board);
     }
 
-    private triggerUpdate(): void {
+    /**
+     * ⚡ PHASE 1: Event-Driven Architecture
+     * 
+     * Triggert Update mit optionalem Nostr-Publish
+     * 
+     * @param options - { publish?: boolean } - Default: true (Primary Actions)
+     *   - publish: true  → User-Action → Publish zu Nostr (PRIMARY)
+     *   - publish: false → Nostr-Event → NUR lokaler Update (SECONDARY)
+     */
+    private triggerUpdate(options?: { publish?: boolean }): void {
         this.updateTrigger++;
         this.saveToStorage();
+        
+        // NUR bei Primary Actions zu Nostr publishen (Default: true)
+        if (options?.publish !== false) {
+            this.publishToNostr();
+        }
+    }
+
+    /**
+     * ⚡ PHASE 1: Event-Driven Architecture
+     * 
+     * Zentrale Methode für Nostr-Publishing
+     * Publiziert aktuelles Board zu Nostr
+     */
+    private publishToNostr(): void {
+        // Asynchron publishen (nicht-blockierend)
+        this.publishBoardAsync();
     }
 
     // ============================================================================

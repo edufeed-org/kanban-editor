@@ -579,12 +579,13 @@ if (typeof window !== 'undefined') {
 ## 📋 Migration Checklist
 
 ### Phase 1: Preparation
-- [ ] Dokumentation erstellt (`EVENT-DRIVEN-ARCHITECTURE.md`)
-- [ ] Team-Review & Approval
+- [x] Dokumentation erstellt (`EVENT-DRIVEN-ARCHITECTURE.md`)
+- [x] Team-Review & Approval ✅ (Dokumentation ist klar verständlich)
 - [ ] Tests für neue Store-APIs schreiben
 
 ### Phase 2: Implementation
-- [ ] **storage.ts/operations.ts**: `triggerUpdate({ publish })` erweitern
+- [x] **kanbanStore.svelte.ts**: `triggerUpdate({ publish })` erweitert ✅
+- [x] **kanbanStore.svelte.ts**: Zentrale `publishToNostr()` Methode erstellt ✅
 - [ ] **operations.ts**: Neue Secondary Actions implementieren:
   - [ ] `upsertCardFromNostr(cardProps)`
   - [ ] `deleteCardFromNostr(cardId)`
