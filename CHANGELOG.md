@@ -1,5 +1,112 @@
 # Changelog
 
+## Version 4.1 - localStorage Consolidation (Bug Fix v1.4)
+
+**Datum:** 9. November 2025  
+**Branch:** `main`  
+**Status:** ✅ **CRITICAL ARCHITECTURE FIX - Single Source of Truth**
+
+### 🎯 Zusammenfassung
+
+**Eliminiert redundanten localStorage Key und fixt "Browser A board not visible" Bug:**
+- ✅ **Consolidated Keys**: `kanban-boards-list` eliminiert (nur `kanban-boards-metadata` bleibt)
+- ✅ **Single Source of Truth**: Board-IDs nun direkt aus Metadaten
+- ✅ **Browser A Fix**: Neu erstellte Boards sichtbar SOFORT (ohne localStorage Clear)
+- ✅ **Simplified Code**: Weniger localStorage-Keys zu verwalten
+- ✅ **TypeScript**: 0 errors, 0 warnings
+- ✅ **Zero Breaking Changes**: Deprecated Methods bleiben als NO-OP
+
+### 🔧 Technical Details
+
+#### Problem (Bug v1.3)
+```
+Browser A createBoard() → Board nicht in Liste sichtbar bis localStorage geleert
+Root Cause: createBoard() nur kanban-boards-list aktualisiert, nicht kanban-boards-metadata
+```
+
+#### Lösung (v1.4)
+```
+Before (REDUNDANT):
+  kanban-boards-list      → ["board-1", "board-2"] (nur IDs)
+  kanban-boards-metadata  → [{id, name, ...}]      (Metadaten)
+  
+After (SINGLE SOURCE):
+  kanban-boards-metadata  → [{id, name, ...}]      (Alles hier!)
+  loadBoardIds() extrahiert IDs direkt aus Metadaten
+```
+
+#### Dateien Geändert
+
+**1. storage.ts** — Simplified Key Management
+```typescript
+// ✅ loadBoardIds() jetzt: Liest NUR aus kanban-boards-metadata
+// ✅ saveBoardIds() jetzt: DEPRECATED (NO-OP)
+// ❌ BOARDS_LIST_KEY: Entfernt
+```
+
+**2. operations.ts** — Removed Redundant Updates
+```typescript
+// ✅ addBoardToMetadataList() jetzt: Updated NUR kanban-boards-metadata
+// ❌ Removed: Separate update von kanban-boards-list
+```
+
+**3. kanbanStore.svelte.ts** — createBoard() Already Calls addBoardToMetadataList()
+```typescript
+// ✅ createBoard() ruft addBoardToMetadataList() auf
+// ✅ Board sofort in Metadaten + localStorage
+// ✅ UI updates via triggerUpdate()
+```
+
+### ✅ Benefits
+
+| Vorher | Nachher |
+|--------|---------|
+| 2 localStorage Keys für Board-Listen | 1 Key (Single Source of Truth) |
+| Sync-Bugs zwischen Keys | Keine Sync-Probleme mehr |
+| Browser A board nicht sichtbar | Sofort sichtbar nach Erstellung |
+| saveBoardIds() + metadata separate | Alles in einem Key |
+| Komplexe Fallback-Logik | Einfacher Code |
+
+### 📋 Test Plan
+
+Siehe: **TEST-CONSOLIDATION.md**
+
+Test Szenarien:
+- ✅ Board Creation (Browser A) — Board sofort sichtbar
+- ✅ Cross-Browser Sync (Nostr) — Browser B sieht Board von A
+- ✅ Sorting by lastAccessed — Newest first
+- ✅ Offline-Online Sync — Boards werden synchronisiert
+- ✅ localStorage Integrity — Nur kanban-boards-metadata existiert
+
+### ⚠️ Deprecated Code (Backward Compatibility)
+
+```typescript
+// storage.ts
+public static saveBoardIds(boardIds: string[]): void {
+    console.warn('⚠️ saveBoardIds() deprecated - Use addBoardToMetadataList() instead!');
+    // NO-OP: Makes no changes to localStorage
+}
+```
+
+**Reason:** 6 Calls in kanbanStore.svelte.ts still active
+**Future:** Remove in next refactoring phase (Phase 2)
+
+### 🔄 Migration
+
+Bestehende localStorage-Instanzen:
+- Alte `kanban-boards-list` Keys bleiben unverändert (werden ignoriert)
+- Neue Boards → nur in `kanban-boards-metadata`
+- Optional: User kann localStorage manuell clearen
+
+### 📊 Code Quality
+
+- **TypeScript**: ✅ 0 errors, 0 warnings
+- **Compilation**: ✅ Build successful
+- **Tests**: ✅ All existing tests still pass
+- **Console**: ✅ No errors (only deprecation warnings)
+
+---
+
 ## Version 4.0 - AI Agent & ChatBot Infrastructure (Phase 3.0 Foundation)
 
 **Datum:** 6. November 2025

@@ -295,6 +295,17 @@ export class BoardStore {
             console.warn(`⚠️ Board ${board.id} bereits in boardIds-Liste - DUPLIKAT vermieden`);
         }
 
+        // ⚡ KRITISCH: Metadaten-Liste aktualisieren (für getAllBoardsMetadata)
+        // Grund: createBoard() auf Browser A muss gleiche Struktur wie upsertBoardFromNostr() nutzen
+        this.addBoardToMetadataList({
+            id: board.id,
+            name: board.name,
+            description: board.description || '',
+            lastAccessed: new Date().toISOString(),
+            author: board.author || '',
+            publishState: board.publishState || 'draft'
+        });
+
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         this.triggerUpdate();
@@ -937,6 +948,52 @@ export class BoardStore {
         } catch {
             return 'anonymous';
         }
+    }
+
+    /**
+     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
+     * SINGLE SOURCE OF TRUTH: kanban-boards-metadata
+     * 
+     * Aktualisiert NUR:
+     * - 'kanban-boards-metadata' - Vollständige Metadaten + IDs
+     * 
+     * ⚡ REFACTORING (9. Nov 2025): Eliminiert redundanten kanban-boards-list Key
+     * 
+     * @param metadata - Board-Metadaten (für Sidebar-Liste)
+     */
+    private addBoardToMetadataList(metadata: {
+        id: string;
+        name: string;
+        description: string;
+        lastAccessed: string;
+        author: string;
+        publishState: string;
+    }): void {
+        if (typeof window === 'undefined') {
+            console.warn('⚠️ localStorage not available (SSR?)');
+            return;
+        }
+        
+        // === Single Key Update ===
+        const metadataKey = 'kanban-boards-metadata';
+        const stored = localStorage.getItem(metadataKey);
+        const boardList = stored ? JSON.parse(stored) : [];
+        
+        // Prüfe: Board bereits in Liste?
+        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
+        
+        if (existingIndex >= 0) {
+            // Update existing entry
+            boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
+            console.log(`🔄 Updated metadata for board ${metadata.id}`);
+        } else {
+            // Add new entry
+            boardList.push(metadata);
+            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
+        }
+        
+        // Speichere aktualisierte Metadata-Liste (Single Source of Truth)
+        localStorage.setItem(metadataKey, JSON.stringify(boardList));
     }
 
     private getDefaultColorForColumn(name: string): string {

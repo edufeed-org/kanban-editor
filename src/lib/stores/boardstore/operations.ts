@@ -611,11 +611,14 @@ export class BoardOperations {
             return;
         }
         
-        // ⚡ KRITISCH: Es gibt ZWEI localStorage-Keys!
-        // 1. 'kanban-boards-metadata' - Vollständige Metadaten
-        // 2. 'kanban-boards-list' - Nur IDs (für boardIds Array)
+        /**
+         * ⚡ REFACTORING (9. Nov 2025): SINGLE SOURCE OF TRUTH
+         * 
+         * Nur kanban-boards-metadata wird aktualisiert.
+         * kanban-boards-list wurde komplett eliminiert.
+         * loadBoardIds() lädt jetzt direkt aus Metadaten!
+         */
         
-        // === 1. Update Metadata-Liste ===
         const metadataKey = 'kanban-boards-metadata';
         const stored = localStorage.getItem(metadataKey);
         const boardList = stored ? JSON.parse(stored) : [];
@@ -635,18 +638,5 @@ export class BoardOperations {
         
         // Speichere aktualisierte Metadata-Liste
         localStorage.setItem(metadataKey, JSON.stringify(boardList));
-        
-        // === 2. Update Board-IDs-Liste ===
-        // ⚡ FIX: MUSS auch 'kanban-boards-list' aktualisieren!
-        const idsKey = 'kanban-boards-list';
-        const storedIds = localStorage.getItem(idsKey);
-        let boardIds: string[] = storedIds ? JSON.parse(storedIds) : [];
-        
-        // Füge ID hinzu, falls nicht vorhanden
-        if (!boardIds.includes(metadata.id)) {
-            boardIds.push(metadata.id);
-            localStorage.setItem(idsKey, JSON.stringify(boardIds));
-            console.log(`➕ Added board ID to list: ${metadata.id}`);
-        }
     }
 }

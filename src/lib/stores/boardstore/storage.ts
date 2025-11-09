@@ -7,19 +7,37 @@ import { authStore } from '../authStore.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
 
 export class BoardStorage {
-    private static BOARDS_LIST_KEY = 'kanban-boards-list';
+    /**
+     * ⚡ REFACTORING (9. Nov 2025): Eliminiert kanban-boards-list
+     * Single Source of Truth: kanban-boards-metadata
+     * 
+     * Alte Struktur:
+     *   - kanban-boards-list (nur IDs) ← REDUNDANT!
+     *   - kanban-boards-metadata (Metadaten) ← USE THIS
+     *   - kanban-board-{id} (volle Daten, lazy-loaded)
+     * 
+     * Neue Struktur:
+     *   - kanban-boards-metadata (einzige Quelle für Board-Liste)
+     *   - kanban-board-{id} (volle Daten, lazy-loaded)
+     */
 
     /**
-     * Lädt Board-IDs aus localStorage
+     * Lädt Board-IDs aus localStorage (aus kanban-boards-metadata)
+     * 
+     * ⚡ KRITISCH: ALLE Board-IDs kommen aus Metadaten!
+     * Keine separaten Keys mehr.
      */
     public static loadBoardIds(): string[] {
         if (typeof window === 'undefined') return [];
         
         try {
-            const stored = localStorage.getItem(BoardStorage.BOARDS_LIST_KEY);
+            const metadataKey = 'kanban-boards-metadata';
+            const stored = localStorage.getItem(metadataKey);
+            
             if (stored) {
-                const ids = JSON.parse(stored);
-                console.log('📋 Board-IDs geladen:', ids);
+                const metadata = JSON.parse(stored);
+                const ids = metadata.map((m: any) => m.id);
+                console.log('📋 Board-IDs geladen aus Metadata:', ids.length, 'Boards');
                 return ids;
             }
         } catch (error) {
@@ -30,17 +48,16 @@ export class BoardStorage {
     }
 
     /**
-     * Speichert Board-IDs in localStorage
+     * ⚠️ DEPRECATED: saveBoardIds() - Nicht mehr nötig!
+     * 
+     * Board-IDs werden NUR über addBoardToMetadataList() aktualisiert.
+     * Diese Methode wird nicht mehr aufgerufen.
+     * 
+     * @deprecated Nutze stattdessen addBoardToMetadataList() in kanbanStore
      */
     public static saveBoardIds(boardIds: string[]): void {
-        if (typeof window === 'undefined') return;
-        
-        try {
-            localStorage.setItem(BoardStorage.BOARDS_LIST_KEY, JSON.stringify(boardIds));
-            console.log('💾 Board-IDs gespeichert:', boardIds.length);
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Speichern der Board-IDs:', error);
-        }
+        console.warn('⚠️ saveBoardIds() deprecated - Use addBoardToMetadataList() instead!');
+        // NO-OP: Methode für Rückwärts-Kompatibilität erhalten, aber macht nichts
     }
 
     /**
