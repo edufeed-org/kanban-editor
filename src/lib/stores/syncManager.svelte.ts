@@ -87,11 +87,11 @@ export class SyncManager {
     }
   }
 
-  public async publishOrQueue(event: NDKEvent, type: 'board' | 'card' | 'comment', priority: 'high' | 'normal' | 'low' = 'normal', publishState?: PublishState, targetRelays?: string[]): Promise<void> {
+  public async publishOrQueue(event: NDKEvent, type: 'board' | 'card' | 'comment', priority: 'high' | 'normal' | 'low' = 'normal', publishState?: PublishState, targetRelays?: string[]): Promise<NDKEvent | undefined> {
     try {
       if (targetRelays !== undefined && targetRelays.length === 0) {
         console.log(`[SyncManager] Local-only mode - skipping Nostr publishing for ${type} event`);
-        return;
+        return undefined; // ← NEU: Return undefined for local-only
       }
       if (this.isOnline && this.signer) {
         try {
@@ -101,24 +101,28 @@ export class SyncManager {
           }
           const relays = await this.signAndPublish(event, targetRelays);
           if (relays && relays.size > 0) {
-            console.log(`[SyncManager]  Event published to ${relays.size} relay(s)`);
+            console.log(`[SyncManager] ✅ Event published to ${relays.size} relay(s)`);
+            console.log(`[SyncManager] 🔑 Event ID: ${event.id}`); // ← NEU: Log Event-ID!
             this.lastSyncTime = Date.now();
-            return;
+            return event; // ← NEU: Return signed event with ID!
           }
           throw new Error('No relays accepted the event');
         } catch (error) {
           console.warn('[SyncManager] Publish failed, will queue:', error);
           console.log(`Event ${event.id} queued for publishing`);
           await this.queueEvent(event, type, priority, publishState, targetRelays);
+          return undefined; // ← NEU: Return undefined when queued
         }
       } else {
         const reason = !this.isOnline ? 'offline' : 'no signer';
         console.log(`[SyncManager] ${reason.toUpperCase()} - queueing ${type} event`);
         await this.queueEvent(event, type, priority, publishState, targetRelays);
+        return undefined; // ← NEU: Return undefined when queued
       }
     } catch (error) {
       console.error('[SyncManager] Unexpected error in publishOrQueue:', error);
       await this.queueEvent(event, type, priority, publishState, targetRelays);
+      return undefined; // ← NEU: Return undefined on error
     }
   }
 

@@ -628,13 +628,21 @@ export class NostrIntegration {
             }
 
             const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(
+            const publishedEvent = await syncManager.publishOrQueue(
                 event, 
                 'board', 
                 'normal',
                 normalizedState,
                 targetRelays
             );
+            
+            // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
+            if (publishedEvent?.id) {
+                board.eventId = publishedEvent.id;
+                console.log(`[NostrIntegration] 🔑 Board Event-ID captured: ${board.eventId}`);
+            } else {
+                console.log(`[NostrIntegration] ⚠️ Board Event-ID not available (event queued or local-only)`);
+            }
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
         }
@@ -779,12 +787,13 @@ export class NostrIntegration {
             console.log(`[NostrIntegration] 🗑️ Deleting board on Nostr: ${board.name} (${boardEventId})`);
 
             // 2. Erstelle Deletion Event (Kind 5)
-            // NIP-09: Replaceable events (Kind 30301) brauchen 'a' tags, nicht 'e' tags
+            // ⚡ NEU: Include actual event ID if available!
             const deletionEvent = createDeletionEvent(
                 boardEventId,
                 true, // isReplaceableEvent = true für Kind 30301
                 `Board "${board.name}" deleted`,
-                this.ndk
+                this.ndk,
+                board.eventId // ← NEU: Actual event ID for relay deletion!
             );
             
             // 🔍 DEBUG: Log deletion event details
@@ -792,6 +801,7 @@ export class NostrIntegration {
             console.log('  Kind:', deletionEvent.kind);
             console.log('  Pubkey (signer):', deletionEvent.pubkey || 'NOT SIGNED YET');
             console.log('  Board Author:', board.author);
+            console.log('  Board Event ID:', board.eventId || 'NOT SET');
             console.log('  ⚠️ MATCH?:', (deletionEvent.pubkey === board.author) ? '✅ YES' : '❌ NO - DELETION WILL FAIL!');
             console.log('  Tags:', JSON.stringify(deletionEvent.tags, null, 2));
             console.log('  Content:', deletionEvent.content);

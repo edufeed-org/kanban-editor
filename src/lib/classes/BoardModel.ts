@@ -52,6 +52,7 @@ export interface ColumnProps {
 
 export interface BoardProps {
     id?: string;
+    eventId?: string; // ← NEU: Actual Nostr event ID
     name: string;
     description?: string;
     columns?: ColumnProps[];
@@ -241,6 +242,7 @@ export class Column {
 
 export class Board {
     public id: string;
+    public eventId?: string; // ← NEU: Actual Nostr event ID (for deletion)
     public name: string;
     public description?: string;
     public columns: Column[] = [];
@@ -254,6 +256,7 @@ export class Board {
 
     constructor(props: BoardProps) {
         this.id = props.id || generateDTag('board');
+        this.eventId = props.eventId; // ← NEU: Event-ID speichern
         this.name = props.name;
         this.description = props.description;
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
@@ -426,6 +429,7 @@ export class Board {
 
     getContextData(full: boolean = false): {
         id: string,
+        eventId?: string, // ← NEU: Event-ID serialisieren!
         name: string,
         description: string,
         tags: string[],
@@ -439,6 +443,7 @@ export class Board {
     } {
         return {
             id: this.id,
+            eventId: this.eventId, // ← NEU: Event-ID serialisieren!
             name: this.name,
             description: this.description || '',
             tags: this.tags,

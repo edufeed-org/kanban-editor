@@ -103,6 +103,7 @@ export class BoardStorage {
         
         const boardProps = {
             id: data.id,
+            eventId: data.eventId, // ← NEU: Event-ID laden!
             name: data.name,
             description: data.description,
             publishState: data.publishState,

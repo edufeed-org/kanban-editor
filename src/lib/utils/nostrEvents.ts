@@ -126,6 +126,9 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const dTag = tags.find(t => t[0] === 'd');
   const id = dTag ? dTag[1] : event.id || '';
 
+  // ⚡ NEU: Store event ID for deletion!
+  const eventId = event.id;
+
   // Extract title
   const titleTag = tags.find(t => t[0] === 'title');
   const name = titleTag ? titleTag[1] : 'Unnamed Board';
@@ -164,6 +167,7 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
 
   return {
     id,
+    eventId, // ← NEU: Event-ID zurückgeben!
     name,
     description,
     columns,
