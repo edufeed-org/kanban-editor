@@ -36,7 +36,7 @@
 // NICHT: Event → Parse → Validate → Merge → Hope
 // SONDERN: Event → Direct Store Action
 
-Board-Event (30301) → boardStore.updateBoardFromNostr(props)
+Board-Event (30301) → boardStore.upsertBoardFromNostr(props)  ← ⚡ UPDATE + INSERT
 Card-Event (30302)  → boardStore.upsertCardFromNostr(cardProps)
 Delete-Event (5)    → boardStore.deleteCardFromNostr(cardId)
 ```
@@ -46,6 +46,7 @@ Delete-Event (5)    → boardStore.deleteCardFromNostr(cardId)
 - ✅ Jeder Event-Type = Eine Store-Methode
 - ✅ Keine komplexe Merge/Validation-Logik
 - ✅ Store hat gleiche API für UI-Actions und Nostr-Events
+- ✅ **Neue Boards werden in Echtzeit erkannt** (kein App-Reload nötig!) 🆕
 
 ---
 
@@ -215,30 +216,90 @@ public deleteCardFromNostr(cardId: string): void {
 }
 
 /**
- * ⚡ SEKUNDÄR: Board-Metadaten von Nostr-Event updaten
- * Nur Name, Description, Tags - KEINE Spalten/Karten!
+ * ⚡ SEKUNDÄR: Board von Nostr-Event erstellen/updaten
  * KEIN Publish zu Nostr (publish: false)
+ * 
+ * Wird aufgerufen für:
+ * - Neue Boards von anderen Usern (kollaboratives Erstellen) ✨
+ * - Updates auf Board-Metadaten (Name, Description, Tags) 📝
  * 
  * @param boardProps - Board-Daten aus nostrEventToBoard()
  */
-public updateBoardMetadataFromNostr(boardProps: Partial<BoardProps>): void {
-    // Nur Metadaten updaten (nicht Struktur!)
-    if (boardProps.name !== undefined) {
+public upsertBoardFromNostr(boardProps: BoardProps): void {
+    // 1. Prüfe: Ist das Board bereits geladen?
+    const isCurrentBoard = this.board.id === boardProps.id;
+    
+    if (isCurrentBoard) {
+        // UPDATE: Nur Metadaten des aktuellen Boards
+        console.log(`📝 Updating current board metadata: ${boardProps.name}`);
         this.board.name = boardProps.name;
+        this.board.description = boardProps.description || '';
+        this.board.tags = boardProps.tags || [];
+        
+        // ⚠️ CRITICAL: publish: false
+        this.triggerUpdate({ publish: false });
+    } else {
+        // INSERT: Neues Board zur Liste hinzufügen
+        console.log(`✨ New board detected from Nostr: ${boardProps.name}`);
+        
+        // 2. Speichere Board-Metadaten in localStorage
+        // (NICHT das komplette Board laden - das passiert bei loadBoard())
+        const metadata = {
+            id: boardProps.id,
+            name: boardProps.name,
+            description: boardProps.description || '',
+            lastAccessed: boardProps.updatedAt || new Date().toISOString(),
+            author: boardProps.author || '',
+            publishState: boardProps.publishState || 'draft'
+        };
+        
+        // 3. Füge zur Board-Liste hinzu
+        // (Diese Logik muss im BoardStore implementiert werden)
+        this.addBoardToMetadataList(metadata);
+        
+        // 4. Optional: Toast-Notification für User
+        console.log(`🔔 Neues Board verfügbar: "${boardProps.name}"`);
+        // Zukünftig: toast.info(`Neues Board: ${boardProps.name}`);
+    }
+}
+
+/**
+ * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
+ * OHNE das komplette Board zu laden
+ * 
+ * @param metadata - Board-Metadaten (für Sidebar-Liste)
+ */
+private addBoardToMetadataList(metadata: {
+    id: string;
+    name: string;
+    description: string;
+    lastAccessed: string;
+    author: string;
+    publishState: string;
+}): void {
+    // Lade aktuelle Board-Liste aus localStorage
+    const boardListKey = 'kanban-boards-metadata';
+    const stored = localStorage.getItem(boardListKey);
+    const boardList = stored ? JSON.parse(stored) : [];
+    
+    // Prüfe: Board bereits in Liste?
+    const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
+    
+    if (existingIndex >= 0) {
+        // Update existing entry
+        boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
+        console.log(`� Updated metadata for board ${metadata.id}`);
+    } else {
+        // Add new entry
+        boardList.push(metadata);
+        console.log(`➕ Added new board to metadata list: ${metadata.name}`);
     }
     
-    if (boardProps.description !== undefined) {
-        this.board.description = boardProps.description;
-    }
+    // Speichere aktualisierte Liste
+    localStorage.setItem(boardListKey, JSON.stringify(boardList));
     
-    if (boardProps.tags !== undefined) {
-        this.board.tags = boardProps.tags;
-    }
-    
-    console.log(`📝 Updated board metadata from Nostr: ${this.board.name}`);
-    
-    // ⚠️ CRITICAL: publish: false
-    this.triggerUpdate({ publish: false });
+    // ⚠️ CRITICAL: publish: false (kein Trigger nötig - nur Metadaten-Liste)
+    // UI wird via separate Subscription für Board-Liste aktualisiert
 }
 ```
 
@@ -259,6 +320,9 @@ export class NostrIntegration {
     // ⚡ NEU: Deletion-Timestamp-Tracking
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
+    
+    // 📝 HINWEIS: Store-Referenz wird für upsertBoardFromNostr() benötigt
+    // → subscribeToUpdates() übergibt boardStore als Parameter
 ```
 
 #### 3.2 Card-Event Handler (VEREINFACHT!)
@@ -390,7 +454,7 @@ private async handleDeletionEvent(
 /**
  * Handler für Board-Events (Kind 30301)
  * 
- * ⚡ NEUE STRATEGIE: Nur Metadaten updaten (keine Karten!)
+ * ⚡ NEUE STRATEGIE: Upsert Board (Metadaten UND neue Boards!)
  */
 private async handleBoardEvent(
     boardEvent: any,
@@ -417,12 +481,6 @@ private async handleBoardEvent(
             return;
         }
         
-        // Nur aktives Board updaten
-        if (boardProps.id !== currentBoard.id) {
-            console.log(`ℹ️ Board-Event für anderes Board (${boardProps.id}), skip`);
-            return;
-        }
-        
         // Prüfe: Wurde Board später gelöscht?
         const deleteTime = this.boardDeletionTimestamps.get(boardProps.id);
         if (deleteTime) {
@@ -433,12 +491,10 @@ private async handleBoardEvent(
             }
         }
         
-        // ⚡ DIREKT: Nur Metadaten updaten (NICHT Spalten/Karten!)
-        boardStore.updateBoardMetadataFromNostr({
-            name: boardProps.name,
-            description: boardProps.description,
-            tags: boardProps.tags
-        });
+        // ⚡ NEU: Upsert statt nur Metadaten-Update
+        // Funktioniert für NEUES Board (wird zu Liste hinzugefügt)
+        // UND für UPDATES (Metadaten werden aktualisiert)
+        boardStore.upsertBoardFromNostr(boardProps);
         
     } catch (error) {
         console.error(`❌ Error processing board event:`, error);
@@ -496,6 +552,50 @@ public subscribeToUpdates(
     this.boardSubscription = sub;
 }
 ```
+
+---
+
+## 💡 Praktisches Beispiel: Kollaborative Board-Erstellung
+
+### Scenario: User A erstellt Board, User B sieht es sofort
+
+```typescript
+// ===== BROWSER A (User A) =====
+// User klickt auf "Neues Board erstellen"
+boardStore.createBoard('Team Sprint Planning');
+  → createBoard() [PRIMARY]
+  → triggerUpdate({ publish: true })
+  → publishToNostr()
+  → Board-Event (30301) wird zu Relay gesendet ✅
+
+// ===== RELAY =====
+// Event wird gespeichert und an alle Subscriber verteilt
+
+// ===== BROWSER B (User B) =====
+// Hat aktive Subscription:
+subscribeToUpdates() empfängt Event
+  → handleBoardEvent(event) wird aufgerufen
+  → nostrEventToBoard(event) deserialisiert Daten
+  → boardStore.upsertBoardFromNostr(boardProps)
+    → isCurrentBoard = false (neues Board!)
+    → addBoardToMetadataList(metadata) ✅
+    → console.log('🔔 Neues Board verfügbar: "Team Sprint Planning"')
+  
+// ===== UI UPDATE (Browser B) =====
+// Sidebar aktualisiert sich automatisch (localStorage-Trigger)
+// User B sieht neues Board in Liste! 🎉
+// KEIN App-Reload nötig! ✅
+```
+
+### Vorteile gegenüber alter Architektur:
+
+| Feature | Ohne `upsertBoardFromNostr()` | Mit `upsertBoardFromNostr()` |
+|---------|------------------------------|------------------------------|
+| **Board-Erkennung** | ❌ Nur bei App-Reload | ✅ Echtzeit via Subscription |
+| **Kollaboration** | ❌ Verzögerung (F5 nötig) | ✅ Instant (<1 Sekunde) |
+| **Board-Liste** | ❌ Manuelles Refresh | ✅ Auto-Update |
+| **User Experience** | ❌ "Wo ist Board X?" | ✅ Toast: "Neues Board!" |
+| **Notification** | ❌ Keine | ✅ Optional: Browser-Notification |
 
 ---
 
@@ -589,7 +689,10 @@ if (typeof window !== 'undefined') {
 - [ ] **operations.ts**: Neue Secondary Actions implementieren:
   - [ ] `upsertCardFromNostr(cardProps)`
   - [ ] `deleteCardFromNostr(cardId)`
-  - [ ] `updateBoardMetadataFromNostr(boardProps)`
+  - [ ] `upsertBoardFromNostr(boardProps)` ← ⚡ ERSETZT updateBoardMetadataFromNostr()
+    - [ ] Logik für UPDATE: Aktuelles Board-Metadaten
+    - [ ] Logik für INSERT: Neues Board zu Liste hinzufügen
+    - [ ] Helper-Methode: `addBoardToMetadataList(metadata)`
 - [ ] **nostr.ts**: Event-Handler refactoren:
   - [ ] Event-ID Deduplication hinzufügen
   - [ ] Deletion-Timestamp-Tracking hinzufügen
@@ -627,6 +730,7 @@ Die neue Architektur gilt als erfolgreich implementiert, wenn:
 - ✅ Card-Events → Card wird erstellt/geupdatet (KEIN Nostr-Publish)
 - ✅ Deletion-Events → Card wird gelöscht (KEIN Nostr-Publish)
 - ✅ Board-Events → Metadaten werden geupdatet (KEIN Nostr-Publish)
+- ✅ **Board-Events (neu)** → Neue Boards werden zur Liste hinzugefügt (Echtzeit!) 🆕
 - ✅ User-Actions → Nostr-Publish erfolgt (PRIMARY)
 - ✅ Keine Endlosschleifen zwischen Browsern
 - ✅ Event-Ordering korrekt (Deletion nach Update = Card bleibt gelöscht)
@@ -677,7 +781,41 @@ Die neue Architektur gilt als erfolgreich implementiert, wenn:
 
 ---
 
-**Version:** 1.0  
+**Version:** 1.1 🆕  
 **Autor:** AI Assistant  
 **Datum:** 9. November 2025  
 **Status:** 🔴 PLANNED - Ready for Implementation
+
+---
+
+## 📝 Changelog
+
+### v1.1 (9. November 2025)
+
+**⚡ BREAKING CHANGE: `upsertBoardFromNostr()` ersetzt `updateBoardMetadataFromNostr()`**
+
+**Neu:**
+- ✅ `upsertBoardFromNostr(boardProps)` - Unterstützt NEUE Boards + Metadaten-Updates
+- ✅ `addBoardToMetadataList(metadata)` - Helper für Board-Liste
+- ✅ Echtzeit-Erkennung von neuen Boards (kein App-Reload nötig)
+- ✅ Praktisches Beispiel: Kollaborative Board-Erstellung
+- ✅ Vergleichstabelle: Mit/Ohne `upsertBoardFromNostr()`
+
+**Geändert:**
+- `handleBoardEvent()` ruft jetzt `upsertBoardFromNostr()` statt `updateBoardMetadataFromNostr()`
+- Board-Events lösen IMMER eine Aktion aus (nicht nur wenn `boardProps.id === currentBoard.id`)
+
+**Entfernt:**
+- ❌ `updateBoardMetadataFromNostr()` (deprecated)
+- ❌ Check `if (boardProps.id !== currentBoard.id) return;` in `handleBoardEvent()`
+
+**Vorteile:**
+- 🚀 Kollaboration in Echtzeit
+- 🔔 Optional: Browser-Notifications für neue Boards
+- 📋 Board-Liste immer aktuell
+
+### v1.0 (9. November 2025)
+
+Initial release mit Event-Driven Architecture.
+
+---
