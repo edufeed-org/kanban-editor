@@ -423,29 +423,69 @@ export class NostrIntegration {
                 return;
             }
             
-            // ⚡ RACE CONDITION FIX: Filter recently deleted cards
-            // Problem: Deletion event arrives → Board event with old data arrives
-            // Solution: Remove cards that were just deleted
-            if (this.recentlyDeletedCards.size > 0 && boardProps.columns) {
-                let filteredCount = 0;
+            // ⚡ RACE CONDITION FIX v2: Fetch aktuelle Cards vom Relay
+            // Problem: Board-Event enthält alte Card-Daten (vor Deletion)
+            // Lösung: Prüfe für jede Card ob sie wirklich auf dem Relay existiert
+            console.log(`🛡️ Validating cards with relay... (checking ${boardProps.columns?.reduce((sum, col) => sum + (col.cards?.length || 0), 0) || 0} cards)`);
+            
+            if (this.ndk && boardProps.columns && boardProps.author) {
+                const boardRef = `30301:${boardProps.author}:${boardProps.id}`;
                 
-                for (const column of boardProps.columns) {
-                    if (column.cards && Array.isArray(column.cards)) {
-                        const originalLength = column.cards.length;
-                        column.cards = column.cards.filter(c => {
-                            if (!c.id) return true; // Keep cards without ID
-                            const isDeleted = this.recentlyDeletedCards.has(c.id);
-                            if (isDeleted) {
-                                console.log(`🛡️ Prevented restore of deleted card: ${c.id} in column "${column.name}"`);
+                try {
+                    // Fetch alle aktuell existierenden Card-Events für dieses Board vom Relay
+                    const cardFilter = {
+                        kinds: [30302],
+                        '#a': [boardRef]
+                    };
+                    
+                    const existingCardEvents = await this.ndk.fetchEvents(cardFilter as any);
+                    const existingCardIds = new Set(
+                        Array.from(existingCardEvents || [])
+                            .map((evt: any) => {
+                                const dTag = evt.tags.find((t: any) => t[0] === 'd');
+                                return dTag ? dTag[1] : null;
+                            })
+                            .filter((id: any) => id !== null)
+                    );
+                    
+                    console.log(`🛡️ Relay has ${existingCardIds.size} card(s) for this board`);
+                    console.log(`🛡️ Existing card IDs:`, Array.from(existingCardIds));
+                    
+                    // Filter Cards: Nur die behalten, die wirklich auf dem Relay existieren
+                    let filteredCount = 0;
+                    for (const column of boardProps.columns) {
+                        if (column.cards && Array.isArray(column.cards)) {
+                            const originalLength = column.cards.length;
+                            
+                            column.cards = column.cards.filter(c => {
+                                if (!c.id) {
+                                    console.log(`🛡️ ⚠️ Card without ID found - keeping it`);
+                                    return true;
+                                }
+                                
+                                const exists = existingCardIds.has(c.id);
+                                if (!exists) {
+                                    console.log(`🛡️ ❌ Card ${c.id} not on relay - filtering out (deleted)`);
+                                    filteredCount++;
+                                }
+                                return exists;
+                            });
+                            
+                            const removed = originalLength - column.cards.length;
+                            if (removed > 0) {
+                                console.log(`🛡️ Removed ${removed} deleted card(s) from column "${column.name}"`);
                             }
-                            return !isDeleted;
-                        });
-                        filteredCount += (originalLength - column.cards.length);
+                        }
                     }
-                }
-                
-                if (filteredCount > 0) {
-                    console.log(`🛡️ Filtered ${filteredCount} recently deleted card(s) from board update`);
+                    
+                    if (filteredCount > 0) {
+                        console.log(`🛡️✅ Filtered ${filteredCount} deleted card(s) via relay validation`);
+                    } else {
+                        console.log(`🛡️ℹ️ All cards exist on relay - no filtering needed`);
+                    }
+                } catch (fetchError) {
+                    console.warn(`🛡️ ⚠️ Failed to validate cards with relay:`, fetchError);
+                    // Fallback: Continue with Board-Event data
                 }
             }
             
@@ -593,6 +633,12 @@ export class NostrIntegration {
                         // Prevents race condition with Board events
                         this.recentlyDeletedCards.add(cardId);
                         console.log(`🗑️ Marked card ${cardId} as recently deleted (prevents restore)`);
+                        
+                        // ⚡ Clear from tracking after 5 seconds (enough time for race condition window)
+                        setTimeout(() => {
+                            this.recentlyDeletedCards.delete(cardId);
+                            console.log(`⏱️ Cleared ${cardId} from recently deleted tracking (after 5s)`);
+                        }, 5000);
                         
                         // ⚡ CACHE INVALIDATION: Clear card from ALL board caches
                         // (Karte könnte theoretisch in mehreren Board-Caches sein)
