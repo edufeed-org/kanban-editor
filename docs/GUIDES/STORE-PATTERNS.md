@@ -31,9 +31,10 @@
 |-----------|:----------:|:---:|
 | **Storage-Keys** | 1 statisch | Mehrere/dynamisch |
 | **Datenstruktur** | Plain Objects | Klassen OK |
+| **Async Init**  | ❌ Nein      | ✅ Ja |
 | **Setup-Zeit** | 5 Min | 15 Min |
 | **Auto-Sync** | ✅ Ja | ❌ Manuell |
-| **Beispiel** | AuthStore | BoardStore, ChatStore |
+| **Beispiel** | ThemeStore | BoardStore, AuthStore, ChatStore |
 
 ---
 
@@ -157,9 +158,11 @@ export const chatStore = new ChatStore();
 
 | Store | Pattern | Grund |
 |-------|---------|-------|
+| **AuthStore** | Manual localStorage | Async Init, NDK, Session-Logik |
+| **BoardStore** | Manual localStorage | Dynamische Keys (`kanban-${id}`), Klassen |
 | **ChatStore** | Manual localStorage | Dynamische Keys (`chat-${boardId}`) |
-| **SyncManager** | Manual localStorage | IndexedDB Queue, Event-Management |
 | **SettingsStore** | Manual localStorage | Async config.json merge |
+| **SyncManager** | Manual localStorage | IndexedDB Queue, Event-Management |
 | **ThemeStore** | persisted() | 1 Key, einfach |
 | **NotificationStore** | persisted() | 1 Key, einfach |
 

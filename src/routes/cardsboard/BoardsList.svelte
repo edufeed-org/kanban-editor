@@ -9,6 +9,7 @@
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
     import CircleIcon from '@lucide/svelte/icons/circle';
+    import SquareArrowRight from '@lucide/svelte/icons/square-arrow-right';
     import ImportPopover from '$lib/components/ImportPopover.svelte';
 
     // Props
@@ -168,10 +169,10 @@
                         title={isActive ? '✅ Aktives Board' : 'Board laden'}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
-                        <div class="font-medium truncate flex items-center gap-2">
+                        <div class="font-medium truncate flex items-center gap-2 board-title">
                             {#if isActive}
                                 <!-- Active indicator icon -->
-                                <div class="h-2 w-2 rounded-full bg-primary-foreground flex-shrink-0"></div>
+                                 <SquareArrowRight class="active-board-indicator"/>
                             {/if}
                             {board.name}
                             {#if board.hasUnseenChanges && !isActive}

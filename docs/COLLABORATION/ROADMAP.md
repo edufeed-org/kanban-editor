@@ -788,7 +788,7 @@ JANUAR 2026
 - ✅ DnD mit `svelte-dnd-action` **ist schon implementiert**
 - ✅ CardDialog **ist schon gebaut** (nur noch Merge-Logik Phase 1.5B)
 - ✅ Nur noch **Refactoring + Integration** mit BoardModel/Store nötig
-- ✅ Merge-System macht viele komplexe Szenarios **überflüssig** (auto-merge!)
+- ✅ Merge-System macht viele komplexe Szenarien **überflüssig** (auto-merge!)
 
 #### Zu implementieren (nur noch 50% der ursprüngliche Arbeit):
 
@@ -1093,7 +1093,7 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ### Meilenstein 4.2: Echtzeit-Kollaboration (15.12. - 31.12., 16 Tage PARALLEL)
 
-**Ziel:** Live-Editing mehrerer Nutzer mit Konfliktauflösung & Presence  
+**Ziel:** Live-Editing
 **Status:** 🟡 PLANNED
 
 #### Zu implementieren:
@@ -1311,7 +1311,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 - **Issues & Bugs:** [GitHub Issues](https://github.com/edufeed-org/kanban-editor/issues)
 - **Feature Requests:** [GitHub Discussions](https://github.com/edufeed-org/kanban-editor/discussions)
-- **Dokumentation:** 
+- **Dokumentation:**
   - 📚 [`docs/_INDEX.md`](../docs/_INDEX.md) - Zentrale Navigation (41 Docs)
   - 📚 [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Übersicht
   - 📚 [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten

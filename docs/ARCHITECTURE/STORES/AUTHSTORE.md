@@ -1,14 +1,15 @@
 # AuthStore Dokumentation
 
 **Datei:** `src/lib/stores/authStore.svelte.ts`  
-**Technologie:** Svelte 5 Runes + NDK (Nostr Development Kit)  
+**Technologie:** Svelte 5 Runes (Klassen-basierter Store) + NDK  
+**Pattern:** Manuelles `localStorage` (siehe `STORE-PATTERNS.md`)  
 **Zweck:** Benutzerauthentifizierung mit Nostr (NIP-07, nsec, Demo-Mode)
 
 ---
 
 ## 📋 Inhaltsverzeichnis
 
-1. [Übersicht](#übersicht)
+1. [Architektur & Pattern](#architektur--pattern)
 2. [Authentifizierungs-Flows](#authentifizierungs-flows)
 3. [Session-Management](#session-management)
 4. [Demo-Modus](#demo-modus)
@@ -19,37 +20,70 @@
 
 ---
 
-## Übersicht
+## Architektur & Pattern
 
-Der `AuthStore` verwaltet die **Benutzerauthentifizierung** via Nostr-Protokoll. Er unterstützt mehrere Login-Methoden und speichert Sessions **ohne Private Keys** in localStorage.
+Der `AuthStore` verwaltet die **Benutzerauthentifizierung** und die **Session** in einer Svelte 5 Klassen-basierten Store. Er folgt dem **manuellen `localStorage` Pattern**, da er eine asynchrone Initialisierung (NDK, `fetchProfile`) und die Verwaltung einer einzelnen, aber komplexen Session-Objekts benötigt.
 
-### Unterstützte Login-Methoden
+**Warum nicht `persisted()`?**
+- **Async-Initialisierung:** Der `AuthStore` muss auf die NDK-Initialisierung und das Laden von Konfigurationen warten.
+- **Komplexe Logik:** Session-Wiederherstellung, Expiration-Checks und Signer-Management erfordern manuelle Kontrolle.
 
-| Methode | Typ | Sicherheit | Production | Verwendung |
-|---------|-----|------------|------------|------------|
-| **NIP-07** | Browser Extension | ⭐⭐⭐⭐⭐ | ✅ Empfohlen | Alby, nos2x, etc. |
-| **nsec** | Private Key Input | ⚠️ NUR DEV | ❌ NIEMALS | Development/Testing |
-| **Demo** | Local Identity | 🔒 Offline | ✅ Offline-Modus | Keine Nostr-Connection |
-| **NIP-46** | Remote Signing | ⭐⭐⭐⭐ | 🔜 Future | (nicht implementiert) |
+```mermaid
+graph TD
+    subgraph AuthStore
+        A[currentUser = $state(null)]
+        B[isAuthenticated = $derived(...)]
+        C[saveSession()]
+        D[restoreSession()]
+    end
 
-### Verwendung in Komponenten
+    subgraph Browser
+        E[localStorage]
+        F[window.nostr]
+    end
+
+    subgraph Backend
+        G[Nostr Relays]
+    end
+
+    UI -- ruft auf --> Login-Methoden
+    Login-Methoden -- schreibt --> A
+    Login-Methoden -- ruft auf --> C
+    C -- schreibt --> E
+    App-Start -- ruft auf --> D
+    D -- liest --> E
+    D -- schreibt --> A
+    Login-Methoden -- interagiert mit --> F
+    NDK -- interagiert mit --> G
+```
+
+### Kern-Implementierung (`authStore.svelte.ts`)
 
 ```typescript
-import { authStore } from '$lib/stores/authStore.svelte';
+// src/lib/stores/authStore.svelte.ts
+import type NDK from '@nostr-dev-kit/ndk';
+import { NDKNip07Signer, NDKPrivateKeySigner, type NDKUser } from '@nostr-dev-kit/ndk';
 
-// Reaktiver Zugriff
-let user = $derived(authStore.currentUser);
-let isLoggedIn = $derived(authStore.isAuthenticated);
+const AUTH_SESSION_KEY = 'kanban-auth-session';
 
-// Login
-await authStore.loginWithNip07();
+export class AuthStore {
+    // 1. Reaktiver State mit Svelte 5 Runes
+    public currentUser = $state<NDKUser | null>(null);
+    public isLoading = $state<boolean>(true);
+    public errorMessage = $state<string | null>(null);
 
-// User-Info
-const pubkey = authStore.getPubkey();
-const userName = authStore.getUserName();
+    // 2. Abgeleiteter reaktiver State
+    public isAuthenticated = $derived(this.currentUser !== null);
 
-// Logout
-await authStore.logout();
+    private ndk: NDK;
+
+    constructor(ndkInstance: NDK) {
+        this.ndk = ndkInstance;
+        this.restoreSession(); // Session beim Start wiederherstellen
+    }
+    
+    // ... Login-Methoden, etc.
+}
 ```
 
 ---
@@ -215,7 +249,7 @@ export interface UserSession {
 
 **REGEL 4:** Sessions enthalten **NIEMALS** Private Keys!
 
-### Session speichern
+### Session speichern (Manuelles localStorage)
 
 ```typescript
 private async saveSession(
@@ -228,61 +262,72 @@ private async saveSession(
         profile: {
             name: user.profile?.name,
             picture: user.profile?.picture || user.profile?.image,
-            ...
+            // ...
         },
         signerType,
         lastLogin: Date.now(),
         expires: Date.now() + 7 * 24 * 60 * 60 * 1000  // 7 Tage
     };
     
-    this.sessionStore.set(session);  // ← persisted store
+    // Manuelles Speichern in localStorage
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    
     console.log(`💾 Session saved for ${user.profile?.name || 'Anonymous'}`);
 }
 ```
 
 **REGEL 5:** Session Expiration ist **7 Tage** für echte Nostr-Sessions, **30 Tage** für Demo.
 
-### Session wiederherstellen
+### Session wiederherstellen (Manuelles localStorage)
 
 ```typescript
-private async restoreSessionOrCreateDemo(): Promise<void> {
-    const stored = this.getStoredSession();
+private async restoreSession(): Promise<void> {
+    const storedJson = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!storedJson) {
+        this.isLoading = false;
+        console.log('👤 Keine Session gefunden.');
+        return;
+    }
+
+    const stored: UserSession = JSON.parse(storedJson);
     
-    // Fall 1: Session vorhanden
-    if (stored && Object.keys(stored).length > 0) {
-        // Expiration Check
-        if (Date.now() > stored.expires) {
-            console.log('⏰ Session expired');
-            this.sessionStore.set(null);
-            this.currentUser = null;
-            return;
-        }
-        
-        // Demo-Session: Direkt aktivieren
-        if (stored.signerType === 'demo') {
-            this.currentUser = { ...stored } as any;
-            console.log('✅ Demo-Session wiederhergestellt');
-            return;
-        }
-        
-        // Nostr-Session: User von NDK laden
-        const user = await this.ndk.fetchUser(stored.pubkey);
+    // Expiration Check
+    if (Date.now() > stored.expires) {
+        localStorage.removeItem(AUTH_SESSION_KEY);
+        this.currentUser = null;
+        this.isLoading = false;
+        console.log('⏰ Session expired');
+        return;
+    }
+    
+    // Demo-Session: Direkt aktivieren
+    if (stored.signerType === 'demo') {
+        this.currentUser = { ...stored } as any; // Type assertion for simplicity
+        this.isLoading = false;
+        console.log('✅ Demo-Session wiederhergestellt');
+        return;
+    }
+    
+    // Nostr-Session: User von NDK laden
+    try {
+        const user = await this.ndk.fetchUser({ pubkey: stored.pubkey });
         if (user) {
             user.profile = stored.profile;
             this.currentUser = user;
-            console.log('🔄 Session restored');
             
             // Signer wiederherstellen (nur NIP-07)
             if (stored.signerType === 'nip07' && window.nostr) {
                 this.ndk.signer = new NDKNip07Signer();
             }
+            console.log('🔄 Nostr-Session wiederhergestellt');
         }
-        return;
+    } catch (error) {
+        console.error("Fehler bei der Wiederherstellung der Nostr-Session:", error);
+        this.currentUser = null;
+        localStorage.removeItem(AUTH_SESSION_KEY);
+    } finally {
+        this.isLoading = false;
     }
-    
-    // Fall 2: Keine Session → User bleibt ausgeloggt
-    console.log('👤 Keine Session → User ist ausgeloggt');
-    this.currentUser = null;
 }
 ```
 
@@ -292,14 +337,14 @@ private async restoreSessionOrCreateDemo(): Promise<void> {
 
 ```typescript
 public async logout(): Promise<void> {
-    // 1. User löschen
+    // 1. User löschen ($state wird reaktiv)
     this.currentUser = null;
     
     // 2. Signer entfernen
     this.ndk.signer = undefined;
     
-    // 3. Session löschen
-    this.sessionStore.set(null);
+    // 3. Session aus localStorage löschen
+    localStorage.removeItem(AUTH_SESSION_KEY);
     
     console.log('🚪 User logged out');
 }
@@ -313,33 +358,20 @@ public async logout(): Promise<void> {
 
 ### Config-Integration
 
+Der `AuthStore` ist vom `SettingsStore` abhängig, um zu prüfen, ob der Demo-Modus erlaubt ist. Diese Prüfung sollte idealerweise außerhalb des `AuthStore` stattfinden, bevor `createDemoSession` aufgerufen wird.
+
 ```typescript
-/**
- * Prüft ob Demo-Sessions in config.json erlaubt sind
- * Liest aus: allow_demo_session.enabled
- */
-public isDemoSessionAllowed(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    try {
-        // Cached Config aus localStorage
-        const cachedConfig = localStorage.getItem('kanban-config');
-        if (cachedConfig) {
-            const config = JSON.parse(cachedConfig);
-            const demoAllowed = config?.allow_demo_session?.enabled;
-            
-            if (typeof demoAllowed === 'boolean') {
-                console.log(`ℹ️  Demo sessions: ${demoAllowed ? 'enabled ✅' : 'disabled ❌'}`);
-                return demoAllowed;
-            }
-        }
-        
-        // Fallback: disabled (sicherer)
-        console.log('ℹ️  Demo sessions: config not yet loaded');
-        return false;
-    } catch (error) {
-        console.error('Error checking demo config:', error);
-        return false;
+// In einem UI-Component (z.B. LoginSheet.svelte)
+import { settingsStore } from '$lib/stores/settingsStore.svelte.ts';
+import { authStore } from '$lib/stores/authStore.svelte.ts';
+
+const isDemoAllowed = $derived(settingsStore.data.allow_demo_session.enabled);
+
+function handleDemoLogin() {
+    if (isDemoAllowed) {
+        authStore.createDemoSession();
+    } else {
+        // UI-Feedback, dass Demo-Modus deaktiviert ist
     }
 }
 ```
@@ -355,7 +387,7 @@ public isDemoSessionAllowed(): boolean {
 }
 ```
 
-**REGEL 8:** Demo-Modus MUSS in Production deaktiviert werden (wenn Nostr-Only gewünscht).
+**REGEL 8:** Die UI sollte den Demo-Login-Button ausblenden, wenn er via `config.json` deaktiviert ist.
 
 ### Demo vs Nostr: Funktionsvergleich
 
@@ -399,9 +431,11 @@ public async updateProfile(profileData: {
     }
     
     // 3. Session aktualisieren
-    if (session) {
+    const storedJson = localStorage.getItem(AUTH_SESSION_KEY);
+    if (storedJson) {
+        const session = JSON.parse(storedJson) as UserSession;
         session.profile = { ...session.profile, ...profileData };
-        this.sessionStore.set(session);
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
     }
     
     console.log('✅ Profile updated');
@@ -609,7 +643,7 @@ const authStore = initializeAuth(ndk);
 
 ```svelte
 <script lang="ts">
-    import { authStore } from '$lib/stores/authStore.svelte';
+    import { authStore } from '$lib/stores/authStore.svelte.ts';
     
     let user = $derived(authStore.currentUser);
     let isLoggedIn = $derived(authStore.isAuthenticated);

@@ -221,6 +221,14 @@ button.bg-destructive:hover {
 .card-content button {
   background-color: var(--primary);
 }
+.active-board .active-board-indicator {
+  color: var(--accent);
+}
+.active-board  {
+  padding: 2px;
+  border: 2px solid var(--ring);
+  border-radius: var(--radius);
+}
 
 @layer base {
   * {

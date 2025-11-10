@@ -141,7 +141,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 **Learning Path:**
 1. **Überblick:** [`README.md`](../README.md)
 2. **Tech Details:** [`AGENTS.md`](../AGENTS.md) (Abschnitt VIII: Test-Suite)
-3. **Offline Testing:** [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Offline-First Szenarien)
+3. **Offline Testing:** [`ARCHITECTURE/STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) (Offline-First Szenarien)
 
 ---
 
@@ -157,7 +157,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **BoardStore (Multi-Board Management)** | [`ARCHITECTURE/STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | 45 min |
 | **Authentifizierung (Store)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | 35 min |
 | **Auth UI-Komponenten** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) | 30 min |
-| **Settings & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
+| **Einstellungen & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
 | **🆕 AI Collaborative Generation** | [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) | 40 min | ✅ Neu (03.11.) - GitHub Copilot Pattern
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
@@ -167,15 +167,14 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Tests Status** | [`TESTS/STATUS.md`](./TESTS/STATUS.md) | 15 min |
 | **Kommentar-System** | [`FEATURE/COMMENTS.md`](./FEATURE/COMMENTS.md) | 30 min |
 | **KI-Chatbot Integration (Spec)** | [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) | 30 min |
+| **Base Store Abstraktion (Zukunft)** | [`ARCHITECTURE/STORES/BASESTORES.md`](./ARCHITECTURE/STORES/BASESTORES.md) | 15 min | ✅ Neu (08.11.) |
 
 ### 🔧 Integration & Technologie
 
 | Thema | Dokument | Umfang |
 |-------|----------|--------|
-| **🆕 AuthStore Integration** | [`GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | 30 min |
 | **NDK Setup** | [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md) | 20 min |
-| **User Auth** | [`ARCHITECTURE/NOSTR-USER.md`](./ARCHITECTURE/NOSTR-USER.md) | 40 min |
-| **Offline-First** | [`ARCHITECTURE/STORES.md`](./ARCHITECTURE/STORES.md) (Abschnitt IV) | 30 min |
+| **Offline-First** | [`ARCHITECTURE/STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | 30 min |
 
 ### 📚 Learning Resources
 
@@ -220,7 +219,7 @@ docs/
 │   └── _INDEX.md              ← Navigation Hub
 │
 ├── ARCHITECTURE/
-│   ├── AUTH-UI-COMPONENTS.md        ← ✅ Neu (29.10.) - Login, Sidebar, ProfileEditor
+│   ├── AUTH-UI-COMPONENTS.md
 │   ├── NDK.md
 │   ├── REACTIVITY.md
 │   ├── UX-RULES.md
@@ -230,19 +229,16 @@ docs/
 │       ├── BOARDSTORE.md            ← Multi-Board Management
 │       ├── CHATBOTSTORE.md          ← KI-Integration (TODO)
 │       ├── SETTINGSSTORE.md         ← Theme, Relays, LLM
-│       └── SYNCMANAGER.md           ← Offline-Sync (TODO)
+│       ├── SYNCMANAGER.md           ← Offline-Sync (TODO)
+│       └── BASESTORES.md            ← ✅ Neu (08.11.) - Base Class Abstraktion
 │
 ├── GUIDES/
-│   ├── AUTHSTORE-BASICS.md
-│   ├── AUTHSTORE-INTEGRATION-GUIDE.md  ← ✅ Neu (23.10.)
 │   ├── Kanban-NIP.md
 │   ├── PROP-VS-STATE-CHEATSHEET.md
 │   ├── QUICK-START.md
-│   ├── SIDEBAR-LOGIN-DOCS-INDEX.md
-│   ├── SIDEBAR-LOGIN-INTEGRATION.md
-│   ├── STORE-PATTERNS.md               ← ✅ Neu (02.11.) - persisted() vs Manual!
+│   ├── STORE-PATTERNS.md
 │   ├── TEST-RUNNER.md
-│   └── THEME-BUTTONS.md  ← ✅ Neu (30.10.)
+│   └── THEME-BUTTONS.md
 │
 ├── COLLABORATION/
 │   ├── CONSOLIDATION-SUMMARY.md
@@ -264,14 +260,14 @@ docs/
 | Rollen-spezifisch | Zeitbudget | Dokumente |
 |---|---|---|
 | **PM / Stakeholder** | 30 min | README + KONZEPT + ROADMAP |
-| **Frontend Dev** | 3-4 Std. | README + AGENTS + UX-RULES + REACTIVITY + REACTIVE-FLOW-VERIFICATION + STORES + PROP-VS-STATE-CHEATSHEET |
-| **Nostr Dev** | 1.5-2 Std. | AGENTS + NDK + NOSTR-USER + Kanban-NIP |
-| **KI Dev** | 1-1.5 Std. | AGENTS (Chat Sektion) + STORES |
+| **Frontend Dev** | 3-4 Std. | README + AGENTS + UX-RULES + REACTIVITY + STORES/README.md + PROP-VS-STATE-CHEATSHEET |
+| **Nostr Dev** | 1.5-2 Std. | AGENTS + NDK + Kanban-NIP + STORES/AUTHSTORE.md |
+| **KI Dev** | 1-1.5 Std. | AGENTS (Chat Sektion) + STORES/README.md + STORES/CHATBOTSTORE.md |
 | **Vollständiges Team** | 5-6 Std. | Alle Dokumente |
 
 **Priorisiert für Frontend Devs (Zeit sparen):**
 1. PROP-VS-STATE-CHEATSHEET.md (5 min)
-2. REACTIVE-FLOW-VERIFICATION.md (20 min)
+2. REACTIVITY.md (Section VI - Verification) (20 min)
 3. Dann REACTIVITY.md (30 min)
 
 ---
@@ -306,7 +302,7 @@ docs/
 
 ## 📚 Vollständige Dokumentations-Übersicht (Alle Dateien)
 
-### ARCHITECTURE/ (8 Dateien)
+### ARCHITECTURE/ (15 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -320,17 +316,19 @@ docs/
 | [`AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) | 🆕 **NEU (06.11.)**: GitHub Copilot-ähnlicher Workflow (2-Phase Processing mit Learning Manager) | ✅ Neu (06.11.) |
 | [`AGENT/MIGRATION-AIACTIONGENERATOR.md`](./ARCHITECTURE/AGENT/MIGRATION-AIACTIONGENERATOR.md) | 🆕 **NEU (06.11.)**: Migration Guide von altem AIActionGenerator zu neuem 2-Phase System | ✅ Neu (06.11.) |
 | **STORES/** | **Store-Architektur (7 Dateien)** | |
-| [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (29.10.) |
-| [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (29.10.) |
-| [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (29.10.) |
-| [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (29.10.) |
-| [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (29.10.) |
+| [`STORES/README.md`](./ARCHITECTURE/STORES/README.md) | Store-Übersicht & Navigation | ✅ Neu (08.11.) |
+| [`STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) | Authentication & Session Management + Author Patterns | ✅ Neu (08.11.) |
+| [`STORES/BOARDSTORE.md`](./ARCHITECTURE/STORES/BOARDSTORE.md) | Multi-Board Management mit MRU Pattern | ✅ Neu (08.11.) |
+| [`STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | Theme, Relays, LLM Config | ✅ Neu (08.11.) |
+| [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (08.11.) |
+| [`STORES/BASESTORES.md`](./ARCHITECTURE/STORES/BASESTORES.md) | Base Class Abstraktion für neue, einfache Stores | ✅ Neu (08.11.) |
 | [`STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) | 🆕 **NEU (06.11.)**: Chat-Session Persistence per Board mit Memory & Summaries (Phase 3.0) | ✅ Neu (06.11.) |
 | [`STORES/USERPREFERENCESSTORE.md`](./ARCHITECTURE/STORES/USERPREFERENCESSTORE.md) | 🆕 **NEU (06.11.)**: Cross-Board Learning & User-Präferenzen (Phase 3.0) | ✅ Neu (06.11.) |
 | **NOSTR/** | **Nostr-spezifische Dokumentation** | |
 | [`NOSTR/DRAFT-PUBLISHING-STRATEGY.md`](./ARCHITECTURE/NOSTR/DRAFT-PUBLISHING-STRATEGY.md) | ✅ **UPDATED (07.11.)**: Relay Selection Strategie (Status: IMPLEMENTED & TESTED) | ✅ Updated (07.11.) |
+| [`EVENT-HANDLING-AND-SYNC.md`](./ARCHITECTURE/NOSTR/EVENT-HANDLING-AND-SYNC.md) | (NEU 10.11) - Single Source of Truth für Nostr Sync, LWW, Echo-Prävention, DnD-Fixes | ✅ Neu (10.11.) |
 
-### GUIDES/ (8 Dateien)
+### GUIDES/ (6 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -338,10 +336,8 @@ docs/
 | [`PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) | Svelte 5 Prop vs State Quick Reference | ✅ |
 | [`Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | Nostr Event Schema | ✅ |
 | [`TEST-RUNNER.md`](./GUIDES/TEST-RUNNER.md) | Test Suite Runner Guide | ✅ |
-| [`AUTHSTORE-BASICS.md`](./GUIDES/AUTHSTORE-BASICS.md) | Archiviert (in archive/) | 📦 Archive |
-| [`AUTHSTORE-INTEGRATION-GUIDE.md`](./GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) | Archiviert (in archive/) | 📦 Archive |
-| [`SETTINGSSTORE-IMPLEMENTATION.md`](./GUIDES/SETTINGSSTORE-IMPLEMENTATION.md) | Archiviert (in archive/) | 📦 Archive |
-| [`SIDEBAR-LOGIN-DOCS-INDEX.md`](./GUIDES/SIDEBAR-LOGIN-DOCS-INDEX.md) | Archiviert (in archive/) | 📦 Archive |
+| [`STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) | persisted() vs. Manual localStorage | ✅ Neu (02.11.) |
+| [`THEME-BUTTONS.md`](./GUIDES/THEME-BUTTONS.md) | Theme-Buttons für Sidebar | ✅ Neu (30.10.) |
 
 ### COLLABORATION/ (6 Dateien)
 
@@ -388,14 +384,14 @@ docs/
 
 ## 🔗 Alle Dokumentationen verlinkt?
 
-✅ **ARCHITECTURE/** — 14/14 Dateien verlinkt (4 root + 6 STORES/ + 4 AGENT/)  
-✅ **GUIDES/** — 8/8 Dateien verlinkt  
+✅ **ARCHITECTURE/** — 15/15 Dateien verlinkt (4 root + 7 STORES/ + 4 AGENT/)  
+✅ **GUIDES/** — 6/6 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTS/** — 2/2 Dateien verlinkt  
 ✅ **FEATURE/** — 11/11 Dateien verlinkt (neue Phase 3.0 Docs!)  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 52/52 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
+**Total: 53/53 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
 
 ---
 
@@ -435,7 +431,7 @@ docs/
 
 ---
 
-## � Phase 3.0 Release: AI Agent Framework Complete!
+##  Phase 3.0 Release: AI Agent Framework Complete!
 
 **Branch:** `feature/agent-chatstore`  
 **Status:** ✅ READY FOR REVIEW & MERGE  
@@ -488,16 +484,16 @@ docs/
 
 ---
 
-## �📊 Dokumentations-Status
+## 📊 Dokumentations-Status
 
 | Kategorie | Status | Letzte Aktualisierung |
 |-----------|--------|----------------------|
 | **✅ MASTER: AGENT/** | ✅ Complete (Phase 3.0) | 06. November 2025 |
-| **✅ MASTER: STORES/** | ✅ Erweitert (7 Dateien) | 06. November 2025 |
+| **✅ MASTER: STORES/** | ✅ Erweitert (7 Dateien) | 08. November 2025 |
 | **✅ MASTER: FEATURE/** | ✅ Erweitert (11 Dateien) | 06. November 2025 |
 | **✅ MASTER: REACTIVITY.md** | ✅ Konsolidiert (2 → 1) | 25. Oktober 2025 |
-| **Architecture** | ✅ Phase 3.0 Complete (14/14) | 06. November 2025 |
-| **Guides** | ✅ Komplett | 25. Oktober 2025 |
+| **Architecture** | ✅ Phase 3.0 Complete (15/15) | 08. November 2025 |
+| **Guides** | ✅ Komplett | 02. November 2025 |
 | **Collaboration** | ✅ Komplett | 21. Oktober 2025 |
 | **Test Suite** | ✅ Komplett | 22. Oktober 2025 |
 | **Features** | ✅ Phase 3.0 Complete (11/11) | 06. November 2025 |

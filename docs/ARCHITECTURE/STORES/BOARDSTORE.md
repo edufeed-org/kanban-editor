@@ -68,13 +68,14 @@ boardStore.createCard(columnId, 'Meine Karte', 'Beschreibung');
 │ ├─ updateTrigger = $state(number)                 │
 │ ├─ uiData = $derived.by(() => {...})              │
 │ ├─ triggerUpdate() → localStorage                 │
-│ └─ publishToNostr() → (Future: Nostr Events)      │
+│ └─ publishToNostr() → SyncManager.publishOrQueue()      │
 └────────────────────────────────────────────────────┘
                     ↓
 ┌────────────────────────────────────────────────────┐
-│ Persistierung                                      │
-│ ├─ localStorage: 'kanban-{boardId}'               │
-│ └─ localStorage: 'kanban-boards-list'             │
+│ Persistierung & Synchronisation                    │
+│ ├─ localStorage: 'kanban-{boardId}' (Sync)        │
+│ ├─ localStorage: 'kanban-boards-list' (Sync)      │
+│ └─ SyncManager: Offline-Queue & Nostr-Publishing (Async) │
 └────────────────────────────────────────────────────┘
 ```
 
@@ -328,14 +329,17 @@ private addCard(columnId: string, props: CardProps) {
     // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Karten hinzufügen
     const signerPubkey = authStore.getPubkey();
     if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-        throw new Error('❌ Keine Berechtigung');
+        throw new Error('❌ Keine Berechtigung: Nur Maintainer können Karten hinzufügen.');
     }
     
     const column = this.board.findColumn(columnId);
+    if (!column) throw new Error(`Spalte ${columnId} nicht gefunden.`);
     const card = column.addCard(props);
     
     this.triggerUpdate();  // ← ESSENTIAL!
-    this.publishToNostr();
+    this.publishCardToNostr(card.id).catch(err => {
+        console.error("Fehler beim Publizieren der Karte:", err)
+    });
     
     return card;
 }
@@ -369,7 +373,9 @@ private updateCard(cardId: string, updates: Partial<CardProps>): void {
     
     result.card.update(updates);
     this.triggerUpdate();  // ← ESSENTIAL!
-    this.publishToNostr();
+    this.publishCardToNostr(cardId).catch(err => {
+        console.error("Fehler beim Publizieren des Karten-Updates:", err)
+    });
 }
 ```
 
@@ -406,7 +412,9 @@ public syncBoardState(uiColumns: UIColumn[]): boolean {
     }
     
     this.triggerUpdate();
-    this.publishToNostr();
+    this.publishBoardToNostr().catch(err => {
+        console.error("Fehler beim Publizieren des Board-Status:", err)
+    });
     return true;
 }
 ```
@@ -422,11 +430,13 @@ public addComment(cardId: string, text: string, author: string): void {
     
     result.card.addComment(text, author);
     this.triggerUpdate();  // ← ESSENTIAL!
-    this.publishToNostr();
+    this.publishCardToNostr(result.card.id).catch(err => {
+        console.error("Fehler beim Publizieren des Kommentars (via Karten-Update):", err)
+    });
 }
 ```
 
-**REGEL 12:** Kommentare triggern ebenfalls `updateTrigger` (für UI-Reaktivität).
+**REGEL 12:** Kommentare triggern ebenfalls `updateTrigger` und ein Karten-Update auf Nostr.
 
 ---
 
