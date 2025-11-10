@@ -146,7 +146,8 @@ export class Card {
         if (props.author !== undefined) this.author = props.author;
         if (props.authorName !== undefined) this.authorName = props.authorName; // ← NEU
 
-        this.updatedAt = generateTimestamp();
+        // ✅ FIXED: Respect updatedAt from props (e.g., Nostr events), or generate new
+        this.updatedAt = props.updatedAt !== undefined ? props.updatedAt : generateTimestamp();
     }
 
     setPublishState(state: PublishState): void {
@@ -184,6 +185,8 @@ export class Card {
             publishState: this.publishState,
             author: this.author, // ← ✅ FIXED: author hinzugefügt!
             authorName: this.authorName, // ← NEU: authorName serialisieren!
+            createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
+            updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
             links: this.links.map(l => ({ url: l.url, title: l.title }))
         };
