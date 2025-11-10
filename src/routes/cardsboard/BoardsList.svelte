@@ -158,8 +158,8 @@
                 <div
                     class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
                         {isActive
-                            ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20'
-                            : 'hover:bg-muted/60 text-foreground'}"
+                            ? 'active-board'
+                            : ''}"
                 >
                     <button
                         onclick={() => handleSelectBoard(board.id)}
