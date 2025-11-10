@@ -493,6 +493,12 @@ export class NostrIntegration {
                 console.log(`✅ LWW: No local board, apply event unconditionally`);
             }
             
+            // ⚡ NEW: Set unseen changes flag if board is NOT currently loaded
+            const { BoardOperations } = await import('./operations.js');
+            if (boardProps.id !== currentBoard.id) {
+                BoardOperations.setHasUnseenChanges(boardProps.id, true);
+            }
+            
             // ⚡ v2.0: Direkte Store-API (SECONDARY action)
             // Unterstützt UPDATE (aktuelles Board) UND INSERT (neues Board)
             boardStore.upsertBoardFromNostr(boardProps);
@@ -610,6 +616,10 @@ export class NostrIntegration {
             } else {
                 console.log(`🔄 Card ${cardProps.id} ist für Background Board ${targetBoardId} - direkter localStorage Update`);
                 boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
+                
+                // ⚡ NEW: Set unseen changes flag for background board
+                const { BoardOperations } = await import('./operations.js');
+                BoardOperations.setHasUnseenChanges(targetBoardId, true);
             }
             
         } catch (error) {

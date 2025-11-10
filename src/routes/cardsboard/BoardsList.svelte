@@ -8,6 +8,7 @@
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
+    import CircleIcon from '@lucide/svelte/icons/circle';
     import ImportPopover from '$lib/components/ImportPopover.svelte';
 
     // Props
@@ -164,9 +165,15 @@
                         disabled={isLoading}
                         class="w-full text-left pr-10"
                     >
-                        <!-- Board Name -->
-                        <div class="font-medium truncate">
+                        <!-- Board Name mit Unseen Changes Badge -->
+                        <div class="font-medium truncate flex items-center gap-2">
                             {board.name}
+                            {#if board.hasUnseenChanges}
+                                <CircleIcon 
+                                    class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
+                                    title="Neue Änderungen"
+                                />
+                            {/if}
                         </div>
                         
                         <!-- Description (optional) -->

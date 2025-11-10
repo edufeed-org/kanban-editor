@@ -236,7 +236,7 @@ export class BoardStore {
     // MULTI-BOARD MANAGEMENT
     // ============================================================================
     
-    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> {
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
@@ -262,7 +262,8 @@ export class BoardStore {
                 createdAt: new Date(this.board.createdAt).getTime(),
                 updatedAt: this.board.updatedAt 
                     ? new Date(this.board.updatedAt).getTime() 
-                    : new Date(this.board.createdAt).getTime()
+                    : new Date(this.board.createdAt).getTime(),
+                hasUnseenChanges: boards[currentBoardIndex].hasUnseenChanges || false // ← Preserve existing value
             };
         }
         
@@ -327,6 +328,9 @@ export class BoardStore {
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         BoardStorage.updateLastAccessed(boardId);
+        
+        // ⚡ NEW: Clear unseen changes flag when user opens board
+        BoardOperations.clearHasUnseenChanges(boardId);
         
         // ⚡ v4.1: KEIN saveToStorage beim Laden!
         // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
@@ -559,15 +563,33 @@ export class BoardStore {
         this.publishCardAsync(cardId);
     }
 
-    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number}> {
+    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
         const allBoards = this.getAllBoards();
-        if (!query) return allBoards;
         
-        const lowerQuery = query.toLowerCase();
-        return allBoards.filter(board => 
-            board.name.toLowerCase().includes(lowerQuery) ||
-            (board.description && board.description.toLowerCase().includes(lowerQuery))
-        );
+        // ✅ 1. SORT by lastAccessed DESC (newest first)
+        const sorted = allBoards.sort((a, b) => {
+            const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
+            const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
+            return timeB - timeA; // DESC: newest first
+        });
+        
+        // ✅ 2. FILTER by search query
+        const filtered = query 
+            ? sorted.filter(board => {
+                const lowerQuery = query.toLowerCase();
+                return board.name.toLowerCase().includes(lowerQuery) ||
+                    (board.description && board.description.toLowerCase().includes(lowerQuery));
+            })
+            : sorted;
+        
+        // ✅ 3. LIMIT to maxBoardsInSidebar (unless searching)
+        // User said: "alle durchsuchbar" - so no limit when query exists
+        if (!query) {
+            const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
+            return filtered.slice(0, maxBoards);
+        }
+        
+        return filtered;
     }
 
     public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {

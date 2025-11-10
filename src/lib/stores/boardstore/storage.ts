@@ -302,7 +302,8 @@ export class BoardStorage {
         name: string; 
         description?: string; 
         createdAt: number; 
-        updatedAt?: number 
+        updatedAt?: number;
+        hasUnseenChanges?: boolean; // ← NEU: Ungesehene Änderungen
     }> {
         if (typeof window === 'undefined') return [];
         
@@ -338,7 +339,8 @@ export class BoardStorage {
                                 name: meta.name || 'Unbenanntes Board',
                                 description: meta.description || '',
                                 createdAt,
-                                updatedAt: lastAccessed
+                                updatedAt: lastAccessed,
+                                hasUnseenChanges: meta.hasUnseenChanges || false // ← NEU
                             };
                         });
                     
@@ -350,7 +352,7 @@ export class BoardStorage {
             }
             
             // Fallback: Alte Logik (einzelne Board-Keys) für Legacy-Boards
-            const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> = [];
+            const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; hasUnseenChanges?: boolean }> = [];
             
             for (const boardId of boardIds) {
                 const storageKey = `kanban-${boardId}`;
@@ -368,7 +370,8 @@ export class BoardStorage {
                             name: data.name || 'Unbenanntes Board',
                             description: data.description,
                             createdAt: data.createdAt || Date.now(),
-                            updatedAt: updatedAtTime
+                            updatedAt: updatedAtTime,
+                            hasUnseenChanges: false // Legacy-Boards: default false
                         });
                     } catch (e) {
                         console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
