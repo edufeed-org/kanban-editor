@@ -758,42 +758,99 @@ describe('Card Constructor Timestamps', () => {
 ## 📋 Implementation Checklist
 
 **Phase 1: Core Fixes (This Task)**
-- [ ] **STEP 1:** Add `createdAt` & `updatedAt` to CardProps interface
-- [ ] **STEP 2:** Fix Card Constructor (use props timestamps)
-- [ ] **STEP 3:** Add board-wide card cleanup in upsertCardFromNostr()
-- [ ] **STEP 4:** Add LWW check to handleCardEvent()
-- [ ] **STEP 5:** Update nostrEventToCard() timestamp extraction
+- [x] **STEP 1:** Add `createdAt` & `updatedAt` to CardProps interface ✅
+- [x] **STEP 2:** Fix Card Constructor (use props timestamps) ✅
+- [x] **STEP 3:** Add board-wide card cleanup in upsertCardFromNostr() ✅
+- [x] **STEP 4:** Add LWW check to handleCardEvent() ✅
+- [x] **STEP 5:** Update nostrEventToCard() timestamp extraction ✅
+- [x] **STEP 6:** Handle card rank (position) in upsertCardFromNostr() ✅ ⭐ NEW
 
 **Phase 2: Testing**
 - [ ] Unit Tests: Card Constructor timestamps (4 tests)
 - [ ] Integration Tests: LWW check (2 scenarios)
 - [ ] Manual Tests: Card move duplication (1 scenario)
+- [ ] Manual Tests: Card rank preservation (1 scenario) ⭐ NEW
 - [ ] Manual Tests: Two-browser concurrent edit (1 scenario)
 - [ ] E2E Tests: Merge-System integration (1 scenario)
 
 **Phase 3: Verification**
 - [ ] Console logs show correct timestamps
+- [ ] Console logs show rank-based positioning ⭐ NEW
 - [ ] No card duplication after moves
+- [ ] Cards positioned at correct rank in column ⭐ NEW
 - [ ] LWW prevents stale event overwrites
 - [ ] Merge-System still works correctly
-- [ ] TypeScript check passes (0 errors)
+- [ ] TypeScript check passes (0 errors) ✅
 
 **Phase 4: Documentation**
-- [ ] Update CHANGELOG.md (Card v4.3 fix)
-- [ ] Update STORES.md (Card timestamp handling)
+- [ ] Update CHANGELOG.md (Card v4.3 fix + rank handling)
+- [ ] Update STORES.md (Card timestamp & rank handling)
 - [ ] Archive this TO-FIX doc (move to archive/)
+
+---
+
+## ⭐ STEP 6: Card Rank (Position) Handling (NEW - 10. Nov 2025)
+
+**Problem:**
+> "was noch nicht berücksicht wird ist der card rank: die reihenfolge der Cards in einer Column"
+
+Cards wurden **immer am Ende** des Arrays hinzugefügt (`column.addCard()`), unabhängig vom `rank` Tag im Nostr Event.
+
+**Fix: Rank-Aware Insertion/Repositioning**
+
+**Datei:** `src/lib/stores/boardstore/operations.ts` (Lines 410-440)
+
+```typescript
+// ✅ NACH FIX:
+if (existingCard) {
+    existingCard.update(cardProps);
+    
+    // ⚡ v4.3: Handle rank (position) change
+    if (cardProps.rank !== undefined) {
+        const currentIndex = column.cards.findIndex(c => c.id === cardProps.id);
+        const targetIndex = cardProps.rank;
+        
+        if (currentIndex !== targetIndex && targetIndex >= 0 && targetIndex < column.cards.length) {
+            // Move card to correct position
+            const [movedCard] = column.cards.splice(currentIndex, 1);
+            column.cards.splice(targetIndex, 0, movedCard);
+            console.log(`  📍 Card repositioned: index ${currentIndex} → ${targetIndex}`);
+        }
+    }
+} else {
+    // ⚡ v4.3: Insert at correct rank position if provided
+    if (cardProps.rank !== undefined && cardProps.rank >= 0 && cardProps.rank <= column.cards.length) {
+        const newCard = new Card(cardProps);
+        column.cards.splice(cardProps.rank, 0, newCard);
+        console.log(`✨ Created new card at rank ${cardProps.rank}`);
+    } else {
+        column.addCard(cardProps); // Fallback: add at end
+    }
+}
+```
+
+**Expected Console Logs:**
+- `📍 Card repositioned: index 3 → 1 (rank: 1)` - Card moved to correct position
+- `✨ Created new card at rank 2` - New card inserted at specific position
+
+**Testing Scenario:**
+1. Card at position 0 in Column A
+2. Move to position 2 in Column B
+3. Nostr event has `rank: 2` tag
+4. Verify: Card appears at index 2 (not at end)
 
 ---
 
 ## 🎯 Success Criteria
 
 ✅ **Card moves** show card ONLY in new column (no duplication)  
+✅ **Card rank** preserved - positioned at correct index in column ⭐ NEW  
 ✅ **Card Constructor** uses event timestamps (not NOW)  
 ✅ **LWW check** prevents stale events from overwriting newer local data  
 ✅ **Merge-System** still works for concurrent edits  
 ✅ **Cross-browser** card operations synchronized correctly  
-✅ **Console logs** show timestamp flow (debug visibility)  
-✅ **TypeScript** compiles without errors  
+✅ **Console logs** show timestamp & rank flow (debug visibility)  
+✅ **TypeScript** compiles without errors ✅  
 ✅ **Tests** pass (Unit + Integration + E2E)
 
 ---
@@ -803,6 +860,7 @@ describe('Card Constructor Timestamps', () => {
 **Successful Patterns to Copy:**
 - ✅ Board v4.3 Fix (Constructor timestamps) - User confirmed: "das funktioniert"
 - ✅ Board v4.0-4.2 Fixes (LWW, upsert, loading)
+- ✅ syncBoardState() rank handling - Reference implementation
 
 **Systems to Integrate:**
 - ✅ Merge-System (MERGE-SYSTEM.md) - Conflict detection & resolution
@@ -814,9 +872,12 @@ describe('Card Constructor Timestamps', () => {
 - `src/lib/utils/mergeEngine.ts` - 3-way Merge Engine
 - `src/routes/cardsboard/MergeConflictDialog.svelte` - UI Component
 - `src/lib/stores/boardstore/nostr.ts` - Event handlers (Board pattern)
+- `src/lib/stores/boardstore/operations.ts` - syncBoardState() rank logic ⭐ NEW
 
 ---
 
 **Erstellt:** 10. November 2025  
+**Aktualisiert:** 10. November 2025 (STEP 6 hinzugefügt)  
+
 **Version:** 1.0  
 **Next Review:** Nach Implementation (Test Results)

@@ -412,10 +412,33 @@ export class BoardOperations {
             // Update existing card
             existingCard.update(cardProps);
             console.log(`🔄 Updated card ${cardProps.id} from Nostr`);
+            
+            // ⚡ v4.3: Handle rank (position) change
+            // If card exists AND has a rank, ensure it's at correct position
+            if (cardProps.rank !== undefined) {
+                const currentIndex = column.cards.findIndex(c => c.id === cardProps.id);
+                const targetIndex = cardProps.rank;
+                
+                if (currentIndex !== targetIndex && targetIndex >= 0 && targetIndex < column.cards.length) {
+                    // Move card to correct position
+                    const [movedCard] = column.cards.splice(currentIndex, 1);
+                    column.cards.splice(targetIndex, 0, movedCard);
+                    console.log(`  📍 Card repositioned: index ${currentIndex} → ${targetIndex} (rank: ${cardProps.rank})`);
+                }
+            }
         } else {
             // Create new card
-            column.addCard(cardProps);
-            console.log(`✨ Created new card ${cardProps.id} from Nostr`);
+            // ⚡ v4.3: Insert at correct rank position if provided
+            if (cardProps.rank !== undefined && cardProps.rank >= 0 && cardProps.rank <= column.cards.length) {
+                // Insert at specific position
+                const newCard = new Card(cardProps);
+                column.cards.splice(cardProps.rank, 0, newCard);
+                console.log(`✨ Created new card ${cardProps.id} at rank ${cardProps.rank}`);
+            } else {
+                // Fallback: Add at end
+                column.addCard(cardProps);
+                console.log(`✨ Created new card ${cardProps.id} (no rank - added at end)`);
+            }
         }
         
         return true;

@@ -98,7 +98,7 @@
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
-        { url: 'ws://localhost:4869', type: 'local', enabled: true },
+        { url: 'ws://localhost:7000', type: 'local', enabled: true },
         { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
     ]);
     
