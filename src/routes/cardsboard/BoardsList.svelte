@@ -164,6 +164,7 @@
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
                         class="w-full text-left pr-10"
+                        title="Neue Änderungen"
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
                         <div class="font-medium truncate flex items-center gap-2">
@@ -171,7 +172,7 @@
                             {#if board.hasUnseenChanges}
                                 <CircleIcon 
                                     class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
-                                    title="Neue Änderungen"
+                                    
                                 />
                             {/if}
                         </div>
