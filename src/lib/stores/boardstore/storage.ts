@@ -36,9 +36,25 @@ export class BoardStorage {
             
             if (stored) {
                 const metadata = JSON.parse(stored);
-                const ids = metadata.map((m: any) => m.id);
-                console.log('📋 Board-IDs geladen aus Metadata:', ids.length, 'Boards');
-                return ids;
+                const ids: string[] = metadata.map((m: any) => m.id);
+                
+                // ✅ FIX: Duplikate entfernen mit Set
+                const uniqueIds: string[] = [...new Set(ids)];
+                
+                if (ids.length !== uniqueIds.length) {
+                    console.warn(`⚠️ DUPLIKATE in Metadata gefunden! ${ids.length} → ${uniqueIds.length} unique IDs`);
+                    console.log('  Duplikate:', ids.filter((id: string, index: number) => ids.indexOf(id) !== index));
+                    
+                    // ⚡ CLEANUP: Metadata bereinigen (Duplikate entfernen)
+                    const uniqueMetadata = metadata.filter((m: any, index: number, self: any[]) => 
+                        self.findIndex(item => item.id === m.id) === index
+                    );
+                    localStorage.setItem(metadataKey, JSON.stringify(uniqueMetadata));
+                    console.log('✅ Metadata bereinigt - Duplikate entfernt');
+                }
+                
+                console.log('📋 Board-IDs geladen aus Metadata:', uniqueIds.length, 'Boards');
+                return uniqueIds;
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Laden der Board-IDs:', error);
