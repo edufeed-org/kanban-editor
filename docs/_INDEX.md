@@ -324,9 +324,16 @@ docs/
 | [`STORES/BASESTORES.md`](./ARCHITECTURE/STORES/BASESTORES.md) | Base Class Abstraktion für neue, einfache Stores | ✅ Neu (08.11.) |
 | [`STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) | 🆕 **NEU (06.11.)**: Chat-Session Persistence per Board mit Memory & Summaries (Phase 3.0) | ✅ Neu (06.11.) |
 | [`STORES/USERPREFERENCESSTORE.md`](./ARCHITECTURE/STORES/USERPREFERENCESSTORE.md) | 🆕 **NEU (06.11.)**: Cross-Board Learning & User-Präferenzen (Phase 3.0) | ✅ Neu (06.11.) |
-| **NOSTR/** | **Nostr-spezifische Dokumentation** | |
-| [`NOSTR/DRAFT-PUBLISHING-STRATEGY.md`](./ARCHITECTURE/NOSTR/DRAFT-PUBLISHING-STRATEGY.md) | ✅ **UPDATED (07.11.)**: Relay Selection Strategie (Status: IMPLEMENTED & TESTED) | ✅ Updated (07.11.) |
-| [`EVENT-HANDLING-AND-SYNC.md`](./ARCHITECTURE/NOSTR/EVENT-HANDLING-AND-SYNC.md) | (NEU 10.11) - Single Source of Truth für Nostr Sync, LWW, Echo-Prävention, DnD-Fixes | ✅ Neu (10.11.) |
+| **NOSTR/** | **Nostr-spezifische Dokumentation (Reorganisiert 10.11.)** | |
+| [`NOSTR/_INDEX.md`](./ARCHITECTURE/NOSTR/_INDEX.md) | 🆕 **NEU (10.11.)**: NOSTR Folder Navigation & "Wer nutzt was?" | ✅ Neu (10.11.) |
+| [`NOSTR/EVENT-HANDLING-AND-SYNC.md`](./ARCHITECTURE/NOSTR/EVENT-HANDLING-AND-SYNC.md) | ✅ **UPDATED (10.11.)**: Single Source of Truth für Nostr Sync, LWW, Echo-Prävention, DnD-Fixes | ✅ Neu (10.11.) |
+| [`NOSTR/LOADING-SUBSCRIPTION.md`](./ARCHITECTURE/NOSTR/LOADING-SUBSCRIPTION.md) | ✅ **UPDATED (10.11.)**: Board-Loading & Subscription Implementation Guide | ✅ Updated (10.11.) |
+| [`NOSTR/IMPLEMENTATION/DRAFT-PUBLISHING-STRATEGY.md`](./ARCHITECTURE/NOSTR/IMPLEMENTATION/DRAFT-PUBLISHING-STRATEGY.md) | ✅ **MOVED (10.11.)**: Relay Selection Strategie (Status: IMPLEMENTED & TESTED) | ✅ Reorganisiert (10.11.) |
+| [`NOSTR/REFERENCE/BUG-FIX-CARD-DELETION-ON-SUBSCRIPTION.md`](./ARCHITECTURE/NOSTR/REFERENCE/BUG-FIX-CARD-DELETION-ON-SUBSCRIPTION.md) | 🔍 **MOVED (10.11.)**: Detaillierte Root-Cause Analyse des Card-Deletion-Bugs | ✅ Reorganisiert (10.11.) |
+| [`NOSTR/REFERENCE/FIX-SUMMARY.md`](./ARCHITECTURE/NOSTR/REFERENCE/FIX-SUMMARY.md) | 📝 **MOVED (10.11.)**: Quick-Reference für Bugs | ✅ Reorganisiert (10.11.) |
+| [`NOSTR/NEXT-STEPS/MERGE-vs-LWW-OVERVIEW.md`](./ARCHITECTURE/NOSTR/NEXT-STEPS/MERGE-vs-LWW-OVERVIEW.md) | 🔮 **CONSOLIDATED (10.11.)**: Phase 2.0 Merge-LWW Integration Planning | ✅ Reorganisiert (10.11.) |
+| [`NOSTR/NEXT-STEPS/MERGE-LWW-INTEGRATION-TODO.md`](./ARCHITECTURE/NOSTR/NEXT-STEPS/MERGE-LWW-INTEGRATION-TODO.md) | 🔮 **CONSOLIDATED (10.11.)**: Phase 2.0 Implementation Checklist | ✅ Reorganisiert (10.11.) |
+| [`NOSTR/NEXT-STEPS/INTEGRATION-ANALYSIS-MERGE-vs-LWW.md`](./ARCHITECTURE/NOSTR/NEXT-STEPS/INTEGRATION-ANALYSIS-MERGE-vs-LWW.md) | 🔮 **CONSOLIDATED (10.11.)**: Detaillierte Analyse für Phase 2.0 | ✅ Reorganisiert (10.11.) |
 
 ### GUIDES/ (6 Dateien)
 
