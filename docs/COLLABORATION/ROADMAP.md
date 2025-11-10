@@ -1,20 +1,29 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.0 (🤖 Phase 3.0 AI Agent Complete - Ready for Phase 3.1+)  
-**Aktualisiert:** 6. November 2025  
-**Status:** ✅ **PHASE 3.0 COMPLETE** | Phase 4 PARALLEL | Testing ab 01.01.2026  
+**Version:** 3.1 (🚀 Nostr Sync Sprint Complete!)  
+**Aktualisiert:** 10. November 2025  
+**Status:** ✅ **PHASE 1: NOSTR SYNC COMPLETE** | Phase 3.0 Ready | Phase 4 ab 15.11  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**🆕 Neu in v3.0 (Complete - 06.11.2025):**
-- 🤖 **PHASE 3.0: AI AGENT INFRASTRUCTURE COMPLETE** ✅
-  - 10 Agent-Module (Intent Detection, LLM Integration, 2-Phase Processing)
-  - ChatStore (Persistent Sessions, Memory, Conversation Summaries)
-  - AIPanel Component (Chat UI, Action Confirmation, Learning Display)
-  - SettingsPanel (LLM Config, Learning System, Relay Management)
-  - 150+ Unit Tests (98%+ Pass Rate)
-  - 15+ Feature & Architecture Docs (+6.000 LOC Documentation)
-  - 0 Breaking Changes (Fully Backward Compatible)
-  - **Status: ✅ READY FOR PRODUCTION MERGE**
+**🆕 Neu in v3.1 (Nostr Sync Sprint - 10.11.2025):**
+- ✅ **LAST-WRITE-WINS IMPLEMENTATION COMPLETE** — Full LWW conflict resolution across all card operations
+  - Timestamp handling in constructors, upsertCardFromNostr(), moveCard()
+  - LWW checks prevent stale localStorage data from overwriting fresh Nostr events
+  - Rank-aware card insertion maintains correct card order in columns
+  - **Status: ✅ PRODUCTION READY** (Branch: `read-boards-from-nostr`)
+- ✅ **Echo-Loop Prevention** — Published events nicht als externe Events reprocessen
+  - Event tracking für eigene published events
+  - Cross-browser sync funktioniert ohne Duplicates
+  - DnD safety: Double-move Prevention bei Column Reordering
+- ✅ **Card-Duplication Bug gefixt** — Timestamp handling + LWW checks
+  - Root cause: Stale localStorage overwrote fresh Nostr events
+  - Solution: Last-Write-Wins with millisecond precision timestamps
+  - Regression tests bestanden (4 Tage Spike → Fixed!)
+- ✅ **Board-Storage Refactoring** — Metadata Elimination, Board Discovery
+  - 95% Redundanz eliminiert (kanban-boards-metadata → Single Source of Truth)
+  - Board-IDs aus localStorage-Keys gescannt (`kanban-{id}` Pattern)
+  - Auto-Migration mit Backup beim ersten Start
+- ✅ **TypeScript: 0 errors, 0 warnings** — Full strict mode compliance
 
 **Previous Milestones (v2.5 - 29.10.2025):**
 - ✅ **DOKUMENTATIONS-GOVERNANCE v3.0** — Bidirektionale Code ↔ Docs Sync MANDATORY
@@ -30,15 +39,17 @@
 
 ---
 
-## 🧐 KEY INSIGHTS (Phase 3.0 Complete!)
+## 🧐 KEY INSIGHTS (Nostr Sync Sprint Complete - 10.11.2025)
 
-✅ **AI-Agent System vollständig implementiert** — 10 Module mit 2-Phase Processing, Intent Detection, Learning Manager  
-✅ **ChatStore persistent** — Sessions pro Board mit Memory & Conversation Summaries  
-✅ **Documentation at 52/52** — Alle Dateien verlinkt, Phase 3.0 Learning Paths aktualisiert  
-✅ **150+ Tests passing** — 98%+ Pass Rate, Production-Ready Code Quality  
-✅ **0 Breaking Changes** — Vollständig abwärtskompatibel, keine Migrationen nötig  
-⚡ **Zeitersparnis: -53 Tage! (-31% Gesamtzeit für Phase 2+4)**  
-✅ **Phase 3.0 Ready for Production:** Branch `feature/agent-chatstore` bereit zum Mergen!
+✅ **Last-Write-Wins vollständig implementiert** — Timestamp-based conflict resolution auf allen Ebenen  
+✅ **Echo-Loop Prevention in Production** — Eigene Events werden nicht reprocessed  
+✅ **Card-Duplication Bug GELÖST** — 4 Tage intensive Spike → Root Cause gefixt  
+✅ **Board-Storage: 95% Redundanz eliminiert** — Single Source of Truth Pattern implementiert  
+✅ **Cross-Browser Sync funktioniert** — Browser B sieht Board-Updates von Browser A über Nostr  
+✅ **TypeScript: Strict Mode** — 0 errors, 0 warnings, Compilation Clean  
+🔴 **KRITISCH NÄCHSTER SCHRITT:** Merge-System ↔ LWW Integration (Dokumentation vorhanden, 70 min Work)  
+⚡ **Zeitersparnis durch Dokumentation:** -2.5 Tage beim nächsten Sprint (bessere Specs!)  
+📍 **Aktueller Critical Path:** Phase 1.5D (Export/Import bis 20.11) → Phase 2 UI → Phase 4 Kollaboration bis 31.12!
 
 ---
 
@@ -62,85 +73,84 @@
 OKTOBER 2025
 ════════════════════════════════════════════════════════════════════
 26.10  ────── 31.10
-       Phase 1.5B: CardDialog Integration (5 Tage - IN PROGRESS)
-
-06.11  ⚡ MILESTONE
-       ✅ Phase 3.0 AI Agent Infrastructure COMPLETE!
-       🤖 10 Agent-Module, ChatStore, AIPanel, 150+ Tests
-       📚 15+ neue Docs (52/52 verlinkt), 0 Breaking Changes
-       ✅ Branch `feature/agent-chatstore` READY FOR MERGE
+       Phase 1.5B: CardDialog Integration (5 Tage) ✓
 
 NOVEMBER 2025
 ════════════════════════════════════════════════════════════════════
-01.11  ────── 10.11
-       Phase 1.5C: Snapshots (9 Tage) ⬇️ -5 Tage
-       Phase 2.0: Merge Production (9 Tage) ⬇️ -5 Tage
+06.11  ⚡ MILESTONE
+       ✅ Phase 3.0 AI Agent Infrastructure COMPLETE!
+       🤖 10 Agent-Module, ChatStore, AIPanel, 150+ Tests
+
+10.11  ⚡ NOSTR SYNC SPRINT COMPLETE!
+       ✅ Last-Write-Wins (LWW) IMPLEMENTIERT & TESTED
+       ✅ Echo-Loop Prevention working
+       ✅ Card-Duplication Bug GELÖST
+       ✅ Board-Storage Refactoring (95% Redundanz weg!)
+       🔴 NÄCHSTER SCHRITT: Merge-System ↔ LWW Integration (70 min, doku: docs/NOSTR/NEXT-STEPS/)
+
+10.11  ────── 20.11
+       Phase 1.5D: Export/Import (10 Tage) 🔴 FÖRDER-ANFORDERUNG
+       Phase 2.0: Merge Production (9 Tage) ⬇️ 
        ↑ PARALLEL
+       
+       🔴 BLOCKER ANALYSIS READY: Merge-LWW Integration needs to happen before full Phase 2.0
+       → 3 Fixes documented, ready for implementation
+       → Check: docs/NOSTR/NEXT-STEPS/ for integration plan
 
-10.11  ────── 22.11
-       Phase 1.5D: Export/Import (10 Tage) ⬇️ -5 Tage 🔴 FÖRDER-ANFORDERUNG
-       Phase 2.1: UI Komponenten (12 Tage) ⬇️ -3 Tage (50% saved!)
-       ↑ PARALLEL
+20.11  ────── 01.12
+       Phase 2.1: UI Komponenten (11 Tage) + Phase 2.2: UX Polish (10 Tage) MERGED
+       ⬇️ Optimization: Diese können jetzt parallel laufen!
 
-22.11  ────── 01.12
-       Phase 2.2: UX Polish (9 Tage) ⬇️ -5 Tage
-
-DEZEMBER 2025
-════════════════════════════════════════════════════════════════════
 01.12  ────── 10.12
-       Phase 2.3: Performance (9 Tage) ⬇️ -7 Tage
+       Phase 2.3: Performance (9 Tage)
 
 10.12  ────── 23.12
-       Phase 4.1: Board-Sharing (13 Tage) ⬇️ -6 Tage
-       Phase 4.2: Echtzeit-Kollaboration START (20.12)
+       Phase 4.1: Board-Sharing (13 Tage)
 
 20.12  ────── 31.12
-       Phase 4.2: Echtzeit-Kollaboration CONTINUES (11 Tage) ⬇️ -5 Tage
-       ↑ PARALLEL - KRITISCH! ⚠️
+       Phase 4.2: Echtzeit-Kollaboration (11 Tage) 
+       🎯 DEADLINE: Phase 2 + Phase 4 FERTIG!
 
 31.12
-       🎯 DEADLINE: Phase 2 + Phase 4 MÜSSEN FERTIG SEIN!
-       ⬇️ ZEITERSPARNIS: -36 Tage insgesamt!
+       ✅ Phase 1: COMPLETE
+       ✅ Phase 3.0: COMPLETE  
+       ✅ Phase 2: SHOULD BE DONE
+       ✅ Phase 4: SHOULD BE DONE (or very close)
 
 JANUAR 2026
 ════════════════════════════════════════════════════════════════════
-01.01  ────── 20.02
-       Phase 3: ✅ COMPLETE (06.11.2025) - AI Agent Infrastructure
-       Phase 4: Testing & QA (31 Tage) ⬇️ -8 Tage
-       ↑ PARALLEL
-       
-       🎯 FOKUS: Phase 4 Testphase + Phase 2 remaining
+01.01  ────── 31.01
+       Phase 3.1+: KI-Integration (50 Tage)
+       Phase 4: Testing & QA (31 Tage)
+       ↑ PARALLEL - FOKUS auf Fehlerbehandlung
 ```
 
 ---
 
 
-## ⏱️ Zeitplan (aktualisiert 26.10.2025)
+## ⏱️ Zeitplan (aktualisiert 10.11.2025)
 
 | Phase | Meilenstein | Start | Ende | Dauer | Status |
 |-------|-------------|-------|------|-------|--------|
 | **1** | 1.0 - Author Fields | 20.10. | ✅ 23.10. | 3 Tage | **DONE** |
-| **1** | 1.1 - Nostr Publishing | 23.10. | 05.11. | 10 Tage | **IN PROGRESS** (Tag 3/10) |
+| **1** | 1.1 - Nostr Publishing | 23.10. | ✅ 10.11. | 18 Tage | **✅ DONE** (Last-Write-Wins Complete!) |
 | **1** | 1.2 - Offline Sync | 05.11. | 15.11. | 10 Tage | PLANNED |
 | **1** | 1.3 - Comments | 20.10. | ✅ 25.10. | 5 Tage | **DONE (Phase A+B)** |
 | **1.5** | 1.5A - Merge Engine | 20.10. | ✅ 26.10. | 6 Tage | **DONE** |
-| **1.5** | 1.5B - Merge Integration | 26.10. | 31.10. | 5 Tage | **DONE** |
+| **1.5** | 1.5B - Merge Integration | 26.10. | ✅ 31.10. | 5 Tage | **DONE** |
 | **1.5** | 1.5C - Snapshots | 01.11. | 10.11. | 9 Tage | PLANNED |
-| **1.5** | 1.5D - Export/Import | 10.11. | 20.11. | 10 Tage | PLANNED |
+| **1.5** | 1.5D - Export/Import | 10.11. | 20.11. | 10 Tage | **IN PROGRESS** (Förder-Anforderung!) |
 | **3.0** | AI Agent Infrastructure | 06.11. | ✅ **06.11.** | - | **✅ COMPLETE** |
 | **1** | 1.4 - Auth | 15.11. | 25.11. | 10 Tage | PLANNED |
-| **1.5A** | Merge Engine | 20.10. | ✅ 26.10. | 6 Tage | **DONE** |
-| **1.5B** | Merge Integration | 26.10. | 31.10. | 5 Tage | **IN PROGRESS** (Tag 0/5) |
-| **1.5C** | Snapshots | 01.11. | 10.11. | 9 Tage | PLANNED |
-| **1.5D** | Export/Import | 10.11. | 20.11. | 10 Tage | PLANNED |
-| **2.0** | Merge Production | 01.11. | 10.11. | 9 Tage | PLANNED |
-| **2.1** | UI Komponenten (50% saved) | 10.11. | 22.11. | 12 Tage | PLANNED |
-| **2.2** | UX Polish & A11y | 22.11. | 01.12. | 9 Tage | PLANNED |
-| **2.3** | Performance | 01.12. | 10.12. | 9 Tage | PLANNED |
-| **4.0** | Kollaboration Phase 1 | 10.12. | 31.12. | 21 Tage | **CRITICAL PATH** |
-| **4.1** | Board-Sharing & Permissions | 10.12. | 23.12. | 13 Tage | PLANNED |
+| **🔴 CRITICAL** | **Merge-LWW Integration** | **Doku: 10.11.** | **15.11.** | **70 min** | **🔴 BLOCKER für Phase 2.0** |
+| **2.0** | Merge Production | 15.11. | 22.11. | 7 Tage | BLOCKED (awaiting Merge-LWW integration) |
+| **2.1** | UI Komponenten (50% saved) | 20.11. | 01.12. | 11 Tage | PLANNED (after 2.0) |
+| **2.2** | UX Polish & A11y | 01.12. | 10.12. | 9 Tage | PLANNED |
+| **2.3** | Performance | 10.12. | 15.12. | 5 Tage | PLANNED (optimized timeline) |
+| **4.0** | Kollaboration Phase 1 | 15.12. | 31.12. | 16 Tage | **CRITICAL PATH** |
+| **4.1** | Board-Sharing & Permissions | 15.12. | 25.12. | 10 Tage | PLANNED |
 | **4.2** | Echtzeit-Kollaboration | 20.12. | 31.12. | 11 Tage | PLANNED |
-| **3** | KI-Integration | 01.01.2026 | 20.02.2026 | 50 Tage | PLANNED |
+| **3.1+** | KI-Integration Extended | 01.01.2026 | 20.02.2026 | 50 Tage | PLANNED |
 | **4** | Kollaboration Testing & QA | 01.01.2026 | 31.01.2026 | 31 Tage | **TESTING PHASE** |
 
 ---
@@ -1324,6 +1334,8 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.1 | 10.11.2025 | 🚀 **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollständig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER für Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |
+| 3.0 | 06.11.2025 | 🤖 **PHASE 3.0 COMPLETE:** AI Agent Infrastructure (10 Module, ChatStore, AIPanel, 150+ Tests). 0 Breaking Changes, 52/52 Docs verlinkt. Phase 1 mostly complete. |
 | 2.8 | 31.10.2025 | 📦 **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). Förder-Anforderung erfüllt! |
 | 2.7 | 31.10.2025 | 🔗 **SHARE-LINK FEATURE:** Phase 1.5B COMPLETE! Full end-to-end implementation + 41 unit tests (100% pass rate). Dokumentation in FEATURE/SHARELINK.md. Atomic 3-Step Sync für Board-Importe, 76% Kompressions-Ratio, Single-Layer URL-Encoding mit XSS-Prevention. |
 | 2.6 | 29.10.2025 | 🎨 **CARD UI REDESIGN PHASE 1:** Badges optimiert, Author-Info zu Popover, Image 60% kleiner, Description 2-line clamp. 70% schneller Entwicklung! |
@@ -1337,42 +1349,44 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 ---
 
-**Nächste Review:** 31.10.2025 (Phase 1.5B Deadline)  
+**Nächste Review:** Nach Merge-LWW Integration (15.11.2025)  
 **Kritischer Meilenstein:** 31.12.2025 (Phase 4 MUSS fertig sein!)  
 **Testing Start:** 01.01.2026 (Phase 3 + Phase 4 Testing parallel)  
-**Dokumentation:** ✅ Vollständig aktualisiert (29.10.2025)  
+**Dokumentation:** ✅ Vollständig aktualisiert (10.11.2025)  
 **Governance:** 🔴 **v3.0 ACTIVE** - Code ↔ Docs Sync MANDATORY
 
 ---
 
-## ⏱️ FINAL TIMELINE SUMMARY (v2.3 - mit 50% Reduktion)
+## ⏱️ FINAL TIMELINE SUMMARY (v3.1 - Nostr Sync Sprint Complete!)
 
 ```
 OKTOBER 2025:
   26-31.10: Phase 1.5B: CardDialog Integration (5 Tage) ✓
 
 NOVEMBER 2025:
-  01-10.11: Phase 1.5C Snapshots (9 Tage) + Phase 2.0 Merge (9 Tage) PARALLEL
-  10-22.11: Phase 1.5D Export/Import (10 Tage) + Phase 2.1 UI (12 Tage) PARALLEL
-  22-01.12: Phase 2.2 UX Polish (9 Tage)
+  06.11  ✅ Phase 3.0 AI Agent Infrastructure COMPLETE
+  10.11  ✅ NOSTR SYNC SPRINT COMPLETE - LWW Full Impl, Echo Prevention, Card-Dedup Fixed
+  10-20.11: Phase 1.5D Export/Import (10 Tage) + Phase 2.0 Merge (9 Tage) PARALLEL
+           🔴 BLOCKER: Merge-LWW Integration (70 min, doku ready)
+  20-01.12: Phase 2.1 UI (11 Tage) + Phase 2.2 UX (9 Tage) PARALLEL
 
 DEZEMBER 2025:
   01-10.12: Phase 2.3 Performance (9 Tage)
   10-23.12: Phase 4.1 Board-Sharing (13 Tage)
-  20-31.12: Phase 4.2 Echtzeit-Kollaboration (11 Tage)
+  20-31.12: Phase 4.2 Echtzeit-Kollaboration (11 Tage) CRITICAL!
   🎯 31.12: DEADLINE - Phase 2 + Phase 4 FERTIG!
 
 JANUAR 2026:
-  01-31.01: Phase 3 KI-Integration (50 Tage) + Phase 4 Testing (31 Tage) PARALLEL
+  01-31.01: Phase 3.1+ KI-Integration (50 Tage) + Phase 4 Testing (31 Tage) PARALLEL
   
 FEBRUAR 2026:
-  01-20.02: Phase 3 KI-Integration Completion (20 Tage mehr)
+  01-20.02: Phase 3 KI-Integration Completion (20 Tage)
 ```
 
-**Neue Gesamtdauer:** 26.10.2025 → 20.02.2026 = **117 Tage** (vs. 170 Tage in v2.2)
+**Neue Gesamtdauer:** 26.10.2025 → 20.02.2026 = **117 Tage**  
 **Einsparnis:** **53 Tage (-31% Gesamtzeit!)**
 
 ---
 
-**Zuletzt aktualisiert:** 26. Oktober 2025 (20:30 Uhr)  
-**Nächste Überprüfung:** Nach Abschluss von Phase 1.5B (31.10.2025)
+**Zuletzt aktualisiert:** 10. November 2025 (Nostr Sync Sprint Complete!)  
+**Nächste Überprüfung:** Nach Merge-LWW Integration (15.11.2025)
