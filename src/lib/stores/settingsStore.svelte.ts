@@ -16,6 +16,7 @@
 
 export type Theme = 'dark' | 'default' | 'auto';
 export type PublishState = 'published' | 'draft' | 'private';
+export type DraftPublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
 /**
  * SettingsState Interface - alle verfügbaren Einstellungen
@@ -30,6 +31,7 @@ export interface SettingsState {
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
+  draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
 
   // LLM Model Integration
   llmModel: string; // API Name des LLM Models, z.B. "gpt-4-mini", "ollama/mistral"
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
     'wss://nos.lol',
   ],
   relaysPrivate: [],
+  draftPublishingMode: 'private-relays', // Default: draft → private relays
 
   // LLM Settings
   llmModel: 'ollama/mistral', // Default: lokales Ollama
@@ -350,6 +353,12 @@ export class SettingsStore {
           relaysPrivate: config.nostr.relaysPrivate
         };
       }
+      if (config.nostr.draftPublishingMode) {
+        this.settings = {
+          ...this.settings,
+          draftPublishingMode: config.nostr.draftPublishingMode
+        };
+      }
     }
 
     // LLM Settings
@@ -576,6 +585,29 @@ export class SettingsStore {
     this.settings.relaysPublic = this.settings.relaysPublic.filter((r) => r !== url);
     this.saveToStorage();
   }
+
+  /**
+   * ────────────────────────────────────────────
+   * Draft Publishing Mode
+   * ────────────────────────────────────────────
+   */
+
+  public setDraftPublishingMode(mode: DraftPublishingMode): void {
+    if (!['private-relays', 'local-only', 'public-relays'].includes(mode)) {
+      console.warn('Invalid draftPublishingMode:', mode);
+      return;
+    }
+    // ✅ Reassignment für Reaktivität
+    this.settings = { ...this.settings, draftPublishingMode: mode };
+    this.saveToStorage();
+    console.log(`📝 Draft publishing mode set to: ${mode}`);
+  }
+
+  /**
+   * ────────────────────────────────────────────
+   * Relay URL Validation (Helper)
+   * ────────────────────────────────────────────
+   */
 
   private isValidRelayUrl(url: string): boolean {
     try {

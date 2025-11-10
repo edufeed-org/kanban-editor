@@ -7,17 +7,17 @@
   import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
   import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
+  import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
   import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
   import { boardStore } from '$lib/stores/kanbanStore.svelte';
+  import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
 
   const { children } = $props();
 
+  // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden statt hardcoded
   const ndk = new NDKSvelte({
-    explicitRelayUrls: [
-      "wss://relay-rpi.edufeed.org/",
-      "wss://relay.damus.io/",
-    ],
+    explicitRelayUrls: settingsStore.settings.relaysPublic,
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 

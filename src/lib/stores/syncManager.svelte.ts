@@ -8,18 +8,21 @@
  * 3. Automatic Retry-Logik (exponentieller Backoff)
  * 4. Online/Offline Detection
  * 5. IndexedDB Persistierung
+ * 6. Smart Relay Selection (based on PublishState + Settings)
  *
  * Integration:
  * - BoardStore.publishToNostr() nutzt SyncManager.publishOrQueue()
  * - AuthStore liefert den Signer (window.nostr oder NDKPrivateKeySigner)
  * - NDK wird für Relay-Publishing genutzt
+ * - RelaySelection bestimmt Ziel-Relays basierend auf PublishState
  *
  * Status: Phase 1.2 ROADMAP (noch zu integrieren)
  */
 
 import type NDK from '@nostr-dev-kit/ndk';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
+import { NDKEvent, NDKRelaySet } from '@nostr-dev-kit/ndk';
 import type { NDKSigner, NDKUser } from '@nostr-dev-kit/ndk';
+import type { PublishState } from '$lib/stores/settingsStore.svelte';
 
 // ============================================================================
 // TYPES
@@ -32,6 +35,8 @@ export interface QueuedEvent {
   retries: number; // Number of failed attempts
   type: 'board' | 'card' | 'comment'; // Event classification
   priority?: 'high' | 'normal' | 'low'; // Optional priority for sorting
+  publishState?: PublishState; // NEW: Track event's publish state for relay selection
+  targetRelays?: string[]; // NEW: Pre-calculated target relays
 }
 
 export interface SyncStatus {
@@ -134,18 +139,36 @@ export class SyncManager {
    * 1. If online → Try to sign and publish
    * 2. If offline or publish fails → Queue event
    * 3. Event persisted to IndexedDB
+   * 
+   * NEW (Option A): Supports targetRelays for smart relay selection
+   * - If targetRelays is empty array → Skip Nostr publishing (local-only)
+   * - If targetRelays provided → Use those specific relays
+   * - If not provided → Fallback to NDK's default relays
    */
   public async publishOrQueue(
     event: NDKEvent,
     type: 'board' | 'card' | 'comment',
-    priority: 'high' | 'normal' | 'low' = 'normal'
+    priority: 'high' | 'normal' | 'low' = 'normal',
+    publishState?: PublishState,
+    targetRelays?: string[]
   ): Promise<void> {
     try {
+      // NEW: Check if we should skip Nostr publishing (local-only mode)
+      if (targetRelays !== undefined && targetRelays.length === 0) {
+        console.log(`[SyncManager] 📭 Local-only mode - skipping Nostr publishing for ${type} event`);
+        console.log(`[SyncManager] (PublishState: ${publishState})`);
+        return; // Don't queue, don't publish
+      }
+
       // Check if we should try immediate publish
       if (this.isOnline && this.signer) {
         try {
           console.log(`[SyncManager] Online - attempting to publish ${type} event immediately`);
-          const relays = await this.signAndPublish(event);
+          if (targetRelays && targetRelays.length > 0) {
+            console.log(`[SyncManager] Using ${targetRelays.length} target relay(s) for PublishState: ${publishState}`);
+          }
+          
+          const relays = await this.signAndPublish(event, targetRelays);
           
           if (relays.size > 0) {
             console.log(`[SyncManager] ✅ Event published to ${relays.size} relay(s)`);
@@ -157,17 +180,17 @@ export class SyncManager {
         } catch (error) {
           console.warn(`[SyncManager] ⚠️ Publish failed, will queue:`, error);
           console.log(`✅ Event ${event.id} queued for publishing`);
-          this.queueEvent(event, type, priority);
+          this.queueEvent(event, type, priority, publishState, targetRelays);
         }
       } else {
         // Offline or no signer
         const reason = !this.isOnline ? 'offline' : 'no signer';
         console.log(`[SyncManager] ${reason.toUpperCase()} - queueing ${type} event`);
-        this.queueEvent(event, type, priority);
+        this.queueEvent(event, type, priority, publishState, targetRelays);
       }
     } catch (error) {
       console.error('[SyncManager] Unexpected error in publishOrQueue:', error);
-      this.queueEvent(event, type, priority);
+      this.queueEvent(event, type, priority, publishState, targetRelays);
     }
   }
 
@@ -176,8 +199,12 @@ export class SyncManager {
    * 
    * CRITICAL: Must sign before publishing
    * This ensures event has valid signature for relay acceptance
+   * 
+   * NEW (Option A): Supports targetRelays for smart relay selection
+   * @param event - Event to sign and publish
+   * @param targetRelays - Optional specific relays to publish to
    */
-  private async signAndPublish(event: NDKEvent): Promise<Set<any>> {
+  private async signAndPublish(event: NDKEvent, targetRelays?: string[]): Promise<Set<any>> {
     if (!this.signer) {
       throw new Error('No signer available - cannot sign event');
     }
@@ -193,10 +220,27 @@ export class SyncManager {
       console.log('[SyncManager] ✅ Event signed successfully');
 
       // Step 2: Publish to relays
-      console.log('[SyncManager] Publishing signed event to relays...');
-      const relays = await event.publish();
       
-      console.log(`[SyncManager] ✅ Published to ${relays.size} relay(s):`, Array.from(relays));
+      // NEW: Use targetRelays if provided
+      let relays: Set<any>;
+      if (targetRelays && targetRelays.length > 0) {
+        // Convert Svelte $state Proxy to plain array (important for NDK!)
+        const plainRelays = Array.isArray(targetRelays) ? [...targetRelays] : targetRelays;
+        console.log(`[SyncManager] 📤 Publishing to ${plainRelays.length} target relay(s):`, plainRelays);
+        console.log('[SyncManager] (NDK will auto-connect if relay not connected yet)');
+        
+        // Create NDKRelaySet from target relays
+        const ndkRelays = new Set(plainRelays.map(url => this.ndk.pool.getRelay(url)));
+        const ndkRelaySet = new NDKRelaySet(ndkRelays, this.ndk);
+        relays = await event.publish(ndkRelaySet);
+      } else {
+        // Fallback: Use NDK's default relays
+        console.log('[SyncManager] 📤 Publishing to NDK default relays');
+        console.log('[SyncManager] (NDK will auto-connect if relay not connected yet)');
+        relays = await event.publish();
+      }
+      
+      // Success - return relay set (caller will log)
       return relays;
     } catch (error) {
       console.error('[SyncManager] Signing or publishing failed:', error);
@@ -211,11 +255,15 @@ export class SyncManager {
    * - Events serialized as JSON (avoid circular refs)
    * - Queue size limited to prevent memory issues
    * - Duplicates check (same event type & content)
+   * 
+   * NEW (Option A): Stores publishState and targetRelays with event
    */
   private queueEvent(
     event: NDKEvent,
     type: 'board' | 'card' | 'comment',
-    priority: 'high' | 'normal' | 'low' = 'normal'
+    priority: 'high' | 'normal' | 'low' = 'normal',
+    publishState?: PublishState,
+    targetRelays?: string[]
   ): void {
     // Check queue size limit
     if (this.eventQueue.length >= this.config.maxQueueSize) {
@@ -236,6 +284,8 @@ export class SyncManager {
       retries: 0,
       type,
       priority,
+      publishState, // NEW: Store for relay selection on retry
+      targetRelays, // NEW: Store for consistent relay usage
     };
 
     // Add to queue (reassignment for Svelte 5 reactivity)
@@ -291,9 +341,12 @@ export class SyncManager {
         const rawEvent = JSON.parse(queuedEvent.event);
         const event = new NDKEvent(this.ndk, rawEvent);
 
-        // Attempt publish
+        // Attempt publish with stored targetRelays
         console.log(`[SyncManager] Publishing queued ${queuedEvent.type} event (attempt ${queuedEvent.retries + 1})`);
-        const relays = await this.signAndPublish(event);
+        if (queuedEvent.targetRelays && queuedEvent.targetRelays.length > 0) {
+          console.log(`[SyncManager] Using stored target relays (PublishState: ${queuedEvent.publishState})`);
+        }
+        const relays = await this.signAndPublish(event, queuedEvent.targetRelays);
 
         if (relays.size > 0) {
           // Success - remove from queue
