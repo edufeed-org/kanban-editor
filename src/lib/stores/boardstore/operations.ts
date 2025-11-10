@@ -5,6 +5,7 @@ import { Board, Column, Card, type CardProps, type ColumnProps } from '../../cla
 import { generateDTag } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
 import type { NostrIntegration } from './nostr.js';
+import { BoardStorage } from './storage.js';
 
 export class BoardOperations {
     /**
@@ -616,133 +617,34 @@ export class BoardOperations {
             
             return true; // = UPDATE
         } else {
-            // INSERT: Neues Board zur Liste hinzufügen
+            // INSERT: Neues Board von Nostr erstellen
             console.log(`✨ New board detected from Nostr: ${boardProps.name}`);
             
-            // Speichere Board-Metadaten in localStorage
-            // (NICHT das komplette Board laden - das passiert bei loadBoard())
-            const metadata = {
+            // Erstelle vollständiges Board-Objekt mit allen Spalten
+            const newBoard = new Board({
                 id: boardProps.id,
                 name: boardProps.name,
                 description: boardProps.description || '',
-                lastAccessed: boardProps.updatedAt || new Date().toISOString(),
                 author: boardProps.author || '',
-                publishState: boardProps.publishState || 'draft'
-            };
+                publishState: (boardProps.publishState as any) || 'draft',
+                tags: boardProps.tags || [],
+                columns: boardProps.columns || [],
+                lastAccessedAt: boardProps.updatedAt || new Date().toISOString(),
+                hasUnseenChanges: true // ← Neues Board vom Nostr = unsichtbare Änderung
+            });
             
-            // Füge zur Board-Liste hinzu
-            BoardOperations.addBoardToMetadataList(metadata);
+            // Speichere Board direkt in localStorage
+            BoardStorage.saveBoard(newBoard);
             
-            // Optional: Toast-Notification für User
             console.log(`🔔 Neues Board verfügbar: "${boardProps.name}"`);
+            console.log(`� Board saved to localStorage: kanban-${newBoard.id}`);
             
             // ⚡ KRITISCH: Reaktivität triggern!
-            // 1. Board-IDs neu laden (wurde von addBoardToMetadataList aktualisiert)
-            // 2. triggerUpdate() für UI-Update
+            // loadBoardIds() wird automatisch neue Keys scannen
             // (Wird im Wrapper kanbanStore.upsertBoardFromNostr() gemacht)
             
             return false; // = INSERT
         }
     }
 
-    /**
-     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
-     * OHNE das komplette Board zu laden
-     * 
-     * @param metadata - Board-Metadaten (für Sidebar-Liste)
-     */
-    private static addBoardToMetadataList(metadata: {
-        id: string;
-        name: string;
-        description: string;
-        lastAccessed: string;
-        author: string;
-        publishState: string;
-        hasUnseenChanges?: boolean; // ← NEU: Flag für ungesehene Änderungen
-    }): void {
-        if (typeof window === 'undefined') {
-            console.warn('⚠️ localStorage not available (SSR?)');
-            return;
-        }
-        
-        /**
-         * ⚡ REFACTORING (9. Nov 2025): SINGLE SOURCE OF TRUTH
-         * 
-         * Nur kanban-boards-metadata wird aktualisiert.
-         * kanban-boards-list wurde komplett eliminiert.
-         * loadBoardIds() lädt jetzt direkt aus Metadaten!
-         */
-        
-        const metadataKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(metadataKey);
-        const boardList = stored ? JSON.parse(stored) : [];
-        
-        // Prüfe: Board bereits in Liste?
-        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
-        
-        if (existingIndex >= 0) {
-            // Update existing entry (preserve hasUnseenChanges wenn nicht explizit gesetzt)
-            boardList[existingIndex] = { 
-                ...boardList[existingIndex], 
-                ...metadata,
-                // Wenn hasUnseenChanges nicht explizit im Update ist, behalte alten Wert
-                hasUnseenChanges: metadata.hasUnseenChanges !== undefined 
-                    ? metadata.hasUnseenChanges 
-                    : boardList[existingIndex].hasUnseenChanges || false
-            };
-            console.log(`🔄 Updated metadata for board ${metadata.id}`);
-        } else {
-            // Add new entry mit Default hasUnseenChanges: false
-            boardList.push({ ...metadata, hasUnseenChanges: metadata.hasUnseenChanges || false });
-            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
-        }
-        
-        // Speichere aktualisierte Metadata-Liste
-        localStorage.setItem(metadataKey, JSON.stringify(boardList));
-    }
-
-    /**
-     * Setzt hasUnseenChanges-Flag für ein Board
-     * 
-     * ⚡ Called from: nostr.ts handleBoardEvent() / handleCardEvent()
-     * 
-     * @param boardId - Board ID
-     * @param value - true = Board hat unsichtbare Änderungen, false = keine
-     */
-    public static setHasUnseenChanges(boardId: string, value: boolean): void {
-        if (typeof window === 'undefined') return;
-        
-        const metadataKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(metadataKey);
-        if (!stored) {
-            console.warn(`⚠️ Keine Metadata gefunden für setHasUnseenChanges`);
-            return;
-        }
-        
-        try {
-            const boardList = JSON.parse(stored);
-            const boardIndex = boardList.findIndex((b: any) => b.id === boardId);
-            
-            if (boardIndex >= 0) {
-                boardList[boardIndex].hasUnseenChanges = value;
-                localStorage.setItem(metadataKey, JSON.stringify(boardList));
-                console.log(`🔔 hasUnseenChanges=${value} für Board ${boardId.substring(0, 20)}...`);
-            } else {
-                console.warn(`⚠️ Board ${boardId} nicht in Metadata gefunden`);
-            }
-        } catch (e) {
-            console.warn('⚠️ Error setting hasUnseenChanges:', e);
-        }
-    }
-
-    /**
-     * Löscht hasUnseenChanges-Flag für ein Board
-     * 
-     * ⚡ Called from: kanbanStore.loadBoard()
-     * 
-     * @param boardId - Board ID
-     */
-    public static clearHasUnseenChanges(boardId: string): void {
-        BoardOperations.setHasUnseenChanges(boardId, false);
-    }
 }

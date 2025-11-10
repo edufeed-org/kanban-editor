@@ -22,6 +22,9 @@ import {
     type UIColumn
 } from './boardstore/index.js';
 
+// ✅ NEW (REFACTORING): Migration import
+import { MetadataMigration } from './boardstore/migration.js';
+
 // Re-export types für Komponenten
 export type { CardItem, UIColumn };
 
@@ -42,6 +45,12 @@ export class BoardStore {
     private nostrIntegration: NostrIntegration;
 
     constructor() {
+        // ✅ NEW (REFACTORING): Run migration FIRST if needed
+        if (MetadataMigration.needsMigration()) {
+            console.log('🔄 Metadata migration needed - running...');
+            MetadataMigration.migrate();
+        }
+        
         // Initialisiere Nostr-Modul
         this.nostrIntegration = new NostrIntegration();
         
@@ -263,7 +272,10 @@ export class BoardStore {
                 updatedAt: this.board.updatedAt 
                     ? new Date(this.board.updatedAt).getTime() 
                     : new Date(this.board.createdAt).getTime(),
-                hasUnseenChanges: boards[currentBoardIndex].hasUnseenChanges || false // ← Preserve existing value
+                lastAccessed: this.board.lastAccessedAt 
+                    ? new Date(this.board.lastAccessedAt).getTime() 
+                    : new Date(this.board.createdAt).getTime(),
+                hasUnseenChanges: this.board.hasUnseenChanges
             };
         }
         
@@ -327,10 +339,11 @@ export class BoardStore {
 
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
-        BoardStorage.updateLastAccessed(boardId);
         
-        // ⚡ NEW: Clear unseen changes flag when user opens board
-        BoardOperations.clearHasUnseenChanges(boardId);
+        // ✅ NEW (REFACTORING): Update board fields directly
+        board.updateLastAccessed();
+        board.clearChanges();
+        BoardStorage.saveBoard(board); // Persist changes
         
         // ⚡ v4.1: KEIN saveToStorage beim Laden!
         // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
@@ -590,6 +603,23 @@ export class BoardStore {
         }
         
         return filtered;
+    }
+
+    /**
+     * ⚡ REFRESH: Board IDs neu aus localStorage laden
+     * 
+     * Nützlich nach Filter-Fixes oder manuellen localStorage-Änderungen.
+     * Ruft loadBoardIds() mit aktualisierter Filter-Logik auf.
+     */
+    public refreshBoardIds(): void {
+        const oldCount = this.boardIds.length;
+        this.boardIds = BoardStorage.loadBoardIds();
+        const newCount = this.boardIds.length;
+        
+        console.log(`🔄 Board IDs refreshed: ${oldCount} → ${newCount}`);
+        console.log(`   IDs: [${this.boardIds.slice(0, 5).join(', ')}${this.boardIds.length > 5 ? ', ...' : ''}]`);
+        
+        this.triggerUpdate(); // UI aktualisieren
     }
 
     public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {

@@ -65,6 +65,8 @@ export interface BoardProps {
     maintainers?: string[]; // ← NEU: Nostr pubkeys mit Edit-Berechtigung
     createdAt?: number;
     updatedAt?: string; // ⚡ v4.0: ISO string für Last-Write-Wins
+    lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
+    hasUnseenChanges?: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     tags?: string[];
     ccLicense?: string;
 }
@@ -283,6 +285,8 @@ export class Board {
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
+    public lastAccessedAt: string; // ✅ NEW (REFACTORING): Moved from metadata
+    public hasUnseenChanges: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     public tags: string[] = [];
     public ccLicense: string = 'cc-by-4.0';
 
@@ -297,6 +301,10 @@ export class Board {
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
+        
+        // ✅ NEW (REFACTORING): Initialize new fields from metadata migration
+        this.lastAccessedAt = props.lastAccessedAt || generateTimestamp();
+        this.hasUnseenChanges = props.hasUnseenChanges ?? false;
         
         // ⚡ v4.3: FIX - Verwende props.createdAt falls vorhanden (von Nostr), sonst NOW
         // createdAt als number (Sekunden) → konvertiere zu ISO string
@@ -332,6 +340,30 @@ export class Board {
         if (props.tags !== undefined) this.tags = props.tags;
         if (props.ccLicense !== undefined) this.ccLicense = props.ccLicense;
         this.updatedAt = generateTimestamp();
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to update lastAccessedAt
+     * Called when a board is loaded/viewed
+     */
+    updateLastAccessed(): void {
+        this.lastAccessedAt = generateTimestamp();
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to mark board as changed
+     * Called when Nostr events are received for this board
+     */
+    markAsChanged(): void {
+        this.hasUnseenChanges = true;
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to clear change notification
+     * Called when user loads the board
+     */
+    clearChanges(): void {
+        this.hasUnseenChanges = false;
     }
 
     /**
@@ -489,6 +521,8 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
+        lastAccessedAt: string, // ✅ NEW (REFACTORING): Include in serialization
+        hasUnseenChanges: boolean, // ✅ NEW (REFACTORING): Include in serialization
         author?: string,
         maintainers?: string[], // ← NEU: maintainers zur Return Type hinzugefügt!
         columns: any[]
@@ -503,6 +537,8 @@ export class Board {
             publishState: this.publishState,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            lastAccessedAt: this.lastAccessedAt, // ✅ NEW (REFACTORING): Serialize new field
+            hasUnseenChanges: this.hasUnseenChanges, // ✅ NEW (REFACTORING): Serialize new field
             author: this.author,
             maintainers: this.maintainers, // ← NEU: maintainers serialisieren!
             columns: this.columns.map(col => col.getContextData(full))

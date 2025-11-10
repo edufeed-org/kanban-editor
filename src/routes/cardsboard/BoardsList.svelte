@@ -154,22 +154,27 @@
             </div>
         {:else}
             {#each filteredBoards as board (board.id)}
+                {@const isActive = currentBoardId === board.id}
                 <div
-                    class="w-full rounded-md px-3 py-2 text-sm transition-colors group relative
-                        {currentBoardId === board.id
-                            ? 'bg-primary text-primary-foreground'
+                    class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
+                        {isActive
+                            ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20'
                             : 'hover:bg-muted/60 text-foreground'}"
                 >
                     <button
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
                         class="w-full text-left pr-10"
-                        title="Neue Änderungen"
+                        title={isActive ? '✅ Aktives Board' : 'Board laden'}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
                         <div class="font-medium truncate flex items-center gap-2">
+                            {#if isActive}
+                                <!-- Active indicator icon -->
+                                <div class="h-2 w-2 rounded-full bg-primary-foreground flex-shrink-0"></div>
+                            {/if}
                             {board.name}
-                            {#if board.hasUnseenChanges}
+                            {#if board.hasUnseenChanges && !isActive}
                                 <CircleIcon 
                                     class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
                                     
@@ -196,7 +201,10 @@
                     >
                         <button
                             onclick={(e) => handleDeleteBoard(board.id, e)}
-                            class="p-1 hover:bg-destructive hover:text-destructive-foreground rounded transition-colors"
+                            class="p-1 rounded transition-colors
+                                {isActive 
+                                    ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
+                                    : 'hover:bg-destructive hover:text-destructive-foreground'}"
                             title="Board löschen"
                             type="button"
                         >

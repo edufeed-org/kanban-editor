@@ -8,71 +8,79 @@ import { settingsStore } from '../settingsStore.svelte.js';
 
 export class BoardStorage {
     /**
-     * ⚡ REFACTORING (9. Nov 2025): Eliminiert kanban-boards-list
-     * Single Source of Truth: kanban-boards-metadata
+     * ✅ REFACTORING (10. Nov 2025): Extract Board IDs from localStorage Keys
      * 
-     * Alte Struktur:
-     *   - kanban-boards-list (nur IDs) ← REDUNDANT!
-     *   - kanban-boards-metadata (Metadaten) ← USE THIS
-     *   - kanban-board-{id} (volle Daten, lazy-loaded)
+     * ALTE METHODE: Liest aus kanban-boards-metadata
+     * NEUE METHODE: Extrahiert IDs aus localStorage Keys direkt
+     * 
+     * Vorteile:
+     * - Auto-Discovery: Boards von Nostr erscheinen automatisch
+     * - Robustheit: Kein einzelner Key kann alles brechen
+     * - Single Source of Truth: Boards enthalten alle ihre Daten
      * 
      * Neue Struktur:
-     *   - kanban-boards-metadata (einzige Quelle für Board-Liste)
-     *   - kanban-board-{id} (volle Daten, lazy-loaded)
-     */
-
-    /**
-     * Lädt Board-IDs aus localStorage (aus kanban-boards-metadata)
-     * 
-     * ⚡ KRITISCH: ALLE Board-IDs kommen aus Metadaten!
-     * Keine separaten Keys mehr.
+     *   - kanban-{id} (volle Board-Daten, alle Felder inkl. lastAccessedAt)
+     *   - KEIN kanban-boards-metadata mehr!
      */
     public static loadBoardIds(): string[] {
         if (typeof window === 'undefined') return [];
         
         try {
-            const metadataKey = 'kanban-boards-metadata';
-            const stored = localStorage.getItem(metadataKey);
+            // Get all localStorage keys
+            const allKeys = Object.keys(localStorage);
             
-            if (stored) {
-                const metadata = JSON.parse(stored);
-                const ids: string[] = metadata.map((m: any) => m.id);
+            // Filter for board keys: "kanban-{id}" but NOT config/settings/metadata/backup
+            const boardKeys = allKeys.filter(key => {
+                // Must start with "kanban-"
+                if (!key.startsWith('kanban-')) return false;
                 
-                // ✅ FIX: Duplikate entfernen mit Set
-                const uniqueIds: string[] = [...new Set(ids)];
+                // Extract ID part (after "kanban-")
+                const id = key.replace('kanban-', '');
                 
-                if (ids.length !== uniqueIds.length) {
-                    console.warn(`⚠️ DUPLIKATE in Metadata gefunden! ${ids.length} → ${uniqueIds.length} unique IDs`);
-                    console.log('  Duplikate:', ids.filter((id: string, index: number) => ids.indexOf(id) !== index));
-                    
-                    // ⚡ CLEANUP: Metadata bereinigen (Duplikate entfernen)
-                    const uniqueMetadata = metadata.filter((m: any, index: number, self: any[]) => 
-                        self.findIndex(item => item.id === m.id) === index
-                    );
-                    localStorage.setItem(metadataKey, JSON.stringify(uniqueMetadata));
-                    console.log('✅ Metadata bereinigt - Duplikate entfernt');
-                }
+                // Exclude non-board keys
+                if (id === 'config') return false;
+                if (id === 'settings') return false;
+                if (id === 'boards-list') return false;
+                if (id.includes('-metadata')) return false;
+                if (id.includes('-backup')) return false;
+                if (id.includes('-migrated')) return false;
                 
-                console.log('📋 Board-IDs geladen aus Metadata:', uniqueIds.length, 'Boards');
-                return uniqueIds;
+                // Board IDs should have minimum length (generated IDs are long)
+                // This filters out accidentally created short keys
+                if (id.length < 10) return false;
+                
+                return true;
+            });
+            
+            // Extract board IDs from keys (remove "kanban-" prefix)
+            const boardIds = boardKeys
+                .map(key => key.replace('kanban-', ''))
+                .filter(id => id && id.length > 0); // ✅ Extra safety: filter empty strings
+            
+            console.log(`📋 Board-IDs gefunden aus localStorage Keys: ${boardIds.length} Boards`);
+            if (boardIds.length > 0) {
+                console.log(`  IDs: ${boardIds.slice(0, 5).join(', ')}${boardIds.length > 5 ? '...' : ''}`);
             }
+            
+            return boardIds;
+            
         } catch (error) {
             console.warn('⚠️ Fehler beim Laden der Board-IDs:', error);
+            return [];
         }
-        
-        return [];
     }
 
     /**
      * ⚠️ DEPRECATED: saveBoardIds() - Nicht mehr nötig!
      * 
-     * Board-IDs werden NUR über addBoardToMetadataList() aktualisiert.
-     * Diese Methode wird nicht mehr aufgerufen.
+     * Nach Metadata-Refactoring (Jan 2026):
+     * - Board-IDs werden automatisch aus localStorage.keys() geladen (loadBoardIds())
+     * - Keine separate Board-Liste mehr notwendig
      * 
-     * @deprecated Nutze stattdessen addBoardToMetadataList() in kanbanStore
+     * @deprecated Wird nicht mehr verwendet - loadBoardIds() scannt localStorage-Keys
      */
     public static saveBoardIds(boardIds: string[]): void {
-        console.warn('⚠️ saveBoardIds() deprecated - Use addBoardToMetadataList() instead!');
+        console.warn('⚠️ saveBoardIds() deprecated - Board IDs are auto-discovered from localStorage keys!');
         // NO-OP: Methode für Rückwärts-Kompatibilität erhalten, aber macht nichts
     }
 
@@ -145,6 +153,8 @@ export class BoardStorage {
             tags: data.tags || [],
             ccLicense: data.ccLicense || 'cc-by-4.0',
             updatedAt: data.updatedAt, // ← KRITISCH: Timestamp MUSS aus localStorage kommen!
+            lastAccessedAt: data.lastAccessedAt, // ✅ NEW (REFACTORING): Load from board
+            hasUnseenChanges: data.hasUnseenChanges ?? false, // ✅ NEW (REFACTORING): Load from board
             columns: data.columns?.map((colData: any) => ({
                 id: colData.id,
                 name: colData.name,
@@ -311,7 +321,13 @@ export class BoardStorage {
     }
 
     /**
-     * Gibt alle gespeicherten Boards zurück
+     * ✅ REFACTORING (10. Nov 2025): Load metadata from boards directly
+     * 
+     * ALTE METHODE: Liest aus kanban-boards-metadata
+     * NEUE METHODE: Lädt Header-Daten direkt aus jedem Board
+     * 
+     * Performance: Nur Header-Daten laden (nicht columns/cards)
+     * Single Source of Truth: Boards enthalten ihre eigenen Metadaten
      */
     public static getAllBoardsMetadata(boardIds: string[]): Array<{ 
         id: string; 
@@ -319,86 +335,69 @@ export class BoardStorage {
         description?: string; 
         createdAt: number; 
         updatedAt?: number;
-        hasUnseenChanges?: boolean; // ← NEU: Ungesehene Änderungen
+        lastAccessed?: number; // ✅ NEW: From board.lastAccessedAt
+        hasUnseenChanges?: boolean; // ✅ NEW: From board.hasUnseenChanges
+        author?: string;
+        publishState?: string;
     }> {
         if (typeof window === 'undefined') return [];
         
-        try {
-            // ⚡ FIX: Lade Metadaten aus 'kanban-boards-metadata' statt einzelne Board-Keys!
-            // Grund: Neue Boards von Nostr haben nur Metadaten, nicht vollständige Board-Daten
-            const metadataKey = 'kanban-boards-metadata';
-            const storedMetadata = localStorage.getItem(metadataKey);
-            
-            if (storedMetadata) {
-                try {
-                    const allMetadata = JSON.parse(storedMetadata);
-                    
-                    // Filter: Nur Boards die in boardIds sind
-                    const boards = allMetadata
-                        .filter((meta: any) => boardIds.includes(meta.id))
-                        .map((meta: any) => {
-                            // Parse timestamps
-                            const lastAccessed = meta.lastAccessed 
-                                ? (typeof meta.lastAccessed === 'string' 
-                                    ? new Date(meta.lastAccessed).getTime()
-                                    : meta.lastAccessed)
-                                : Date.now();
-                            
-                            const createdAt = meta.createdAt 
-                                ? (typeof meta.createdAt === 'string'
-                                    ? new Date(meta.createdAt).getTime()
-                                    : meta.createdAt)
-                                : lastAccessed;
-                            
-                            return {
-                                id: meta.id,
-                                name: meta.name || 'Unbenanntes Board',
-                                description: meta.description || '',
-                                createdAt,
-                                updatedAt: lastAccessed,
-                                hasUnseenChanges: meta.hasUnseenChanges || false // ← NEU
-                            };
-                        });
-                    
-                    // Sortiere nach updatedAt (neueste zuerst)
-                    return boards.sort((a: any, b: any) => (b.updatedAt || 0) - (a.updatedAt || 0));
-                } catch (e) {
-                    console.warn('⚠️ Fehler beim Parsen von Board-Metadaten:', e);
-                }
-            }
-            
-            // Fallback: Alte Logik (einzelne Board-Keys) für Legacy-Boards
-            const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; hasUnseenChanges?: boolean }> = [];
-            
-            for (const boardId of boardIds) {
-                const storageKey = `kanban-${boardId}`;
-                const stored = localStorage.getItem(storageKey);
+        // ✅ Filter out invalid IDs (undefined, null, empty strings)
+        const validIds = boardIds.filter(id => id && typeof id === 'string' && id.length > 0);
+        
+        const boards = validIds.map(id => {
+            try {
+                const boardKey = `kanban-${id}`;
+                const stored = localStorage.getItem(boardKey);
                 
-                if (stored) {
-                    try {
-                        const data = JSON.parse(stored);
-                        const updatedAtTime = data.updatedAt 
-                            ? new Date(data.updatedAt).getTime() 
-                            : (data.createdAt || Date.now());
-                        
-                        boards.push({
-                            id: boardId,
-                            name: data.name || 'Unbenanntes Board',
-                            description: data.description,
-                            createdAt: data.createdAt || Date.now(),
-                            updatedAt: updatedAtTime,
-                            hasUnseenChanges: false // Legacy-Boards: default false
-                        });
-                    } catch (e) {
-                        console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
-                    }
+                if (!stored) {
+                    console.warn(`⚠️ Board ${id} nicht gefunden in localStorage`);
+                    return null;
                 }
+                
+                const boardData = JSON.parse(stored);
+                
+                // ✅ Parse timestamps correctly
+                const parseTimestamp = (value: any): number => {
+                    if (!value) return 0;
+                    if (typeof value === 'number') return value;
+                    if (typeof value === 'string') {
+                        const parsed = new Date(value).getTime();
+                        return isNaN(parsed) ? 0 : parsed;
+                    }
+                    return 0;
+                };
+                
+                // Return LIGHTWEIGHT metadata (no columns/cards!)
+                return {
+                    id: boardData.id,
+                    name: boardData.name || 'Unbenanntes Board',
+                    description: boardData.description || '',
+                    createdAt: parseTimestamp(boardData.createdAt) || Date.now(),
+                    updatedAt: parseTimestamp(boardData.updatedAt),
+                    lastAccessed: parseTimestamp(boardData.lastAccessedAt), // ✅ From board!
+                    hasUnseenChanges: boardData.hasUnseenChanges ?? false,  // ✅ From board!
+                    author: boardData.author,
+                    publishState: boardData.publishState
+                };
+                
+            } catch (error) {
+                console.error(`❌ Fehler beim Laden von Board ${id}:`, error);
+                return null;
             }
-            
-            return boards.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        } catch (error) {
-            console.error('❌ Fehler beim Laden aller Boards:', error);
-            return [];
-        }
+        }).filter(meta => meta !== null) as Array<{
+            id: string;
+            name: string;
+            description?: string;
+            createdAt: number;
+            updatedAt?: number;
+            lastAccessed?: number;
+            hasUnseenChanges?: boolean;
+            author?: string;
+            publishState?: string;
+        }>;
+        
+        // Sort by lastAccessed (most recent first)
+        return boards.sort((a, b) => (b.lastAccessed || b.updatedAt || 0) - (a.lastAccessed || a.updatedAt || 0));
     }
 }

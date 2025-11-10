@@ -494,9 +494,14 @@ export class NostrIntegration {
             }
             
             // ⚡ NEW: Set unseen changes flag if board is NOT currently loaded
-            const { BoardOperations } = await import('./operations.js');
             if (boardProps.id !== currentBoard.id) {
-                BoardOperations.setHasUnseenChanges(boardProps.id, true);
+                // Board ist im Hintergrund → markiere als geändert
+                const { BoardStorage } = await import('./storage.js');
+                const backgroundBoard = BoardStorage.loadBoard(boardProps.id);
+                if (backgroundBoard) {
+                    backgroundBoard.markAsChanged();
+                    BoardStorage.saveBoard(backgroundBoard);
+                }
             }
             
             // ⚡ v2.0: Direkte Store-API (SECONDARY action)
@@ -618,8 +623,12 @@ export class NostrIntegration {
                 boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
                 
                 // ⚡ NEW: Set unseen changes flag for background board
-                const { BoardOperations } = await import('./operations.js');
-                BoardOperations.setHasUnseenChanges(targetBoardId, true);
+                const { BoardStorage } = await import('./storage.js');
+                const backgroundBoard = BoardStorage.loadBoard(targetBoardId);
+                if (backgroundBoard) {
+                    backgroundBoard.markAsChanged();
+                    BoardStorage.saveBoard(backgroundBoard);
+                }
             }
             
         } catch (error) {
