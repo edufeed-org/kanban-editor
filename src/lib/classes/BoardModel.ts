@@ -42,6 +42,9 @@ export interface CardProps {
     rank?: number; // Position in der Spalte (aus Nostr Event "rank"-Tag)
     columnId?: string; // Spalten-ID (aus Nostr Event "s"-Tag - muss Column-ID sein, nicht Name!)
     boardRef?: string; // Board-Referenz (aus "a"-Tag, Format: "30301:pubkey:board-id")
+    // ⚡ v4.3: Timestamps for Last-Write-Wins and Merge-System (same pattern as BoardProps)
+    createdAt?: number | string; // Unix timestamp (from Nostr event.created_at) or ISO string
+    updatedAt?: string; // ISO string for LWW timestamp comparison
 }
 
 export interface ColumnProps {
@@ -106,8 +109,29 @@ export class Card {
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
         this.authorName = props.authorName; // ← NEU: authorName laden
-        this.createdAt = generateTimestamp();
-        this.updatedAt = this.createdAt;
+        
+        // ⚡ v4.3: Use props.createdAt if available (from Nostr event)
+        // Same pattern as Board Constructor - enables LWW and Merge-System
+        if (props.createdAt !== undefined) {
+            this.createdAt = typeof props.createdAt === 'number'
+                ? new Date(props.createdAt * 1000).toISOString()
+                : props.createdAt;
+        } else {
+            this.createdAt = generateTimestamp();
+        }
+        
+        this.updatedAt = props.updatedAt || this.createdAt;
+        
+        // Debug logging for timestamp tracking
+        if (props.updatedAt || props.createdAt) {
+            console.log(`🔍 Card Constructor DEBUG:`);
+            console.log(`  cardId:`, this.id);
+            console.log(`  heading:`, this.heading);
+            console.log(`  props.createdAt:`, props.createdAt);
+            console.log(`  props.updatedAt:`, props.updatedAt);
+            console.log(`  this.createdAt:`, this.createdAt);
+            console.log(`  this.updatedAt:`, this.updatedAt);
+        }
     }
 
     update(props: Partial<CardProps>): void {

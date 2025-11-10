@@ -356,6 +356,11 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     boardRef,
     columnId,
     rank,
+    // ⚡ v4.3: Extract timestamps from Nostr event for LWW and Merge-System
+    createdAt: event.created_at,  // Unix timestamp (number)
+    updatedAt: event.created_at 
+      ? new Date(event.created_at * 1000).toISOString()  // ISO string for comparison
+      : new Date().toISOString(),  // Fallback to NOW if no timestamp
     // @ts-ignore - columnName ist nicht in CardProps, aber wir brauchen es für Fallback-Matching
     columnName,
   };

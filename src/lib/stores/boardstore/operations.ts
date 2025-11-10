@@ -392,6 +392,19 @@ export class BoardOperations {
             return false;
         }
         
+        // ⚡ v4.3: Remove card from OLD column if it moved (prevents duplication)
+        // Search ALL columns except target column for the card
+        for (const col of board.columns) {
+            if (col.id === columnId) continue; // Skip target column
+            
+            const oldCardIndex = col.cards.findIndex(c => c.id === cardProps.id);
+            if (oldCardIndex >= 0) {
+                console.log(`🔄 Card ${cardProps.id} moved from column ${col.id} → ${columnId}`);
+                col.cards.splice(oldCardIndex, 1); // Remove from old column
+                break; // Card can only be in one column at a time
+            }
+        }
+        
         // 2. Check if card exists
         const existingCard = column.findCard(cardProps.id!);
         

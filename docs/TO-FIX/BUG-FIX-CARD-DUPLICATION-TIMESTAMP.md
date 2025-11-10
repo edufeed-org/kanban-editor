@@ -1,10 +1,19 @@
 # 🐛 BUG-FIX: Card Duplication & Timestamp Issues
 
-**Status:** 🔴 CRITICAL - Card Operations Broken  
+**Status:** ✅ IMPLEMENTED - All 5 Steps Complete (10. Nov 2025)  
 **Erstellt:** 10. November 2025  
-**Priorität:** HIGH (User-reported Bug)  
+**Priorität:** HIGH (User-reported Bug) - RESOLVED ✅  
 **Betroffene Komponenten:** Card-Events, upsertCardFromNostr(), Card Constructor  
-**Verwandte Systeme:** ✅ Merge-System (MERGE-SYSTEM.md) - MUSS berücksichtigt werden!
+**Verwandte Systeme:** ✅ Merge-System (MERGE-SYSTEM.md) - Integration Complete!
+
+**Implementation Summary:**
+- ✅ STEP 1: CardProps has timestamp fields (5 min)
+- ✅ STEP 2: Card Constructor uses event timestamps (10 min)
+- ✅ STEP 3: upsertCardFromNostr removes from old column (15 min)
+- ✅ STEP 4: handleCardEvent has LWW check (15 min)
+- ✅ STEP 5: nostrEventToCard extracts timestamps (10 min)
+- ✅ TypeScript: 0 errors, 0 warnings
+- ⏳ Testing: Manual verification pending
 
 ---
 
@@ -19,16 +28,22 @@
 - ❌ Last-Write-Wins funktioniert nicht für Cards
 - ❌ Stale Card-Events überschreiben neuere lokale Daten
 
+**Expected After Fix:**
+- ✅ Card appears ONLY in new position after move
+- ✅ Card timestamps preserved from Nostr events
+- ✅ Last-Write-Wins prevents stale event application
+- ✅ Merge-System can detect card conflicts
+
 ---
 
 ## 🔍 Root Cause Analysis
 
-### **Problem 1: Card Constructor ignoriert Timestamps (EXAKT wie Board v4.3 Bug!)**
+### **Problem 1: Card Constructor ignoriert Timestamps (EXAKT wie Board v4.3 Bug!)** ✅ FIXED
 
 **Datei:** `src/lib/classes/BoardModel.ts` Lines 111-112
 
 ```typescript
-// ❌ AKTUELL (FALSCH):
+// ❌ VORHER (FALSCH):
 constructor(props: CardProps) {
     // ... Felder laden ...
     this.createdAt = generateTimestamp();  // ← IMMER NOW! Ignoriert props.createdAt

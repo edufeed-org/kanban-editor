@@ -574,6 +574,27 @@ export class NostrIntegration {
                 }
             }
             
+            // ⚡ v4.3: Last-Write-Wins for Cards (same pattern as Board)
+            // Compare event timestamp with local card updatedAt
+            const result = currentBoard.findCardAndColumn(cardProps.id!);
+            if (result && result.card.updatedAt) {
+                const localTime = new Date(result.card.updatedAt).getTime();
+                const eventTime = cardEvent.created_at * 1000;
+                
+                if (eventTime <= localTime) {
+                    console.log(`⏭️ Card LWW: Skip older/equal event`);
+                    console.log(`  Card:        ${cardProps.heading || cardProps.id}`);
+                    console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
+                    console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
+                    console.log(`  Delta:       ${((localTime - eventTime) / 1000).toFixed(1)}s newer`);
+                    return;
+                }
+                
+                console.log(`✅ Card LWW: Apply newer event`);
+                console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
+                console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
+            }
+            
             // columnId ist KRITISCH - ohne geht nichts!
             if (!cardProps.columnId) {
                 console.error(`❌ Card ${cardProps.id} hat keine columnId!`);
