@@ -16,7 +16,13 @@
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import UserIcon from '@lucide/svelte/icons/user';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
+	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import DownloadIcon from '@lucide/svelte/icons/download';
 	import type { CardItem } from './types.js';
+	import { onMount, onDestroy } from 'svelte';
 
 	interface Props {
 		cardId: string | number;
@@ -27,10 +33,30 @@
 
 	let commentText = $state('');
 	let isSubmitting = $state(false);
+	let isLoadingComments = $state(false);
 	let selectedAuthorPopover = $state<string | null>(null);
 	let editName = $state('');
 	let selectedColor = $state('slate');
 	let localPublishState = $state<'draft' | 'published' | 'archived'>('draft');
+
+	// Subscription cleanup function
+	let unsubscribeComments: (() => void) | undefined;
+
+	/**
+	 * 🔥 Auto-subscribe to real-time comment updates on mount
+	 */
+	onMount(() => {
+		console.log('[CardViewDialog] Mounting - subscribing to comments for card:', cardId);
+		unsubscribeComments = boardStore.subscribeToComments(String(cardId));
+	});
+
+	/**
+	 * 🔥 Cleanup subscription on unmount to prevent leaks
+	 */
+	onDestroy(() => {
+		console.log('[CardViewDialog] Unmounting - cleaning up comment subscription');
+		unsubscribeComments?.();
+	});
 
 	/**
 	 * 🔥 Lese die Karte DIREKT aus boardStore.uiData
@@ -89,6 +115,45 @@
 			console.error('❌ Fehler beim Hinzufügen des Kommentars:', error);
 		} finally {
 			isSubmitting = false;
+		}
+	}
+
+	/**
+	 * 🔥 Load remote comments from Nostr relays
+	 */
+	async function handleLoadComments() {
+		try {
+			isLoadingComments = true;
+			await boardStore.loadComments(String(cardId));
+			console.log('✅ Comments loaded from Nostr');
+		} catch (error) {
+			console.error('❌ Failed to load comments:', error);
+		} finally {
+			isLoadingComments = false;
+		}
+	}
+
+	/**
+	 * 🔥 Retry publishing a failed comment
+	 */
+	async function handleRetryComment(commentId: string) {
+		try {
+			// Find the failed comment
+			const comment = displayComments.find(c => c.id === commentId);
+			if (!comment) return;
+			
+			// Re-publish by adding it again (will trigger publish in addComment)
+			const author = comment.author || authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+			
+			// Delete the failed comment first
+			boardStore.deleteComment(String(cardId), commentId);
+			
+			// Re-add it (this will trigger publish)
+			boardStore.addComment(String(cardId), comment.text, author);
+			
+			console.log('✅ Comment retry initiated');
+		} catch (error) {
+			console.error('❌ Comment retry failed:', error);
 		}
 	}
 
@@ -311,10 +376,27 @@
 			<!-- Divider -->
 			<div class="my-2 border-t"></div>
 
-			<!-- Comments Section Header -->
-			<h3 class="text-sm font-semibold text-muted-foreground">
-				Kommentare ({displayComments.length})
-			</h3>
+			<!-- Comments Section Header with Load Button -->
+			<div class="flex items-center justify-between">
+				<h3 class="text-sm font-semibold text-muted-foreground">
+					Kommentare ({displayComments.length})
+				</h3>
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={handleLoadComments}
+					disabled={isLoadingComments}
+					class="gap-2 h-8"
+				>
+					{#if isLoadingComments}
+						<LoaderIcon class="h-3 w-3 animate-spin" />
+						<span class="text-xs">Laden...</span>
+					{:else}
+						<DownloadIcon class="h-3 w-3" />
+						<span class="text-xs">Kommentare laden</span>
+					{/if}
+				</Button>
+			</div>
 
 			<!-- Existing Comments List -->
 			{#if displayComments.length > 0}
@@ -347,7 +429,28 @@
 							<div class="flex-1 min-w-0 space-y-2">
 								<div class="flex justify-between items-start gap-2">
 									<div class="flex-1 min-w-0">
-										<div class="font-medium text-sm">{comment.author}</div>
+										<div class="flex items-center gap-2">
+											<span class="font-medium text-sm">{comment.author}</span>
+											
+											<!-- 🔥 Sync Status Icon -->
+											{#if comment.syncStatus === 'syncing'}
+												<span title="Wird synchronisiert...">
+													<LoaderIcon class="h-3 w-3 animate-spin text-blue-500" />
+												</span>
+											{:else if comment.syncStatus === 'synced'}
+												<span title="Synchronisiert">
+													<CheckIcon class="h-3 w-3 text-green-500" />
+												</span>
+											{:else if comment.syncStatus === 'failed'}
+												<span title="Synchronisation fehlgeschlagen">
+													<CircleAlertIcon class="h-3 w-3 text-red-500" />
+												</span>
+											{:else if comment.syncStatus === 'local'}
+												<span title="Nur lokal (Offline)">
+													<WifiOffIcon class="h-3 w-3 text-amber-500" />
+												</span>
+											{/if}
+										</div>
 										<div class="text-xs text-muted-foreground">
 											{new Date(comment.createdAt).toLocaleDateString('de-DE', {
 												year: 'numeric',
@@ -358,14 +461,29 @@
 											})}
 										</div>
 									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
-										class="btn text-destructive bg-destructive h-6 w-6 p-0"
-									>
-										<TrashIcon class="size-3" />
-									</Button>
+									
+									<!-- Action Buttons: Retry (if failed) + Delete -->
+									<div class="flex gap-1">
+										{#if comment.syncStatus === 'failed'}
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => handleRetryComment(comment.id || `fallback-${index}`)}
+												class="h-6 w-6 p-0 text-amber-600 hover:text-amber-700"
+												title="Erneut versuchen"
+											>
+												<RefreshCwIcon class="size-3" />
+											</Button>
+										{/if}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
+											class="btn text-destructive bg-destructive h-6 w-6 p-0"
+										>
+											<TrashIcon class="size-3" />
+										</Button>
+									</div>
 								</div>
 								<p class="text-sm text-foreground whitespace-pre-wrap break-words">
 									{comment.text}
