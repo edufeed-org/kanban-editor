@@ -2,6 +2,7 @@
     import KeyRoundIcon from "@lucide/svelte/icons/key-round";
     import { resolve } from '$app/paths';
     import * as Avatar from "$lib/components/ui/avatar/index.js";
+    import { getInitials, getAvatarColor } from "$lib/components/ui/avatar/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
     import * as Card from "$lib/components/ui/card/index.js";
     import Kind1PostCreationForm from "$lib/components/Kind1PostCreationForm.svelte";
@@ -64,8 +65,8 @@
                     <div class="flex items-center space-x-3">
                         <Avatar.Root class="h-8 w-8 flex-shrink-0">
                             <Avatar.Image src="" alt={currentUser?.profile?.name || 'Jack Dorsey'} />
-                            <Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser?.profile?.name)} text-white text-xs font-semibold`}>
-                                {Avatar.getInitials(currentUser?.profile?.name || 'Jack Dorsey')}
+                            <Avatar.Fallback class={`${getAvatarColor(currentUser?.profile?.name)} text-white text-xs font-semibold`}>
+                                {getInitials(currentUser?.profile?.name || 'Jack Dorsey')}
                             </Avatar.Fallback>
                         </Avatar.Root>
                         <div>

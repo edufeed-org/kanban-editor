@@ -890,6 +890,7 @@ Benutzer-Anzeige im Footer der linken Sidebar mit Login/Logout und Demo-Session-
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Avatar from "$lib/components/ui/avatar/index.js";
+  import { getInitials, getAvatarColor } from "$lib/components/ui/avatar/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { authStore } from "$lib/stores/authStore.svelte.js";
   import LoginDialog from "./LoginDialog.svelte";
@@ -941,8 +942,8 @@ Benutzer-Anzeige im Footer der linken Sidebar mit Login/Logout und Demo-Session-
         <div class="px-3 py-3 flex items-center gap-2 hover:bg-muted/50 rounded-md cursor-pointer">
           <Avatar.Root class="h-8 w-8 flex-shrink-0">
             <Avatar.Image src="" alt={currentUser.profile?.name || ''} />
-            <Avatar.Fallback class="{Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold">
-              {Avatar.getInitials(currentUser.profile?.name) || ''}
+            <Avatar.Fallback class="{getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold">
+              {getInitials(currentUser.profile?.name) || ''}
             </Avatar.Fallback>
           </Avatar.Root>
           <div class="flex-1 min-w-0">

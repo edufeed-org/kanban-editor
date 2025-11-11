@@ -437,8 +437,8 @@ export class NostrIntegration {
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(boardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (1s): ${boardEvent.id.substring(0, 30)}...`);
-            }, 1000);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
+            }, 5000);
             
             return;
         }
@@ -542,8 +542,8 @@ export class NostrIntegration {
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(cardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (1s): ${cardEvent.id.substring(0, 30)}...`);
-            }, 1000);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${cardEvent.id.substring(0, 30)}...`);
+            }, 5000);
             
             return;
         }

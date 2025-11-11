@@ -10,6 +10,7 @@
 
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
+	import { getAvatarColor } from "$lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import LoginDialog from "./LoginDialog.svelte";
@@ -71,14 +72,13 @@
 			<DropdownMenu.Trigger class="bg-secondary rounded-md">
 				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
-						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
-							<!-- Avatar mit User-Initialen -->
-							{Avatar.getInitials(currentUser.profile?.name) || ''}
+						<Avatar.Image src="" alt={authStore.getDisplayName()} />
+						<Avatar.Fallback class={`${getAvatarColor(authStore.getDisplayName())} text-white text-xs font-semibold`}>
+							{authStore.getUserInitials()}
 						</Avatar.Fallback>
 					</Avatar.Root>
 					<div>
-						<p class="text-sm font-semibold">{currentUser.profile?.name}</p>
+						<p class="text-sm font-semibold">{authStore.getDisplayName()}</p>
 						<p class="text-xs text-muted-foreground font-mono">
 							{formatPubkey(currentUser.pubkey)}
 						</p>

@@ -68,10 +68,11 @@
 	let localAuthorName = $state(card.authorName);
 	let localAttendees = $state(card.attendees || []);
 
-	// Ensure minimum 1 attendee (author should always be included)
+	// 🔧 FIX: AvatarStack erwartet PUBKEYS, nicht Display-Namen!
+	// Ensure minimum 1 attendee (author pubkey should always be included)
 	const attendees = $derived(localAttendees && localAttendees.length > 0
 		? localAttendees
-		: (localAuthorName ? [localAuthorName] : []));
+		: (localAuthor ? [localAuthor] : []));
 
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components

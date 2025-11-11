@@ -550,9 +550,34 @@ export class AuthStore {
 
   /**
    * 👤 Get current user's display name
+   * Returns the profile name if available, otherwise null
    */
   public getUserName(): string | null {
     return this.currentUser?.profile?.name ?? null;
+  }
+
+  /**
+   * 👤 Get display name with fallback
+   * Returns: profile.name OR "Nostr Nutzer" (never null)
+   * Use this for UI display where you always want to show something
+   */
+  public getDisplayName(): string {
+    return this.currentUser?.profile?.name || 'Nostr Nutzer';
+  }
+
+  /**
+   * 🎨 Get user initials for avatar
+   * Returns: Initials from name OR "NN" for "Nostr Nutzer"
+   */
+  public getUserInitials(): string {
+    const name = this.currentUser?.profile?.name;
+    if (!name) return 'NN';
+    
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   }
 
   /**
@@ -666,6 +691,12 @@ class AuthStoreProxy {
   getUserName() {
     return AuthStoreWrapper.getInstance().getUserName();
   }
+  getDisplayName() {
+    return AuthStoreWrapper.getInstance().getDisplayName();
+  }
+  getUserInitials() {
+    return AuthStoreWrapper.getInstance().getUserInitials();
+  }
   
   /**
    * Sichere Getter für SSR-Context (gibt null statt Error)
@@ -678,6 +709,16 @@ class AuthStoreProxy {
   getUserNameSafe(): string | null {
     const instance = AuthStoreWrapper.getInstanceSafe();
     return instance ? instance.getUserName() : null;
+  }
+  
+  getDisplayNameSafe(): string {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getDisplayName() : 'Nostr Nutzer';
+  }
+  
+  getUserInitialsSafe(): string {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getUserInitials() : 'NN';
   }
   updateProfile(profile: Partial<UserSession['profile']>) {
     return AuthStoreWrapper.getInstance().updateProfile(profile);

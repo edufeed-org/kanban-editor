@@ -513,6 +513,30 @@ getPubkey(): string | null
 // NPub (Bech32)
 getNpub(): string | null
 
+// Display Name (with fallback)
+getUserName(): string | null        // Returns profile.name or null
+getDisplayName(): string            // Returns profile.name or "Nostr Nutzer" (never null)
+getUserInitials(): string           // Returns initials from name or "NN"
+
+// SSR-Safe Variants (return fallback instead of throwing)
+getPubkeySafe(): string | null
+getUserNameSafe(): string | null
+getDisplayNameSafe(): string        // Returns "Nostr Nutzer" if not initialized
+getUserInitialsSafe(): string       // Returns "NN" if not initialized
+```
+
+**Verwendung in UI:**
+```typescript
+// ✅ RICHTIG - Nutze getDisplayName() für UI-Anzeige
+<p>{authStore.getDisplayName()}</p>  // "Alice" oder "Nostr Nutzer"
+
+// ✅ RICHTIG - Nutze getUserInitials() für Avatar
+<Avatar.Fallback>{authStore.getUserInitials()}</Avatar.Fallback>  // "AL" oder "NN"
+
+// ❌ FALSCH - Nutze nicht getUserName() direkt in UI (kann null sein)
+<p>{authStore.getUserName()}</p>  // Kann leer sein!
+```
+
 // Display Name
 getUserName(): string | null
 
