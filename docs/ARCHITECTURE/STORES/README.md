@@ -1,396 +1,165 @@
-# Store-Architektur: Übersicht
+# Store-Architektur: Übersicht & Prinzipien
 
 **Verzeichnis:** `docs/ARCHITECTURE/STORES/`  
-**Letztes Update:** 29. Oktober 2025  
-**Status:** Vollständige Dokumentation aller Stores
+**Letztes Update:** 06. November 2025  
+**Status:** ✅ **AKTUELL** - Zentrale Dokumentation aller Stores
 
 ---
 
-## 📚 Dokumentations-Index
+## 🎯 Kernprinzipien der Store-Architektur
+
+Unsere Store-Architektur basiert auf drei fundamentalen Prinzipien, die Konsistenz, Wartbarkeit und Performance sicherstellen.
+
+1.  **Klassen-basierte Stores mit Svelte 5 Runes:**
+    - Jeder Store ist eine TypeScript-Klasse, die als Singleton exportiert wird.
+    - Interne Zustände werden mit `$state()` verwaltet, abgeleitete Daten mit `$derived.by()`.
+    - Dies kapselt die Logik und macht die API klar und testbar.
+
+2.  **Manuelle Persistierung für komplexe Stores:**
+    - Wir nutzen bewusst **NICHT** `svelte-persisted-store` für komplexe Stores wie `BoardStore` oder `SettingsStore`.
+    - **Grund:** Wir benötigen volle Kontrolle über die Serialisierung (Klassen → JSON), dynamische `localStorage`-Keys und asynchrone Initialisierung (z.B. Laden von `config.json`).
+    - **Siehe:** [`GUIDES/STORE-PATTERNS.md`](../../GUIDES/STORE-PATTERNS.md) für eine detaillierte Entscheidungshilfe.
+
+3.  **Zentraler `triggerUpdate()`-Mechanismus:**
+    - Jede Zustandsänderung, die persistiert werden muss, ruft intern `triggerUpdate()` auf.
+    - Diese Methode inkrementiert einen `$state`-Zähler, der wiederum alle `$derived`-Werte neu berechnen lässt und die `saveToStorage()`-Methode auslöst.
+    - Dies garantiert, dass die UI immer synchron mit dem `localStorage` ist.
+
+---
+
+## 🗺️ Store-Interaktionsdiagramm
+
+Dieses Diagramm zeigt, wie die zentralen Stores miteinander kommunizieren und welche externen Abhängigkeiten bestehen.
+
+```mermaid
+graph TD
+    subgraph "Browser/OS"
+        B1[config.json]
+        B2[localStorage]
+        B3[Offline/Online Events]
+    end
+
+    subgraph "Anwendung"
+        A[UI Components]
+        S_SETTINGS[SettingsStore]
+        S_AUTH[AuthStore]
+        S_BOARD[BoardStore]
+        S_SYNC[SyncManager]
+    end
+
+    subgraph "Nostr Network"
+        N1[Public Relays]
+    end
+
+    %% Store-Interaktionen
+    A -- "user actions" --> S_BOARD
+    A -- "user actions" --> S_AUTH
+    A -- "user actions" --> S_SETTINGS
+    S_BOARD -- "liest Daten für UI" --> A
+    S_AUTH -- "liest Daten für UI" --> A
+    S_SETTINGS -- "liest Daten für UI" --> A
+
+    %% Abhängigkeiten
+    B1 -- "wird geladen von" --> S_SETTINGS
+    S_SETTINGS -- "konfiguriert" --> S_AUTH
+    S_SETTINGS -- "konfiguriert" --> S_SYNC
+    S_AUTH -- "liefert User-Kontext an" --> S_BOARD
+    S_BOARD -- "sendet Events via" --> S_SYNC
+    B3 -- "triggert" --> S_SYNC
+
+    %% Persistierung
+    S_BOARD -- "speichert/lädt Boards" --> B2
+    S_AUTH -- "speichert/lädt Session" --> B2
+    S_SETTINGS -- "speichert/lädt Settings" --> B2
+    S_SYNC -- "speichert/lädt Event-Queue" --> B2
+
+    %% Nostr Kommunikation
+    S_SYNC -- "publiziert an" --> N1
+
+    classDef store fill:#E1F5FE,stroke:#0288D1,stroke-width:2px;
+    class S_SETTINGS,S_AUTH,S_BOARD,S_SYNC store;
+```
+
+---
+
+## 📚 Verzeichnis der Stores
 
 ### Implementierte Stores
 
-| Store | Datei | Status | Phase | Dokumentation |
-|-------|-------|--------|-------|---------------|
-| **BoardStore** | `kanbanStore.svelte.ts` | ✅ Vollständig | Phase 1 | [BOARDSTORE.md](./BOARDSTORE.md) |
-| **AuthStore** | `authStore.svelte.ts` | ✅ Vollständig | Phase 1 | [AUTHSTORE.md](./AUTHSTORE.md) |
-| **SettingsStore** | `settingsStore.svelte.ts` | ✅ Vollständig | Phase 1 | [SETTINGSSTORE.md](./SETTINGSSTORE.md) |
+| Store | Datei | Status | Kurzbeschreibung | Dokumentation |
+|:---|:---|:---:|:---|:---|
+| **BoardStore** | `kanbanStore.svelte.ts` | ✅ Aktiv | Single Source of Truth für alle Board-Daten. Verwaltet CRUD, Persistierung und UI-Daten. | [BOARDSTORE.md](./BOARDSTORE.md) |
+| **AuthStore** | `authStore.svelte.ts` | ✅ Aktiv | Verwaltet Benutzerauthentifizierung (NIP-07, nsec) und Session-Management. | [AUTHSTORE.md](./AUTHSTORE.md) |
+| **SettingsStore** | `settingsStore.svelte.ts` | ✅ Aktiv | Lädt und merged `config.json` mit User-Settings. Konfiguriert Relays, Theme, LLM. | [SETTINGSSTORE.md](./SETTINGSSTORE.md) |
+| **SyncManager** | `syncManager.ts` | ✅ Aktiv | Offline-First Event-Queue mit Retry-Logik. Nutzt `localStorage` für die Queue. | [SYNCMANAGER.md](./SYNCMANAGER.md) |
 
-### Geplante Stores
+### Zukünftige / Geplante Stores
 
-| Store | Datei | Status | Phase | Dokumentation |
-|-------|-------|--------|-------|---------------|
-| **SyncManager** | `syncManager.ts` | ⏳ TODO | Phase 1.2 | [SYNCMANAGER.md](./SYNCMANAGER.md) |
-
-**⚠️ Agent-Features:** ChatStore, ChatBotStore, UserPreferencesStore wurden in den **`feature/agent-chatstore`** Branch verschoben.
-
-→ **Siehe Branch:** `feature/agent-chatstore` für AI-Agent-spezifische Store-Implementierungen
-
----
-
-## 🎯 Store-Pattern Guide (NEU!)
-
-**⚠️ WICHTIG:** Nicht alle Stores verwenden dasselbe Persistierungs-Pattern!
-
-→ **Lese ZUERST:** [`GUIDES/STORE-PATTERNS.md`](../../GUIDES/STORE-PATTERNS.md) (20 min)
-
-**Schnell-Übersicht:**
-
-| Store | Persisten-Muster | Wann verwenden | Grund |
-|-------|------------------|-----------------|-------|
-| **AuthStore** | `persisted()` | ✅ Session-Daten | Statischer Key, einfache Daten |
-| **BoardStore** | Manual localStorage | ✅ Multi-Board | Dynamische Keys (`kanban-${id}`) |
-| **SettingsStore** | Manual localStorage | ✅ Config-Merge | Async config.json Integration |
-
-**Design-Entscheidung:**
-- ✅ **persisted()** = Simple Stores (AuthStore)
-- ✅ **Manual localStorage** = Complex Stores (BoardStore, SettingsStore)
-
-**Nicht automatisch alles zu persisted() konvertieren!** Lies Pattern-Guide für Details.
+| Store | Status | Phase | Beschreibung | Dokumentation |
+|:---|:---:|:---:|:---|:---|
+| **ChatStore** | ⏳ Geplant | 3.1 | Speichert Konversationsverläufe pro Board. | [CHATSTORE.md](./CHATSTORE.md) |
+| **BaseStores** | 🔮 Konzept | 1.6+ | Abstrakte Basisklassen (`BaseSimpleStore`, `BaseComplexStore`) zur Reduzierung von Boilerplate-Code in zukünftigen, einfachen Stores. | [BASESTORES.md](./BASESTORES.md) |
+| **AgentStore** | ⏳ Geplant | 3.2 | Verwaltet KI-Agenten, ihre Fähigkeiten und Aktionen. | `AGENTSTORE.md` |
 
 ---
 
-## 🎯 Quick Start für Entwickler
+## 🚀 Initialisierungs-Reihenfolge (KRITISCH!)
 
-### Store nutzen in Komponenten
-
-```svelte
-<script lang="ts">
-    // Importiere Store
-    import { boardStore } from '$lib/stores/kanbanStore.svelte';
-    import { authStore } from '$lib/stores/authStore.svelte';
-    import { settingsStore } from '$lib/stores/settingsStore.svelte';
-    
-    // Reaktiver Zugriff via $derived
-    let columns = $derived(boardStore.uiData);
-    let isLoggedIn = $derived(authStore.isAuthenticated);
-    let theme = $derived(settingsStore.settings.theme);
-    
-    // Store-API aufrufen
-    boardStore.createCard(columnId, 'Titel', 'Beschreibung');
-    await authStore.loginWithNip07();
-    settingsStore.setTheme('dark');
-</script>
-```
-
-### Wichtigste Regeln (für AI-Agents)
-
-| Regel | Store | Severity |
-|-------|-------|----------|
-| **IMMER** `triggerUpdate()` nach Board-Änderungen | BoardStore | 🔴 CRITICAL |
-| **NIEMALS** Private Keys speichern | AuthStore | 🔴 CRITICAL |
-| **IMMER** Settings via Reassignment updaten | SettingsStore | 🔴 CRITICAL |
-| **IMMER** Config vor AuthStore laden | SettingsStore | 🔴 CRITICAL |
-| **NIEMALS** Board-Klasse direkt mutieren | BoardStore | 🔴 CRITICAL |
-
----
-
-## 📋 Store-Verantwortlichkeiten
-
-### BoardStore (kanbanStore.svelte.ts)
-
-**Zweck:** Single Source of Truth für alle Board-Daten
-
-**Kernfunktionen:**
-- ✅ Multi-Board-Verwaltung (Create, Load, Delete)
-- ✅ CRUD-Operationen (Cards, Columns, Comments)
-- ✅ Reaktive UI-Anbindung (`$derived.by()`)
-- ✅ Auto-Persistierung (localStorage)
-- ✅ Autorisierung (Maintainer-basiert)
-- ✅ MRU-Reload (Most Recently Used Board)
-- ✅ Paste-System Integration
-
-**API-Highlights:**
-```typescript
-// Board-Verwaltung
-boardStore.createBoard(name: string): string
-boardStore.loadBoard(boardId: string): boolean
-boardStore.getAllBoards(): Array<{ id, name, updatedAt }>
-boardStore.deleteBoard(boardId?: string): boolean
-
-// CRUD
-boardStore.createCard(columnId, name, description?): string
-boardStore.editCard(cardId, updates): void
-boardStore.moveCard(cardId, fromColId, toColId): void
-boardStore.addComment(cardId, text, author): void
-
-// UI-Events
-boardStore.syncBoardState(uiColumns): boolean
-boardStore.handleCardPaste(cardId, clipboardData): Promise<PasteResult>
-
-// Reactive Data
-boardStore.uiData  // $derived → UIColumn[]
-boardStore.boardMeta  // $derived → { id, name, description }
-```
-
-**Siehe:** [BOARDSTORE.md](./BOARDSTORE.md)
-
----
-
-### AuthStore (authStore.svelte.ts)
-
-**Zweck:** Benutzerauthentifizierung via Nostr
-
-**Kernfunktionen:**
-- ✅ NIP-07 Browser Extension Login (Production)
-- ✅ nsec Private Key Login (Development ONLY)
-- ✅ Demo-Modus (Offline Identity)
-- ✅ Session-Management (7 Tage Expiration)
-- ✅ Profile-Updates (NIP-05 Verifikation)
-- ✅ Auto-Restore bei App-Start
-
-**API-Highlights:**
-```typescript
-// Login
-authStore.loginWithNip07(): Promise<NDKUser>
-authStore.loginWithNsec(nsec: string): Promise<NDKUser>  // Dev only!
-authStore.createDemoSession(): void
-
-// Session
-authStore.logout(): Promise<void>
-authStore.updateProfile(profileData): Promise<void>
-
-// User-Info
-authStore.getPubkey(): string | null
-authStore.getNpub(): string | null
-authStore.getUserName(): string | null
-
-// Reactive States
-authStore.currentUser  // $state → NDKUser | null
-authStore.isAuthenticated  // $derived → boolean
-authStore.isLoading  // $state → boolean
-```
-
-**Security:**
-- ❌ **NIEMALS** Private Keys in localStorage speichern!
-- ❌ **NIEMALS** nsec-Login in Production verwenden!
-- ✅ Session ohne Private Keys (nur pubkey)
-- ✅ Auto-Expiration (7 Tage für Nostr, 30 Tage für Demo)
-
-**Siehe:** [AUTHSTORE.md](./AUTHSTORE.md)
-
----
-
-### SettingsStore (settingsStore.svelte.ts)
-
-**Zweck:** Anwendungs-Einstellungen & config.json Integration
-
-**Kernfunktionen:**
-- ✅ UI/UX Settings (Theme, Column-Layout, Scroll)
-- ✅ Nostr Relay-Konfiguration
-- ✅ LLM-Integration (Ollama, OpenAI, etc.)
-- ✅ MCP Server URLs
-- ✅ Board/Card Defaults
-- ✅ Sidebar Visibility
-- ✅ Config.json Merge (Smart-Merge Strategie)
-
-**API-Highlights:**
-```typescript
-// UI Settings
-settingsStore.setTheme('dark' | 'default' | 'auto')
-settingsStore.setMaxCardsBeforeScroll(value: number)
-settingsStore.setColumnWidth(value: number)
-
-// Nostr Relays
-settingsStore.addRelayPublic(url: string)
-settingsStore.setRelaysPublic(urls: string[])
-
-// LLM
-settingsStore.setLlmModel(model: string)
-settingsStore.setLlmBaseUrl(url: string)
-settingsStore.setLlmApiKey(key: string)  // ⚠️ Nur für localhost!
-
-// Config
-settingsStore.loadAndCacheConfig(): Promise<any>
-settingsStore.exportSettings(): string
-settingsStore.importSettings(json: string): boolean
-settingsStore.reset(): void
-
-// Reactive States
-settingsStore.settings  // $state → SettingsState
-settingsStore.isDarkMode  // $derived → boolean
-settingsStore.isLlmConfigured  // $derived → boolean
-```
-
-**Security:**
-- ❌ **NIEMALS** API-Keys für Remote-Services speichern!
-- ✅ Nur für lokales Ollama (localhost) API-Keys speichern
-- ✅ Config-Loading MUSS vor AuthStore erfolgen
-
-**Siehe:** [SETTINGSSTORE.md](./SETTINGSSTORE.md)
-
----
-
-### SyncManager (syncManager.ts) ⏳ TODO
-
-**Zweck:** Offline-First Event-Queue für Nostr-Synchronisation
-
-**Kernfunktionen (Geplant):**
-- ⏳ Automatic Event-Queueing (bei Offline)
-- ⏳ Retry-Logik (Exponentieller Backoff)
-- ⏳ Dead-Letter Queue (nach 3 Fehlversuchen)
-- ⏳ Online/Offline Detection
-- ⏳ IndexedDB Persistence (via Dexie)
-
-**API-Highlights (Geplant):**
-```typescript
-syncManager.publishOrQueue(event: NDKEvent, type): Promise<void>
-syncManager.syncQueue(): Promise<void>
-syncManager.status  // { isOnline, isSyncing, queuedEvents }
-```
-
-**Implementation:**
-- Phase 1.2 (ROADMAP.md)
-- Dependencies: `dexie` (IndexedDB-Wrapper)
-
-**Siehe:** [SYNCMANAGER.md](./SYNCMANAGER.md)
-
----
-
-### Agent-Stores (Verschoben zu feature/agent-chatstore)
-
-**ChatStore, ChatBotStore, UserPreferencesStore** wurden in einen separaten Feature-Branch verschoben für isolierte Entwicklung:
-
-→ **Branch:** `feature/agent-chatstore`  
-→ **Dokumentation:** Siehe Branch für vollständige Specs:
-- `CHATSTORE.md` - Board-spezifische Memories
-- `CHATBOTSTORE.md` - LLM Integration, 11 AI-Actions
-- `USERPREFERENCESSTORE.md` - Cross-board Learning
-- `AGENT/` - AI-Collaborative-Generation, AI-Actions-Reference
-
-**Grund:** Isolierung experimenteller AI-Features von stabilen Core-Patterns
-
----
-
-## 🔄 Store-Abhängigkeiten
-
-### Initialisierungs-Reihenfolge (KRITISCH!)
-
-```
-1. SettingsStore.loadAndCacheConfig()
-   ↓
-2. NDK initialisieren (mit Relays aus Settings)
-   ↓
-3. AuthStore initialisieren (braucht config.allow_demo_session)
-   ↓
-4. BoardStore (braucht AuthStore für Autorisierung)
-   ↓
-5. SyncManager (braucht NDK + BoardStore)
-   ↓
-6. ChatBotStore (braucht BoardStore + SettingsStore)
-```
-
-**Implementation in +layout.svelte:**
+Die korrekte Initialisierung der Stores in `+layout.svelte` ist entscheidend für die Stabilität der Anwendung.
 
 ```typescript
-import { onMount } from 'svelte';
-import NDK from '@nostr-dev-kit/ndk';
-import { settingsStore } from '$lib/stores/settingsStore.svelte';
-import { initializeAuth } from '$lib/stores/authStore.svelte';
-import { boardStore } from '$lib/stores/kanbanStore.svelte';
+// In +layout.svelte -> onMount
 
-onMount(async () => {
-    // 1. Config laden
-    await settingsStore.loadAndCacheConfig();
-    
-    // 2. NDK initialisieren
-    const ndk = new NDK({
-        explicitRelayUrls: settingsStore.settings.relaysPublic
-    });
-    await ndk.connect();
-    
-    // 3. AuthStore initialisieren
-    const authStore = initializeAuth(ndk);
-    
-    // 4. BoardStore hat bereits Instanz (global Singleton)
-    // 5. SyncManager initialisieren (TODO Phase 1.2)
-    // boardStore.initializeSyncManager(ndk);
-    
-    // 6. ChatBotStore hat bereits Instanz (TODO Phase 3.1)
-});
+// 1. SettingsStore: Lädt config.json und User-Settings aus localStorage.
+await settingsStore.loadAndCacheConfig();
+
+// 2. NDK: Wird mit den Relays aus dem SettingsStore initialisiert.
+const ndk = new NDK({ explicitRelayUrls: settingsStore.getRelayUrls() });
+await ndk.connect();
+
+// 3. AuthStore: Initialisiert die User-Session. Benötigt NDK und Config-Daten.
+const authStore = initializeAuth(ndk);
+await authStore.restoreSession();
+
+// 4. BoardStore: Benötigt den AuthStore zur Autorisierung von Aktionen.
+// (Wird als globaler Singleton importiert, keine explizite Initialisierung nötig)
+
+// 5. SyncManager: Benötigt NDK für Publishing.
+const syncManager = new SyncManager(ndk);
+boardStore.setSyncManager(syncManager); // Abhängigkeit injizieren
 ```
 
-**REGEL:** Diese Reihenfolge ist **NICHT verhandelbar** — Änderungen führen zu Crashes!
+**Regel:** Diese Reihenfolge ist **nicht verhandelbar**. Änderungen führen zu Race Conditions und undefiniertem Verhalten.
 
 ---
 
-## 🛠️ Debugging-Tools
+## 🛠️ Debugging & Werkzeuge
 
-### Browser Console
+Für das Debugging der Stores stehen in der Browser-Konsole globale Instanzen zur Verfügung (im Dev-Modus):
 
 ```javascript
-// BoardStore
-console.log('Current Board:', boardStore.data);
-console.log('UI-Columns:', boardStore.uiData);
-console.log('All Boards:', boardStore.getAllBoards());
+// BoardStore API
+window.boardStore.data // Aktuelles Board-Objekt
+window.boardStore.uiData // Für die UI aufbereitete Daten
+window.boardStore.getAllBoards() // Liste aller verfügbaren Boards
 
-// AuthStore
-console.log('User:', authStore.currentUser);
-console.log('Pubkey:', authStore.getPubkey());
-console.log('Session:', authStore.getSessionInfo());
+// AuthStore API
+window.authStore.currentUser // Aktueller NDKUser
+window.authStore.getPubkey()
+window.authStore.isAuthenticated
 
-// SettingsStore
-settingsStore.debugPrintSettings();
-console.log('Config:', localStorage.getItem('kanban-config'));
+// SettingsStore API
+window.settingsStore.settings // Aktuelles Einstellungs-Objekt
+window.settingsStore.getRelayUrls() // Kombinierte Relay-Liste
+
+// SyncManager API
+window.syncManager.status // { isOnline, isSyncing, queueSize }
 ```
 
-### localStorage-Keys
-
-| Key | Store | Inhalt |
-|-----|-------|--------|
-| `kanban-{boardId}` | BoardStore | Board-Daten (JSON) |
-| `kanban-boards-list` | BoardStore | Array von Board-IDs |
-| `nostr-user-session` | AuthStore | User-Session (ohne Private Key!) |
-| `kanban-settings` | SettingsStore | Alle Settings |
-| `kanban-config` | SettingsStore | Cached config.json |
-
 ---
 
-## � Verwandte Architektur-Dokumente
+## 🔗 Verwandte Dokumente
 
-- **[REACTIVITY.md](../REACTIVITY.md)** — Svelte 5 Runes ($state, $derived, $effect)
-- **[NDK.md](../NDK.md)** — NDK Integration & Event Publishing
-- **[AUTH-UI-COMPONENTS.md](../AUTH-UI-COMPONENTS.md)** — LoginSheet, UserHeader, ProfileEditor
-- **[UX-RULES.md](../UX-RULES.md)** — shadcn-svelte UI Patterns
-
----
-
-## �📚 Weitere Ressourcen
-
-### Related Docs
-
-- **[AGENTS.md](../../AGENTS.md)** — BoardModel-Klassen & Chat-System
-- **[ROADMAP.md](../../COLLABORATION/ROADMAP.md)** — Phasen & Meilensteine
-- **[NOSTR-USER.md](../NOSTR-USER.md)** — Nostr-Authentifizierung Details
-- **[NDK.md](../NDK.md)** — NDK Integration Patterns
-- **[UX-RULES.md](../UX-RULES.md)** — shadcn-svelte UI-Patterns
-
-### Technische Specs
-
-- **Svelte 5 Runes:** https://svelte-5-preview.vercel.app/docs/runes
-- **NDK (Nostr Dev Kit):** https://github.com/nostr-dev-kit/ndk
-- **Dexie (IndexedDB):** https://dexie.org/
-- **OpenAI API:** https://platform.openai.com/docs/api-reference
-
----
-
-## ✅ Checkliste für neue Store-Implementierungen
-
-Wenn ein neuer Store erstellt wird:
-
-- [ ] Datei mit `.svelte.ts` Endung (wenn Runes verwendet)
-- [ ] `$state` für mutable Data, `$derived` für berechnete Werte
-- [ ] Alle Updates via Reassignment (`this.data = { ... }`)
-- [ ] localStorage-Persistierung mit SSR-Safety (`typeof window !== 'undefined'`)
-- [ ] Dokumentation in `docs/ARCHITECTURE/STORES/{NAME}.md`
-- [ ] Eintrag in diesem Index (README.md)
-- [ ] Integration in `+layout.svelte` dokumentiert
-- [ ] Security-Rules definiert (falls relevant)
-- [ ] Häufige Fehler dokumentiert
-- [ ] API-Referenz mit TypeScript-Signaturen
-
----
-
-**Stand:** 29. Oktober 2025  
-**Maintainer:** edufeed-org/kanban-editor Team  
-**Lizenz:** CC-BY-4.0
+- **[GUIDES/STORE-PATTERNS.md](../../GUIDES/STORE-PATTERNS.md)**: Wann `persisted()` vs. manuelle Speicherung verwenden?
+- **[ARCHITECTURE/REACTIVITY.md](../REACTIVITY.md)**: Wie Svelte 5 Runes in den Stores genutzt werden.
+- **[ARCHITECTURE/NOSTR/EVENT-HANDLING-AND-SYNC.md](../NOSTR/EVENT-HANDLING-AND-SYNC.md)**: Wie der `SyncManager` mit Nostr interagiert.

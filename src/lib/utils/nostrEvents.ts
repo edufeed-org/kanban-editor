@@ -126,6 +126,9 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const dTag = tags.find(t => t[0] === 'd');
   const id = dTag ? dTag[1] : event.id || '';
 
+  // ⚡ NEU: Store event ID for deletion!
+  const eventId = event.id;
+
   // Extract title
   const titleTag = tags.find(t => t[0] === 'title');
   const name = titleTag ? titleTag[1] : 'Unnamed Board';
@@ -162,8 +165,14 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const licenseTag = tags.find(t => t[0] === 'license');
   const ccLicense = licenseTag ? licenseTag[1] : 'cc-by-4.0';
 
+  // ⚡ v4.0: Extract event timestamp for Last-Write-Wins
+  // Nostr created_at ist in Sekunden, wir brauchen ISO string
+  const eventTimestamp = event.created_at || Math.floor(Date.now() / 1000);
+  const updatedAt = new Date(eventTimestamp * 1000).toISOString();
+
   return {
     id,
+    eventId, // ← NEU: Event-ID zurückgeben!
     name,
     description,
     columns,
@@ -172,6 +181,8 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
     maintainers: maintainers.length > 0 ? maintainers : undefined,
     tags: boardTags,
     ccLicense,
+    createdAt: eventTimestamp, // ⚡ v4.0: Timestamp als number
+    updatedAt, // ⚡ v4.0: ISO string für Board-Klasse
   };
 }
 
@@ -189,7 +200,8 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *   tags: [
  *     ["d", "card-id"],  // d-tag: unique identifier
  *     ["a", "30301:board-author:board-id"],  // Reference to board
- *     ["s", "Column Name"],  // Section/Column name
+ *     ["s", "column-id"],  // PRIMARY: Column-ID (laut Kanban-NIP)
+ *     ["col_label", "Column Name"],  // SECONDARY: Human-readable name
  *     ["title", "Card Title"],
  *     ["description", "..."],
  *     ["state", "draft|published|archived"],
@@ -201,10 +213,15 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *   content: "", // Full description as markdown
  * }
  * ```
+ * 
+ * ⚠️ WICHTIG: columnId UND columnName müssen übergeben werden!
+ * - columnId → s-Tag (PRIMARY, für eindeutige Zuordnung)
+ * - columnName → col_label-Tag (SECONDARY, für Anzeige)
  */
 export function cardToNostrEvent(
   card: Card,
-  columnName: string,
+  columnId: string,    // ⚠️ GEÄNDERT: War vorher columnName
+  columnName: string,  // ⚠️ NEU: Für col_label Tag
   rank: number,
   boardRef: string, // Format: "30301:author-pubkey:board-id"
   ndk: NDK
@@ -215,7 +232,8 @@ export function cardToNostrEvent(
   const tags: string[][] = [
     ['d', card.id],
     ['a', boardRef], // Reference to board
-    ['s', columnName], // Section/Column
+    ['s', columnId], // PRIMARY: Column-ID (laut Kanban-NIP!)
+    ['col_label', columnName], // SECONDARY: Human-readable name
     ['title', card.heading],
     ['rank', String(rank)],
   ];
@@ -265,6 +283,9 @@ export function cardToNostrEvent(
 
 /**
  * Konvertiert ein Nostr Event zurück zu CardProps
+ * 
+ * ⚠️ WICHTIG: Gibt auch Nostr-Metadaten zurück (rank, columnId, boardRef)
+ * Diese sind KRITISCH für Echtzeit-Synchronisation!
  */
 export function nostrEventToCard(event: NDKEvent): CardProps {
   const tags = event.tags || [];
@@ -304,8 +325,26 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     title: t[2] || '',
   }));
 
+  // ⚠️ NEU: Extract Nostr-Metadaten für Synchronisation
+  // Board-Referenz (Format: "30301:pubkey:board-id")
+  const aTag = tags.find(t => t[0] === 'a');
+  const boardRef = aTag ? aTag[1] : undefined;
+
+  // Column-ID (MUSS Column-ID sein, NICHT Name!)
+  const sTag = tags.find(t => t[0] === 's');
+  const columnId = sTag ? sTag[1] : undefined;
+  
+  // Column-Name (Fallback für Spalten-Matching wenn ID nicht passt)
+  const colLabelTag = tags.find(t => t[0] === 'col_label');
+  const columnName = colLabelTag ? colLabelTag[1] : undefined;
+
+  // Position in der Spalte
+  const rankTag = tags.find(t => t[0] === 'rank');
+  const rank = rankTag ? parseInt(rankTag[1], 10) : undefined;
+
   return {
     id,
+    eventId: event.id, // ← NEU: Actual event ID from Nostr
     heading,
     content,
     color,
@@ -313,6 +352,17 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     links: links.length > 0 ? links : undefined,
     publishState,
     author,
+    // ⚠️ NOSTR-METADATEN: Für Echtzeit-Sync
+    boardRef,
+    columnId,
+    rank,
+    // ⚡ v4.3: Extract timestamps from Nostr event for LWW and Merge-System
+    createdAt: event.created_at,  // Unix timestamp (number)
+    updatedAt: event.created_at 
+      ? new Date(event.created_at * 1000).toISOString()  // ISO string for comparison
+      : new Date().toISOString(),  // Fallback to NOW if no timestamp
+    // @ts-ignore - columnName ist nicht in CardProps, aber wir brauchen es für Fallback-Matching
+    columnName,
   };
 }
 
@@ -363,16 +413,46 @@ export function createCommentEvent(
 /**
  * Erstellt einen Deletions-Event (Kind 5 - NIP-09)
  * Wird verwendet um Kommentare oder Cards zu löschen
+ * 
+ * @param targetIdentifier - Für regular events (Kind 1): die Event-ID
+ *                          - Für replaceable events (Kind 30301/30302): "kind:pubkey:d-tag"
+ * @param isReplaceableEvent - true für Kind 30301/30302 (nutzt 'a' tags), false für Kind 1 (nutzt 'e' tags)
+ * @param reason - Optional: Grund für die Löschung
+ * @param ndk - NDK instance
  */
 export function createDeletionEvent(
-  targetEventId: string,
+  targetIdentifier: string,
+  isReplaceableEvent: boolean = false,
   reason?: string,
-  ndk?: NDK
+  ndk?: NDK,
+  eventId?: string  // ← NEU: Optionale tatsächliche Event-ID
 ): NDKEvent {
   const event = new NDKEvent(ndk);
   event.kind = EVENT_KINDS.DELETION;
 
-  event.tags = [['e', targetEventId]];
+  // NIP-09: Für replaceable events 'a' tags nutzen, für regular events 'e' tags
+  if (isReplaceableEvent) {
+    event.tags = [['a', targetIdentifier]];
+    
+    // ⚠️ NIP-09: 'k' tag für den Kind des zu löschenden Events SOLLTE hinzugefügt werden
+    // Format: "30302:pubkey:d-tag" → Kind ist "30302"
+    const kind = targetIdentifier.split(':')[0];
+    if (kind) {
+      event.tags.push(['k', kind]);
+    }
+    
+    // ⚠️ FIX: Manche Relays brauchen AUCH die Event-ID ('e' tag)
+    // für replaceable events, um sie zu löschen!
+    if (eventId) {
+      event.tags.push(['e', eventId]);
+    }
+  } else {
+    event.tags = [['e', targetIdentifier]];
+    
+    // Für regular events ist der Kind nicht aus der ID extrahierbar
+    // (müsste separat übergeben werden)
+  }
+  
   event.content = reason || 'Event deleted';
 
   return event;

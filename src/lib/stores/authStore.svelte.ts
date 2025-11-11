@@ -34,7 +34,20 @@ export class AuthStore {
   public errorMessage = $state<string | null>(null);
   
   constructor(private ndk: NDK) {
-    this.restoreSessionOrCreateDemo();
+    // ℹ️ restoreSessionOrCreateDemo ist jetzt async
+    // Wird von +layout.svelte aufgerufen als await initializeAuth().restoreSession()
+  }
+
+  /**
+   * 🔄 Stelle Session wieder her oder erstelle Demo-Session
+   * MUSS von +layout.svelte nach initializeAuth() aufgerufen werden!
+   * 
+   * @example
+   * const authStore = initializeAuth(ndk);
+   * await authStore.restoreSession();  // ← WICHTIG!
+   */
+  public async restoreSession(): Promise<void> {
+    return this.restoreSessionOrCreateDemo();
   }
 
   /**
@@ -64,6 +77,18 @@ export class AuthStore {
         console.log('✅ SyncManager signer updated after NIP-07 login');
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+
+      // 🔗 Nach erfolgreichem Login: Boards aus Nostr laden & Live-Subscription starten
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        // Board-Author ggf. aktualisieren
+        boardStore.updateBoardAuthor?.();
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-07 login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after NIP-07 login:', error);
       }
 
       return user;
@@ -156,6 +181,17 @@ export class AuthStore {
         console.log('✅ SyncManager signer updated after OIDC login');
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+
+      // 🔗 Nach OIDC-Login: Boards aus Nostr laden & Live-Subscription starten
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        boardStore.updateBoardAuthor?.();
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after OIDC login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after OIDC login:', error);
       }
 
       return user;
@@ -259,6 +295,10 @@ export class AuthStore {
             } catch (e) {
               console.warn('⚠️ SyncManager update on restore:', e);
             }
+
+            // ℹ️ Note: BoardStore will load boards from Nostr when initializeNostr() is called
+            // Don't do it here - avoid duplicate loading and race conditions
+
           } catch (error) {
             console.warn("⚠️ NIP-07 Signer rekonstruktion fehlgeschlagen:", error);
             // Fall back to demo if NIP-07 fails
@@ -286,6 +326,10 @@ export class AuthStore {
               } catch (e) {
                 console.warn('⚠️ SyncManager update on restore:', e);
               }
+
+              // ℹ️ Note: BoardStore will load boards from Nostr when initializeNostr() is called
+              // Don't do it here - avoid duplicate loading and race conditions
+
             } catch (error) {
               console.warn("⚠️ nsec Signer rekonstruktion fehlgeschlagen:", error);
               signer = null;
@@ -415,44 +459,6 @@ export class AuthStore {
     } catch (error) {
       console.error("Error checking demo session config:", error);
       return false;
-    }
-  }
-
-  /**
-   * Restore Session
-   */
-  private async restoreSession(): Promise<void> {
-    try {
-      const session = this.getStoredSession();
-
-      if (!session || Object.keys(session).length === 0) return;
-
-      if (Date.now() > session.expires) {
-        console.log("⏰ Session expired");
-        this.sessionStore.set(null);
-        return;
-      }
-
-      const user = await this.ndk.fetchUser(session.pubkey);
-      
-      if (!user) return;
-
-      user.profile = session.profile;
-
-      this.currentUser = user;
-
-      console.log(
-        `🔄 Session restored for ${session.profile.name || "Anonymous"}`
-      );
-
-      // Try to restore signer (only for NIP-07)
-      if (session.signerType === "nip07" && window.nostr) {
-        const signer = new NDKNip07Signer();
-        this.ndk.signer = signer;
-      }
-    } catch (error) {
-      console.error("Failed to restore session:", error);
-      this.sessionStore.set(null);
     }
   }
 

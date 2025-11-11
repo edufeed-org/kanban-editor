@@ -8,6 +8,8 @@
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
+    import CircleIcon from '@lucide/svelte/icons/circle';
+    import SquareArrowRight from '@lucide/svelte/icons/square-arrow-right';
     import ImportPopover from '$lib/components/ImportPopover.svelte';
 
     // Props
@@ -20,8 +22,12 @@
 
     // Abgeleitete Boards-Liste (mit Filterung)
     let filteredBoards = $derived.by(() => {
+        // ⚡ KRITISCH: updateTrigger für Reaktivität!
+        // Ohne dies wird die Liste nicht aktualisiert bei neuen Boards von Nostr
+        const trigger = boardStore.updateTrigger;
+        
         const results = boardStore.filterBoards(searchQuery);
-        console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}")`);
+        console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}", trigger: ${trigger})`);
         return results;
     });
 
@@ -149,20 +155,32 @@
             </div>
         {:else}
             {#each filteredBoards as board (board.id)}
+                {@const isActive = currentBoardId === board.id}
                 <div
-                    class="w-full rounded-md px-3 py-2 text-sm transition-colors group relative
-                        {currentBoardId === board.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-muted/60 text-foreground'}"
+                    class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
+                        {isActive
+                            ? 'active-board'
+                            : ''}"
                 >
                     <button
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
                         class="w-full text-left pr-10"
+                        title={isActive ? '✅ Aktives Board' : 'Board laden'}
                     >
-                        <!-- Board Name -->
-                        <div class="font-medium truncate">
+                        <!-- Board Name mit Unseen Changes Badge -->
+                        <div class="font-medium truncate flex items-center gap-2 board-title">
+                            {#if isActive}
+                                <!-- Active indicator icon -->
+                                 <SquareArrowRight class="active-board-indicator"/>
+                            {/if}
                             {board.name}
+                            {#if board.hasUnseenChanges && !isActive}
+                                <CircleIcon 
+                                    class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
+                                    
+                                />
+                            {/if}
                         </div>
                         
                         <!-- Description (optional) -->
@@ -184,7 +202,10 @@
                     >
                         <button
                             onclick={(e) => handleDeleteBoard(board.id, e)}
-                            class="p-1 hover:bg-destructive hover:text-destructive-foreground rounded transition-colors"
+                            class="p-1 rounded transition-colors
+                                {isActive 
+                                    ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
+                                    : 'hover:bg-destructive hover:text-destructive-foreground'}"
                             title="Board löschen"
                             type="button"
                         >

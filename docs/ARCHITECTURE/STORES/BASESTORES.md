@@ -1,22 +1,19 @@
-# Base Store Architecture (Future - Phase 1.6+)
+# Base Store Architecture (Zukunftskonzept)
 
-**Version:** 1.0  
-**Datum:** 02. November 2025  
-**Status:** 🔮 FUTURE - Konzept für Phase 1.6+  
-**Zweck:** DRY-Abstraktion wenn 3+ Manual localStorage Stores existieren
+**Version:** 2.0
+**Datum:** 06. November 2025
+**Status:** 🔮 **ZUKUNFTSKONZEPT** - NICHT für bestehende Stores verwenden!
+**Zweck:** DRY-Abstraktion für zukünftige, einfache Stores mit `localStorage`-Anbindung.
 
 ---
 
-## 🎯 Problem
+## 🎯 Problem: Code-Duplikation in Stores
 
-Aktuell haben wir 3 Stores mit Manual localStorage Pattern:
-- **BoardStore** (~200 Zeilen)
-- **ChatStore** (~300 Zeilen)
-- **SyncManager** (geplant, ~250 Zeilen)
+Aktuell haben mehrere Stores, die das "Manual `localStorage`"-Pattern nutzen, redundanten Code.
 
-**Code-Duplikation:**
+**Beispiel für Code-Duplikation:**
 ```typescript
-// Diese ~30 Zeilen sind in JEDEM Store identisch:
+// Diese ~30 Zeilen sind in JEDEM manuellen Store identisch:
 private updateTrigger = $state(0);
 
 private saveToStorage(): void {
@@ -35,18 +32,72 @@ public clear(): void {
     this.updateTrigger++;
 }
 ```
-
-**→ Solution: Base Class mit shared logic** 🚀
+**Lösung:** Eine `BaseStore`-Klasse, die diese Logik kapselt und für zukünftige, einfache Stores wiederverwendbar ist.
 
 ---
 
-## 🏗️ Interface Hierarchy
+## 🏗️ Architektur-Visualisierung
+
+```mermaid
+graph TD
+    subgraph Interfaces
+        A[IStore]
+        B[IPersistentStore]
+        A --> B
+    end
+
+    subgraph Base Classes
+        C[BaseSimpleStore]
+        D[BaseComplexStore]
+    end
+
+    subgraph Implementations
+        E[Future: NotificationStore]
+        F[Future: RecentBoardsStore]
+    end
+
+    B --> C
+    B --> D
+
+    C --> E
+    D --> F
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+---
+
+## 📜 Kritische Regeln für Entwickler
+
+1.  **🔴 NICHTS REFAKTORISIEREN:** Bestehende Stores (`BoardStore`, `ChatStore`, `AuthStore`, `SettingsStore`) dürfen **NICHT** zu `BaseStore` migriert werden. Ihre Logik ist zu spezifisch.
+2.  **✅ NUR FÜR NEUE STORES:** Das `BaseStore`-Pattern ist ausschließlich für **neue, einfache** Stores ab Phase 2.0 gedacht (z.B. `NotificationStore`).
+3.  **⚖️ ABWÄGUNG TREFFEN:** Prüfe vor der Erstellung eines neuen Stores, ob die Komplexität eine eigene Implementierung rechtfertigt oder ob `BaseStore` ausreicht. Siehe [STORE-PATTERNS.md](../../GUIDES/STORE-PATTERNS.md).
+
+---
+
+## 🚫 Wann BaseStore NICHT verwenden (WICHTIG!)
+
+`BaseStore` ist **ungeeignet** für die vier zentralen Stores des Projekts. Die Migration würde die Komplexität erhöhen und die Lesbarkeit verschlechtern.
+
+| Store | Grund gegen Migration | Status |
+|:---|:---|:---|
+| **BoardStore** | Zu komplex: Multi-Board-Logik, Klassen-Rekonstruktion, Export/Import-API. | ❌ **NICHT migrieren** |
+| **ChatStore** | Zu spezifisch: KI-Kontext-Aufbereitung, Memory-Ranking. | ❌ **NICHT migrieren** |
+| **AuthStore** | Zu komplex: NDK-Integration, asynchrone Profil-Abfragen, Signer-Management. | ❌ **NICHT migrieren** |
+| **SettingsStore** | Zu spezifisch: Asynchrones Laden von `config.json`, Merging-Logik. | ❌ **NICHT migrieren** |
+
+**Fazit:** `BaseStore` ist eine Referenz für **zukünftige, einfache Stores**, kein Werkzeug für das Refactoring der bestehenden Architektur.
+
+---
+
+## 🛠️ Interface-Hierarchie
 
 ```typescript
-// src/lib/stores/BaseStore.ts (Future)
+// src/lib/stores/base/BaseStore.ts (Zukünftige Datei)
 
 /**
- * Universal Base Interface für ALLE Stores
+ * Universelles Basis-Interface für alle Stores.
  */
 export interface IStore {
 	clear?(): void;
@@ -54,7 +105,7 @@ export interface IStore {
 }
 
 /**
- * Interface für Stores mit localStorage
+ * Interface für Stores, die in localStorage persistiert werden.
  */
 export interface IPersistentStore<T> extends IStore {
 	loadFromStorage(): T;
@@ -65,84 +116,48 @@ export interface IPersistentStore<T> extends IStore {
 
 ---
 
-## 🎯 BaseComplexStore<T> - Für Manual localStorage Stores
+## 🧩 `BaseComplexStore<T>` - Für manuelle `localStorage`-Stores
+
+Diese Klasse ist für Stores gedacht, die dynamische Keys oder komplexe Datenstrukturen (wie Klassen) verwalten.
 
 ```typescript
 /**
- * Abstract Base Class für Manual localStorage Pattern
- * 
- * Features:
- * - Shared triggerUpdate() logic
- * - Shared saveToStorage() logic
- * - Shared clear() implementation
- * 
- * Nutzen: BoardStore, ChatStore, SyncManager
+ * Abstrakte Basisklasse für das "Manual localStorage"-Pattern.
+ * Kapselt die triggerUpdate-Logik.
+ *
+ * Zukünftige Nutzung: RecentBoardsStore, etc.
  */
 export abstract class BaseComplexStore<T> implements IPersistentStore<T> {
-	// ============================================================================
-	// Shared State
-	// ============================================================================
-
 	protected updateTrigger = $state(0);
 
-	// ============================================================================
-	// Abstract Methods (Subclass MUSS implementieren)
-	// ============================================================================
-
-	/**
-	 * Gibt den localStorage-Key zurück
-	 * Kann statisch oder dynamisch sein
-	 */
+	// --- Abstrakte Methoden (Müssen von der Subklasse implementiert werden) ---
 	protected abstract getStorageKey(): string;
-
-	/**
-	 * Gibt die zu speichernden Daten zurück
-	 */
 	protected abstract getData(): T;
-
-	/**
-	 * Lädt Daten aus localStorage
-	 */
 	protected abstract loadFromStorage(): T;
 
-	// ============================================================================
-	// Shared Implementation (DRY!)
-	// ============================================================================
-
-	/**
-	 * Speichert Daten zu localStorage
-	 * ✅ Shared - keine Duplikation!
-	 */
+	// --- Geteilte Implementierung (DRY) ---
 	protected saveToStorage(): void {
 		try {
 			const key = this.getStorageKey();
 			const data = this.getData();
 			localStorage.setItem(key, JSON.stringify(data));
 		} catch (error) {
-			console.error('Failed to save to localStorage:', error);
+			console.error(`[BaseComplexStore] Failed to save to localStorage for key "${this.getStorageKey()}":`, error);
 		}
 	}
 
-	/**
-	 * Triggert UI-Update UND persistiert
-	 * ✅ Shared - keine Duplikation!
-	 */
 	protected triggerUpdate(): void {
 		this.updateTrigger++;
 		this.saveToStorage();
 	}
 
-	/**
-	 * Löscht localStorage-Eintrag
-	 * ✅ Shared - keine Duplikation!
-	 */
 	public clear(): void {
 		try {
 			const key = this.getStorageKey();
 			localStorage.removeItem(key);
 			this.updateTrigger++;
 		} catch (error) {
-			console.error('Failed to clear localStorage:', error);
+			console.error(`[BaseComplexStore] Failed to clear localStorage for key "${this.getStorageKey()}":`, error);
 		}
 	}
 }
@@ -150,372 +165,96 @@ export abstract class BaseComplexStore<T> implements IPersistentStore<T> {
 
 ---
 
-## 🎯 BaseSimpleStore<T> - Für Hybrid Pattern Stores
+## 🧩 `BaseSimpleStore<T>` - Für `persisted()`-Stores
+
+Diese Klasse abstrahiert das `persisted()`-Pattern für einfache Key-Value-Stores.
 
 ```typescript
+import { persisted } from 'svelte-persisted-store';
+import { get } from 'svelte/store';
+
 /**
- * Abstract Base Class für persisted() + $state Pattern
- * 
- * Features:
- * - Wraps persisted() automatisch
- * - Shared update() logic
- * - Shared clear() implementation
- * 
- * Nutzen: AuthStore, SettingsStore, ThemeStore
+ * Abstrakte Basisklasse für das "persisted() + $state"-Pattern.
+ *
+ * Zukünftige Nutzung: NotificationStore, ThemeStore, etc.
  */
 export abstract class BaseSimpleStore<T> implements IStore {
-	// ============================================================================
-	// Abstract Methods (Subclass MUSS implementieren)
-	// ============================================================================
-
+    // --- Abstrakte Methoden ---
 	protected abstract getDefaultValue(): T;
 	protected abstract getStorageKey(): string;
 
-	// ============================================================================
-	// Shared Implementation
-	// ============================================================================
-
+    // --- Geteilte Implementierung ---
 	private _store = persisted<T>(this.getStorageKey(), this.getDefaultValue());
 	protected data = $state<T>(get(this._store));
 
-	/**
-	 * Aktualisiert Store-Daten
-	 */
 	protected update(newData: T): void {
 		this.data = newData;
 		this._store.set(newData);
 	}
 
-	/**
-	 * Löscht Store-Daten
-	 */
 	public clear(): void {
 		const defaultValue = this.getDefaultValue();
-		this.data = defaultValue;
-		this._store.set(defaultValue);
-	}
-
-	/**
-	 * Lädt Daten aus persisted Store
-	 */
-	protected load(): void {
-		this.data = get(this._store);
+		this.update(defaultValue);
 	}
 }
 ```
 
 ---
 
-## 📊 Migration Examples
+## ✅ Zukünftige Anwendungsbeispiele
 
-### ChatStore extends BaseComplexStore
-
-```typescript
-// VORHER: ~300 Zeilen mit Duplikation
-export class ChatStore {
-	private updateTrigger = $state(0);
-	
-	private saveToStorage(): void {
-		const key = `chat-session-${this.currentBoardId}`;
-		localStorage.setItem(key, JSON.stringify(this.session.getContextData()));
-	}
-	
-	private triggerUpdate(): void {
-		this.updateTrigger++;
-		this.saveToStorage();
-	}
-	
-	public clear(): void {
-		localStorage.removeItem(this.getStorageKey());
-		this.updateTrigger++;
-	}
-	
-	// ... 270 weitere Zeilen
-}
-
-// NACHHER: ~270 Zeilen, -30 Zeilen Boilerplate!
-export class ChatStore extends BaseComplexStore<ChatSession | null> {
-	private currentBoardId = $state<string | null>(null);
-	private session = $state<ChatSession | null>(null);
-	
-	// Abstract Methods implementieren
-	protected getStorageKey(): string {
-		return `chat-session-${this.currentBoardId}`;
-	}
-	
-	protected getData(): ChatSession | null {
-		return this.session?.getContextData() || null;
-	}
-	
-	protected loadFromStorage(): ChatSession | null {
-		// ... implementation
-	}
-	
-	// ✅ triggerUpdate(), saveToStorage(), clear() inherited!
-	public addMessage(content: string, role: 'user' | 'assistant'): void {
-		this.session?.addMessage({ content, role });
-		this.triggerUpdate(); // ← From BaseComplexStore!
-	}
-}
-```
-
----
-
-### AuthStore extends BaseSimpleStore
+### Beispiel 1: `NotificationStore` (einfach)
 
 ```typescript
-// VORHER: ~80 Zeilen mit persisted() Boilerplate
-export class AuthStore {
-	private sessionStore = persisted<UserSession | null>('nostr-user-session', null);
-	public currentUser = $state<NDKUser | null>(null);
-	
-	public saveSession(user: NDKUser): void {
-		const session = { npub: user.npub, ... };
-		this.sessionStore.set(session);
-		this.currentUser = user;
-	}
-	
-	public logout(): void {
-		this.sessionStore.set(null);
-		this.currentUser = null;
-	}
-}
-
-// NACHHER: ~60 Zeilen, -20 Zeilen Boilerplate!
-export class AuthStore extends BaseSimpleStore<UserSession | null> {
-	public currentUser = $state<NDKUser | null>(null);
-	
-	protected getStorageKey(): string {
-		return 'nostr-user-session';
-	}
-	
-	protected getDefaultValue(): UserSession | null {
-		return null;
-	}
-	
-	// ✅ clear(), update() inherited!
-	public saveSession(user: NDKUser): void {
-		const session = { npub: user.npub, ... };
-		this.update(session); // ← From BaseSimpleStore!
-		this.currentUser = user;
-	}
-	
-	public logout(): void {
-		this.clear(); // ← From BaseSimpleStore!
-		this.currentUser = null;
-	}
-}
-```
-
----
-
-## � Wann BaseStore nutzen? (Decision Tree für NEUE Stores)
-
-```
-Neue Store nötig?
-    ↓
-Braucht localStorage?
-    ├─ NEIN → Nutze plain $state (kein BaseStore)
-    └─ JA → Weiter
-         ↓
-Hat komplexe Logik? (NDK, Async, Klassen?)
-    ├─ JA → Custom Implementation (wie ChatStore, BoardStore)
-    └─ NEIN → Weiter
-         ↓
-Ist es ein einfacher Key-Value Store?
-    ├─ JA → Nutze persisted() (schnellste Lösung)
-    └─ NEIN → Weiter
-         ↓
-Dynamische Storage Keys? (z.B. chat-${id})
-    ├─ JA → Nutze BaseComplexStore ✅
-    └─ NEIN → Nutze BaseSimpleStore ✅
-```
-
-**Beispiele für ZUKÜNFTIGE BaseStore-Nutzung:**
-
-### Beispiel 1: NotificationStore (BaseSimpleStore)
-
-```typescript
+// Nutzt BaseSimpleStore für einen einfachen, persistenten Array.
 export class NotificationStore extends BaseSimpleStore<Notification[]> {
-    protected getStorageKey(): string {
-        return 'notifications';
-    }
-    
-    protected getDefaultValue(): Notification[] {
-        return [];
-    }
-    
-    // Custom methods
+    protected getStorageKey = () => 'app-notifications';
+    protected getDefaultValue = () => [];
+
     public addNotification(text: string): void {
-        const notifications = [...this.data, { id: Date.now(), text }];
-        this.update(notifications);
+        const newNotification = { id: Date.now(), text, read: false };
+        this.update([...this.data, newNotification]);
     }
 }
 ```
 
-### Beispiel 2: RecentBoardsStore (BaseComplexStore)
+### Beispiel 2: `RecentBoardsStore` (komplex)
 
 ```typescript
+// Nutzt BaseComplexStore für eine Liste mit spezieller Lade-Logik.
 export class RecentBoardsStore extends BaseComplexStore<BoardMetadata[]> {
     private recentBoards = $state<BoardMetadata[]>(this.loadFromStorage());
-    
-    protected getStorageKey(): string {
-        return 'recent-boards';
-    }
-    
-    protected getData(): BoardMetadata[] {
-        return this.recentBoards;
-    }
-    
+
+    protected getStorageKey = () => 'recent-boards';
+    protected getData = () => this.recentBoards;
+
     protected loadFromStorage(): BoardMetadata[] {
-        // Custom loading logic
-        return [];
+        const stored = localStorage.getItem(this.getStorageKey());
+        // Eigene Logik, z.B. Sortierung nach letztem Zugriff
+        return stored ? JSON.parse(stored) : [];
     }
-    
+
     public addBoard(id: string, name: string): void {
         this.recentBoards = [{ id, name, lastAccessed: Date.now() }, ...this.recentBoards];
-        this.triggerUpdate();
+        this.triggerUpdate(); // Methode aus der Basisklasse
     }
 }
 ```
 
 ---
 
-## ❌ KEINE Migration bestehender Stores (Stand 02.11.2025)
+## 📚 Weiterführende Dokumentation
 
-```typescript
-- [ ] Import BaseSimpleStore
-- [ ] extends BaseSimpleStore<UserSession | null>
-- [ ] Implementiere getStorageKey()
-- [ ] Implementiere getDefaultValue()
-- [ ] Ersetze sessionStore.set() mit this.update()
-- [ ] Ersetze manuelles clear() mit this.clear()
-- [ ] Tests laufen lassen
-```
-
-### Schritt 5: SettingsStore migrieren (~5 Min)
-
-```typescript
-- [ ] Import BaseSimpleStore
-- [ ] extends BaseSimpleStore<Settings>
-- [ ] Implementiere getStorageKey()
-- [ ] Implementiere getDefaultValue()
-- [ ] Ersetze manuelle updates mit this.update()
-- [ ] Tests laufen lassen
-```
-
----
-
-## ✅ Benefits
-
-| Benefit | Impact |
-|---------|--------|
-| **DRY** | -30 Zeilen pro Store (~90 Zeilen total) |
-| **Type Safety** | Interface enforces consistent API |
-| **Testability** | Mock IPersistentStore<T> für alle Stores |
-| **Consistency** | Alle Stores haben clear(), reset() |
-| **Maintainability** | Bug-Fixes in BaseClass → alle Stores profitieren |
-| **Documentation** | Interface ist self-documenting |
-
----
-
-## 🚫 Wann NICHT verwenden
-
-BaseComplexStore ist **NICHT geeignet** für:
-
-1. **Stores mit 100% unique Logik**
-   - Keine shared methods
-   - Beispiel: TemporaryUIStore
-
-2. **Stores die KEIN localStorage brauchen**
-   - Nur in-memory State
-   - Beispiel: ToastStore, ModalStore
-
-3. **Stores mit sehr einfacher Struktur**
-   - < 50 Zeilen Code
-   - Overhead würde Nutzen übersteigen
-
-4. **⚠️ BESTEHENDE STORES (WICHTIG!)** ← **NEU 02.11.2025**
-   - **BoardStore** → ❌ NICHT migrieren
-     - Zu komplex: Multi-Board Management, Dynamic Keys (`kanban-${id}`)
-     - Spezielle Logik: Klassen-Rekonstruktion, Export/Import
-     - ~200 Zeilen unique Code würden nicht reduziert
-   - **ChatStore** → ❌ NICHT migrieren  
-     - Perfekt wie es ist: Klarer Manual Pattern
-     - Spezielle Logik: Memory Ranking, AI Context Preparation
-     - Migration würde Code SCHWERER lesbar machen
-   - **AuthStore** → ❌ NICHT migrieren
-     - Zu komplex: NDK Integration, Signer Management
-     - Async Operations: Profile fetching, Session restore
-     - Nutzt bereits `persisted()` für Session
-   - **SettingsStore** → ❌ NICHT migrieren
-     - Async config.json loading + localStorage merge
-     - Theme Detection (system preferences)
-     - Migration würde mehr Probleme schaffen als lösen
-
-**Fazit:** BaseStore ist für **ZUKÜNFTIGE einfache Stores** gedacht, NICHT für Refactoring bestehender Stores!
-
----
-
-## 🎯 Wann BaseStores wirklich Sinn machen
-
-**Nutze BaseComplexStore NUR für:**
-
-1. **Neue einfache Stores** (Phase 2+)
-   - NotificationStore
-   - ThemeStore (wenn von SettingsStore getrennt)
-   - KeyboardShortcutStore
-   - RecentBoardsStore
-
-2. **Wenn 5+ neue Stores** hinzukommen
-   - Dann lohnt sich die Abstraktion
-   - Jetzt: Nur 4 Stores, alle sehr unterschiedlich
-
-**Aktueller Stand (02.11.2025):**
-- ✅ ChatStore: Fertig, bleibt wie es ist
-- ✅ BoardStore: Fertig, bleibt wie es ist  
-- ✅ AuthStore: Fertig, bleibt wie es ist
-- ✅ SettingsStore: Fertig, bleibt wie es ist
-
-**→ BaseStore Pattern = Referenz für ZUKÜNFTIGE Stores, nicht für Refactoring!** 🎯
-
----
-
-## 📚 Related Documentation
-
-- **[STORE-PATTERNS.md](../../GUIDES/STORE-PATTERNS.md)** — Wann Hybrid vs Manual Pattern?
-- **[CHATSTORE.md](./CHATSTORE.md)** — ChatStore Implementation
-- **[BOARDSTORE.md](./BOARDSTORE.md)** — BoardStore Implementation
-- **[AUTHSTORE.md](./AUTHSTORE.md)** — AuthStore Implementation
+- **[STORE-PATTERNS.md](../../GUIDES/STORE-PATTERNS.md)**: Entscheidungshilfe für die Wahl des richtigen Store-Patterns.
+- **[CHATSTORE.md](./CHATSTORE.md)**: Beispiel für eine komplexe, manuelle Store-Implementierung.
+- **[BOARDSTORE.md](./BOARDSTORE.md)**: Beispiel für eine hochkomplexe Store-Implementierung mit Multi-Board-Management.
 
 ---
 
 ## 📝 Versionshistorie
 
 | Version | Datum | Änderungen |
-|---------|-------|------------|
-| 1.1 | 02.11.2025 | ⚠️ **KLARSTELLUNG:** Keine Migration bestehender Stores! BaseStore nur für NEUE einfache Stores in Zukunft |
-| 1.0 | 02.11.2025 | Initial concept für Phase 1.6+ |
-
----
-
-## 📋 Zusammenfassung
-
-**Was ist BaseStore?**
-- Abstract Base Classes für DRY localStorage-Logik
-- Reduziert ~30 Zeilen Boilerplate pro Store
-
-**Wann nutzen?**
-- ✅ Für NEUE einfache Stores (Phase 2+)
-- ✅ Wenn 5+ neue Stores mit ähnlicher Logik
-- ❌ NICHT für bestehende komplexe Stores
-
-**Bestehende Stores:**
-- BoardStore → Bleibt Custom (zu komplex)
-- ChatStore → Bleibt Custom (perfekt wie es ist)
-- AuthStore → Bleibt Custom (NDK Integration)
-- SettingsStore → Bleibt Custom (async config)
-
-**Status:** 🔮 FUTURE CONCEPT  
-**Implementation:** Ab Phase 1.6+ (nur für NEUE Stores)  
-**Zeit bis Implementation:** ~2-3 Wochen (nach Phase 1.5 Export/Import)
+|:---|:---|:---|
+| 2.0 | 06.11.2025 |  ristrutturiert, Mermaid-Diagramm und "Kritische Regeln" hinzugefügt. Klarstellung, dass bestehende Stores nicht migriert werden. |
+| 1.1 | 02.11.2025 | ⚠️ **KLARSTELLUNG:** Keine Migration bestehender Stores! BaseStore nur für NEUE einfache Stores in Zukunft. |
+| 1.0 | 02.11.2025 | Initiales Konzept für Phase 1.6+. |

@@ -7,7 +7,7 @@
  *   window.reactive_test()
  */
 
-import { boardStore } from '../stores/kanbanStore.svelte.js';
+import { boardStore } from '../stores/kanbanStore.svelte';
 
 /**
  * Interaktiver Test der Reaktivität ohne Reload
@@ -31,7 +31,7 @@ Achte auf die UI - alle Änderungen sollten SOFORT sichtbar sein (ohne Reload)!`
 		const col = boardStore.addColumn({
 			name: '🔬 REAKTIV Test-Spalte',
 			color: 'chart-5'
-		});
+		})!;
 		console.log(`✅ Spalte erstellt: "${col.name}"`);
 		console.log(`   ID: ${col.id}`);
 		console.log(`   🎯 Schaue jetzt ins Board - die neue Spalte sollte RECHTS sichtbar sein!`);
@@ -139,7 +139,7 @@ Das funktioniert weil:
 export function reactive_quick_test(): void {
 	console.log('%c⚡ Quick Reactive Test', 'color: #ff00ff; font-weight: bold');
 	
-	const col = boardStore.addColumn({ name: '⚡ Quick Test' });
+	const col = boardStore.addColumn({ name: '⚡ Quick Test' })!;
 	console.log('✅ Spalte erstellt - sollte SOFORT im Board sichtbar sein');
 	
 	const card = col.addCard({ 

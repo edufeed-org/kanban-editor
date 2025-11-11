@@ -51,6 +51,7 @@ export interface SettingsState {
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
   showRightSidebar: boolean; // KI-Agent + Debug Sidebar
+  maxBoardsInSidebar: number; // Max. Anzahl angezeigter Boards in Sidebar (alle durchsuchbar), Default: 10
 
   // Learning System Configuration
   useLearningManager: boolean; // Aktiviert das Cross-Board Learning System
@@ -160,6 +161,7 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // Sidebar
   showLeftSidebar: true,
   showRightSidebar: true,
+  maxBoardsInSidebar: 10, // Max. Anzahl angezeigter Boards (alle durchsuchbar)
 
   // Learning System
   useLearningManager: true,
@@ -779,6 +781,12 @@ export class SettingsStore {
   public toggleRightSidebar(): void {
     // ✅ Reassignment für Reaktivität
     this.settings = { ...this.settings, showRightSidebar: !this.settings.showRightSidebar };
+    this.saveToStorage();
+  }
+
+  public setMaxBoardsInSidebar(value: number): void {
+    // ✅ Reassignment für Reaktivität
+    this.settings = { ...this.settings, maxBoardsInSidebar: value };
     this.saveToStorage();
   }
 

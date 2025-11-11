@@ -59,7 +59,7 @@
         
         console.log('📋 Paste in Column:', columnId);
         
-        const result = await boardStore.handleColumnPaste(columnId, event.clipboardData);
+        const result = await boardStore.handleColumnPaste(columnId, event.clipboardData as any);
         
         if (result.success) {
             toast.success(`Neue Karte erstellt (${result.type})`, {

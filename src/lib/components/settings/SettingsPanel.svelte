@@ -274,6 +274,30 @@
                 onCheckedChange={(checked) => settingsStore.toggleRightSidebar()}
               />
             </div>
+            
+            <!-- Max Boards in Sidebar -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <Label class="font-normal">Max. sichtbare Boards</Label>
+                <span class="text-sm text-muted-foreground">{settings.maxBoardsInSidebar}</span>
+              </div>
+              <Input
+                type="number"
+                min="1"
+                max="50"
+                value={settings.maxBoardsInSidebar}
+                oninput={(e) => {
+                  const value = parseInt(e.currentTarget.value, 10);
+                  if (!isNaN(value) && value >= 1 && value <= 50) {
+                    settingsStore.setMaxBoardsInSidebar(value);
+                  }
+                }}
+                class="w-24"
+              />
+              <p class="text-xs text-muted-foreground">
+                Wie viele Boards maximal in der Sidebar angezeigt werden (alle durchsuchbar)
+              </p>
+            </div>
           </div>
           
         </Card.Content>

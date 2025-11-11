@@ -13,9 +13,7 @@
 
   "nostr": {
     "relaysPublic": [
-      "wss://relay-rpi.edufeed.org",
-      "wss://relay.primal.net",
-      "wss://nos.lol"
+      "ws://localhost:7000"
     ],
     "relaysPrivate": []
   },

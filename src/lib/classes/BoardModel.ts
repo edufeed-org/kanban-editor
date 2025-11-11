@@ -26,6 +26,7 @@ export interface Link extends NostrElement {
 
 export interface CardProps {
     id?: string;
+    eventId?: string; // ← NEU: Actual Nostr event ID (für Deletion via NIP-09)
     heading: string;
     content?: string;
     color?: string;
@@ -37,6 +38,13 @@ export interface CardProps {
     publishState?: PublishState;
     author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
     authorName?: string; // ← NEU: Lesbar Display Name für UI (z.B. "Johan Amos Comenius")
+    // ⚠️ NOSTR-SPECIFIC: Metadaten für Echtzeit-Synchronisation
+    rank?: number; // Position in der Spalte (aus Nostr Event "rank"-Tag)
+    columnId?: string; // Spalten-ID (aus Nostr Event "s"-Tag - muss Column-ID sein, nicht Name!)
+    boardRef?: string; // Board-Referenz (aus "a"-Tag, Format: "30301:pubkey:board-id")
+    // ⚡ v4.3: Timestamps for Last-Write-Wins and Merge-System (same pattern as BoardProps)
+    createdAt?: number | string; // Unix timestamp (from Nostr event.created_at) or ISO string
+    updatedAt?: string; // ISO string for LWW timestamp comparison
 }
 
 export interface ColumnProps {
@@ -48,6 +56,7 @@ export interface ColumnProps {
 
 export interface BoardProps {
     id?: string;
+    eventId?: string; // ← NEU: Actual Nostr event ID
     name: string;
     description?: string;
     columns?: ColumnProps[];
@@ -55,6 +64,9 @@ export interface BoardProps {
     author?: string;
     maintainers?: string[]; // ← NEU: Nostr pubkeys mit Edit-Berechtigung
     createdAt?: number;
+    updatedAt?: string; // ⚡ v4.0: ISO string für Last-Write-Wins
+    lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
+    hasUnseenChanges?: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     tags?: string[];
     ccLicense?: string;
 }
@@ -70,6 +82,7 @@ export interface AIAction {
 
 export class Card {
     public id: string;
+    public eventId?: string; // ← NEU: Actual Nostr event ID
     public heading: string;
     public content?: string;
     public color?: string;
@@ -86,6 +99,7 @@ export class Card {
 
     constructor(props: CardProps) {
         this.id = props.id || generateDTag('card');
+        this.eventId = props.eventId; // ← NEU: eventId laden
         this.heading = props.heading;
         this.content = props.content;
         this.color = props.color;
@@ -97,8 +111,29 @@ export class Card {
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
         this.authorName = props.authorName; // ← NEU: authorName laden
-        this.createdAt = generateTimestamp();
-        this.updatedAt = this.createdAt;
+        
+        // ⚡ v4.3: Use props.createdAt if available (from Nostr event)
+        // Same pattern as Board Constructor - enables LWW and Merge-System
+        if (props.createdAt !== undefined) {
+            this.createdAt = typeof props.createdAt === 'number'
+                ? new Date(props.createdAt * 1000).toISOString()
+                : props.createdAt;
+        } else {
+            this.createdAt = generateTimestamp();
+        }
+        
+        this.updatedAt = props.updatedAt || this.createdAt;
+        
+        // Debug logging for timestamp tracking
+        if (props.updatedAt || props.createdAt) {
+            console.log(`🔍 Card Constructor DEBUG:`);
+            console.log(`  cardId:`, this.id);
+            console.log(`  heading:`, this.heading);
+            console.log(`  props.createdAt:`, props.createdAt);
+            console.log(`  props.updatedAt:`, props.updatedAt);
+            console.log(`  this.createdAt:`, this.createdAt);
+            console.log(`  this.updatedAt:`, this.updatedAt);
+        }
     }
 
     update(props: Partial<CardProps>): void {
@@ -113,7 +148,8 @@ export class Card {
         if (props.author !== undefined) this.author = props.author;
         if (props.authorName !== undefined) this.authorName = props.authorName; // ← NEU
 
-        this.updatedAt = generateTimestamp();
+        // ✅ FIXED: Respect updatedAt from props (e.g., Nostr events), or generate new
+        this.updatedAt = props.updatedAt !== undefined ? props.updatedAt : generateTimestamp();
     }
 
     setPublishState(state: PublishState): void {
@@ -142,6 +178,7 @@ export class Card {
     } {
         return {
             id: this.id,
+            eventId: this.eventId, // ← NEU: eventId serialisieren!
             heading: this.heading,
             content: this.content,
             color: this.color,
@@ -150,6 +187,8 @@ export class Card {
             publishState: this.publishState,
             author: this.author, // ← ✅ FIXED: author hinzugefügt!
             authorName: this.authorName, // ← NEU: authorName serialisieren!
+            createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
+            updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
             links: this.links.map(l => ({ url: l.url, title: l.title }))
         };
@@ -237,6 +276,7 @@ export class Column {
 
 export class Board {
     public id: string;
+    public eventId?: string; // ← NEU: Actual Nostr event ID (for deletion)
     public name: string;
     public description?: string;
     public columns: Column[] = [];
@@ -245,11 +285,14 @@ export class Board {
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
+    public lastAccessedAt: string; // ✅ NEW (REFACTORING): Moved from metadata
+    public hasUnseenChanges: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     public tags: string[] = [];
     public ccLicense: string = 'cc-by-4.0';
 
     constructor(props: BoardProps) {
         this.id = props.id || generateDTag('board');
+        this.eventId = props.eventId; // ← NEU: Event-ID speichern
         this.name = props.name;
         this.description = props.description;
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
@@ -258,8 +301,32 @@ export class Board {
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
-        this.createdAt = generateTimestamp();
-        this.updatedAt = this.createdAt;
+        
+        // ✅ NEW (REFACTORING): Initialize new fields from metadata migration
+        this.lastAccessedAt = props.lastAccessedAt || generateTimestamp();
+        this.hasUnseenChanges = props.hasUnseenChanges ?? false;
+        
+        // ⚡ v4.3: FIX - Verwende props.createdAt falls vorhanden (von Nostr), sonst NOW
+        // createdAt als number (Sekunden) → konvertiere zu ISO string
+        if (props.createdAt !== undefined) {
+            this.createdAt = typeof props.createdAt === 'number'
+                ? new Date(props.createdAt * 1000).toISOString()
+                : props.createdAt;
+        } else {
+            this.createdAt = generateTimestamp();
+        }
+        
+        // ⚡ v4.0: Verwende updatedAt aus Props (falls von Nostr), sonst neu generieren
+        this.updatedAt = props.updatedAt || this.createdAt;
+        
+        // ⚡ v4.2: DEBUG - Timestamp tracking
+        if (props.updatedAt || props.createdAt) {
+            console.log(`🔍 Board Constructor DEBUG:`);
+            console.log(`  props.createdAt:`, props.createdAt);
+            console.log(`  props.updatedAt:`, props.updatedAt);
+            console.log(`  this.createdAt:`, this.createdAt);
+            console.log(`  this.updatedAt:`, this.updatedAt);
+        }
     }
 
     setPublishState(state: PublishState): void {
@@ -273,6 +340,30 @@ export class Board {
         if (props.tags !== undefined) this.tags = props.tags;
         if (props.ccLicense !== undefined) this.ccLicense = props.ccLicense;
         this.updatedAt = generateTimestamp();
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to update lastAccessedAt
+     * Called when a board is loaded/viewed
+     */
+    updateLastAccessed(): void {
+        this.lastAccessedAt = generateTimestamp();
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to mark board as changed
+     * Called when Nostr events are received for this board
+     */
+    markAsChanged(): void {
+        this.hasUnseenChanges = true;
+    }
+
+    /**
+     * ✅ NEW (REFACTORING): Helper method to clear change notification
+     * Called when user loads the board
+     */
+    clearChanges(): void {
+        this.hasUnseenChanges = false;
     }
 
     /**
@@ -357,13 +448,18 @@ export class Board {
 
     /**
      * Upsert-Operation: Fügt Karte hinzu ODER aktualisiert sie, wenn sie bereits existiert
-     * Spaltenübergreifend! Wenn die Karte woanders existiert, wird sie nicht verschoben.
+     * Spaltenübergreifend! Unterstützt jetzt auch Spalten- und Positionswechsel.
+     * 
+     * ⚠️ WICHTIG: Für Nostr-Synchronisation!
+     * - Wenn Karte existiert: Update (Position/Spalte KANN geändert werden)
+     * - Wenn Karte neu: Insert (an rank-Position oder am Ende)
      * 
      * @param targetColumnId - Spalte, in die die Karte aufgenommen wird
      * @param cardProps - Die Kartendaten
+     * @param rank - Optional: Position in der Spalte (0-basiert). Wenn undefined, wird am Ende eingefügt.
      * @returns Die neue oder aktualisierte Karte
      */
-    upsertCard(targetColumnId: string, cardProps: CardProps): Card {
+    upsertCard(targetColumnId: string, cardProps: CardProps, rank?: number): Card {
         const targetColumn = this.findColumn(targetColumnId);
         if (!targetColumn) {
             throw new Error(`Target column ${targetColumnId} not found`);
@@ -373,20 +469,51 @@ export class Board {
         const existing = this.findCardById(cardProps.id!);
         
         if (existing) {
-            // ✅ UPDATE: Karte existiert bereits - nur Daten aktualisieren
-            // Die Karte BLEIBT in ihrer aktuellen Spalte!
-            existing.card.update(cardProps);
-            return existing.card;
+            // ✅ UPDATE: Karte existiert bereits
+            const { card, column: currentColumn } = existing;
+            
+            // Update Kartendaten
+            card.update(cardProps);
+            
+            // ⚠️ NEU: Prüfe ob Spalte oder Position geändert wurde
+            if (currentColumn.id !== targetColumnId || (rank !== undefined && currentColumn.cards.indexOf(card) !== rank)) {
+                // Karte aus alter Spalte entfernen
+                currentColumn.cards = currentColumn.cards.filter(c => c.id !== card.id);
+                
+                // Karte in neue Spalte an rank-Position einfügen
+                if (rank !== undefined && rank >= 0 && rank <= targetColumn.cards.length) {
+                    // Einfügen an spezifischer Position
+                    const newCards = [...targetColumn.cards];
+                    newCards.splice(rank, 0, card);
+                    targetColumn.cards = newCards;
+                } else {
+                    // Am Ende einfügen
+                    targetColumn.cards = [...targetColumn.cards, card];
+                }
+            }
+            
+            return card;
         } else {
             // ✅ INSERT: Neue Karte - zu Zielspalte hinzufügen
             const newCard = new Card(cardProps);
-            targetColumn.cards = [...targetColumn.cards, newCard];
+            
+            if (rank !== undefined && rank >= 0 && rank <= targetColumn.cards.length) {
+                // Einfügen an spezifischer Position
+                const newCards = [...targetColumn.cards];
+                newCards.splice(rank, 0, newCard);
+                targetColumn.cards = newCards;
+            } else {
+                // Am Ende einfügen
+                targetColumn.cards = [...targetColumn.cards, newCard];
+            }
+            
             return newCard;
         }
     }
 
     getContextData(full: boolean = false): {
         id: string,
+        eventId?: string, // ← NEU: Event-ID serialisieren!
         name: string,
         description: string,
         tags: string[],
@@ -394,12 +521,15 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
+        lastAccessedAt: string, // ✅ NEW (REFACTORING): Include in serialization
+        hasUnseenChanges: boolean, // ✅ NEW (REFACTORING): Include in serialization
         author?: string,
         maintainers?: string[], // ← NEU: maintainers zur Return Type hinzugefügt!
         columns: any[]
     } {
         return {
             id: this.id,
+            eventId: this.eventId, // ← NEU: Event-ID serialisieren!
             name: this.name,
             description: this.description || '',
             tags: this.tags,
@@ -407,6 +537,8 @@ export class Board {
             publishState: this.publishState,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            lastAccessedAt: this.lastAccessedAt, // ✅ NEW (REFACTORING): Serialize new field
+            hasUnseenChanges: this.hasUnseenChanges, // ✅ NEW (REFACTORING): Serialize new field
             author: this.author,
             maintainers: this.maintainers, // ← NEU: maintainers serialisieren!
             columns: this.columns.map(col => col.getContextData(full))

@@ -1,57 +1,42 @@
-# SyncManager: Offline-First Architektur mit Nostr Signing
+# SyncManager: Offline-First Nostr Events
 
-**Status:** Phase 1.2 ROADMAP (Offline-First Synchronisation)  
-**Implementiert:** 01. November 2025  
-**Komponenten:** SyncManager + nostrEvents Utilities  
+**Datei:** `src/lib/stores/syncManager.svelte.ts`  
+**Technologie:** Svelte 5 Runes + TypeScript  
+**Pattern:** Manuelles `localStorage` (für die Event-Queue)  
+**Version:** 2.0 (Aktualisiert 02. Nov 2025)
 
 ---
 
 ## 🎯 Übersicht
 
-Der **SyncManager** implementiert eine vollständige Offline-First Architektur mit automatischer Nostr-Event-Synchronisation:
+Der **SyncManager** implementiert eine vollständige Offline-First Architektur für Nostr-Events. Er fängt alle ausgehenden Events ab, signiert sie und stellt sie entweder sofort zu oder reiht sie in eine persistente Warteschlange ein, wenn der Benutzer offline ist.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ USER BEARBEITET BOARD                                       │
-│ (BoardStore.createCard, editCard, moveCard, etc.)          │
-└────────────────────┬────────────────────────────────────────┘
-                     ↓
-         ┌───────────────────────────┐
-         │ triggerUpdate()            │
-         │ - inkrementiert counter   │
-         │ - speichert zu storage    │
-         │ - triggert $effect        │
-         └────────────┬──────────────┘
-                      ↓
-         ┌───────────────────────────┐
-         │ publishToNostr() ASYNC    │
-         │ - konvertiert zu Event    │
-         │ - calls SyncManager       │
-         └────────────┬──────────────┘
-                      ↓
-         ┌─────────────────────────────────────────────────┐
-         │ SyncManager.publishOrQueue()                     │
-         │                                                  │
-         │ 1. CHECK: isOnline && hasSigner?               │
-         │                                                  │
-         │ YES ──→ SIGN & PUBLISH (sofort)               │
-         │         ├─→ event.sign(signer)                │
-         │         └─→ event.publish() → Relays          │
-         │                                                  │
-         │ NO ───→ QUEUE EVENT (offline-fallback)        │
-         │         ├─→ Serialize zu JSON                 │
-         │         ├─→ Speichere zu localStorage          │
-         │         └─→ Retry wenn online                 │
-         └─────────────────────────────────────────────────┘
-                      ↓
-         ┌──────────────────────────┐
-         │ RETRY LOGIC (falls error)│
-         │                          │
-         │ • Exponential backoff    │
-         │ • 2^retries × baseDelay  │
-         │ • Stop-on-First-Error    │
-         │ • Dead-letter nach 3x    │
-         └──────────────────────────┘
+```mermaid
+graph TD
+    subgraph BoardStore
+        A[1. User-Aktion: createCard()] -- ruft auf --> B{triggerUpdate()};
+        B -- löst aus --> C{publishToNostr()};
+    end
+
+    subgraph SyncManager
+        C -- übergibt Event --> D{publishOrQueue(event)};
+        D -- Online? --> E{Sign & Publish};
+        D -- Offline? --> F[Queue Event];
+    end
+
+    subgraph Browser Storage
+        F -- speichert in --> G[localStorage: 'nostr-event-queue'];
+    end
+    
+    subgraph Nostr Network
+        E -- sendet an --> H((Relays));
+    end
+
+    subgraph "Bei Reconnect"
+        I[window.online Event] -- löst aus --> J{syncQueue()};
+        J -- liest aus --> G;
+        J -- Online? --> E;
+    end
 ```
 
 ---
@@ -60,35 +45,36 @@ Der **SyncManager** implementiert eine vollständige Offline-First Architektur m
 
 ### 1. **SyncManager** (`src/lib/stores/syncManager.svelte.ts`)
 
-Hauptkomponente für Event-Queueing und Nostr-Publishing.
+Die zentrale Klasse für das Event-Queueing und das Nostr-Publishing.
 
 **Key Features:**
-- ✅ **Event Queueing** — Queue wenn offline, persisted zu localStorage
-- ✅ **Automatic Signing** — Events signiert mit Nostr-Signer vor Publishing
-- ✅ **Retry-Logik** — Exponentieller Backoff (2^retries × baseDelay)
-- ✅ **Online/Offline Detection** — Auto-sync bei Reconnect
-- ✅ **Priority System** — high/normal/low Events
-- ✅ **Type Safety** — Full TypeScript support
+- ✅ **Event Queueing** — Persistente Warteschlange in `localStorage`, wenn offline.
+- ✅ **Automatisches Signieren** — Events werden vor dem Senden mit dem aktiven Nostr-Signer signiert.
+- ✅ **Retry-Logik** — Exponentieller Backoff (z.B. 1s, 2s, 4s) bei fehlgeschlagenen Sendeversuchen.
+- ✅ **Online/Offline Detection** — Automatischer Sync bei Wiederverbindung.
+- ✅ **Priority System** — Events können als `high`, `normal` oder `low` priorisiert werden.
+- ✅ **Typsicherheit** — Vollständige TypeScript-Unterstützung.
 
 **Public API:**
 
 ```typescript
-// Main entry point
+// Haupt-Einstiegspunkt
 await syncManager.publishOrQueue(event, 'board', 'high');
 
-// Utilities
-syncManager.syncQueue();           // Manual sync
-syncManager.getQueueStats();       // Stats for debugging
-syncManager.updateSigner(signer);  // Update signer (login/logout)
-syncManager.dispose();             // Cleanup
+// Hilfsfunktionen
+syncManager.syncQueue();           // Manuellen Sync anstoßen
+syncManager.getQueueStats();       // Statistiken für das Debugging
+syncManager.updateSigner(signer);  // Signer bei Login/Logout aktualisieren
+syncManager.dispose();             // Event-Listener aufräumen
 
-// Status
-syncManager.status;  // { isOnline, isSyncing, queuedEvents, ... }
+// Reaktiver Status
+let status = $derived(syncManager.status);
+// { isOnline, isSyncing, queuedEvents, ... }
 ```
 
 ### 2. **nostrEvents Utilities** (`src/lib/utils/nostrEvents.ts`)
 
-Serialisierung zwischen BoardModel-Klassen und Nostr-Events.
+Hilfsfunktionen zur Serialisierung zwischen den `BoardModel`-Klassen und den Nostr-Events.
 
 **Funktionen:**
 
@@ -103,208 +89,176 @@ nostrEventToCard(event) → CardProps
 
 // Comment Event (Kind 1)
 createCommentEvent(text, cardRef, cardEventId, ndk) → NDKEvent
+
+// Andere Events
 createDeletionEvent(eventId, reason, ndk) → NDKEvent
 createSoftLockEvent(cardId, cardEventId, ttl, ndk) → NDKEvent
 
-// Utilities
+// Hilfsfunktionen
 extractBoardRef(event) → string
-extractColumnName(event) → string
-extractRank(event) → number
 validateEventSignature(event) → boolean
-validateEventTags(event, kind) → boolean
 ```
 
 ---
 
-## 🔧 Integration in BoardStore
+## 🔧 Integration in den BoardStore
 
-### Initalisierung
+### Initialisierung
+
+Der `SyncManager` wird innerhalb des `BoardStore` initialisiert, sobald der `NDK`-Kontext verfügbar ist.
 
 ```typescript
-// In +layout.ts
-const ndk = new NDK({ explicitRelayUrls: [...] });
-await ndk.connect();
-await boardStore.initializeNostr(ndk);
+// In kanbanStore.svelte.ts
+export class BoardStore {
+    private syncManager: SyncManager | null = null;
 
-// SyncManager wird intern erzeugt
-// publicOrQueue() wird dann verfügbar
+    public initializeNostr(ndk: NDK, signer: NDKSigner | null) {
+        this.ndk = ndk;
+        this.syncManager = new SyncManager(ndk, signer);
+    }
+}
 ```
 
-### Mutations mit Publishing
+### Mutations-Flow mit Publishing
 
 ```typescript
 // In kanbanStore.svelte.ts
 public createCard(columnId: string, heading: string): string {
   const card = col.addCard({ heading });
   
-  // SYNC: Update UI + localStorage
+  // 1. SYNC: UI und localStorage sofort aktualisieren
   this.triggerUpdate();
   
-  // ASYNC: Publish zu Nostr (non-blocking)
+  // 2. ASYNC: Event an Nostr senden (blockiert die UI nicht)
   this.publishCardToNostr(card.id).catch(err => {
-    // Falls offline/fehler: wird auto-gequed!
+    // Fehlerbehandlung hier nicht nötig, da der SyncManager das Queuing übernimmt
+    console.warn(`Publishing für Karte ${card.id} wird später versucht.`);
   });
   
   return card.id;
 }
 
 private async publishCardToNostr(cardId: string): Promise<void> {
+  if (!this.syncManager) return;
+
   const { card, column } = this.board.findCardAndColumn(cardId);
   const boardRef = `30301:${this.board.author}:${this.board.id}`;
   const cardEvent = cardToNostrEvent(card, column.name, rank, boardRef, this.ndk);
   
-  // ← SyncManager handled queueing automatisch!
+  // Der SyncManager kümmert sich automatisch um das Queuing!
   await this.syncManager.publishOrQueue(cardEvent, 'card', 'normal');
 }
 ```
 
 ---
 
-## 📊 Event Flow Beispiel
+## 📊 Event-Flow Beispiele
 
-### Scenario 1: Online Publishing
+### Szenario 1: Online Publishing
 
 ```
 User bearbeitet Karte
     ↓
-triggerUpdate() → localStorage + UI updated (SYNC)
+triggerUpdate() → localStorage + UI werden synchron aktualisiert
     ↓
-publishCardToNostr() aufgerufen (ASYNC)
+publishCardToNostr() wird asynchron aufgerufen
     ↓
 SyncManager.publishOrQueue(event, 'card')
     ↓
 isOnline? JA
     ↓
-event.sign(signer) → Event signiert mit Nostr-Key
+event.sign(signer) → Event wird mit dem Nostr-Key des Benutzers signiert
     ↓
-event.publish() → Relays publizieren Event
+event.publish() → Event wird an die Relays gesendet
     ↓
-✅ Event published to 3 relays
-   (kein Queueing notwendig)
+✅ Event an 3 Relays publiziert (kein Queuing nötig)
 ```
 
-### Scenario 2: Offline Fallback
+### Szenario 2: Offline-Fallback
 
 ```
-User bearbeitet Karte (Browser OFFLINE)
+User bearbeitet Karte (Browser ist OFFLINE)
     ↓
-triggerUpdate() → localStorage + UI updated (SYNC)
+triggerUpdate() → localStorage + UI werden synchron aktualisiert
     ↓
-publishCardToNostr() aufgerufen (ASYNC)
+publishCardToNostr() wird asynchron aufgerufen
     ↓
 SyncManager.publishOrQueue(event, 'card')
     ↓
 isOnline? NEIN
     ↓
 queueEvent(event)
-    - Serialize zu JSON
-    - Save zu localStorage: 'nostr-event-queue'
+    - Serialisiere Event zu JSON-String
+    - Speichere in localStorage: 'nostr-event-queue'
     ↓
-📥 Event queued (retries: 0)
-   Queue size: 1
+📥 Event in die Warteschlange gestellt (Versuche: 0)
+   Queue-Größe: 1
 ```
 
-### Scenario 3: Reconnect + Retry
+### Szenario 3: Reconnect + Retry
 
 ```
-Browser kommt Online (window.online event)
+Browser wird wieder online (window.online Event)
     ↓
-SyncManager detects: isOnline = true
+SyncManager erkennt: isOnline = true
     ↓
-syncQueue() gestartet AUTOMATISCH
+syncQueue() wird AUTOMATISCH gestartet
     ↓
-for each event in queue:
+Für jedes Event in der Queue:
   
-  1. Deserialize JSON → NDKEvent
+  1. Deserialisiere JSON → NDKEvent
   2. event.sign(signer) → Signieren
-  3. event.publish() → Publish zu Relays
+  3. event.publish() → An Relays senden
   
-  SUCCESS? 
-  → Remove from queue ✅
+  ERFOLGREICH? 
+  → Aus der Queue entfernen ✅
   
-  FAILURE?
+  FEHLER?
   → retries++
-  → Falls retries >= 3: REMOVE (dead-letter)
-  → Falls retries < 3: KEEP für später
-    (Exponential backoff: 1s, 2s, 4s)
+  → Falls retries >= 3: Entfernen (Dead-Letter-Queue)
+  → Falls retries < 3: Für späteren Versuch behalten
+    (Exponentieller Backoff: 1s, 2s, 4s)
     ↓
-💾 Queue persisted zu localStorage
-📊 Stats updated
-```
-
-### Scenario 4: Publikation während Offline → Auto-Publish nach Reconnect
-
-```
-Timeline:
-10:00 - User offline, erstellt Karte
-        Event wird gequed (retries: 0)
-        
-10:05 - Browser kommt Online
-        SyncManager.syncQueue() triggered
-        
-        Event 1: Signing... 
-                 Publishing... ✅
-                 Removed from queue
-                 
-        Event 2: Signing...
-                 Publishing... ❌ (Relay timeout)
-                 retries: 0 → 1
-                 Keep in queue (retry später)
-                 
-10:35 - Periodic sync trigger (every 30s)
-        Event 2: Signing...
-                 Publishing... ✅
-                 Removed from queue
-                 
-Queue ist jetzt EMPTY ✅
+💾 Queue wird in localStorage persistiert
+📊 Status wird aktualisiert
 ```
 
 ---
 
 ## 🔐 Event Signing
 
-### Signing Flow
+### Signatur-Flow
 
 ```typescript
-// SyncManager.signAndPublish(event)
+// Intern im SyncManager.signAndPublish(event)
 
-1. Check: Hat event einen Signer?
-   if (!this.signer) throw 'No signer available'
+// 1. Prüfen, ob ein Signer verfügbar ist
+if (!this.signer) throw new Error('Kein Signer verfügbar');
 
-2. Sign Event mit Nostr-Key
-   await event.sign(this.signer)
-   // ← Generiert cryptographische Signatur
-   // ← event.sig = '...' (hex string)
-   // ← event.pubkey = '...' (public key)
+// 2. Event mit dem Nostr-Key signieren
+await event.sign(this.signer);
+// → Erzeugt eine kryptographische Signatur
+// → event.sig = '...' (hex string)
+// → event.pubkey = '...' (public key)
 
-3. Validate Signature
-   if (!event.sig) throw 'Signing failed - no sig'
+// 3. Signatur validieren
+if (!event.sig) throw new Error('Signieren fehlgeschlagen');
 
-4. Publish zu Relays
-   const relays = await event.publish()
-   // ← Relays validieren Signatur
-   // ← Nur gültig signierte Events akzeptiert
-   
-5. Return relays Set
-   if (relays.size === 0) throw 'No relays accepted'
+// 4. An Relays publizieren
+const relays = await event.publish();
+// → Relays validieren die Signatur
+// → Nur gültig signierte Events werden akzeptiert   
+// 5. Ergebnis zurückgeben
+if (relays.size === 0) throw new Error('Kein Relay hat das Event akzeptiert');
 ```
 
-### Signer Quellen
+### Signer-Quellen
 
-```typescript
-// Priorität (von AuthStore):
+Der Signer wird vom `AuthStore` bereitgestellt und an den `SyncManager` übergeben. Die Priorität ist:
 
-1. window.nostr (NIP-07 Browser Extension)
-   ✅ Sicherste Option (private keys NIEMALS im Browser)
-   ✅ Alby, nos2x, etc.
-
-2. NDKPrivateKeySigner(nsec)
-   ⚠️ Development only
-   ❌ NIEMALS in Production!
-
-3. NDKNip46Signer (remote)
-   ✅ Zukünftig für mobile Apps
-```
+1.  **`window.nostr` (NIP-07 Browser Extension)**: Sicherste Option, da private Schlüssel den Browser nie verlassen.
+2.  **`NDKPrivateKeySigner(nsec)`**: Nur für die Entwicklung. **NIEMALS in Produktion verwenden!**
+3.  **`NDKNip46Signer` (remote)**: Zukünftige Option für mobile Apps.
 
 ---
 
@@ -314,57 +268,30 @@ Queue ist jetzt EMPTY ✅
 
 ```javascript
 // Key: 'nostr-event-queue'
-// Value: JSON array of QueuedEvent objects
+// Value: JSON-Array von QueuedEvent-Objekten
 
 [
   {
-    event: '{"kind":30302,"content":"...","tags":[...],"sig":"..."}',
-    timestamp: 1730445600000,
-    retries: 0,
-    type: 'card',
-    priority: 'normal'
+    "event": "{\"kind\":30302,\"content\":\"...\",\"tags\":[...]}",
+    "timestamp": 1730445600000,
+    "retries": 0,
+    "type": "card",
+    "priority": "normal"
   },
   {
-    event: '{"kind":1,"content":"Comment...","tags":[...],"sig":"..."}',
-    timestamp: 1730445605000,
-    retries: 1,  // ← Already failed once
-    type: 'comment',
-    priority: 'normal'
-  },
-  // ... more events
+    "event": "{\"kind\":1,\"content\":\"Kommentar...\",\"tags\":[...]}",
+    "timestamp": 1730445605000,
+    "retries": 1,
+    "type": "comment",
+    "priority": "normal"
+  }
 ]
 ```
 
-### Persistence Operations
-
-```typescript
-// Save Queue zu localStorage
-private saveQueueToStorage(): void {
-  const queueData = this.eventQueue.map(e => ({
-    event: e.event,      // JSON string (serialized)
-    timestamp: e.timestamp,
-    retries: e.retries,
-    type: e.type,
-    priority: e.priority,
-  }));
-  
-  localStorage.setItem('nostr-event-queue', JSON.stringify(queueData));
-}
-
-// Load Queue from localStorage
-private loadQueueFromStorage(): void {
-  const stored = localStorage.getItem('nostr-event-queue');
-  if (stored) {
-    this.eventQueue = JSON.parse(stored);
-  }
-}
-```
-
-**Wichtig:** 
-- ✅ Events als JSON-String (verhindert circular references)
-- ✅ Sofortige Persistierung nach jedem Add/Remove
-- ✅ Overlebt Browser-Reload
-- ✅ Max 5-10KB pro Event (typ. Größe)
+**Wichtige Hinweise:**
+- ✅ **Event als String:** Das `event`-Feld speichert das serialisierte `NDKEvent` als JSON-String. Dies verhindert Probleme mit zirkulären Referenzen und sorgt für eine robuste Speicherung.
+- ✅ **Persistenz:** Die Queue überlebt einen Browser-Neustart.
+- ✅ **Größe:** Typischerweise 5-10 KB pro Event.
 
 ---
 
@@ -372,225 +299,119 @@ private loadQueueFromStorage(): void {
 
 ### Exponentieller Backoff
 
-```typescript
-// Formel: delay = 2^retries × baseDelayMs
+Die Verzögerung zwischen den Sendeversuchen erhöht sich exponentiell, um die Relays nicht zu überlasten.
 
-const baseDelay = 1000; // 1 second
-
-Retry 0 (sofort)
-Retry 1: wait 1s    (2^0 × 1000 = 1000ms)
-Retry 2: wait 2s    (2^1 × 1000 = 2000ms)
-Retry 3: wait 4s    (2^2 × 1000 = 4000ms)
-Retry 4+: REMOVE    (Dead-letter nach 3 Versuche)
 ```
+Formel: delay = 2^retries × baseDelayMs
+```
+
+- **Versuch 1:** Sofort
+- **Versuch 2:** nach 1s (2^0 × 1000ms)
+- **Versuch 3:** nach 2s (2^1 × 1000ms)
+- **Versuch 4:** nach 4s (2^2 × 1000ms)
+- **Nach 3 Fehlversuchen:** Event wird aus der Queue entfernt (Dead-Letter-Prinzip).
 
 ### Stop-on-First-Error
 
-```typescript
-// syncQueue() stoppt beim ersten Fehler
-
-for (const event of queue) {
-  try {
-    await publish(event);
-    remove(event);  // Success
-  } catch (error) {
-    event.retries++;
-    
-    if (event.retries >= 3) {
-      remove(event);  // Dead-letter
-    } else {
-      save(event);    // Keep für später
-    }
-    
-    break; // ← STOP HERE (verhindert Relay-Überload)
-    // Nächster Versuch in 30s (periodic sync)
-  }
-}
-```
-
-**Warum Stop-on-First-Error?**
-- ✅ Verhindert dass hunderte Events gleichzeitig fehlschlagen
-- ✅ Zuerst Problem diagnostizieren bevor weitere Versuche
-- ✅ Relay nicht überlasten
-- ✅ Retry wird automatisch triggert wenn online
+Der `syncQueue()`-Prozess stoppt beim ersten Fehler, um eine Überlastung der Relays zu verhindern. Der nächste Sync-Versuch erfolgt automatisch nach einer kurzen Pause (z.B. 30 Sekunden) oder bei der nächsten Benutzerinteraktion.
 
 ---
 
 ## 🌐 Online/Offline Detection
 
-### Event Listener
+Der `SyncManager` nutzt die Standard-Browser-APIs, um den Netzwerkstatus zu überwachen.
 
 ```typescript
 // Browser-Events
 window.addEventListener('online', () => {
-  console.log('🌐 ONLINE');
   this.isOnline = true;
-  this.syncQueue();  // ← Auto-Sync auf Reconnect!
+  this.syncQueue();  // ← Automatischer Sync bei Wiederverbindung!
 });
 
 window.addEventListener('offline', () => {
-  console.log('📡 OFFLINE');
   this.isOnline = false;
 });
 ```
 
-### Periodic Sync
-
-```typescript
-// Alle 30 Sekunden (wenn online und queue nicht leer)
-setInterval(() => {
-  if (this.isOnline && this.eventQueue.length > 0) {
-    this.syncQueue();
-  }
-}, 30000);
-```
+Zusätzlich wird ein **periodischer Sync** alle 30 Sekunden ausgeführt, solange der Browser online ist und die Queue nicht leer ist.
 
 ---
 
 ## 📊 Debug Utilities
 
-### Queue Statistics
+### Queue-Statistiken
 
 ```typescript
 const stats = syncManager.getQueueStats();
 
-// Output:
+// Beispiel-Output:
 {
   total: 5,
   byType: { board: 1, card: 3, comment: 1 },
   byPriority: { high: 1, normal: 3, low: 1 },
-  byRetries: { '0': 3, '1': 2, '2': 0, '3+': 0 }
+  byRetries: { '0': 3, '1': 2 }
 }
 ```
 
-### Status Check
-
-```typescript
-const status = syncManager.status;
-
-// Output:
-{
-  isOnline: true,
-  isSyncing: false,
-  queuedEvents: 2,
-  lastSyncTime: 1730445600000,
-  nextRetryTime: 1730445604000
-}
-```
-
-### UI Integration (Topbar)
+### UI-Integration (Beispiel für eine Topbar)
 
 ```svelte
+<script>
+    import { syncManager } from '$lib/stores/syncManager.svelte.js';
+    let status = $derived(syncManager.status);
+</script>
+
 <div class="sync-indicator">
   {#if status.isOnline}
-    🌐 Online
+    <span>🌐 Online</span>
   {:else}
-    📡 Offline
+    <span class="text-orange-500">📡 Offline</span>
   {/if}
   
   {#if status.isSyncing}
-    ⏳ Syncing...
+    <span>⏳ Syncing...</span>
   {/if}
   
   {#if status.queuedEvents > 0}
-    📥 {status.queuedEvents} queued
+    <span class="text-blue-500">📥 {status.queuedEvents} in Queue</span>
   {/if}
 </div>
 ```
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Konfiguration
 
-### Default Config
-
-```typescript
-{
-  maxRetries: 3,           // Events nach 3 Versuche entfernen
-  backoffMultiplier: 2,    // Exponentieller Backoff: 2^retries
-  baseDelayMs: 1000,       // 1 Sekunde Basis-Delay
-  maxQueueSize: 1000,      // Max 1000 Events in Queue
-  syncIntervalMs: 30000    // Auto-sync alle 30 Sekunden
-}
-```
-
-### Custom Config
+Die Konfiguration erfolgt über ein Objekt, das an den `SyncManager`-Konstruktor übergeben wird.
 
 ```typescript
-const syncManager = initializeSyncManager(ndk, signer, {
-  maxRetries: 5,           // Längere Retry-Phase
-  baseDelayMs: 2000,       // Längere Delays
-  maxQueueSize: 500,       // Kleinere Queue
-  syncIntervalMs: 60000    // Weniger häufige Syncs
-});
+const config = {
+  maxRetries: 3,           // Events nach 3 Versuchen entfernen
+  baseDelayMs: 1000,       // 1 Sekunde Basis-Verzögerung für Backoff
+  syncIntervalMs: 30000    // Automatischer Sync alle 30 Sekunden
+};
+
+const syncManager = new SyncManager(ndk, signer, config);
 ```
 
 ---
 
-## 🧪 Tests
+## Kritische Regeln für Entwickler
 
-### Test Suite
-
-```bash
-pnpm run test:unit         # Run all unit tests
-pnpm run test:unit -- syncManager  # Run only SyncManager tests
-```
-
-### Coverage
-
-```
-SyncManager.svelte.spec.ts:
-✅ Initialization (3 tests)
-✅ Queue Management (4 tests)
-✅ Event Signing (2 tests)
-✅ Retry Logic (3 tests)
-✅ Storage Persistence (3 tests)
-✅ Online/Offline Detection (2 tests)
-✅ Status & Statistics (2 tests)
-✅ Priority System (3 tests)
-✅ Cleanup (2 tests)
-
-Total: 25+ unit tests
-Coverage: 95%+
-```
-
----
-
-## 🚀 Rollout Plan
-
-### Phase 1.2: Core Implementation
-
-- ✅ SyncManager mit IndexedDB
-- ✅ Event Signing mit Nostr-Signer
-- ✅ Retry-Logik mit Backoff
-- ✅ Unit Tests (25+ tests)
-- ✅ Documentation
-
-### Phase 1.3: Integration
-
-- ⏳ BoardStore Integration
-- ⏳ AuthStore Signer-Updates
-- ⏳ Layout.svelte Initialization
-- ⏳ UI Status-Indicator
-
-### Phase 1.4: Production
-
-- ⏳ Error Handling & Logging
-- ⏳ Performance Testing
-- ⏳ User Testing (offline scenarios)
-- ⏳ Deployment
+| Regel | Beschreibung | Severity |
+|-------|--------------|----------|
+| **REGEL 1** | **Niemals `event.publish()` direkt aufrufen.** Immer `syncManager.publishOrQueue()` verwenden, um die Offline-Fähigkeit zu gewährleisten. | 🔴 CRITICAL |
+| **REGEL 2** | **Signer muss aktuell gehalten werden.** Bei Login/Logout `syncManager.updateSigner()` aufrufen, um sicherzustellen, dass Events korrekt signiert werden. | 🔴 CRITICAL |
+| **REGEL 3** | **Events als String speichern.** Beim Hinzufügen zur Queue muss das Event serialisiert werden, um Persistenzprobleme zu vermeiden. | 🟠 HIGH |
+| **REGEL 4** | **UI-Feedback geben.** Den reaktiven `status` des SyncManagers nutzen, um dem Benutzer den aktuellen Sync-Status anzuzeigen. | 🟡 MEDIUM |
 
 ---
 
 ## 📚 Weitere Dokumentation
 
-- [`SYNCMANAGER-INTEGRATION.md`](./SYNCMANAGER-INTEGRATION.md) — Integration Guide
-- [`nostrEvents.ts`](../../utils/nostrEvents.ts) — Event Serialisierung
-- [`STORES.md`](../STORES/README.md) — Store Architecture
-- [`ROADMAP.md`](../../COLLABORATION/ROADMAP.md) — Phase Timeline
+- [`SYNCMANAGER-INTEGRATION.md`](./SYNCMANAGER-INTEGRATION.md) — Detaillierter Integrations-Guide
+- [`nostrEvents.ts`](../../utils/nostrEvents.ts) — Code für die Event-Serialisierung
+- [`STORES/README.md`](./README.md) — Übersicht der Store-Architektur
+- [`ROADMAP.md`](../../COLLABORATION/ROADMAP.md) — Zeitplan für die Implementierung
 
 ---
-
-**Autor:** GitHub Copilot  
-**Datum:** 01. November 2025  
-**Status:** ✅ IMPLEMENTATION COMPLETE, Phase 1.2 Ready

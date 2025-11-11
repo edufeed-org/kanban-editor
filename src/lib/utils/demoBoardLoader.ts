@@ -10,7 +10,7 @@
  * ins aktive Board eingefügt
  */
 
-import { boardStore } from '../stores/kanbanStore.svelte.js';
+import { boardStore } from '../stores/kanbanStore.svelte';
 
 // Demo-Daten (Subset aus data.ts)
 const DEMO_DATA = [
@@ -103,7 +103,7 @@ export function add_democontent(): void {
 			const column = boardStore.addColumn({
 				name: demoColumn.columnName,
 				color: demoColumn.color
-			});
+			})!;
 
 			columnCount++;
 			console.log(`✅ Spalte erstellt: "${demoColumn.columnName}" (ID: ${column.id})`);

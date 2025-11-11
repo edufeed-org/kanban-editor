@@ -1,2132 +1,1296 @@
 // src/lib/stores/kanbanStore.svelte.ts
+// REFACTORED: Hauptstore der alle Module zusammenführt
 
-import { Board, Chat, Column, Card, type CardProps, type ColumnProps, type PublishState } from '../classes/BoardModel.js';
-import { generateTimestamp, generateDTag } from '../utils/idGenerator.js';
-import { initializeLearningManager, boardLearningManager } from './boardLearningManager.svelte.js';
-import jsoncrush from 'jsoncrush';
+import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
+import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
-import { userPreferencesStore, type LearnResult } from './userPreferencesStore.svelte.js';
-import { getSyncManager, initializeSyncManager } from './syncManager.svelte.js';
-import { boardToNostrEvent, cardToNostrEvent, createCommentEvent } from '../utils/nostrEvents.js';
-import { getTargetRelays } from '../utils/relaySelection.js';
+import { initializeSyncManager } from './syncManager.svelte.js';
+import { nostrEventToCard } from '../utils/nostrEvents.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
-// UI-Typen importieren für Kompatibilität mit bestehenden Komponenten
-export type CardItem = {
-    id: number | string;
-    name: string;
-    description?: string;
-    comments?: any[];
-    attendees?: string[];
-    labels?: string[];
-    color?: string;
-    publishState?: PublishState;
-    author?: string;
-    authorName?: string; // Display name (readable), author = pubkey (Nostr)
-    image?: string;
-    link?: string;
-    columnId?: string;
-    boardId?: string;
-};
+// Module imports
+import {
+    BoardStorage,
+    NostrIntegration,
+    BoardOperations,
+    ExportImport,
+    BoardLearning,
+    PasteHandler,
+    ChatIntegration,
+    type CardItem,
+    type UIColumn
+} from './boardstore/index.js';
 
-export type UIColumn = {
-    id: string;
-    name: string;
-    description?: string;
-    color?: string;
-    items: CardItem[];
-};
+// ✅ NEW (REFACTORING): Migration import
+import { MetadataMigration } from './boardstore/migration.js';
+
+// Re-export types für Komponenten
+export type { CardItem, UIColumn };
 
 // ============================================================================
-// BOARD STORE (SVELTE 5 RUNES)
+// BOARD STORE (SVELTE 5 RUNES) - REFACTORED
 // ============================================================================
 
 export class BoardStore {
-    private static BOARDS_LIST_KEY = 'kanban-boards-list'; // Schlüssel für Liste aller Board-IDs
+    private static BOARDS_LIST_KEY = 'kanban-boards-list';
     
-    // Die Board-Instanz als reaktiver Zustand (Svelte 5 Rune)
+    // Reaktiver State
     private board = $state(this.loadFromStorage());
-    
-    // 🔥 NEUE: Liste aller Board-IDs (für Multi-Board-Verwaltung)
-    private boardIds = $state<string[]>(this.loadBoardIds());
-
-    // Separate Spalten-Reihenfolge (wird nicht mutiert, nur replace)
+    private boardIds = $state<string[]>(BoardStorage.loadBoardIds());
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
-
-    // Trigger für Reaktivität - wird bei jeder Änderung inkrementiert
-    // PUBLIC: Wird von Components gelesen als $derived-Abhängigkeit
     public updateTrigger = $state(0);
     
-    // ⭐ NEU: NDK für Nostr Publishing
-    private ndk?: NDK;
+    // Module instances
+    private nostrIntegration: NostrIntegration;
 
     constructor() {
-        // KRITISCH: Wenn das Board nicht in der Liste ist, füge es hinzu!
-        // (Das passiert beim ersten Laden wenn ein Default Board erstellt wird)
+        // ✅ NEW (REFACTORING): Run migration FIRST if needed
+        if (MetadataMigration.needsMigration()) {
+            console.log('🔄 Metadata migration needed - running...');
+            MetadataMigration.migrate();
+        }
+        
+        // Initialisiere Nostr-Modul
+        this.nostrIntegration = new NostrIntegration();
+        
         if (typeof window !== 'undefined') {
-            const currentBoardId = this.board.id;
-            if (!this.boardIds.includes(currentBoardId)) {
-                console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
-                
-                // ✅ FIX: Speichere das Default Board
-                // Auth-Check wird in saveToStorage() gemacht (lazy evaluation)
-                this.boardIds = [...this.boardIds, currentBoardId];
-                this.saveBoardIds();
-                
-                // Speichere auch das Default Board selbst
-                this.saveToStorage();
-            }
-            
-            // ✅ FIX: Nach Auth-Initialisierung prüfen ob Board-Author aktualisiert werden muss
-            // (Falls Board erstellt wurde bevor User eingeloggt war)
+            this.initializeBoard();
             this.scheduleAuthorFix();
-            
-            // 🔥 DEBUGGING: Speichere die aktuelle Board-ID im window für Console-Tests
             this.exposeCurrentBoardIdToWindow();
-            
-            // 🎓 LEARNING MANAGER: Initialisiere wenn in config.json aktiviert
             this.initializeLearningManagerIfEnabled();
         }
     }
     
-    /**
-     * Plant die Aktualisierung des Board-Authors nach Auth-Initialisierung
-     * 
-     * Wird sofort aufgerufen - wenn authStore später authentifiziert wird,
-     * wird updateBoardAuthor() via authStore.svelte.ts aufgerufen
-     */
-    private scheduleAuthorFix(): void {
-        // AuthStore wird in +layout.svelte initialisiert
-        // Wenn hier schon authentifiziert: sofort fixen
-        this.fixAnonymousBoardAuthor();
-        
-        // Falls später authentifiziert: updateBoardAuthor() wird manuell aufgerufen
-        // (z.B. von SettingsPanel.svelte nach Login)
+    private initializeBoard(): void {
+        const currentBoardId = this.board.id;
+        if (!this.boardIds.includes(currentBoardId)) {
+            console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
+            this.boardIds = [...this.boardIds, currentBoardId];
+            BoardStorage.saveBoardIds(this.boardIds);
+            this.saveToStorage();
+        }
     }
     
-    /**
-     * Initialisiert den BoardLearningManager wenn in config.json aktiviert
-     */
+    private scheduleAuthorFix(): void {
+        this.fixAnonymousBoardAuthor();
+    }
+    
     private async initializeLearningManagerIfEnabled(): Promise<void> {
         try {
-            // Lade config.json
             const response = await fetch('/config.json');
-            if (!response.ok) {
-                console.log('ℹ️ config.json nicht gefunden, LearningManager nicht initialisiert');
-                return;
-            }
+            if (!response.ok) return;
             
             const config = await response.json();
             const useLearning = config.learning?.useLearningManager ?? false;
             
             if (useLearning) {
                 initializeLearningManager(this);
-                console.log('✅ BoardLearningManager aktiviert (via config.json)');
-            } else {
-                console.log('ℹ️ BoardLearningManager deaktiviert (config.learning.useLearningManager = false)');
+                console.log('✅ BoardLearningManager aktiviert');
             }
         } catch (error) {
-            console.warn('⚠️ Fehler beim Laden von config.json für LearningManager:', error);
+            console.warn('⚠️ Fehler beim Laden von config.json:', error);
         }
     }
     
-    /**
-     * Aktualisiert Board-Author wenn er 'anonymous' ist aber User eingeloggt ist
-     * 
-     * WICHTIG: authStore muss bereits von +layout.svelte initialisiert sein!
-     * Falls nicht initialisiert → gibt Error aus, nicht kritisch
-     * Die Funktion wird später via updateBoardAuthor() nach Login erneut aufgerufen
-     */
     private fixAnonymousBoardAuthor(): void {
         try {
-            // ⚠️ DEFENSIV: authStore könnte noch nicht initialisiert sein (early import)
-            // Prüfe ob authStore überhaupt verfügbar ist
-            if (!authStore) {
-                console.warn('⚠️ authStore nicht verfügbar (noch nicht von +layout.svelte initialisiert)');
-                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
-                return;
-            }
-            
-            // Prüfe ob authStore.getPubkey() Funktion hat (könnte auch nicht vollständig initialisiert sein)
-            if (typeof authStore.getPubkey !== 'function') {
-                console.warn('⚠️ authStore.getPubkey() nicht verfügbar (authStore nicht vollständig initialisiert)');
-                console.log('ℹ️ Board-Author wird später via updateBoardAuthor() nach Login aktualisiert');
+            if (!authStore || typeof authStore.getPubkey !== 'function') {
                 return;
             }
             
             const pubkey = authStore.getPubkey();
             const isAuth = authStore.isAuthenticated;
             
-            console.log('🔍 fixAnonymousBoardAuthor() - isAuthenticated:', isAuth, '| pubkey:', pubkey);
+            if (!isAuth || !pubkey) return;
             
-            if (!isAuth || !pubkey) {
-                console.log('ℹ️ User nicht eingeloggt, überspringe Author-Fix');
-                return;
-            }
-            
-            // Prüfe ob aktuelles Board einen anonymous Author hat
             if (this.board.author === 'anonymous' || !this.board.author) {
-                console.log('🔧 Fixe anonymous Board-Author:', this.board.id);
-                
-                // Aktualisiere Board-Author
                 this.board.author = pubkey;
                 this.board.maintainers = [pubkey];
-                
-                // Speichere das aktualisierte Board
                 this.saveToStorage();
-                
-                console.log('✅ Board-Author aktualisiert:', pubkey.slice(0, 16) + '...');
-            } else {
-                console.log('✅ Board hat bereits einen Author:', this.board.author.slice(0, 16) + '...');
+                console.log('✅ Board-Author aktualisiert');
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
-            console.log('ℹ️ Dieser Fehler ist nicht kritisch - Board-Author wird später aktualisiert');
         }
     }
 
-    // Öffentliche getter-Funktion, um die Board-Daten reaktiv abzurufen
+    // ============================================================================
+    // PUBLIC GETTERS
+    // ============================================================================
+    
     public get data() {
-        // Zugriff auf updateTrigger sorgt für Reaktivität
         this.updateTrigger;
         return this.board;
     }
 
-    // ============================================================================
-    // REAKTIVES UI-INTERFACE (für bestehende Komponenten)
-    // ============================================================================
+    public get uiData(): UIColumn[] {
+        this.updateTrigger;
+        this._columnOrder;
+        
+        const orderedColumns = this._columnOrder
+            .map(id => this.board.columns.find(c => c.id === id))
+            .filter(Boolean) as any[];
 
-    // Konvertiert Board-Daten zu UI-kompatiblem Format (reaktiv via $derived)
-    public uiData = $derived.by(() => {
-        // WICHTIG: Direkter Zugriff auf this.board.columns für Reaktivität!
-        // (nicht nur updateTrigger - Svelte 5 muss das Arrays Property tracking sehen)
-        const columns = this.board.columns; // ← Direkter Zugriff triggert Tracking
-        const columnOrder = this._columnOrder;
-        const trigger = this.updateTrigger; // ← Auch updateTrigger als Fallback
-        
-        // 🔥 WICHTIG: Auch alle card.comments Arrays direkt lesen!
-        // Das garantiert, dass Änderungen an comments die Ableitung triggern
-        columns.forEach(col => {
-            col.cards.forEach(card => {
-                // Direkter Zugriff auf comments für Dependency Tracking
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const _ = card.comments;
-            });
-        });
-        
-        console.log('🔄 uiData wird neu berechnet...', columns.length, 'Spalten, trigger:', trigger);
-        
-        // Erstelle eine Map für schnellen Zugriff
-        const columnMap = new Map(columns.map(c => [c.id, c]));
-        
-        // Nutze _columnOrder für die Reihenfolge
-        const result: UIColumn[] = [];
-        for (const colId of columnOrder) {
-            const column = columnMap.get(colId);
-            if (column) {
-                    result.push({
-                        id: column.id,
-                        name: column.name,
-                        color: column.color,
-                        items: column.cards.map(card => ({
-                            id: card.id,
-                            name: card.heading,
-                            description: card.content,
-                            image: card.image,
-                            comments: card.comments,
-                            attendees: card.attendees,
-                            labels: card.labels,
-                            color: card.color,
-                            publishState: card.publishState,
-                            author: card.author || card.attendees?.[0], // author oder erster Attendee
-                            authorName: card.authorName, // ← NEUE ZEILE: Display name für UI
-                            columnId: column.id,
-                            boardId: this.board.id
-                        }))
-                    });
-            }
-        }
-        
-        return result;
-    });
-
-    // 🔥 WICHTIG: Reaktive Board-Metadaten für Topbar und andere Komponenten
-    // Diese $derived wird neu berechnet sobald board.name oder board.description sich ändern
-    public boardMeta = $derived({
-        id: this.board.id,
-        name: this.board.name,
-        description: this.board.description,
-        trigger: this.updateTrigger  // Auch updateTrigger als Fallback-Dependency
-    });
-
-    // ============================================================================
-    // ⭐ NOSTR INTEGRATION (Phase 1.2)
-    // ============================================================================
-
-    /**
-     * Initialisiere Nostr Publishing mit NDK
-     * Wird in +layout.ts aufgerufen nach NDK.connect()
-     */
-    public async initializeNostr(ndk: NDK): Promise<void> {
-        this.ndk = ndk;
-        
-        // Initialisiere auch den SyncManager
-        // Der Signer wird später von AuthStore aktualisiert
-        initializeSyncManager(ndk, undefined);
-        
-        console.log('✅ Nostr initialized - SyncManager ready');
-        console.log(`📡 Publishing NDK configured`);
-    }
-
-    /**
-     * Cleanup bei App-Exit
-     */
-    public dispose(): void {
-        try {
-            const syncManager = getSyncManager();
-            if (syncManager) syncManager.dispose();
-            console.log('✅ SyncManager disposed');
-        } catch (error) {
-            console.warn('⚠️ SyncManager dispose warning:', error);
-        }
-    }
-
-    // ============================================================================
-    // PRIVATE HELPER
-    // ============================================================================
-
-    /**
-     * 🔥 DEBUGGING: Speichert die aktuelle Board-ID im window-Objekt
-     * Ermöglicht einfache Console-Tests: 
-     * JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))
-     */
-    private exposeCurrentBoardIdToWindow(): void {
-        if (typeof window === 'undefined') return;
-        
-        const boardId = this.board.id;
-        (window as any).CURRENT_KANBAN_BOARD_ID = boardId;
-        (window as any).CURRENT_KANBAN_BOARD_STORAGE_ID = 'kanban-'+boardId;
-        
-        console.log(`✅ Board-ID verfügbar: window.CURRENT_KANBAN_BOARD_ID = "${boardId}"`);
-        console.log('📊 localStorage testen:');
-        console.log(`   JSON.parse(localStorage.getItem('CURRENT_KANBAN_BOARD_STORAGE_ID'))`);
-    }
-
-    private loadBoardIds(): string[] {
-        if (typeof window === 'undefined') return [];
-        
-        try {
-            const stored = localStorage.getItem(BoardStore.BOARDS_LIST_KEY);
-            if (stored) {
-                const ids = JSON.parse(stored);
-                console.log('📋 Board-IDs geladen:', ids);
-                return ids;
-            }
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Laden der Board-IDs:', error);
-        }
-        
-        // Neue App - keine alten Boards zu migrieren
-        return [];
-    }
-
-    private saveBoardIds(): void {
-        if (typeof window === 'undefined') return;
-        
-        try {
-            localStorage.setItem(BoardStore.BOARDS_LIST_KEY, JSON.stringify(this.boardIds));
-            console.log('💾 Board-IDs gespeichert:', this.boardIds.length);
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Speichern der Board-IDs:', error);
-        }
-    }
-
-    private loadFromStorage(): Board {
-        if (typeof window === 'undefined') {
-            // SSR fallback
-            return this.createDefaultBoard();
-        }
-        
-        try {
-            // Lade das zuletzt AUFGERUFENE Board aus der Board-Liste (via lastAccessedAt)
-            const boardIds = this.loadBoardIds();
-            
-            if (boardIds.length > 0) {
-                // Finde das Board mit dem neuesten lastAccessedAt (oder fallback zu updatedAt)
-                let mostRecentBoardId = boardIds[0];
-                let mostRecentTime = 0;
-                
-                console.log('🔍 Suche zuletzt aufgerufenes Board...');
-                
-                for (const boardId of boardIds) {
-                    const stored = localStorage.getItem(`kanban-${boardId}`);
-                    if (stored) {
-                        try {
-                            const data = JSON.parse(stored);
-                            // Priorisiere lastAccessedAt für MRU-Reload (wann zuletzt geöffnet)
-                            const lastAccessed = data.lastAccessedAt || data.updatedAt || data.createdAt;
-                            
-                            // ⚠️ WICHTIG: ISO-String zu Timestamp konvertieren für numerischen Vergleich!
-                            const timestamp = lastAccessed 
-                                ? (typeof lastAccessed === 'string' 
-                                    ? new Date(lastAccessed).getTime() 
-                                    : lastAccessed)
-                                : 0;
-                            
-                            console.log(`  Board: ${data.name} | lastAccessedAt: ${lastAccessed} | timestamp: ${timestamp}`);
-                            
-                            if (timestamp > mostRecentTime) {
-                                mostRecentTime = timestamp;
-                                mostRecentBoardId = boardId;
-                                console.log(`    → Neuer Kandidat!`);
-                            }
-                        } catch (e) {
-                            console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
-                        }
-                    }
-                }
-                
-                const stored = localStorage.getItem(`kanban-${mostRecentBoardId}`);
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    console.log('✅ Zuletzt aufgerufenes Board geladen:', data.name);
-                    return this.reconstructBoard(data);
-                }
-            }
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Laden aus localStorage:', error);
-        }
-        
-        // Keine Boards vorhanden - erstelle Default Board
-        return this.createDefaultBoard();
-    }
-
-    private reconstructBoard(data: any): Board {
-        // ✅ MIGRATION: Wenn author kein Pubkey-Format hat, ignoriere es
-        // (Es ist wahrscheinlich ein alter Display-Name)
-        let author = data.author;
-        if (author && !author.match(/^[0-9a-f]{64}$/)) {
-            // Ist kein Hex-Pubkey → Wahrscheinlich alter Display-Name
-            console.warn(`⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze auf 'anonymous'`);
-            author = 'anonymous'; // ← Setze auf anonymous statt alte Name zu nutzen
-        }
-        
-        // Erstelle Board-Instanz mit rekonstruierten Columns/Cards
-        const boardProps = {
-            id: data.id,
-            name: data.name,
-            description: data.description,
-            publishState: data.publishState,
-            author: author, // ← Migrierte/bereinigte author
-            maintainers: data.maintainers || [], // ← NEU: maintainers laden
-            tags: data.tags || [], // ← NEU: Tags laden
-            ccLicense: data.ccLicense || 'cc-by-4.0', // ← NEU: License laden
-            columns: data.columns?.map((colData: any) => ({
-                id: colData.id,
-                name: colData.name,
-                color: colData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
-                cards: colData.cards?.map((cardData: any) => ({
-                    id: cardData.id,
-                    heading: cardData.heading,
-                    content: cardData.content,
-                    image: cardData.image, // ← image MUSS hier sein!
-                    color: cardData.color || 'slate', // 🎯 Standardfarbe wenn keine gespeichert
-                    author: cardData.author, // ← ✅ FIXED: author hinzugefügt!
-                    authorName: cardData.authorName, // ← NEU: authorName laden
-                    comments: cardData.comments || [],
-                    labels: cardData.labels || [],
-                    links: cardData.links || [],
-                    attendees: cardData.attendees || [],
-                    publishState: cardData.publishState || 'draft'
-                })) || []
-            })) || []
-        };
-        
-        return new Board(boardProps);
-    }
-
-    private createDefaultBoard(): Board {
-        // ✅ FIX: Nutze defaultColumns aus Settings statt leere Spalten
-        const defaultColumnNames = settingsStore.settings.defaultColumns || ['To Do', 'In Progress', 'Done'];
-        
-        console.log('🆕 Erstelle Default Board mit Spalten:', defaultColumnNames);
-        
-        const columns = defaultColumnNames.map(name => ({ 
-            name, 
-            color: this.getDefaultColorForColumn(name) 
+        return orderedColumns.map(col => ({
+            id: col.id,
+            name: col.name,
+            description: col.description,
+            color: col.color,
+            items: col.cards.map((card: any) => ({
+                id: card.id,
+                name: card.heading,
+                description: card.content,
+                comments: card.comments,
+                attendees: card.attendees,
+                labels: card.labels,
+                color: card.color,
+                publishState: card.publishState,
+                author: card.author,
+                authorName: card.authorName,
+                image: card.image,
+                link: card.links?.[0]?.url,
+                columnId: col.id,
+                boardId: this.board.id
+            }))
         }));
-        
-        // ✅ FIX: Setze author für Berechtigungen!
-        // Auch beim Default Board muss der Author gesetzt sein
-        const author = this.getSafeAuthor();
-        
-        return new Board({
-            name: 'Mein KI Kanban Board',
-            description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
-            author: author,
-            maintainers: author !== 'anonymous' ? [author] : [],
-            columns
-        });
-    }
-    
-    /**
-     * Hilfsmethode: Gibt Standard-Farbe basierend auf Spalten-Namen zurück
-     */
-    private getDefaultColorForColumn(name: string): string {
-        const lowerName = name.toLowerCase();
-        if (lowerName.includes('to do') || lowerName.includes('todo') || lowerName.includes('backlog')) {
-            return 'blue';
-        }
-        if (lowerName.includes('progress') || lowerName.includes('working') || lowerName.includes('doing')) {
-            return 'orange';
-        }
-        if (lowerName.includes('done') || lowerName.includes('complete') || lowerName.includes('finished')) {
-            return 'green';
-        }
-        if (lowerName.includes('archive') || lowerName.includes('archived')) {
-            return 'red';
-        }
-        return 'slate'; // Default Farbe
-    }
-    
-    /**
-     * Hilfsmethode: Gibt Author sicher zurück (auch wenn authStore noch nicht initialisiert)
-     * 
-     * WICHTIG: Während SSR ist authStore noch nicht verfügbar!
-     * Der Store wird erst im Browser via +layout.svelte initialisiert.
-     */
-    private getSafeAuthor(): string {
-        try {
-            // SSR Check: authStore existiert nur im Browser
-            if (typeof window === 'undefined') {
-                return 'anonymous';
-            }
-            
-            // Nutze sichere Methode die null zurückgibt statt Error zu werfen
-            const pubkey = authStore?.getPubkeySafe();
-            
-            if (pubkey) {
-                console.log('✅ Author gefunden:', pubkey.slice(0, 16) + '...');
-                return pubkey;
-            }
-            
-            console.warn('⚠️ authStore nicht initialisiert oder kein User eingeloggt, nutze "anonymous"');
-            return 'anonymous';
-        } catch (error) {
-            // Fallback für unerwartete Fehler
-            console.error('❌ Unerwarteter Fehler in getSafeAuthor():', error);
-            return 'anonymous';
-        }
     }
 
-    private saveToStorage(): void {
-        if (typeof window === 'undefined') return;
-        
-        // ✅ FIX: Prüfe ob Speichern erlaubt ist (lazy evaluation)
-        // authStore könnte noch nicht initialisiert sein beim ersten Aufruf
-        if (!this.canSaveToStorage()) {
-            console.warn('⚠️ Speichern nicht erlaubt (User nicht eingeloggt und anonymes Speichern deaktiviert)');
-            return;
-        }
-        
-        try {
-            const data = this.board.getContextData(true);
-            // 🔥 WICHTIG: Board.id ist bereits "board-TIMESTAMP", daher nutze es direkt als Schlüssel!
-            // z.B. Board.id = "board-1761035980797" → Key = "kanban-board-1761035980797"
-            const storageKey = `kanban-${this.board.id}`;
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            console.log('💾 Board in localStorage gespeichert:', storageKey);
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
-        }
-    }
-    
-    /**
-     * Prüft ob localStorage-Speicherung erlaubt ist
-     * - Wenn User eingeloggt: Immer erlaubt
-     * - Wenn nicht eingeloggt: Hängt von canUseLocalStorageAnonymously() ab
-     */
-    private canSaveToStorage(): boolean {
-        try {
-            // authStore könnte noch nicht initialisiert sein (z.B. beim ersten Import)
-            // In dem Fall: Erlaube Speicherung (Fallback zu anonymem Speichern)
-            const isAuthenticated = authStore?.isAuthenticated ?? false;
-            
-            if (isAuthenticated) {
-                return true; // User eingeloggt → immer erlauben
-            }
-            
-            // User nicht eingeloggt → prüfe ob anonymes Speichern erlaubt ist
-            return this.canUseLocalStorageAnonymously();
-        } catch (error) {
-            // authStore noch nicht initialisiert → Fallback zu anonymem Speichern
-            console.warn('⚠️ authStore noch nicht verfügbar, nutze Fallback-Logik');
-            return this.canUseLocalStorageAnonymously();
-        }
-    }
-    
-    /**
-     * Prüft ob localStorage für anonyme Nutzung erlaubt ist
-     * (z.B. für lokale Tests ohne Auth)
-     */
-    private canUseLocalStorageAnonymously(): boolean {
-        // TODO: Könnte aus Settings kommen (allowAnonymousStorage)
-        // Für jetzt: Erlaube localStorage auch ohne Auth (wie bisher)
-        return true; // Change to false to enforce auth requirement
+    public get allBoardIds(): string[] {
+        return this.boardIds;
     }
 
-    private triggerUpdate(): void {
-        this.updateTrigger++;
-        this.saveToStorage(); // Automatisch speichern bei jeder Änderung
-        console.log('🔄 Update triggered:', this.updateTrigger);
-    }
-
-    // ============================================================================
-    // MULTI-BOARD VERWALTUNG
-    // ============================================================================
-
-    /**
-     * Gibt alle gespeicherten Boards in chronologischer Reihenfolge zurück (neueste zuerst)
-     * REAKTIV: updateTrigger wird gelesen um Neuberechnung zu triggern
-     */
-    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> {
-        // 🔥 WICHTIG: updateTrigger lesen damit Svelte diese Methode als abhängig registriert!
-        const trigger = this.updateTrigger;
-        // 🔥 WICHTIG: boardIds lesen damit bei Änderungen neu berechnet wird!
-        const ids = this.boardIds;
-        
-        if (typeof window === 'undefined') return [];
-        
-        try {
-            const boards: Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number }> = [];
-            
-            // Nutze die gespeicherte Liste statt durchsuche alle localStorage-Keys
-            for (const boardId of ids) {
-                // 🔥 WICHTIG: boardId ist bereits "board-...", daher nutze "kanban-..." als Key
-                const storageKey = `kanban-${boardId}`;
-                const stored = localStorage.getItem(storageKey);
-                
-                if (stored) {
-                    try {
-                        const data = JSON.parse(stored);
-                        // updatedAt is ISO string, parse to timestamp for sorting
-                        // PRIORISIERE updatedAt (wann bearbeitet) für LISTE-SORTIERUNG
-                        const updatedAtTime = data.updatedAt 
-                            ? new Date(data.updatedAt).getTime() 
-                            : (data.createdAt || Date.now());
-                        
-                        boards.push({
-                            id: boardId,
-                            name: data.name || 'Unbenanntes Board',
-                            description: data.description,
-                            createdAt: data.createdAt || Date.now(),
-                            updatedAt: updatedAtTime
-                        });
-                    } catch (e) {
-                        console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
-                    }
-                }
-            }
-            
-            // Sortiere nach updatedAt (zuletzt BEARBEITETE zuerst!) - für Board-Liste Anzeige
-            // WICHTIG: updatedAt != lastAccessedAt!
-            //   - updatedAt = wann wurde Board GEÄNDERT (Metadata/Karten) → für Liste-Sortierung
-            //   - lastAccessedAt = wann wurde Board GEÖFFNET → für Reload-MRU (in loadFromStorage)
-            return boards.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        } catch (error) {
-            console.error('❌ Fehler beim Laden aller Boards:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Filtert Boards nach Suchbegriff
-     * REAKTIV: updateTrigger wird gelesen um Neuberechnung zu triggern
-     */
-    public filterBoards(searchTerm: string): Array<{ id: string; name: string; description?: string; createdAt: number }> {
-        // 🔥 WICHTIG: updateTrigger lesen damit Svelte diese Methode als abhängig registriert!
-        const trigger = this.updateTrigger;
-        
-        const allBoards = this.getAllBoards();
-        const term = searchTerm.toLowerCase().trim();
-        
-        if (!term) return allBoards;
-        
-        return allBoards.filter(board => 
-            board.name.toLowerCase().includes(term) ||
-            (board.description?.toLowerCase().includes(term) ?? false)
-        );
-    }
-
-    /**
-     * Erstellt ein neues Board mit Default-Spalten und speichert es
-     */
-    public createBoard(name: string = 'Neues Board'): string {
-        // ✅ KRITISCH: author MUSS der Pubkey sein für Nostr-Kompatibilität & Authorisierung!
-        // Display-Name ist nur für UI-Anzeige relevant, nicht für Vergleiche
-        const author = this.getSafeAuthor();
-        
-        // ✅ FIX: Nutze defaultColumns aus Settings statt hardcoded Spalten
-        const defaultColumnNames = settingsStore.settings.defaultColumns || ['To Do', 'In Progress', 'Done'];
-        const columns = defaultColumnNames.map(name => ({ 
-            name, 
-            color: this.getDefaultColorForColumn(name) 
-        }));
-        
-        const newBoard = new Board({
-            name,
-            description: '',
-            author: author, // ✅ Pubkey für Nostr Events & Authorisierung
-            maintainers: author !== 'anonymous' ? [author] : [], // ✅ NEU: Ich bin der einzige Maintainer
-            columns
-        });
-        
-        // Board.id ist jetzt durch Board Constructor gesetzt (mit generateDTag('board'))
-        const newBoardId = newBoard.id;
-        const now = Date.now();
-        
-        // Speichere das neue Board als separate Einheit
-        if (typeof window !== 'undefined') {
-            try {
-                const data = newBoard.getContextData(true);
-                // @ts-ignore - Wir wissen, dass createdAt existiert, aber getContextData() gibt es nicht zurück
-                data.createdAt = now;
-                // 🔥 WICHTIG: Key ist "kanban-board-...", da Board.id bereits "board-..." ist
-                localStorage.setItem(`kanban-${newBoardId}`, JSON.stringify(data));
-                
-                // 🔥 WICHTIG: Füge die Board-ID zur Liste hinzu!
-                this.boardIds = [...this.boardIds, newBoardId];
-                this.saveBoardIds();
-                
-                console.log('✅ Neues Board erstellt:', newBoardId, name);
-                
-                // 🔥 WICHTIG: Triggere updateTrigger damit $derived.by() in BoardsList neu berechnet wird!
-                this.updateTrigger++;
-                
-            } catch (error) {
-                console.error('❌ Fehler beim Speichern des neuen Boards:', error);
-            }
-        }
-        
-        return newBoardId;
-    }
-
-    /**
-     * Lädt ein Board mit der gegebenen ID und macht es zum aktiven Board
-     */
-    public loadBoard(boardId: string): boolean {
-        if (typeof window === 'undefined') return false;
-        
-        try {
-            // 🔥 WICHTIG: boardId ist bereits "board-...", daher nutze "kanban-board-..." als Key
-            const storageKey = `kanban-${boardId}`;
-            const stored = localStorage.getItem(storageKey);
-            if (!stored) {
-                console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
-                return false;
-            }
-            
-            const data = JSON.parse(stored);
-            this.board = this.reconstructBoard(data);
-            this._columnOrder = this.board.columns.map(c => c.id);
-            
-            // ✨ NEU: Setze lastAccessedAt auf JETZT (für MRU-Reload)
-            // Nutze direkte localStorage-Update OHNE triggerUpdate() um Endlosschleife zu vermeiden
-            data.lastAccessedAt = generateTimestamp();
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            
-            // 🔥 WICHTIG: Nur updateTrigger erhöhen (für UI-Reaktivität), aber NICHT saveToStorage() aufrufen!
-            // Grund: saveToStorage() würde board.getContextData() nutzen, das lastAccessedAt nicht enthält
-            this.updateTrigger++;
-            
-            console.log('✅ Board geladen:', boardId, this.board.name, '(lastAccessedAt aktualisiert)');
-            return true;
-        } catch (error) {
-            console.error('❌ Fehler beim Laden von Board:', boardId, error);
-            return false;
-        }
-    }
-
-    /**
-     * Löscht ein Board mit der gegebenen ID
-     */
-    public deleteBoard(boardId?: string): boolean {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Boards löschen!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        const targetId = boardId || this.board.id;
-        
-        if (typeof window === 'undefined') return false;
-        
-        try {
-            // 🔥 WICHTIG: targetId ist bereits "board-...", daher nutze "kanban-..." als Key
-            localStorage.removeItem(`kanban-${targetId}`);
-            
-            // 🔥 WICHTIG: Entferne die Board-ID aus der Liste!
-            this.boardIds = this.boardIds.filter(id => id !== targetId);
-            this.saveBoardIds();
-            
-            console.log('🗑️ Board gelöscht:', targetId);
-            
-            // 🔥 WICHTIG: Triggere updateTrigger damit $derived.by() in BoardsList neu berechnet wird!
-            this.updateTrigger++;
-            
-            // Wenn das aktuelle Board gelöscht wurde, lade ein anderes oder Default
-            if (targetId === this.board.id) {
-                const allBoards = this.getAllBoards();
-                if (allBoards.length > 0) {
-                    this.loadBoard(allBoards[0].id);
-                } else {
-                    // Keine anderen Boards, erstelle Default
-                    this.board = this.createDefaultBoard();
-                    this._columnOrder = this.board.columns.map(c => c.id);
-                    this.triggerUpdate();
-                }
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Fehler beim Löschen von Board:', targetId, error);
-            return false;
-        }
-    }
-
-    /**
-     * Gibt die ID des aktuellen Boards zurück
-     */
-    public getCurrentBoardId(): string {
-        return this.board.id;
-    }
-
-    /**
-     * Gibt die Metadaten des aktuellen Boards zurück
-     */
-    public getCurrentBoardMeta(): { id: string; name: string; description?: string } {
+    public get boardMeta() {
+        this.updateTrigger;
         return {
             id: this.board.id,
             name: this.board.name,
-            description: this.board.description
+            description: this.board.description,
+            publishState: this.board.publishState,
+            author: this.board.author,
+            createdAt: this.board.createdAt,
+            updatedAt: this.board.updatedAt
         };
     }
 
-    /**
-     * Aktualisiert die Metadaten des aktuellen Boards (Name, Beschreibung, Tags, Lizenz, etc.)
-     */
-    public updateCurrentBoardMeta(updates: { 
-        name?: string
-        description?: string
-        tags?: string[]
-        ccLicense?: string
-    }): void {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Board-Metadaten aktualisieren!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        this.board.update(updates); // ✅ Nutze board.update() damit updatedAt gesetzt wird!
-        this.triggerUpdate(); // 🔥 speichert zu localStorage und triggert $derived Neuberechnung
-        console.log('✅ Board-Metadaten aktualisiert:', { 
-            name: this.board.name, 
+    public getCurrentBoardMeta() {
+        return {
+            id: this.board.id,
+            name: this.board.name,
             description: this.board.description,
-            tags: this.board.tags,
-            ccLicense: this.board.ccLicense
-        });
+            publishState: this.board.publishState,
+            author: this.board.author,
+            createdAt: this.board.createdAt,
+            updatedAt: this.board.updatedAt
+        };
     }
 
     // ============================================================================
-    // PROXY-METHODEN FÜR BOARD-OPERATIONEN
+    // STORAGE METHODS (delegiert zu BoardStorage)
     // ============================================================================
-
-    public setPublishState(state: PublishState): void {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen publishState ändern!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        const oldState = this.board.publishState
-        console.log({oldState})
-        this.board.setPublishState(state);
-        this.triggerUpdate();
+    
+    private loadFromStorage(): Board {
+        const boardIds = BoardStorage.loadBoardIds();
+        const mostRecentBoardId = BoardStorage.loadMostRecentBoard(boardIds);
         
-        if (state === 'published') {
-            this.publishBoardAsync().catch(err => {
-                this.board.setPublishState(oldState);
-                console.log('this.board', this.board)
-                this.triggerUpdate();
-                console.error('⚠️ Async board publishing failed:', err);
+        if (mostRecentBoardId) {
+            const board = BoardStorage.loadBoard(mostRecentBoardId);
+            if (board) {
+                console.log(`✅ Letztes Board geladen: ${board.name} (${mostRecentBoardId})`);
+                return board;
+            }
+        }
+        
+        return BoardStorage.createDefaultBoard();
+    }
+
+    private saveToStorage(): void {
+        BoardStorage.saveBoard(this.board);
+    }
+
+    /**
+     * ⚡ PHASE 1: Event-Driven Architecture
+     * 
+     * Triggert Update mit optionalem Nostr-Publish
+     * 
+     * @param options - { publish?: boolean } - Default: true (Primary Actions)
+     *   - publish: true  → User-Action → Publish zu Nostr (PRIMARY)
+     *   - publish: false → Nostr-Event → NUR lokaler Update (SECONDARY)
+     */
+    private triggerUpdate(options?: { publish?: boolean }): void {
+        this.updateTrigger++;
+        this.saveToStorage();
+        
+        // NUR bei Primary Actions zu Nostr publishen (Default: true)
+        if (options?.publish !== false) {
+            console.log('🚀 triggerUpdate: Publishing to Nostr (publish=' + (options?.publish ?? 'undefined (default true)') + ')');
+            this.publishToNostr();
+        } else {
+            console.log('⏭️ triggerUpdate: SKIP publish to Nostr (publish=false)');
+        }
+    }
+
+    /**
+     * ⚡ PHASE 1: Event-Driven Architecture
+     * 
+     * Zentrale Methode für Nostr-Publishing
+     * Publiziert aktuelles Board zu Nostr
+     */
+    private publishToNostr(): void {
+        // Asynchron publishen (nicht-blockierend)
+        this.publishBoardAsync();
+    }
+
+    // ============================================================================
+    // MULTI-BOARD MANAGEMENT
+    // ============================================================================
+    
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
+        // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
+        this.updateTrigger;
+        
+        // ⚡ WICHTIG: Metadata aus localStorage lesen
+        const boards = BoardStorage.getAllBoardsMetadata(this.boardIds);
+        
+        // ⚡ DEBUG: Duplikate-Check
+        const boardIdsInList = boards.map(b => b.id);
+        const duplicates = boardIdsInList.filter((id, index) => boardIdsInList.indexOf(id) !== index);
+        if (duplicates.length > 0) {
+            console.error(`🔴 DUPLIKATE in getAllBoards() gefunden:`, duplicates);
+            console.log('  boardIds:', this.boardIds);
+            console.log('  boards:', boards.map(b => ({ id: b.id, name: b.name })));
+        }
+        
+        // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
+        const currentBoardIndex = boards.findIndex(b => b.id === this.board.id);
+        if (currentBoardIndex !== -1) {
+            boards[currentBoardIndex] = {
+                id: this.board.id,
+                name: this.board.name,
+                description: this.board.description,
+                createdAt: new Date(this.board.createdAt).getTime(),
+                updatedAt: this.board.updatedAt 
+                    ? new Date(this.board.updatedAt).getTime() 
+                    : new Date(this.board.createdAt).getTime(),
+                lastAccessed: this.board.lastAccessedAt 
+                    ? new Date(this.board.lastAccessedAt).getTime() 
+                    : new Date(this.board.createdAt).getTime(),
+                hasUnseenChanges: this.board.hasUnseenChanges
+            };
+        }
+        
+        return boards;
+    }
+
+    public createBoard(name: string, description?: string): string {
+        const author = this.getSafeAuthor();
+        const board = new Board({
+            name,
+            description,
+            author,
+            maintainers: [author],
+            publishState: 'draft',
+            columns: []
+        });
+
+        settingsStore.settings.defaultColumns.forEach((colName: string) => {
+            board.addColumn({
+                name: colName,
+                color: this.getDefaultColorForColumn(colName)
             });
+        });
+
+        BoardStorage.saveBoard(board);
+        
+        // ⚡ FIX: Duplikate vermeiden! Nur hinzufügen wenn nicht bereits in Liste
+        if (!this.boardIds.includes(board.id)) {
+            this.boardIds = [...this.boardIds, board.id];
+            BoardStorage.saveBoardIds(this.boardIds);
+            console.log(`✅ Board ${board.name} added to list - now visible in sidebar`);
+        } else {
+            console.warn(`⚠️ Board ${board.id} bereits in boardIds-Liste - DUPLIKAT vermieden`);
+        }
+
+        // ⚡ KRITISCH: Metadaten-Liste aktualisieren (für getAllBoardsMetadata)
+        // Grund: createBoard() auf Browser A muss gleiche Struktur wie upsertBoardFromNostr() nutzen
+        this.addBoardToMetadataList({
+            id: board.id,
+            name: board.name,
+            description: board.description || '',
+            lastAccessed: new Date().toISOString(),
+            author: board.author || '',
+            publishState: board.publishState || 'draft'
+        });
+
+        this.board = board;
+        this._columnOrder = board.columns.map(c => c.id);
+        this.triggerUpdate();
+
+        console.log(`✅ Neues Board erstellt: ${name}`);
+        return board.id;
+    }
+
+    public loadBoard(boardId: string): boolean {
+        const board = BoardStorage.loadBoard(boardId);
+        if (!board) {
+            console.error(`❌ Board ${boardId} nicht gefunden`);
+            return false;
+        }
+
+        this.board = board;
+        this._columnOrder = board.columns.map(c => c.id);
+        
+        // ✅ NEW (REFACTORING): Update board fields directly
+        board.updateLastAccessed();
+        board.clearChanges();
+        BoardStorage.saveBoard(board); // Persist changes
+        
+        // ⚡ v4.1: KEIN saveToStorage beim Laden!
+        // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
+        // Das würde neuere Nostr-Daten überschreiben!
+        // Aber: updateTrigger++ damit $derived neu berechnet wird
+        this.updateTrigger++;
+        
+        ChatIntegration.reset();
+        console.log(`✅ Board geladen: ${board.name}`);
+        
+        // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
+        this.loadCardsFromNostr(board);
+        
+        return true;
+    }
+
+    public deleteBoard(boardId?: string): boolean {
+        const idToDelete = boardId || this.board.id;
+        
+        if (this.boardIds.length <= 1) {
+            console.error('❌ Letztes Board kann nicht gelöscht werden');
+            return false;
+        }
+
+        // 1. Board-Referenz speichern für Nostr-Löschung
+        const boardToDelete = (idToDelete === this.board.id) 
+            ? this.board 
+            : this.loadBoardById(idToDelete);
+
+        // 2. Auf anderes Board wechseln wenn aktuelles Board gelöscht wird
+        if (this.board.id === idToDelete) {
+            const otherBoardId = this.boardIds.find(id => id !== idToDelete);
+            if (otherBoardId) {
+                this.loadBoard(otherBoardId);
+            }
+        }
+
+        // 3. Lokal löschen
+        BoardStorage.deleteBoard(idToDelete);
+        this.boardIds = this.boardIds.filter(id => id !== idToDelete);
+        BoardStorage.saveBoardIds(this.boardIds);
+
+        console.log(`✅ Board ${idToDelete} lokal gelöscht`);
+
+        // 4. Auf Nostr löschen (asynchron)
+        if (boardToDelete) {
+            this.nostrIntegration.deleteBoard(boardToDelete);
+        }
+
+        return true;
+    }
+
+    private loadBoardById(boardId: string): Board | null {
+        try {
+            const data = BoardStorage.loadBoard(boardId);
+            if (!data) return null;
+            return BoardStorage.reconstructBoard(data);
+        } catch (error) {
+            console.error(`❌ Error loading board ${boardId}:`, error);
+            return null;
         }
     }
 
-    public addColumn(props: ColumnProps) {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten hinzufügen!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        const column = this.board.addColumn(props);
-        // WICHTIG: _columnOrder muss aktualisiert werden!
-        // Sonst wird die neue Spalte von uiData nicht berücksichtigt (weil $derived.by nach _columnOrder filtert)
-        this._columnOrder = [...this._columnOrder, column.id];
-        this.triggerUpdate();
-        return column;
+    // ============================================================================
+    // NOSTR INTEGRATION (delegiert zu NostrIntegration)
+    // ============================================================================
+    
+    public async initializeNostr(ndk: NDK): Promise<void> {
+        // initializeSyncManager erwartet NDK + Signer
+        const signer = ndk.signer;
+        await initializeSyncManager(ndk, signer);
+        
+        await this.nostrIntegration.initialize(ndk, async () => {
+            await this.loadBoardsFromNostr();
+        });
+        
+        // ✅ KRITISCH: Subscription für Live-Updates SOFORT starten
+        // Damit auch ohne Login neue Boards in anderen Browsern sichtbar werden
+        this.subscribeToNostrUpdates();
+        console.log('[BoardStore] ✅ Live subscription started - ready for multi-browser sync');
     }
 
-    public deleteColumn(columnId: string): void {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten löschen!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
+    public async loadBoardsFromNostr(): Promise<void> {
+        await this.nostrIntegration.loadBoardsFromNostr(
+            this.boardIds,
+            this.board,
+            (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
+                // ⚡ FIX: Duplikate vermeiden via Set-Deduplication
+                this.boardIds = [...new Set([...this.boardIds, ...updatedBoardIds])];
+                BoardStorage.saveBoardIds(this.boardIds);
+                console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
+                
+                if (switched && newBoard) {
+                    this.board = newBoard;
+                    this._columnOrder = newBoard.columns.map(c => c.id);
+                    this.triggerUpdate();
+                }
+            }
+        );
+    }
 
-        this.board.deleteColumn(columnId);
-        // WICHTIG: _columnOrder muss aktualisiert werden!
-        this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+    private async loadCardsFromNostr(board: Board): Promise<void> {
+        await this.nostrIntegration.loadCardsForBoard(
+            board,
+            (cardProps: any) => {
+                console.log('🃏 Card vom Relay geladen:', cardProps.id, 'für Spalte:', cardProps.columnId);
+                
+                try {
+                    // Prüfe ob Card bereits existiert (Duplikate vermeiden!)
+                    const existing = this.board.findCardById(cardProps.id);
+                    if (existing) {
+                        console.log('✅ Card bereits vorhanden, skip:', cardProps.id);
+                        return;
+                    }
+                    
+                    // Finde Zielspalte
+                    let targetColumn = this.board.findColumn(cardProps.columnId);
+                    
+                    // Fallback: Name-basiertes Matching
+                    if (!targetColumn && (cardProps as any).columnName) {
+                        targetColumn = this.board.columns.find(col => 
+                            col.name.toLowerCase() === ((cardProps as any).columnName || '').toLowerCase()
+                        );
+                        if (targetColumn) {
+                            console.log(`✅ Column matched by name: "${(cardProps as any).columnName}"`);
+                            cardProps.columnId = targetColumn.id;
+                        }
+                    }
+                    
+                    // Letzter Fallback: Erste Spalte
+                    if (!targetColumn && this.board.columns.length > 0) {
+                        targetColumn = this.board.columns[0];
+                        console.log(`⚠️ Using first column as fallback: "${targetColumn.name}"`);
+                        cardProps.columnId = targetColumn.id;
+                    }
+                    
+                    if (!targetColumn) {
+                        console.error(`❌ No column found for card ${cardProps.id}`);
+                        return;
+                    }
+                    
+                    // Card via upsert hinzufügen (mit rank-Position)
+                    this.board.upsertCard(cardProps.columnId, cardProps, cardProps.rank);
+                    
+                } catch (error) {
+                    console.error(`❌ Error loading card from Nostr:`, error);
+                }
+            }
+        );
+        
+        // Nach dem Laden aller Cards: UI aktualisieren
         this.triggerUpdate();
+        console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
+    }
+
+    /**
+     * ⚡ EVENT-DRIVEN ARCHITECTURE v2.0
+     * Subscribed zu Nostr-Updates (Board, Card, Deletion)
+     * 
+     * Nutzt die neuen Secondary Actions:
+     * - upsertCardFromNostr()
+     * - deleteCardFromNostr()
+     * - upsertBoardFromNostr()
+     */
+    public subscribeToNostrUpdates(): void {
+        console.log('[BoardStore] 🛰️ Subscribing to Nostr updates (Event-Driven v2.0)');
+        
+        // ⚡ NEU: Store-Referenz statt Callbacks!
+        this.nostrIntegration.subscribeToUpdates(this.board, this);
+    }
+
+    // Alias-Methoden für Backward-Kompatibilität
+    public async loadBoardsFromNostrForCurrentUser(): Promise<void> {
+        await this.loadBoardsFromNostr();
+    }
+
+    public subscribeToBoardUpdatesForCurrentUser(): void {
+        this.subscribeToNostrUpdates();
+    }
+
+    public getCurrentBoardId(): string {
+        return this.board.id;
     }
 
     public findColumn(columnId: string) {
         return this.board.findColumn(columnId);
     }
 
+    // Weitere Backward-Kompatibilität-Methoden
+    public addColumn(props: { name: string; color?: string }) {
+        const columnId = this.createColumn(props.name, props.color);
+        return this.board.findColumn(columnId);
+    }
+
+    public addCard(columnId: string, props: Partial<CardProps>): string {
+        return this.createCard(columnId, props.heading || 'Neue Karte', props.content);
+    }
+
+    public deleteColumnWithCards(columnId: string): void {
+        this.deleteColumn(columnId);
+    }
+
+    public upsertCard(columnId: string, props: Partial<CardProps> & { heading: string }): string {
+        const result = this.board.findCardAndColumn(props.id || '');
+        if (result) {
+            // Update existing card
+            this.editCard(result.card.id, props);
+            return result.card.id;
+        } else {
+            // Create new card
+            return this.createCard(columnId, props.heading, props.content);
+        }
+    }
+
     public findCardAndColumn(cardId: string) {
         return this.board.findCardAndColumn(cardId);
     }
 
-    public moveCard(cardId: string, fromColId: string, toColId: string): void {
-        this.board.moveCard(cardId, fromColId, toColId);
-        this.triggerUpdate(); // Trigger Reaktivität
-        // Nach einer Änderung sollte hier der Nostr-Publish-Befehl folgen
-        this.publishToNostr();
-    }
-
-    public addCard(columnId: string, props: CardProps) {
-        // ✅ NEU: Authorization Check - nur Maintainers können Karten hinzufügen
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
-            console.error(error);
-            throw new Error(error);
-        }
-        
-        const column = this.board.findColumn(columnId);
-        if (column) {
-            const card = column.addCard(props);
-            this.triggerUpdate(); // Trigger Reaktivität
-            return card;
-        }
-        throw new Error(`Column with id ${columnId} not found`);
-    }
-
-    /**
-     * Upsert-Operation: Fügt Karte hinzu ODER aktualisiert sie, wenn sie bereits existiert
-     * 
-     * Primärer Use-Case: Nostr Events laden/synchronisieren
-     * - Wenn Karte mit gleicher ID existiert → Update durchführen
-     * - Wenn Karte nicht existiert → Neue Karte in targetColumnId erstellen
-     * 
-     * @param targetColumnId - Spalte, in die neue Karten aufgenommen werden
-     * @param props - Die Kartendaten (MUSS eine ID haben!)
-     * @returns Die neue oder aktualisierte Karte
-     */
-    public upsertCard(targetColumnId: string, props: CardProps) {
-        if (!props.id) {
-            throw new Error('upsertCard requires props.id to be set (from Nostr d-tag)');
-        }
-
-        // ✅ NEU: Authorization Check (nur bei INSERT neuer Karten)
-        // UPDATE: Keine Authorisierung nötig (Existierende Karten können von author aktualisiert werden)
-        const existingCard = this.board.findCardById(props.id!);
-        if (!existingCard) {
-            // Neue Karte: Check Berechtigung
-            const signerPubkey = authStore.getPubkey();
-            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-                const error = `❌ Nicht autorisiert: Sie müssen angemeldet sein und Maintainer dieses Boards sein (author: ${this.board.author}, maintainers: ${this.board.maintainers.join(', ') || 'keine'})`;
-                console.error(error);
-                throw new Error(error);
-            }
-        }
-
-        const card = this.board.upsertCard(targetColumnId, props);
-        this.triggerUpdate(); // Trigger Reaktivität
-        this.publishToNostr();
-        return card;
-    }
-
     public updateCard(cardId: string, updates: Partial<CardProps>): void {
-        const result = this.board.findCardAndColumn(cardId);
-        if (result) {
-            result.card.update(updates);
-            this.triggerUpdate(); // Trigger Reaktivität
-            this.publishToNostr();
-            
-            // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
-            this.publishCardAsync(cardId).catch(err => 
-                console.error('⚠️ Async card publishing failed:', err)
-            );
-        } else {
-            throw new Error(`Card with id ${cardId} not found`);
-        }
+        this.editCard(cardId, updates);
     }
 
-    public deleteCard(cardId: string): void {
-        const result = this.board.findCardAndColumn(cardId);
-        if (result) {
-            result.column.deleteCard(cardId);
-            this.triggerUpdate(); // Trigger Reaktivität
-            this.publishToNostr();
-            
-            // 🔄 Trigger async deletion publishing to Nostr (non-blocking)
-            // TODO: Implement createDeletionEvent in nostrEvents.ts if needed
-        } else {
-            throw new Error(`Card with id ${cardId} not found`);
-        }
-    }
-
-    public setCardPublishState(cardId: string, state: PublishState): void {
-        const result = this.board.findCardAndColumn(cardId);
-        if (result) {
-            result.card.setPublishState(state);
-            this.triggerUpdate(); // ← CRITICAL FIX: Trigger Reaktivität + localStorage!
-            this.publishToNostr();
-            
-            // 🔄 Trigger async publishing to Nostr via SyncManager (non-blocking)
-            this.publishCardAsync(cardId).catch(err => 
-                console.error('⚠️ Async card publishing failed:', err)
-            );
-        } else {
-            throw new Error(`Card with id ${cardId} not found`);
-        }
-    }
-
-    public addComment(cardId: string, text: string, author: string): void {
-        const result = this.board.findCardAndColumn(cardId);
-        if (result) {
-            result.card.addComment(text, author);
-            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
-            this.publishToNostr();
-        } else {
-            throw new Error(`Card with id ${cardId} not found`);
-        }
-    }
-
-    public deleteComment(cardId: string, commentId: string): void {
-        const result = this.board.findCardAndColumn(cardId);
-        if (result) {
-            result.card.deleteComment(commentId);
-            this.triggerUpdate(); // Triggert Reaktivität + localStorage Speicherung
-            this.publishToNostr();
-        } else {
-            throw new Error(`Card with id ${cardId} not found`);
-        }
-    }
-
-    public updateColumn(columnId: string, updates: { name?: string; color?: string }): void {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten bearbeiten!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        const column = this.board.findColumn(columnId);
-        if (column) {
-            column.update(updates);
-            this.triggerUpdate(); // Trigger Reaktivität
-            this.publishToNostr();
-        } else {
-            throw new Error(`Column with id ${columnId} not found`);
-        }
-    }
-
-    public deleteColumnWithCards(columnId: string): void {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten mit Karten löschen!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            throw new Error(`❌ Keine Berechtigung: Sie müssen angemeldet sein und Maintainer dieses Boards sein`);
-        }
-
-        this.board.deleteColumn(columnId);
-        
-        // Entferne auch aus _columnOrder
-        this._columnOrder = this._columnOrder.filter(id => id !== columnId);
-        
-        this.triggerUpdate(); // Trigger Reaktivität
-        this.publishToNostr();
-    }
-
-
-
-    // ============================================================================
-    // UI-EVENT-HANDLER (direkt von Komponenten aufrufbar)
-    // ============================================================================
-
-    /**
-     * Wird von Column.svelte Footer aufgerufen: "Neue Karte" Button
-     */
-    public createCard(columnId: string, name: string = 'Neue Karte', description?: string): string {
-        console.log('🆕 createCard aufgerufen:', { columnId, name, description });
-        
-        // ✅ KRITISCH: author MUSS der Pubkey sein (wie bei Board)!
-        // Das ist notwendig für Nostr-Kompatibilität und Vergleiche
-        const author = authStore.getPubkey() || 'anonymous';
-        const authorName = authStore.getUserName() || author; // ← NEU: Lesbar Name für UI
-        
-        const cardProps: CardProps = {
-            heading: name,
-            content: description || 'Bitte bearbeiten...',
-            publishState: 'draft',
-            author: author, // ✅ Pubkey für Konsistenz & Nostr Events
-            authorName: authorName // ← NEU: Lesbar Name speichern
-        };
-        
-        const card = this.addCard(columnId, cardProps);
-
-        return card.id;
-    }
-
-    /**
-     * Wird von Board.svelte aufgerufen: "Neue Spalte" Button am Ende des Boards
-     */
-    public createColumn(name: string = 'Neue Spalte'): string {
-        console.log('🆕 createColumn aufgerufen:', { name });
-        
-        const columnProps: ColumnProps = {
-            name,
-            color: 'slate'
-        };
-        
-        // Verwende this.addColumn() (nicht this.board.addColumn()) damit _columnOrder aktualisiert wird
-        const column = this.addColumn(columnProps);
-        
-        this.triggerUpdate(); // Trigger Reaktivität
-        this.publishToNostr();
-        
-        console.log('✅ Spalte erstellt:', column.id, 'Board hat jetzt', this.board.columns.length, 'Spalten');
-        return column.id;
-    }
-
-    /**
-     * Wird von DnD-Handlern aufgerufen: Karte zwischen Spalten verschieben
-     * @returns true bei Erfolg, false bei fehlender Autorisierung
-     */
-    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): boolean {
-        // Nur bewegen wenn sich die Spalte tatsächlich geändert hat
-        if (fromColumnId !== toColumnId) {
-            // 🔐 AUTORISIERUNG: Prüfen vor dem Verschieben
-            const signerPubkey = authStore.getPubkey();
-            if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-                console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
-                return false;
-            }
-            
-            this.moveCard(cardId, fromColumnId, toColumnId);
-        }
-        return true;
-    }
-
-    /**
-     * Wird von Board.svelte aufgerufen: Spalten reordern (DnD)
-     * @param reorderedColumns - Die neu angeordneten Spalten aus der UI
-     * @returns true bei Erfolg, false bei fehlender Autorisierung
-     */
-    public reorderColumns(reorderedColumns: UIColumn[]): boolean {
-        console.log('🔄 reorderColumns aufgerufen mit', reorderedColumns.length, 'Spalten');
-        
-        // 🔐 AUTORISIERUNG: Prüfen vor dem Reordern
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
-            return false;
-        }
-        
-        // Aktualisiere die interne Reihenfolge der Spalten
-        // Die reorderedColumns enthalten die UIColumn-Struktur mit allen Karten
-        // Wir müssen die Board.columns mit den neuen Positions-IDs aktualisieren
-        
-        const newColumnOrder = reorderedColumns.map(col => col.id);
-        console.log('  Neue Reihenfolge:', newColumnOrder);
-        
-        // Sortiere board.columns nach der neuen Reihenfolge
-        this.board.columns.sort((a, b) => {
-            const indexA = newColumnOrder.indexOf(a.id);
-            const indexB = newColumnOrder.indexOf(b.id);
-            return indexA - indexB;
-        });
-        
-        // Trigger Reaktivität und speichern
-        this.triggerUpdate();
-        this.publishToNostr();
-        
-        return true;
-    }
-
-    /**
-     * Vollständige Synchronisierung: Spalten-Reihenfolge UND Karten-Positionen
-     * @param uiColumns - Komplettes Update mit neuer Spalten- und Karten-Reihenfolge
-     * @returns true bei Erfolg, false bei fehlender Autorisierung
-     */
-    public syncBoardState(uiColumns: UIColumn[]): boolean {
-        // 🔐 AUTORISIERUNG: Nur Maintainer dürfen Spalten/Karten verschieben!
-        const signerPubkey = authStore.getPubkey();
-        if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-            console.warn('❌ Keine Berechtigung: User muss angemeldet sein und Maintainer sein');
-            return false; // ← Gibt false zurück statt Error zu werfen
-        }
-
-        console.log('🔄 syncBoardState - Synchronisiere Spalten UND Karten');
-        console.log('  UI-Spalten:', uiColumns.length);
-        
-        // SCHRITT 1: Spalten-Reihenfolge
-        const newColumnOrder = uiColumns.map(c => c.id);
-        this._columnOrder = newColumnOrder;
-        
-        // SCHRITT 2: Reordne board.columns
-        const columnMap = new Map(this.board.columns.map(c => [c.id, c]));
-        const reorderedColumns: typeof this.board.columns = [];
-        for (const colId of newColumnOrder) {
-            const col = columnMap.get(colId);
-            if (col) {
-                reorderedColumns.push(col);
-            }
-        }
-        this.board.columns = reorderedColumns;
-        
-        // SCHRITT 3: Karten-Positionen synchronisieren
-        // Für jede Spalte in der UI: Aktualisiere die Karten-Reihenfolge und Position
-        for (const uiColumn of uiColumns) {
-            const boardColumn = this.board.findColumn(uiColumn.id);
-            if (!boardColumn) continue;
-            
-            // Erstelle eine Map der Karten-IDs für schnellen Zugriff
-            const cardMap = new Map(boardColumn.cards.map(c => [c.id, c]));
-            
-            // Reordne die Karten basierend auf der UI-Reihenfolge
-            const reorderedCards: typeof boardColumn.cards = [];
-            for (const uiCard of uiColumn.items) {
-                const cardIdStr = String(uiCard.id);
-                
-                // Prüfe ob die Karte bereits in dieser Spalte ist
-                let card = cardMap.get(cardIdStr);
-                
-                if (!card) {
-                    // Karte ist woanders - suche sie im gesamten Board
-                    const result = this.board.findCardAndColumn(cardIdStr);
-                    if (result && result.column.id !== uiColumn.id) {
-                        // Karte muss von anderer Spalte verschoben werden
-                        console.log(`  📍 Verschiebe Karte ${cardIdStr} von ${result.column.id} nach ${uiColumn.id}`);
-                        result.column.deleteCard(cardIdStr);
-                        boardColumn.appendCard(result.card);
-                        card = result.card;
-                    }
-                }
-                
-                if (card) {
-                    reorderedCards.push(card);
-                }
-            }
-            
-            // Setze die neue Karten-Reihenfolge
-            boardColumn.cards = reorderedCards;
-        }
-        
-        console.log('  ✓ Board-State synchronisiert');
-        
-        this.triggerUpdate();
-        this.publishToNostr();
-        
-        return true; // ← Erfolgreiche Synchronisierung
-    }
-
-    /**
-     * Wird von UI aufgerufen: Karte löschen
-     */
     public removeCard(cardId: string): void {
         this.deleteCard(cardId);
     }
 
-    /**
-     * Wird von UI aufgerufen: Kartendetails bearbeiten  
-     */
-    public editCard(cardId: string, updates: { name?: string; description?: string; image?: string; color?: string; labels?: string[] }): void {
-        const cardProps: Partial<CardProps> = {};
-        if (updates.name !== undefined) cardProps.heading = updates.name;
-        if (updates.description !== undefined) cardProps.content = updates.description;
-        if (updates.image !== undefined) cardProps.image = updates.image;
-        if (updates.color !== undefined) cardProps.color = updates.color;
-        if (updates.labels !== undefined) cardProps.labels = updates.labels;
-        
-        this.updateCard(cardId, cardProps);
+    public setCardPublishState(cardId: string, state: 'draft' | 'published' | 'archived'): void {
+        BoardOperations.setCardPublishState(this.board, cardId, state);
+        this.triggerUpdate();
+        this.publishCardAsync(cardId);
     }
 
-    // ============================================================================
-    // PASTE-SYSTEM INTEGRATION
-    // ============================================================================
-
-    /**
-     * Verarbeitet Paste-Event für eine bestehende Card
-     * 
-     * @param cardId - ID der Ziel-Card
-     * @param clipboardData - Clipboard-Daten vom Paste-Event
-     * @returns PasteResult mit success/error
-     */
-    public async handleCardPaste(
-        cardId: string,
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
-    ): Promise<import('../paste/types.js').PasteResult> {
-        const { pasteHandler } = await import('../paste/PasteHandler.js');
+    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
+        const allBoards = this.getAllBoards();
         
-        const result = await pasteHandler.handlePaste(clipboardData, {
-            target: 'card',
-            cardId,
-            author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'
+        // ✅ 1. SORT by lastAccessed DESC (newest first)
+        const sorted = allBoards.sort((a, b) => {
+            const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
+            const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
+            return timeB - timeA; // DESC: newest first
         });
         
-        if (result.success && result.cardUpdates) {
-            // Merge mit existierender Card
-            const existing = this.board.findCardAndColumn(cardId);
-            if (existing) {
-                const merged = this.mergeCardUpdates(existing.card, result.cardUpdates);
-                this.updateCard(cardId, merged);
-            }
+        // ✅ 2. FILTER by search query
+        const filtered = query 
+            ? sorted.filter(board => {
+                const lowerQuery = query.toLowerCase();
+                return board.name.toLowerCase().includes(lowerQuery) ||
+                    (board.description && board.description.toLowerCase().includes(lowerQuery));
+            })
+            : sorted;
+        
+        // ✅ 3. LIMIT to maxBoardsInSidebar (unless searching)
+        // User said: "alle durchsuchbar" - so no limit when query exists
+        if (!query) {
+            const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
+            return filtered.slice(0, maxBoards);
         }
         
-        return result;
+        return filtered;
     }
 
     /**
-     * Verarbeitet Paste-Event für eine Column (erstellt neue Card)
+     * ⚡ REFRESH: Board IDs neu aus localStorage laden
      * 
-     * @param columnId - ID der Ziel-Column
-     * @param clipboardData - Clipboard-Daten vom Paste-Event
-     * @returns PasteResult mit success/error + neue Card-ID
+     * Nützlich nach Filter-Fixes oder manuellen localStorage-Änderungen.
+     * Ruft loadBoardIds() mit aktualisierter Filter-Logik auf.
      */
-    public async handleColumnPaste(
-        columnId: string,
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
-    ): Promise<import('../paste/types.js').PasteResult & { cardId?: string }> {
-        const { pasteHandler } = await import('../paste/PasteHandler.js');
+    public refreshBoardIds(): void {
+        const oldCount = this.boardIds.length;
+        this.boardIds = BoardStorage.loadBoardIds();
+        const newCount = this.boardIds.length;
         
-        const result = await pasteHandler.handlePaste(clipboardData, {
-            target: 'column',
-            columnId,
-            author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'
-        });
+        console.log(`🔄 Board IDs refreshed: ${oldCount} → ${newCount}`);
+        console.log(`   IDs: [${this.boardIds.slice(0, 5).join(', ')}${this.boardIds.length > 5 ? ', ...' : ''}]`);
         
-        if (result.success && result.cardUpdates) {
-            // Erstelle neue Card mit Paste-Daten
-            const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
-            
-            const cardProps: CardProps = {
-                heading: result.cardUpdates.heading || 'Eingefügter Inhalt',
-                content: result.cardUpdates.content || '',
-                image: result.cardUpdates.image,
-                color: result.cardUpdates.color || 'slate',
-                labels: result.cardUpdates.labels || [],
-                links: result.cardUpdates.links || [],
-                publishState: 'draft',
-                author
-            };
-            
-            const card = this.addCard(columnId, cardProps);
-            return { ...result, cardId: card.id };
-        }
-        
-        return result;
+        this.triggerUpdate(); // UI aktualisieren
     }
 
-    /**
-     * Hilfsmethode: Merged Paste-Updates mit existierender Card
-     * Append statt Replace für content
-     */
-    private mergeCardUpdates(
-        existingCard: import('../classes/BoardModel.js').Card,
-        updates: Partial<CardProps>
-    ): Partial<CardProps> {
-        const merged: Partial<CardProps> = { ...updates };
-        
-        // Content: Append statt Replace
-        if (updates.content) {
-            merged.content = (existingCard.content || '') + updates.content;
-        }
-        
-        // Labels: Merge (keine Duplikate)
-        if (updates.labels) {
-            const existingLabels = existingCard.labels || [];
-            merged.labels = [...new Set([...existingLabels, ...updates.labels])];
-        }
-        
-        // Links: Append
-        if (updates.links) {
-            const existingLinks = existingCard.links || [];
-            merged.links = [...existingLinks, ...updates.links];
-        }
-        
-        return merged;
+    public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {
+        BoardOperations.updateBoardMetadata(this.board, updates);
+        this.triggerUpdate();
+        this.publishBoardAsync();
     }
 
-    // ============================================================================
-    // KI-INTEGRATION
-    // ============================================================================
+    public setPublishState(state: 'draft' | 'published' | 'archived'): void {
+        BoardOperations.setBoardPublishState(this.board, state);
+        this.triggerUpdate();
+        this.publishBoardAsync();
+    }
 
-    public sendPromptToAI(prompt: string, context?: any): void {
-        if (this.chat) {
-            this.chat.sendPromptToAI(prompt, context);
+    public moveCard(cardId: string, fromColumnId: string, toColumnId: string): void {
+        if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
+            this.triggerUpdate();
+            this.publishBoardAsync();
         }
     }
 
-    public processAIAction(action: any): void {
-        if (this.chat) {
-            this.chat.processAIAction(action);
-            this.publishToNostr();
-        }
-    }
-
-    // ============================================================================
-    // NOSTR-INTEGRATION
-    // ============================================================================
-
-    /**
-     * ✅ REFACTORED: Publiziert Board-Änderungen zu Nostr
-     * 
-     * Diese Methode wird nach jeder Board-Änderung aufgerufen (via triggerUpdate).
-     * Sie delegiert an publishBoardAsync() für die tatsächliche Nostr-Publikation.
-     * 
-     * Non-blocking: Führt publishing im Hintergrund aus ohne auf Ergebnis zu warten.
-     */
-    private publishToNostr(): void {
-        // ✅ AUTHORIZATION CHECK: Bereits in addCard() und upsertCard() durchgeführt!
-        // Diese Methode wird nur aufgerufen wenn Validierung erfolgreich war
-        
-        // Lokale Persistierung (synchron)
-        this.saveToStorage();
-        
-        // Nostr Publishing (async, non-blocking)
-        if (this.ndk) {
-            this.publishBoardAsync().catch(error => {
-                console.error('⚠️ Background board publishing failed:', error);
-            });
-        } else {
-            console.warn('⚠️ NDK not initialized, skipping Nostr publishing');
-        }
-    }
-
-    // ============================================================================
-    // ASYNC NOSTR PUBLISHING (via SyncManager)
-    // ============================================================================
-
-    /**
-     * Publishes a card update to Nostr via SyncManager
-     * Non-blocking: executes in background, doesn't wait for result
-     */
-    private async publishCardAsync(cardId: string): Promise<void> {
-        if (!this.ndk) return;
-
-        try {
-            const result = this.board.findCardAndColumn(cardId);
-            if (!result) {
-                console.warn(`⚠️ Card ${cardId} not found for publishing`);
-                return;
-            }
-
-            const { card, column } = result;
-            const columnIndex = this.board.columns.indexOf(column);
-            const boardRef = `30302:${this.board.author || 'unknown'}:${this.board.id}`;
-
-            // Serialize card to Nostr event (Kind 30302)
-            const event = cardToNostrEvent(card, column.name, columnIndex, boardRef, this.ndk);
-
-            // NEW: Determine target relays based on Card's PublishState
-            const publishState = card.publishState || 'draft';
-            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
-            
-            const targetRelays = getTargetRelays({
-                publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
-                relaysPublic: settingsStore.settings.relaysPublic,
-                relaysPrivate: settingsStore.settings.relaysPrivate
-            });
-
-            // Queue for publishing (handles signing + retry logic)
-            const syncManager = getSyncManager();
-
-            console.log(`✅ Card ${cardId} queued for publishing`);
-            await syncManager.publishOrQueue(
-                event, 
-                'card', 
-                'normal',
-                normalizedState,
-                targetRelays
-            );
-        } catch (error) {
-            console.error(`❌ Error publishing card ${cardId}:`, error);
-        }
-    }
-
-    /**
-     * Publishes board metadata to Nostr via SyncManager
-     * Non-blocking: executes in background
-     */
     private async publishBoardAsync(): Promise<void> {
-        if (!this.ndk) return;
-
-        try {
-            // Serialize board to Nostr event (Kind 30301)
-            const event = boardToNostrEvent(this.board, this.ndk);
-
-            // NEW: Determine target relays based on PublishState
-            // Note: 'archived' is treated as 'private' for relay selection
-            const publishState = this.board.publishState || 'draft';
-            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
-            
-            const targetRelays = getTargetRelays({
-                publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
-                relaysPublic: settingsStore.settings.relaysPublic,
-                relaysPrivate: settingsStore.settings.relaysPrivate
-            });
-
-            // Queue for publishing with target relays
-            const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(
-                event, 
-                'board', 
-                'normal',
-                normalizedState,
-                targetRelays
-            );
-        } catch (error) {
-            console.error(`❌ Error publishing board:`, error);
-        }
+        await this.nostrIntegration.publishBoard(this.board);
     }
 
-    /**
-     * Publishes a comment to Nostr via SyncManager
-     * Non-blocking: executes in background
-     * 
-     * Comments inherit the PublishState of their parent Card:
-     * - Draft card → Comment goes to private relays (based on draftPublishingMode)
-     * - Published card → Comment goes to public relays
-     * - Private/Archived card → Comment goes to private relays
-     */
+    private async publishCardAsync(cardId: string): Promise<void> {
+        await this.nostrIntegration.publishCard(this.board, cardId);
+    }
+
     private async publishCommentAsync(cardId: string, commentId: string): Promise<void> {
-        if (!this.ndk) return;
+        await this.nostrIntegration.publishComment(this.board, cardId, commentId);
+    }
 
+    // ============================================================================
+    // CARD/COLUMN OPERATIONS (delegiert zu BoardOperations)
+    // ============================================================================
+    
+    public createCard(columnId: string, name: string, description?: string): string {
+        const author = this.getSafeAuthor();
+        const cardId = BoardOperations.createCard(this.board, columnId, name, description, author);
+        
+        if (cardId) {
+            this.triggerUpdate();
+            this.publishCardAsync(cardId);
+        }
+        
+        return cardId || '';
+    }
+
+    public editCard(cardId: string, updates: Partial<CardProps>): void {
+        if (BoardOperations.updateCard(this.board, cardId, updates)) {
+            this.triggerUpdate();
+            this.publishCardAsync(cardId);
+        }
+    }
+
+    public async deleteCard(cardId: string): Promise<void> {
+        // Lösche Card lokal UND auf Nostr (via BoardOperations)
+        const success = await BoardOperations.deleteCard(
+            this.board, 
+            cardId, 
+            this.nostrIntegration
+        );
+        
+        if (success) {
+            this.triggerUpdate();
+            this.publishBoardAsync();
+        }
+    }
+
+    public createColumn(name: string, color?: string): string {
+        const columnId = BoardOperations.createColumn(this.board, name, color);
+        
+        if (columnId) {
+            this._columnOrder = [...this._columnOrder, columnId];
+            this.triggerUpdate();
+            this.publishBoardAsync();
+        }
+        
+        return columnId || '';
+    }
+
+    public updateColumn(columnId: string, updates: Partial<ColumnProps>): void {
+        if (BoardOperations.updateColumn(this.board, columnId, updates)) {
+            this.triggerUpdate();
+            this.publishBoardAsync();
+        }
+    }
+
+    public deleteColumn(columnId: string): void {
+        if (BoardOperations.deleteColumn(this.board, columnId)) {
+            this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+            this.triggerUpdate();
+            this.publishBoardAsync();
+        }
+    }
+
+    public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): void {
+        if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
+            this.triggerUpdate();
+            this.publishCardAsync(cardId);
+            this.publishBoardAsync();
+        }
+    }
+
+    public reorderColumns(columnIds: string[]): void {
+        this._columnOrder = columnIds;
+        BoardOperations.reorderColumns(this.board, columnIds);
+        this.triggerUpdate();
+        this.publishBoardAsync();
+    }
+
+    private syncInProgress = $state(false);
+    private pendingSyncData: UIColumn[] | null = null;
+    private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    public syncBoardState(uiColumns: UIColumn[]): boolean {
+        // Debounce: Sammle schnelle Änderungen
+        this.pendingSyncData = uiColumns;
+        
+        if (this.syncDebounceTimer) {
+            clearTimeout(this.syncDebounceTimer);
+            console.log('⏱️ Sync debounced (waiting for more changes)');
+        }
+        
+        this.syncDebounceTimer = setTimeout(() => {
+            this.executeSyncBoardState();
+        }, 150); // 150ms debounce
+        
+        return true;
+    }
+
+    private async executeSyncBoardState(): Promise<void> {
+        if (this.syncInProgress) {
+            console.log('⏳ Sync bereits in Arbeit, warte...');
+            return;
+        }
+        
+        if (!this.pendingSyncData) return;
+        
+        this.syncInProgress = true;
+        const uiColumns = this.pendingSyncData;
+        this.pendingSyncData = null;
+        
+        console.group('📦 executeSyncBoardState');
+        console.log('Processing columns:', uiColumns.length);
+        
         try {
-            const result = this.board.findCardAndColumn(cardId);
-            if (!result) {
-                console.warn(`⚠️ Card ${cardId} not found for comment publishing`);
-                return;
-            }
-
-            const { card } = result;
-            const comment = card.comments?.find(c => c.id === commentId);
-            if (!comment) {
-                console.warn(`⚠️ Comment ${commentId} not found`);
-                return;
-            }
-
-            // Create comment event (Kind 1)
-            const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
-            const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
-
-            // NEW: Comments inherit relay selection from their parent Card
-            const publishState = card.publishState || 'draft';
-            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
-            
-            const targetRelays = getTargetRelays({
-                publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
-                relaysPublic: settingsStore.settings.relaysPublic,
-                relaysPrivate: settingsStore.settings.relaysPrivate
-            });
-
-            // Queue for publishing with inherited relay selection
-            const syncManager = getSyncManager();
-            await syncManager.publishOrQueue(
-                event, 
-                'comment', 
-                'normal',
-                normalizedState,
-                targetRelays
+            const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
+                this.board,
+                this._columnOrder,
+                uiColumns
             );
-
-            console.log(`✅ Comment ${commentId} queued for publishing (inherits card's ${publishState} state)`);
+            this._columnOrder = newColumnOrder;
+            
+            // ⚡ CRITICAL: triggerUpdate mit publish=false
+            // Grund: Wir publishen selbst weiter unten sequentiell!
+            this.triggerUpdate({ publish: false });
+            
+            // Publishing sequentiell (nicht parallel) um Race Conditions zu vermeiden
+            console.log('📤 Publishing board...');
+            await this.publishBoardAsync();
+            
+            // Publiziere verschobene Cards
+            if (movedCardIds.length > 0) {
+                console.log(`📤 Publishing ${movedCardIds.length} moved cards...`);
+                for (const cardId of movedCardIds) {
+                    await this.publishCardAsync(cardId);
+                }
+            }
+            
+            console.log('✅ Sync complete');
         } catch (error) {
-            console.error(`❌ Error publishing comment:`, error);
+            console.error('❌ Sync failed:', error);
+        } finally {
+            this.syncInProgress = false;
+            console.groupEnd();
+            
+            // Falls während dem Sync neue Daten angekommen sind
+            if (this.pendingSyncData) {
+                console.log('🔄 Neue Änderungen vorhanden, starte erneut...');
+                this.executeSyncBoardState();
+            }
+        }
+    }
+
+    public async addComment(cardId: string, text: string, authorOverride?: string): Promise<void> {
+        const author = authorOverride || this.getSafeAuthor();
+        const commentId = BoardOperations.addComment(this.board, cardId, text, author);
+        
+        if (commentId) {
+            this.triggerUpdate();
+            await this.publishCommentAsync(cardId, commentId);
+        }
+    }
+
+    public deleteComment(cardId: string, commentId: string): void {
+        if (BoardOperations.deleteComment(this.board, cardId, commentId)) {
+            this.triggerUpdate();
+            this.publishCardAsync(cardId);
         }
     }
 
     // ============================================================================
-    // CHAT-INTEGRATION
+    // EXPORT/IMPORT (delegiert zu ExportImport)
     // ============================================================================
+    
+    public exportBoardAsJson(includeMetadata = true): string {
+        return ExportImport.exportBoardAsJson(this.board, includeMetadata);
+    }
 
-    private chat = $state<Chat | null>(null);
+    public exportAllBoardsAsJson(): string {
+        return ExportImport.exportAllBoardsAsJson(this.boardIds);
+    }
 
-    public initializeChat(): void {
-        this.chat = new Chat(this.board);
+    public importBoardFromJson(jsonString: string, mode: 'merge' | 'new' | 'overwrite' = 'merge') {
+        return ExportImport.importBoardFromJson(jsonString, mode);
+    }
+
+    public saveImportedBoard(board: Board, overwriteExisting = false): string {
+        // ⚡ FIX: Duplikate vermeiden mit Set
+        if (overwriteExisting) {
+            if (!this.boardIds.includes(board.id)) {
+                this.boardIds = [...this.boardIds, board.id];
+            }
+        } else {
+            if (!this.boardIds.includes(board.id)) {
+                this.boardIds = [...this.boardIds, board.id];
+            }
+        }
+
+        BoardStorage.saveBoardIds(this.boardIds);
+        BoardStorage.saveBoard(board);
+
+        this.board = board;
+        this._columnOrder = board.columns.map(c => c.id);
+        this.triggerUpdate();
+
+        console.log(`✅ Importiertes Board gespeichert: ${board.name}`);
+        return board.id;
+    }
+
+    public restoreAllBoardsFromBackup(jsonString: string) {
+        const result = ExportImport.restoreAllBoardsFromBackup(jsonString);
+        
+        if (result.success && result.boards.length > 0) {
+            const newBoardIds = result.boards.map(b => b.id);
+            this.boardIds = [...new Set([...this.boardIds, ...newBoardIds])];
+            BoardStorage.saveBoardIds(this.boardIds);
+            
+            this.board = result.boards[0];
+            this._columnOrder = this.board.columns.map(c => c.id);
+            this.triggerUpdate();
+        }
+        
+        return result;
+    }
+
+    public async generateShareLink(boardIdOrMetadata?: string | boolean, includeMetadata = true) {
+        // Backward compatibility: alte Signatur generateShareLink(includeMetadata)
+        // Neue Signatur: generateShareLink(boardId, includeMetadata)
+        let targetBoardId: string;
+        let metadata: boolean;
+        
+        if (typeof boardIdOrMetadata === 'string') {
+            targetBoardId = boardIdOrMetadata;
+            metadata = includeMetadata;
+        } else {
+            targetBoardId = this.board.id;
+            metadata = boardIdOrMetadata !== undefined ? boardIdOrMetadata : true;
+        }
+        
+        // Load the target board temporarily if not current
+        const wasCurrentBoard = targetBoardId === this.board.id;
+        const originalBoardId = this.board.id;
+        
+        if (!wasCurrentBoard) {
+            this.loadBoard(targetBoardId);
+        }
+        
+        const result = await ExportImport.generateShareLink(this.board, metadata);
+        
+        // Restore original board if we switched
+        if (!wasCurrentBoard) {
+            this.loadBoard(originalBoardId);
+        }
+        
+        return result;
+    }
+
+    public parseShareToken(token: string): any {
+        return ExportImport.parseShareToken(token);
+    }
+
+    public importFromShareToken(token: string, mode: 'merge' | 'new' | 'overwrite' = 'merge') {
+        try {
+            const parsed = this.parseShareToken(token);
+            const boardData = parsed.board || parsed;
+            const jsonString = JSON.stringify(boardData);
+            return this.importBoardFromJson(jsonString, mode);
+        } catch (error) {
+            console.error('❌ Share-Token Import fehlgeschlagen:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
+    }
+
+    // ============================================================================
+    // LEARNING METHODS (delegiert zu BoardLearning)
+    // ============================================================================
+    
+    public learnColumnStructure(columnId: string): any {
+        return BoardLearning.learnColumnStructure(this.board, columnId);
+    }
+
+    public learnBoardStructure(): any {
+        return BoardLearning.learnBoardStructure(this.board);
+    }
+
+    public createColumnWithTemplate(templateName: string): any {
+        return BoardLearning.createColumnWithTemplate(this.board, templateName);
+    }
+
+    // ============================================================================
+    // PASTE HANDLERS (delegiert zu PasteHandler)
+    // ============================================================================
+    
+    public handleCardPaste(cardId: string, pastedData: any): { success: boolean; type?: string; debug?: any; error?: string } {
+        const author = this.getSafeAuthor();
+        const success = PasteHandler.handleCardPaste(this.board, cardId, pastedData, author);
+        
+        if (success) {
+            this.triggerUpdate();
+            this.publishCardAsync(cardId);
+            return { success: true, type: 'card' };
+        }
+        
+        return { success: false, error: 'Paste fehlgeschlagen' };
+    }
+
+    public handleColumnPaste(columnId: string, pastedCards: any[]): { success: boolean; type?: string; debug?: any; error?: string } {
+        const author = this.getSafeAuthor();
+        const cardIds = PasteHandler.handleColumnPaste(this.board, columnId, pastedCards, author);
+        
+        if (cardIds.length > 0) {
+            this.triggerUpdate();
+            this.publishBoardAsync();
+            return { success: true, type: 'column', debug: { cardIds } };
+        }
+        
+        return { success: false, error: 'Keine Karten erstellt' };
+    }
+
+    // ============================================================================
+    // CHAT INTEGRATION (delegiert zu ChatIntegration)
+    // ============================================================================
+    
+    public initializeChat(): Chat {
+        return ChatIntegration.initializeChat(this.board);
     }
 
     public get chatInstance(): Chat | null {
-        return this.chat;
+        return ChatIntegration.getChatInstance();
     }
 
     // ============================================================================
-    // UTILITY-METHODEN
+    // UTILITY METHODS
     // ============================================================================
+    
+    public updateBoardAuthor(): void {
+        this.fixAnonymousBoardAuthor();
+    }
 
-    public getContextData(full: boolean = false): any {
+    public getContextData(full = true): any {
         return this.board.getContextData(full);
     }
 
-    // ============================================================================
-    // EXPORT/IMPORT FUNKTIONALITÄT (Phase 1.5D)
-    // ============================================================================
-
-    /**
-     * Exportiert das aktuelle Board als JSON mit Metadaten
-     * @param includeMetadata - true: Wrapper mit Version/Timestamp. false: Raw Board data
-     * @returns JSON-String
-     */
-    public exportBoardAsJson(includeMetadata = true): string {
-        const data = this.board.getContextData(true);
-        
-        if (includeMetadata) {
-            return JSON.stringify({
-                version: '1.0',
-                exportedAt: generateTimestamp(),
-                exportedBy: 'kanban-editor',
-                boardId: this.board.id,
-                boardName: this.board.name,
-                board: data
-            }, null, 2);
-        }
-        
-        return JSON.stringify(data, null, 2);
-    }
-
-    /**
-     * Exportiert alle Boards als Backup-Datei
-     * @returns JSON-String mit allen Boards
-     */
-    public exportAllBoardsAsJson(): string {
-        const allBoards: any[] = [];
-        
-        // Lade alle Boards aus localStorage
-        for (const boardId of this.boardIds) {
-            const storageKey = `kanban-${boardId}`;
-            const stored = localStorage.getItem(storageKey);
-            
-            if (stored) {
-                try {
-                    const data = JSON.parse(stored);
-                    allBoards.push(data);
-                } catch (error) {
-                    console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, error);
-                }
-            }
-        }
-        
-        return JSON.stringify({
-            version: '1.0',
-            exportedAt: generateTimestamp(),
-            exportedBy: 'kanban-editor',
-            boardCount: allBoards.length,
-            boards: allBoards
-        }, null, 2);
-    }
-
-    /**
-     * Importiert ein Board aus JSON
-     * @param jsonString - JSON-String mit Board-Daten
-     * @param mode - 'merge' (neue IDs), 'new' (separates Board), 'overwrite' (replace aktuelles)
-     * @returns { success, board?, error? }
-     */
-    public importBoardFromJson(
-        jsonString: string,
-        mode: 'merge' | 'new' | 'overwrite' = 'merge'
-    ): { success: boolean; board?: Board; error?: string } {
+    private getSafeAuthor(): string {
         try {
-            const importData = JSON.parse(jsonString);
-            
-            // Entpacke Metadaten falls vorhanden
-            const boardData = importData.board || importData;
-            
-            // Validiere Struktur
-            if (!boardData.id || !boardData.name) {
-                return { 
-                    success: false, 
-                    error: 'Invalid board structure: missing id or name' 
-                };
+            if (!authStore || typeof authStore.getPubkey !== 'function') {
+                return 'anonymous';
             }
+            return authStore.getPubkey() || 'anonymous';
+        } catch {
+            return 'anonymous';
+        }
+    }
 
-            let newBoard: Board;
+    /**
+     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
+     * SINGLE SOURCE OF TRUTH: kanban-boards-metadata
+     * 
+     * Aktualisiert NUR:
+     * - 'kanban-boards-metadata' - Vollständige Metadaten + IDs
+     * 
+     * ⚡ REFACTORING (9. Nov 2025): Eliminiert redundanten kanban-boards-list Key
+     * 
+     * @param metadata - Board-Metadaten (für Sidebar-Liste)
+     */
+    private addBoardToMetadataList(metadata: {
+        id: string;
+        name: string;
+        description: string;
+        lastAccessed: string;
+        author: string;
+        publishState: string;
+    }): void {
+        if (typeof window === 'undefined') {
+            console.warn('⚠️ localStorage not available (SSR?)');
+            return;
+        }
+        
+        // === Single Key Update ===
+        const metadataKey = 'kanban-boards-metadata';
+        const stored = localStorage.getItem(metadataKey);
+        const boardList = stored ? JSON.parse(stored) : [];
+        
+        // Prüfe: Board bereits in Liste?
+        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
+        
+        if (existingIndex >= 0) {
+            // Update existing entry
+            boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
+            console.log(`🔄 Updated metadata for board ${metadata.id}`);
+        } else {
+            // Add new entry
+            boardList.push(metadata);
+            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
+        }
+        
+        // Speichere aktualisierte Metadata-Liste (Single Source of Truth)
+        localStorage.setItem(metadataKey, JSON.stringify(boardList));
+    }
 
-            if (mode === 'merge' || mode === 'new') {
-                // MERGE-Mode: Neue IDs für alle Elemente (keine Konflikte!)
-                // NEW-Mode: Wie MERGE, aber mit "(Imported)" Suffix
-                
-                newBoard = new Board({
-                    id: generateDTag('board'),
-                    name: mode === 'new' 
-                        ? `${boardData.name} (Imported)`
-                        : boardData.name,
-                    description: boardData.description,
-                    publishState: boardData.publishState || 'draft',
-                    author: boardData.author || 'anonymous',
-                    maintainers: boardData.maintainers || [boardData.author || 'anonymous'],
-                    tags: boardData.tags || [],
-                    ccLicense: boardData.ccLicense || 'cc-by-4.0',
-                    columns: []
-                });
+    private getDefaultColorForColumn(name: string): string {
+        const normalized = name.toLowerCase().trim();
+        const colorMap: Record<string, string> = {
+            'to do': 'blue',
+            'in progress': 'orange',
+            'done': 'green',
+            'archive': 'red'
+        };
+        return colorMap[normalized] || 'slate';
+    }
 
-                // Rekonstruiere Spalten mit neuen IDs
-                newBoard.columns = (boardData.columns || []).map((colData: any) => {
-                    const newCol = new Column({
-                        id: generateDTag('column'),
-                        name: colData.name,
-                        color: colData.color || 'slate',
-                        cards: []
-                    });
-                    
-                    // Rekonstruiere Karten mit neuen IDs
-                    newCol.cards = (colData.cards || []).map((cardData: any) => {
-                        return new Card({
-                            id: generateDTag('card'),
-                            heading: cardData.heading,
-                            content: cardData.content,
-                            image: cardData.image,
-                            color: cardData.color || 'slate',
-                            author: cardData.author || 'anonymous',
-                            authorName: cardData.authorName,
-                            comments: cardData.comments || [],
-                            labels: cardData.labels || [],
-                            links: cardData.links || [],
-                            attendees: cardData.attendees || [],
-                            publishState: cardData.publishState || 'draft'
-                        });
-                    });
-                    
-                    return newCol;
-                });
-                
-                console.log(`✅ Board importiert im '${mode}'-Modus:`, newBoard.name);
-                
-            } else if (mode === 'overwrite') {
-                // OVERWRITE-Mode: Nutze IDs aus Datei (direkt ersetzen)
-                newBoard = this.reconstructBoard(boardData);
-                console.log('✅ Board importiert im "overwrite"-Modus:', newBoard.name);
-            } else {
-                return { success: false, error: 'Unknown import mode' };
-            }
-
-            return { success: true, board: newBoard };
-            
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('❌ Import-Fehler:', errorMessage);
-            return { 
-                success: false, 
-                error: `Failed to import board: ${errorMessage}` 
+    private exposeCurrentBoardIdToWindow(): void {
+        if (typeof window !== 'undefined') {
+            (window as any).__getCurrentBoardId = () => {
+                console.log('📍 Aktuelles Board:', this.board.id, '|', this.board.name);
+                return this.board.id;
             };
         }
     }
 
-    /**
-     * Speichert ein importiertes Board dauerhaft
-     * @param board - Das zu speichernde Board
-     * @param overwriteExisting - true: Ersetze aktuelles Board. false: Speichere als separates Board
-     */
-    public saveImportedBoard(board: Board, overwriteExisting = false): string {
-        if (typeof window === 'undefined') {
-            throw new Error('Cannot save board: not in browser environment');
-        }
+    // ========================================================================
+    // EVENT-DRIVEN ARCHITECTURE v2.0: SECONDARY ACTIONS
+    // Werden von Nostr-Event-Handlern aufgerufen (publish: false)
+    // ========================================================================
 
+    /**
+     * ⚡ SEKUNDÄR: Card von Nostr-Event erstellen/updaten
+     * KEIN Publish zu Nostr (publish: false)
+     */
+    public upsertCardFromNostr(cardProps: CardProps): void {
+        BoardOperations.upsertCardFromNostr(this.board, cardProps);
+        this.triggerUpdate({ publish: false });
+    }
+
+    /**
+     * ⚡ v3.0: BACKGROUND BOARD SYNC
+     * 
+     * Card von Nostr-Event in BACKGROUND-Board einfügen/updaten
+     * (Board ist NICHT aktuell geöffnet)
+     * 
+     * Wird aufgerufen wenn:
+     * - Browser A hat Board 1 offen
+     * - Browser B hat Board 2 offen
+     * - Browser A fügt Card zu Board 1 hinzu
+     * - Browser B empfängt Card-Event für Board 1 (Background-Board)
+     * 
+     * KEIN Publish zu Nostr (publish: false)
+     * KEIN triggerUpdate (kein UI-Update, da Board nicht geöffnet)
+     */
+    public upsertCardToBackgroundBoard(boardId: string, cardProps: CardProps): void {
+        console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        
+        // 1. Lade Board aus localStorage
+        const storageKey = `kanban-${boardId}`;
+        const stored = localStorage.getItem(storageKey);
+        
+        if (!stored) {
+            console.warn(`⚠️ Background Board ${boardId} not found in localStorage - skip card update`);
+            return;
+        }
+        
         try {
-            const data = board.getContextData(true);
-            const storageKey = `kanban-${board.id}`;
+            const boardData = JSON.parse(stored);
             
-            // Speichere das Board
-            localStorage.setItem(storageKey, JSON.stringify(data));
+            // 2. Rekonstruiere Board-Instanz (ohne Reaktivität!)
+            const tempBoard = BoardStorage.reconstructBoard(boardData);
             
-            // Registriere die Board-ID wenn es nicht bereits existiert
-            if (!this.boardIds.includes(board.id)) {
-                this.boardIds = [...this.boardIds, board.id];
-                this.saveBoardIds();
-            }
+            // 3. Füge/Update Card in tempBoard
+            BoardOperations.upsertCardFromNostr(tempBoard, cardProps);
             
-            // Wenn overwriteExisting: Setze aktuelles Board
-            if (overwriteExisting) {
-                this.board = board;
-                this._columnOrder = board.columns.map(c => c.id);
-                this.updateTrigger++;
-            }
+            // 4. Speichere Board zurück zu localStorage
+            BoardStorage.saveBoard(tempBoard);
             
-            console.log('✅ Importiertes Board gespeichert:', storageKey);
-            return board.id;
+            console.log(`✅ Card ${cardProps.id} saved to background board ${boardId}`);
             
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('❌ Fehler beim Speichern des importierten Boards:', errorMessage);
-            throw error;
+            console.error(`❌ Error updating background board ${boardId}:`, error);
         }
     }
 
     /**
-     * Stellt alle Boards aus einer backup.json Datei wieder her
-     * Erkennt automatisch Backup-Format mit "boards" Array
+     * ⚡ SEKUNDÄR: Card von Nostr-Event löschen
+     * KEIN Publish zu Nostr (publish: false)
+     */
+    public deleteCardFromNostr(cardId: string): void {
+        BoardOperations.deleteCardFromNostr(this.board, cardId);
+        this.triggerUpdate({ publish: false });
+    }
+
+    /**
+     * ⚡ SEKUNDÄR: Board von Nostr-Event erstellen/updaten
+     * KEIN Publish zu Nostr (publish: false)
      * 
-     * @param jsonString - JSON-String aus backup.json (mit oder ohne Metadaten)
-     * @returns { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] }
+     * Wird aufgerufen für:
+     * - Neue Boards von anderen Usern (kollaboratives Erstellen)
+     * - Updates auf Board-Metadaten (Name, Description, Tags)
      */
-    public restoreAllBoardsFromBackup(
-        jsonString: string
-    ): { success: boolean; imported: number; failed: number; boards: Board[]; errors: string[] } {
-        const result = {
-            success: false,
-            imported: 0,
-            failed: 0,
-            boards: [] as Board[],
-            errors: [] as string[]
-        };
-
-        try {
-            const backupData = JSON.parse(jsonString);
-            
-            // Erkenne Backup-Format: muss "boards" Array haben
-            const boardsArray = backupData.boards || [];
-            
-            if (!Array.isArray(boardsArray) || boardsArray.length === 0) {
-                result.errors.push('Invalid backup format: missing boards array');
-                return result;
-            }
-
-            console.log(`🔄 Stelle ${boardsArray.length} Boards wieder her...`);
-
-            // Importiere jedes Board
-            for (let i = 0; i < boardsArray.length; i++) {
-                try {
-                    const boardData = boardsArray[i];
-                    
-                    // Validiere Board-Struktur
-                    if (!boardData.id || !boardData.name) {
-                        throw new Error(`Board ${i + 1}: missing id or name`);
-                    }
-
-                    // Rekonstruiere Board im OVERWRITE-Mode (nutze original IDs aus backup)
-                    const board = this.reconstructBoard(boardData);
-                    
-                    // Speichere Board dauerhaft
-                    const storageKey = `kanban-${board.id}`;
-                    localStorage.setItem(storageKey, JSON.stringify(boardData));
-                    
-                    // Registriere Board-ID
-                    if (!this.boardIds.includes(board.id)) {
-                        this.boardIds = [...this.boardIds, board.id];
-                    }
-                    
-                    result.boards.push(board);
-                    result.imported++;
-                    
-                    console.log(`✅ Board ${i + 1}/${boardsArray.length}: ${board.name}`);
-                    
-                } catch (error) {
-                    const errorMsg = error instanceof Error ? error.message : String(error);
-                    result.errors.push(`Board ${i + 1}: ${errorMsg}`);
-                    result.failed++;
-                    console.error(`❌ Board ${i + 1} fehlgeschlagen:`, errorMsg);
-                }
-            }
-
-            // Speichere alle Board-IDs persistiert
-            this.saveBoardIds();
-            
-            result.success = result.imported > 0;
-            
-            console.log(`✅ Backup-Wiederherstellung abgeschlossen: ${result.imported} OK, ${result.failed} Fehler`);
-            
-            return result;
-            
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            result.errors.push(`Failed to restore backup: ${errorMessage}`);
-            console.error('❌ Backup-Wiederherstellungsfehler:', errorMessage);
-            return result;
+    public upsertBoardFromNostr(boardProps: BoardProps): void {
+        if (!boardProps.id) {
+            console.warn('⚠️ upsertBoardFromNostr: Board has no ID, skip');
+            return;
         }
-    }
-
-    public exportData(): any {
-        return this.board.getContextData(true);
-    }
-
-    /**
-     * Erzeugt einen share-link für ein Board. Komprimiert mit jsoncrush und erzeugt URL
-     * @param boardId - id des zu teilenden Boards
-     * @returns { url: string, tokenSize: number }
-     */
-    public async generateShareLink(boardId: string, includeMetadata = true): Promise<{ url: string; tokenSize: number }> {
-        // Finde Board (falls boardId ist current board, nutze this.board)
-        let board: Board | undefined;
-        if (this.board.id === boardId) board = this.board;
-        else {
-            // versuche aus storage zu laden
-            const raw = localStorage.getItem(`kanban-${boardId}`);
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    board = this.reconstructBoard(parsed);
-                } catch (e) {
-                    console.warn('generateShareLink: Failed to parse stored board', e);
-                }
-            }
-        }
-
-        if (!board) throw new Error(`Board ${boardId} not found`);
-
-        const payload = includeMetadata
-            ? { version: '1.0', exportedAt: generateTimestamp(), board: board.getContextData(true) }
-            : board.getContextData(true);
-
-        const json = JSON.stringify(payload);
-    const crushed = jsoncrush.crush(json);
-    const token = encodeURIComponent(crushed);
-
-        // Read optional limit from static config (if available)
-        let maxTokenSize = 200000; // default
-        try {
-            const resp = await fetch('/config.json');
-            if (resp.ok) {
-                const cfg = await resp.json();
-                if (cfg?.shareTokenMaxSize) maxTokenSize = Number(cfg.shareTokenMaxSize) || maxTokenSize;
-            }
-        } catch (e) {
-            // ignore
-        }
-
-        if (token.length > maxTokenSize) {
-            throw new Error(`Share token too large (${token.length} > ${maxTokenSize}). Use Export/Backup instead.`);
-        }
-
-        const url = `${window.location.origin}/cardsboard?import=${token}`;
-        return { url, tokenSize: token.length };
-    }
-
-    /**
-     * Dekodiert und validiert einen Share-Token (jsoncrush)
-     * 
-     * Der Token-Flow:
-     * 1. generateShareLink() crusht JSON und encodiert mit encodeURIComponent
-     * 2. URL enthält: ?import=<ENCODED_CRUSHED>
-     * 3. Browser decodiert automatisch bei params.get('import')
-     * 4. parseShareToken() erhält den CRUSHED (aber DECODIERT) Token
-     * 5. Wir uncrushen direkt!
-     */
-    public parseShareToken(token: string): any {
-        try {
-            // Der Token ist bereits decodiert vom Browser!
-            // Er ist CRUSHED aber nicht URI-encoded mehr
-            const json = jsoncrush.uncrush(token);
-            const parsed = JSON.parse(json);
+        
+        // ⚡ v4.2: DEBUG - Was kommt an?
+        console.log(`🔍 upsertBoardFromNostr DEBUG:`, {
+            id: boardProps.id,
+            name: boardProps.name,
+            updatedAt: boardProps.updatedAt,
+            updatedAtType: typeof boardProps.updatedAt
+        });
+        
+        // ⚡ Konvertiere ColumnProps zu kompaktem Format
+        const columns = boardProps.columns?.map(c => ({
+            id: c.id || '',
+            name: c.name,
+            color: c.color
+        }));
+        
+        const isUpdate = BoardOperations.upsertBoardFromNostr(this.board, {
+            id: boardProps.id,
+            name: boardProps.name,
+            description: boardProps.description,
+            tags: boardProps.tags,
+            columns, // ⚡ NEU: Spalten-Sync
+            author: boardProps.author,
+            publishState: boardProps.publishState,
+            updatedAt: boardProps.updatedAt  // ⚡ v4.1: Timestamp MUSS weitergegeben werden!
+        });
+        
+        if (isUpdate) {
+            // Board-Metadaten + Spalten wurden aktualisiert
+            // ⚡ CRITICAL: _columnOrder muss synchronisiert werden!
+            this._columnOrder = this.board.columns.map(c => c.id);
             
-            console.log('✅ Token erfolgreich geparst:', {
-                hasBoard: !!parsed.board,
-                boardName: parsed.board?.name || 'N/A',
-                boardColumns: parsed.board?.columns?.length || 0,
-                version: parsed.version || 'unknown'
+            // ⚡ v4.1: KEIN saveToStorage bei Updates von Nostr!
+            // Grund: Board existiert bereits in localStorage
+            // Update wird erst beim nächsten User-Edit gespeichert
+            // Das verhindert Race Conditions mit LWW
+            this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+        } else {
+            // ⚡ v4.2: NEUES Board - Erstelle VOLLSTÄNDIGES Board-Objekt!
+            // Grund: Board existiert noch nicht in localStorage
+            // User soll es in der Board-Liste UND beim Öffnen sehen können
+            // KRITISCH: Nutze updatedAt vom Event, nicht NOW!
+            console.log(`📦 upsertBoardFromNostr: Neues Board ${boardProps.id}, erstelle & speichere`);
+            console.log(`🔍 DEBUG: boardProps.updatedAt =`, boardProps.updatedAt);
+            
+            // 1. Erstelle vollständiges Board-Objekt aus boardProps
+            const newBoard = new Board({
+                id: boardProps.id,
+                eventId: boardProps.eventId,
+                name: boardProps.name,
+                description: boardProps.description,
+                tags: boardProps.tags,
+                author: boardProps.author,
+                publishState: boardProps.publishState,
+                updatedAt: boardProps.updatedAt,  // ⚡ v4.2: Timestamp vom Event!
+                columns: boardProps.columns
             });
             
-            return parsed;
-        } catch (error) {
-            console.error('❌ Token-Parsing Fehler:', error);
-            const msg = error instanceof Error ? error.message : String(error);
-            throw new Error(`Invalid share token: ${msg}`);
+            console.log(`🔍 DEBUG: newBoard.updatedAt AFTER construction =`, newBoard.updatedAt);
+            
+            // 2. Speichere vollständiges Board zu localStorage
+            // (Board hat jetzt den korrekten updatedAt-Timestamp vom Event)
+            BoardStorage.saveBoard(newBoard);
+            
+            // 3. Board-Liste muss neu geladen werden
+            this.boardIds = BoardStorage.loadBoardIds();
+            
+            // 4. Trigger update für UI
+            this.updateTrigger++;
         }
     }
-
-    /**
-     * Importiert direkt aus einem Share-Token (crushed). Gibt das Import-Ergebnis zurück.
-     */
-    public importFromShareToken(token: string, mode: 'merge'|'new'|'overwrite' = 'merge') {
-        try {
-            const data = this.parseShareToken(token);
-            
-            // ⚠️ parseShareToken() gibt entweder { version, board: {...} } oder direkt board zurück
-            // Je nachdem, was in generateShareLink() als Payload gespeichert wurde
-            const actualData = data.board || data;
-            
-            // Wenn Backup-Format (Array von Boards)
-            if (Array.isArray(actualData.boards)) {
-                return this.restoreAllBoardsFromBackup(JSON.stringify(actualData));
-            }
-            
-            // Single board
-            const jsonString = JSON.stringify(actualData);
-            return this.importBoardFromJson(jsonString, mode);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error('❌ importFromShareToken Fehler:', message);
-            return { success: false, error: message };
-        }
-    }
-
-    public importData(data: any): void {
-        // Legacy-Methode: Nur für interne Tests
-        if (data && data.columns) {
-            console.log('Legacy importData() aufgerufen. Nutze stattdessen importBoardFromJson()');
-        }
-    }
-
-    // ============================================================================
-    // LEARNING METHODS - DELEGATED TO BOARDLEARNINGMANAGER (Phase 3.1B)
-    // ============================================================================
     
     /**
-     * 🎓 LEARNING INTERFACE: Lernt die Kartenstruktur einer Spalte
+     * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
+     * KEIN Publish zu Nostr (publish: false)
      * 
-     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
-     * Wenn LearningManager deaktiviert: Gibt Error zurück
+     * Wird aufgerufen wenn ein Deletion-Event (Kind 5) für ein Board empfangen wird.
      * 
-     * @param columnId - ID der zu lernenden Spalte
-     * @returns Lern-Ergebnis mit Status und Konfidenz
-     * 
-     * @see BoardLearningManager.learnColumnStructure()
-     * 
-     * @example
-     * // Nach dem Erstellen einer "Einstieg"-Spalte mit 4 Standard-Karten:
-     * boardStore.learnColumnStructure('column-123');
-     * // → Delegiert an: boardLearningManager.learnColumnStructure('column-123')
+     * @param boardId - ID des zu löschenden Boards
      */
-    public learnColumnStructure(columnId: string): LearnResult | { success: false; error: string } {
-        if (!boardLearningManager || !boardLearningManager.isEnabled) {
-            return { 
-                success: false, 
-                error: 'LearningManager nicht aktiviert (config.learning.useLearningManager = false)' 
-            };
-        }
+    public deleteBoardFromNostr(boardId: string): void {
+        console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
         
-        return boardLearningManager.learnColumnStructure(columnId) as any;
-    }
-
-    /**
-     * 🎓 LEARNING INTERFACE: Lernt die Struktur aller Spalten im Board
-     * 
-     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
-     * 
-     * @returns Array von Lern-Ergebnissen pro Spalte
-     * 
-     * @see BoardLearningManager.learnBoardStructure()
-     * 
-     * @example
-     * // Nach dem Finalisieren eines typischen Unterrichts-Boards:
-     * const results = boardStore.learnBoardStructure();
-     * // → Delegiert an: boardLearningManager.learnBoardStructure()
-     */
-    public learnBoardStructure(): Array<{ columnName: string; result: LearnResult | { success: false; error: string } }> {
-        if (!boardLearningManager || !boardLearningManager.isEnabled) {
-            return [];
-        }
+        // Lösche Board aus Metadaten-Liste
+        const wasDeleted = BoardOperations.deleteBoardFromNostr(boardId);
         
-        return boardLearningManager.learnBoardStructure();
-    }
-
-    /**
-     * 🎓 LEARNING INTERFACE: Erstellt Spalte mit gelerntem Template
-     * 
-     * ⚠️ DELEGATION: Diese Methode delegiert an BoardLearningManager (wenn aktiviert)
-     * Falls LearningManager deaktiviert: Erstellt Spalte ohne Template
-     * 
-     * @param columnName - Name der neuen Spalte
-     * @param applyTemplate - Ob gelernte Karten automatisch hinzugefügt werden sollen
-     * @param minConfidence - Minimale Konfidenz für Template-Anwendung (default: 0.7)
-     * @returns Objekt mit columnId und optional templateApplied + cardIds
-     * 
-     * @see BoardLearningManager.createColumnWithTemplate()
-     * 
-     * @example
-     * // Erstellt "Einstieg"-Spalte MIT Template (wenn gelernt):
-     * const result = boardStore.createColumnWithTemplate('Einstieg', true);
-     * // → Delegiert an: boardLearningManager.createColumnWithTemplate('Einstieg', true, 0.7)
-     */
-    public createColumnWithTemplate(
-        columnName: string,
-        applyTemplate: boolean = false,
-        minConfidence: number = 0.7
-    ): {
-        columnId: string;
-        templateApplied?: boolean;
-        cardIds?: string[];
-        confidence?: number;
-    } {
-        // Fallback: Wenn LearningManager nicht verfügbar → erstelle einfache Spalte
-        if (!boardLearningManager || !boardLearningManager.isEnabled) {
-            const columnId = this.createColumn(columnName);
-            return { columnId, templateApplied: false };
-        }
-        
-        // Delegation an LearningManager
-        return boardLearningManager.createColumnWithTemplate(columnName, applyTemplate, minConfidence);
-    }
-
-    /**
-     * Aktualisiert den Author des aktuellen Boards
-     * 
-     * Wird von +layout.svelte nach erfolgreichem Login aufgerufen,
-     * um "anonymous" durch den echten User zu ersetzen.
-     * 
-     * @returns true wenn erfolgreich aktualisiert
-     */
-    public updateBoardAuthor(): boolean {
-        try {
-            const pubkey = authStore?.getPubkeySafe();
+        if (wasDeleted) {
+            // Board-Liste aktualisieren
+            this.boardIds = BoardStorage.loadBoardIds();
             
-            if (!pubkey) {
-                console.warn('⚠️ Kein Pubkey verfügbar, Author bleibt unverändert');
-                return false;
+            // Wenn aktuell geladenes Board gelöscht wurde → zu anderem Board wechseln
+            if (this.board.id === boardId) {
+                console.log(`⚠️ Active board ${boardId} was deleted`);
+                
+                if (this.boardIds.length > 0) {
+                    // Wechsel zum ersten verfügbaren Board
+                    const firstBoardId = this.boardIds[0];
+                    console.log(`🔄 Switching to first available board: ${firstBoardId}`);
+                    
+                    const raw = BoardStorage.loadBoard(firstBoardId);
+                    if (raw) {
+                        this.board = BoardStorage.reconstructBoard(raw);
+                        this._columnOrder = this.board.columns.map(c => c.id);
+                    }
+                } else {
+                    // Keine Boards mehr → erstelle neues leeres Board
+                    console.log(`📝 No boards left, creating new empty board`);
+                    this.createBoard('Neues Board', 'Automatisch erstellt nach Board-Löschung');
+                }
             }
             
-            // Nur updaten wenn aktueller Author "anonymous" ist
-            if (this.board.author === 'anonymous') {
-                console.log('🔄 Aktualisiere Board-Author von "anonymous" zu:', pubkey.slice(0, 16) + '...');
-                this.board.author = pubkey;
-                this.triggerUpdate();
-                this.publishToNostr();
-                return true;
-            }
-            
-            // Board-Author ist bereits gesetzt
-            const currentAuthor = this.board.author || 'unknown';
-            console.log('✅ Board-Author ist bereits gesetzt:', currentAuthor.length > 16 ? currentAuthor.slice(0, 16) + '...' : currentAuthor);
-            return false;
-        } catch (error) {
-            console.error('❌ Fehler beim Aktualisieren des Board-Authors:', error);
-            return false;
+            this.triggerUpdate({ publish: false });
         }
     }
 }
 
 // ============================================================================
-// STORE-INSTANZEN
+// SINGLETON EXPORT
 // ============================================================================
 
-// Globale Board-Store-Instanz
 export const boardStore = new BoardStore();
 
 // ============================================================================
-// CONVENIENCE-FUNKTIONEN FÜR KOMPONENTEN
+// HELPER FUNCTIONS (für Komponenten-Kompatibilität)
 // ============================================================================
 
-// Hilfsfunktion für Card-Operationen
 export function getCardById(cardId: string) {
-    return boardStore.findCardAndColumn(cardId);
+    const board = boardStore.data;
+    const result = board.findCardAndColumn(cardId);
+    return result?.card || null;
 }
 
-// Hilfsfunktion für Column-Operationen
 export function getColumnById(columnId: string) {
-    return boardStore.findColumn(columnId);
+    const board = boardStore.data;
+    return board.findColumn(columnId) || null;
 }

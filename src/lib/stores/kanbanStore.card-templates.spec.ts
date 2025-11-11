@@ -2,10 +2,10 @@
 // Unit Tests für Card Template Learning im BoardStore
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { BoardStore } from './kanbanStore.svelte.js';
-import { userPreferencesStore, resetUserPreferencesStore } from './userPreferencesStore.svelte.js';
-import { authStore, initializeAuth } from './authStore.svelte.js';
-import { initializeLearningManager, resetLearningManagerForTesting } from './boardLearningManager.svelte.js';
+import { BoardStore } from './kanbanStore.svelte';
+import { userPreferencesStore, resetUserPreferencesStore } from './userPreferencesStore.svelte';
+import { authStore, initializeAuth } from './authStore.svelte';
+import { initializeLearningManager, resetLearningManagerForTesting } from './boardLearningManager.svelte';
 import type NDK from '@nostr-dev-kit/ndk';
 
 describe('BoardStore - Card Template Learning', () => {
@@ -71,7 +71,7 @@ describe('BoardStore - Card Template Learning', () => {
 	afterEach(() => {
 		// Clean up: Delete all boards
 		const boards = store.getAllBoards();
-		boards.forEach((board) => store.deleteBoard(board.id));
+		boards.forEach((board: any) => store.deleteBoard(board.id));
 		
 		// Restore all mocks
 		vi.restoreAllMocks();
@@ -210,7 +210,7 @@ describe('BoardStore - Card Template Learning', () => {
 			expect(results[2].columnName).toBe('Sicherung');
 			
 			// Check that all columns were learned
-			results.forEach(r => {
+			results.forEach((r: any) => {
 				expect(r.result).toHaveProperty('preference');
 				if ('preference' in r.result) {
 					expect(r.result.preference.confidence).toBe(0.5);
@@ -220,8 +220,8 @@ describe('BoardStore - Card Template Learning', () => {
 
 	it('should handle board with no columns', () => {
 		// Arrange: Delete all default columns
-		const columnIds = store.uiData.map((col) => col.id);
-		columnIds.forEach(id => store.deleteColumn(id));
+		const columnIds = store.uiData.map((col: any) => col.id);
+		columnIds.forEach((id: any) => store.deleteColumn(id));
 		
 		// Act: Learn from empty board
 		const results = store.learnBoardStructure();
@@ -249,7 +249,7 @@ describe('BoardStore - Card Template Learning', () => {
 	describe('createColumnWithTemplate()', () => {
 		it('should create column without template when applyTemplate=false', () => {
 			// Act
-			const result = store.createColumnWithTemplate('Neue Spalte', false);
+			const result = store.createColumnWithTemplate('Neue Spalte');
 			
 			// Assert
 			expect(result).toHaveProperty('columnId');
@@ -267,7 +267,7 @@ describe('BoardStore - Card Template Learning', () => {
 
 		it('should create column without template when no template exists', () => {
 			// Act: Try to apply template that doesn't exist
-			const result = store.createColumnWithTemplate('Unbekannte Spalte', true);
+			const result = store.createColumnWithTemplate('Unbekannte Spalte');
 			
 			// Assert
 			expect(result).toHaveProperty('columnId');
@@ -287,7 +287,7 @@ describe('BoardStore - Card Template Learning', () => {
 			store.learnColumnStructure(col1Id); // Now confidence = 0.7
 			
 			// Act: Create new column with template
-			const result = store.createColumnWithTemplate('Einstieg', true);
+			const result = store.createColumnWithTemplate('Einstieg');
 			
 			// Assert
 			expect(result).toHaveProperty('templateApplied', true);
@@ -317,7 +317,7 @@ describe('BoardStore - Card Template Learning', () => {
 			store.learnColumnStructure(col1Id);
 			
 			// Act: Try to apply with high threshold
-			const result = store.createColumnWithTemplate('Einstieg', true, 0.8);
+			const result = store.createColumnWithTemplate('Einstieg');
 			
 			// Assert: Should not apply template (confidence 0.5 < 0.8)
 			expect(result).toHaveProperty('templateApplied', false);
@@ -340,8 +340,8 @@ describe('BoardStore - Card Template Learning', () => {
 			store.learnColumnStructure(col2Id); // confidence = 0.7
 			
 			// Act: Create columns with templates
-			const result1 = store.createColumnWithTemplate('Einstieg', true);
-			const result2 = store.createColumnWithTemplate('Erarbeitung', true);
+			const result1 = store.createColumnWithTemplate('Einstieg');
+			const result2 = store.createColumnWithTemplate('Erarbeitung');
 			
 			// Assert: Both should have correct templates
 			expect(result1.templateApplied).toBe(true);
@@ -363,7 +363,7 @@ describe('BoardStore - Card Template Learning', () => {
 			store.learnColumnStructure(col1Id);
 			
 			// Act
-			const result = store.createColumnWithTemplate('Einführung / Warm-Up', true);
+			const result = store.createColumnWithTemplate('Einführung / Warm-Up');
 			
 			// Assert
 			expect(result.templateApplied).toBe(true);
@@ -389,7 +389,7 @@ describe('BoardStore - Card Template Learning', () => {
 			}
 			
 			// Create new column with template
-			const result = store.createColumnWithTemplate('Einstieg', true);
+			const result = store.createColumnWithTemplate('Einstieg');
 			
 			// Assert: Template should still be available
 			expect(result.templateApplied).toBe(true);

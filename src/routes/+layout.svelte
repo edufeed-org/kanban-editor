@@ -26,7 +26,28 @@
   const authStore = initializeAuth(ndk);
 
   onMount(async () => {
-    // Initialize BoardStore with NDK for Nostr publishing
+    // 🔑 CRITICAL: Initialize SyncManager FIRST (before AuthStore restores session)
+    // This ensures SyncManager.updateSigner() works when AuthStore restores NIP-07
+    try {
+      const { initializeSyncManager } = await import('$lib/stores/syncManager.svelte');
+      initializeSyncManager(ndk, undefined);
+      console.log('✅ SyncManager initialized first');
+    } catch (error) {
+      console.warn('⚠️ SyncManager init failed:', error);
+    }
+
+    // 🔐 SECOND: Restore AuthStore session
+    // At this point, SyncManager is ready to receive updateSigner() calls
+    try {
+      await authStore.restoreSession();
+      console.log('✅ AuthStore session restored');
+    } catch (error) {
+      console.warn('⚠️ AuthStore session restore failed:', error);
+    }
+
+    // ✅ THIRD: Initialize BoardStore with NDK for Nostr publishing
+    // At this point, authStore is fully ready with restored session & signer
+    // AND SyncManager is initialized and has the signer
     try {
       boardStore.initializeNostr(ndk);
       console.log('✅ BoardStore initialized with NDK - publishing ready');

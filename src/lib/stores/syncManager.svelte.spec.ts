@@ -385,12 +385,12 @@ describe('SyncManager', () => {
       event2.kind = 30302;
       await syncManager.publishOrQueue(event2, 'card');
 
-      const stats = syncManager.getQueueStats();
+      const queuedEvents = syncManager.getQueuedEvents();
 
-      expect(stats.total).toBe(2);
-      expect(stats.byType.board).toBe(1);
-      expect(stats.byType.card).toBe(1);
-      expect(stats.byType.comment).toBe(0);
+      expect(queuedEvents.length).toBe(2);
+      expect(queuedEvents.filter(e => e.type === 'board').length).toBe(1);
+      expect(queuedEvents.filter(e => e.type === 'card').length).toBe(1);
+      expect(queuedEvents.filter(e => e.type === 'comment').length).toBe(0);
     });
   });
 
