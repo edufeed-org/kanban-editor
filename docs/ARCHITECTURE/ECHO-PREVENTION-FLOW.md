@@ -125,7 +125,7 @@ private async handleBoardEvent(boardEvent: any, boardStore: any) {
         // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
         setTimeout(() => {
             syncManager.clearMyEvent(boardEvent.id);
-            console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
+            console.log(`[SyncManager] 🗑️ Delayed cleanup (1s): ${boardEvent.id.substring(0, 30)}...`);
         }, 5000);
         
         return; // ← Early exit, KEIN Processing!
@@ -217,7 +217,7 @@ function handleDndFinalizeColumns(e: any) {
 ⏭️ Eigenes Board-Event erkannt - SKIP: abc123...
 [SyncManager] ✅ Event published to 1 relay(s)
 🔓 Board.svelte: isLocalDnD = false (nach 2s)
-[SyncManager] 🗑️ Delayed cleanup (5s): abc123... (nach 5s)
+[SyncManager] 🗑️ Delayed cleanup (1s): abc123... (nach 5s)
 ```
 
 **Erwartete UI:**
@@ -263,7 +263,7 @@ function handleDndFinalizeColumns(e: any) {
 ⏭️ Eigenes Board-Event erkannt - SKIP
 📥 Board-Event erhalten: abc123... ← Echo #2 (same ID!)
 ⏭️ Eigenes Board-Event erkannt - SKIP ← AUCH GESKIPPT! ✅
-[SyncManager] 🗑️ Delayed cleanup (5s): abc123... (nach 5s)
+[SyncManager] 🗑️ Delayed cleanup (1s): abc123... (nach 5s)
 ```
 
 **Erwartete UI:**
@@ -335,7 +335,7 @@ setTimeout(() => { isLocalDnD = false; }, 2000);
 **Check:** Cleanup funktioniert?
 ```javascript
 // Nach 5 Sekunden sollte erscheinen:
-[SyncManager] 🗑️ Delayed cleanup (5s): ...
+[SyncManager] 🗑️ Delayed cleanup (1s): ...
 
 // Check Set size (sollte klein bleiben):
 console.log(syncManager.myPublishedEvents.size); // Sollte < 10 sein
