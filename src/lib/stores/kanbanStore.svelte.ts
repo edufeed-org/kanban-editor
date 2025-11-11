@@ -824,6 +824,30 @@ export class BoardStore {
         }
     }
 
+    /**
+     * Loads comments for a specific card from Nostr relays
+     * Fetches Kind 1 events and merges with local comments
+     * 
+     * @param cardId - ID of the card to load comments for
+     * 
+     * @example
+     * ```typescript
+     * await boardStore.loadComments('card-123');
+     * // Fetches all remote comments, merges with local, persists to storage
+     * ```
+     */
+    public async loadComments(cardId: string): Promise<void> {
+        if (!this.nostrIntegration) {
+            console.warn('[BoardStore] loadComments: Nostr integration not available');
+            return;
+        }
+
+        await this.nostrIntegration.loadComments(this.board, cardId);
+        
+        // Trigger UI update after comments are loaded
+        this.triggerUpdate();
+    }
+
     // ============================================================================
     // EXPORT/IMPORT (delegiert zu ExportImport)
     // ============================================================================

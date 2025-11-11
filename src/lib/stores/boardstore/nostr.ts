@@ -3,6 +3,7 @@
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
+import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
@@ -978,6 +979,84 @@ export class NostrIntegration {
         });
 
         return merged;
+    }
+
+    /**
+     * Loads comments for a specific card from Nostr relays
+     * Fetches Kind 1 events with #a tag referencing the card, merges with local comments
+     * 
+     * @param board - Board containing the card
+     * @param cardId - ID of the card to load comments for
+     * 
+     * @example
+     * ```typescript
+     * await nostrIntegration.loadComments(board, 'card-123');
+     * // Fetches all Kind 1 events with #a: ['30302:author:card-123']
+     * // Merges with local comments in card.comments
+     * // Persists merged state to localStorage
+     * ```
+     */
+    public async loadComments(board: Board, cardId: string): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] loadComments: NDK not initialized');
+            return;
+        }
+
+        try {
+            // 1. Find the card in the board
+            const result = board.findCardAndColumn(cardId);
+            if (!result) {
+                console.warn(`[NostrIntegration] Card ${cardId} not found in board`);
+                return;
+            }
+
+            const { card } = result;
+
+            // 2. Build card reference for Nostr filter
+            // Format: "30302:<author-pubkey>:<card-d-tag>"
+            const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
+
+            console.log(`[NostrIntegration] 📥 Loading comments for card: ${card.heading} (${cardRef})`);
+
+            // 3. Fetch Kind 1 (text note) events with #a tag referencing this card
+            const events = await this.ndk.fetchEvents({
+                kinds: [1] as number[],
+                '#a': [cardRef]
+            });
+
+            if (!events || events.size === 0) {
+                console.log('[NostrIntegration] 📭 No remote comments found');
+                return;
+            }
+
+            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s)`);
+
+            // 4. Convert Nostr events to Comment objects
+            const remoteComments: Comment[] = Array.from(events).map(event => {
+                return {
+                    id: generateDTag(), // Local ID for UI
+                    eventId: event.id!, // Nostr event ID for deduplication
+                    text: event.content,
+                    author: event.pubkey,
+                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    syncStatus: 'synced' as const // Remote comments are always synced
+                };
+            });
+
+            // 5. Merge with local comments using deduplication algorithm
+            const localComments = card.comments || [];
+            const merged = this.mergeComments(localComments, remoteComments);
+
+            // 6. Update card with merged comments
+            card.comments = merged;
+
+            // 7. Persist to localStorage
+            BoardStorage.saveBoard(board);
+
+            console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+        } catch (error) {
+            console.error('[NostrIntegration] ❌ Error loading comments:', error);
+        }
     }
 
     /**

@@ -140,19 +140,21 @@ private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comm
 
 ## 📊 Status Overview
 
-### ✅ Completed (Phase 2)
+### ✅ Completed (Phase 2 + Phase 3A)
 
 - [x] Comment interface extended with eventId + syncStatus
 - [x] publishComment() captures eventId after publish
 - [x] publishComment() sets syncStatus states
 - [x] mergeComments() function implemented
 - [x] 8 unit tests for mergeComments() (all passing)
+- [x] **loadComments() function implemented** ✅ NEW!
+- [x] **10 unit tests for loadComments() (all passing)** ✅ NEW!
 - [x] Error handling for failed publishes
 - [x] localStorage persistence after publish
+- [x] **Public API in kanbanStore.svelte.ts** ✅ NEW!
 
-### ⏳ Pending (Phase 3)
+### ⏳ Pending (Phase 3B)
 
-- [ ] loadComments() function - Fetch Kind 1 events from Nostr
 - [ ] subscribeToComments() - Live updates subscription
 - [ ] Integration in CardViewDialog.svelte
 - [ ] UI sync status icons (🔄 syncing, ✅ synced, ❌ failed)
@@ -344,9 +346,9 @@ public subscribeToComments(board: Board, cardId: string): () => void {
 }
 ```
 
-### 3. UI Integration (Priority: Medium)
+### 3. UI integration in CardViewDialog.svelte (Priority: Medium)
 
-**Task:** Show sync status in CardViewDialog
+**Task:** Show sync status in CardViewDialog + Load Comments button
 
 **Files to modify:**
 - `src/routes/cardsboard/CardViewDialog.svelte`
@@ -356,18 +358,19 @@ public subscribeToComments(board: Board, cardId: string): () => void {
 - Checkmark icon for `syncStatus === 'synced'`
 - Error icon + retry button for `syncStatus === 'failed'`
 - "Offline" badge for `syncStatus === 'local'`
+- **"Load Comments" button** calling `boardStore.loadComments(cardId)`
 
 ---
 
-## 📈 Metrics
+## 📈 Metrics (Updated 11. November 2025)
 
 | Metric | Value |
 |--------|-------|
-| **Files Modified** | 3 |
-| **New Functions** | 1 (mergeComments) |
-| **Lines Added** | ~130 |
-| **Tests Written** | 8 |
-| **Test Coverage** | 100% (mergeComments) |
+| **Files Modified** | 5 |
+| **New Functions** | 2 (mergeComments, loadComments) |
+| **Lines Added** | ~280 |
+| **Tests Written** | 18 (8 mergeComments + 10 loadComments) |
+| **Test Coverage** | 100% (both functions) |
 | **Breaking Changes** | 0 |
 | **TypeScript Errors** | 0 |
 
