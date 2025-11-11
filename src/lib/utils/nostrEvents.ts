@@ -251,9 +251,28 @@ export function cardToNostrEvent(
     tags.push(['color', card.color]);
   }
 
-  // Author (p-tag)
+  // Image (Kartenbild-URL)
+  if (card.image) {
+    tags.push(['image', card.image]);
+  }
+
+  // Author (p-tag mit Role)
   if (card.author) {
-    tags.push(['p', card.author]);
+    tags.push(['p', card.author, '', 'author']);
+  }
+
+  // Author Display Name (NIP-39 Pattern)
+  if (card.authorName) {
+    tags.push(['name', card.authorName]);
+  }
+
+  // Attendees (p-tags mit Role)
+  if (card.attendees && card.attendees.length > 0) {
+    card.attendees.forEach(attendee => {
+      if (attendee !== card.author) {  // Nicht doppeln
+        tags.push(['p', attendee, '', 'attendee']);
+      }
+    });
   }
 
   // Labels
@@ -310,8 +329,22 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
   const colorTag = tags.find(t => t[0] === 'color');
   const color = colorTag ? colorTag[1] : undefined;
 
-  // Extract author
+  // Extract image
+  const imageTag = tags.find(t => t[0] === 'image');
+  const image = imageTag ? imageTag[1] : undefined;
+
+  // Extract author (primary creator)
   const author = event.pubkey;
+
+  // Extract author display name (NIP-39)
+  const nameTag = tags.find(t => t[0] === 'name');
+  const authorName = nameTag ? nameTag[1] : undefined;
+
+  // Extract attendees (all p-tags with 'attendee' role, excluding author)
+  const pTags = tags.filter(t => t[0] === 'p');
+  const attendees = pTags
+    .filter(t => t[3] === 'attendee')  // Nur attendee-Role
+    .map(t => t[1]);
 
   // Extract labels
   const labelTags = tags.filter(t => t[0] === 'label');
@@ -348,8 +381,11 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     heading,
     content,
     color,
+    image, // ← NEU: Kartenbild-URL
+    authorName, // ← NEU: Display Name
     labels: labels.length > 0 ? labels : undefined,
     links: links.length > 0 ? links : undefined,
+    attendees: attendees.length > 0 ? attendees : undefined, // ← NEU: Zugeordnete User
     publishState,
     author,
     // ⚠️ NOSTR-METADATEN: Für Echtzeit-Sync
