@@ -848,6 +848,44 @@ export class BoardStore {
         this.triggerUpdate();
     }
 
+    /**
+     * ⚡ Phase 3B: Subscribes to live comment updates for a specific card
+     * 
+     * Creates a persistent subscription for all Kind 1 events targeting this card.
+     * New comments will be automatically merged with existing ones and trigger UI updates.
+     * 
+     * **WICHTIG:** Cleanup-Funktion MUSS aufgerufen werden (z.B. in onDestroy)!
+     * 
+     * @param cardId - ID of the card to subscribe to
+     * @returns Cleanup function to stop the subscription
+     * 
+     * @example
+     * ```typescript
+     * // In CardViewDialog.svelte:
+     * let unsubscribe: () => void;
+     * 
+     * onMount(() => {
+     *     unsubscribe = boardStore.subscribeToComments(card.id);
+     * });
+     * 
+     * onDestroy(() => {
+     *     unsubscribe?.();
+     * });
+     * ```
+     */
+    public subscribeToComments(cardId: string): () => void {
+        if (!this.nostrIntegration) {
+            console.warn('[BoardStore] subscribeToComments: Nostr integration not available');
+            return () => {}; // Return no-op cleanup function
+        }
+
+        return this.nostrIntegration.subscribeToComments(
+            this.board,
+            cardId,
+            () => this.triggerUpdate() // Callback for UI updates
+        );
+    }
+
     // ============================================================================
     // EXPORT/IMPORT (delegiert zu ExportImport)
     // ============================================================================

@@ -15,6 +15,7 @@ import { toast } from 'svelte-sonner';
 export class NostrIntegration {
     private ndk?: NDK;
     private boardSubscription: any | null = null;
+    private commentSubscriptions = new Map<string, any>(); // cardId -> subscription
 
     // ⚡ NEU (v2.0): Event-Deduplication für Event-Driven Architecture
     private processedEvents = new Set<string>();
@@ -1057,6 +1058,133 @@ export class NostrIntegration {
         } catch (error) {
             console.error('[NostrIntegration] ❌ Error loading comments:', error);
         }
+    }
+
+    /**
+     * ⚡ Phase 3B: Abonniert Live-Updates für Kommentare einer Karte
+     * 
+     * Erstellt eine persistente Subscription für alle Kind 1 Events, die auf diese Card referenzieren.
+     * Neue Kommentare werden automatisch mit bestehenden gemerged und triggern UI-Updates.
+     * 
+     * @param board - Das Board mit der Card
+     * @param cardId - Die ID der Card
+     * @param onUpdate - Callback der nach jedem neuen Kommentar aufgerufen wird (z.B. triggerUpdate() für UI refresh)
+     * @returns Cleanup-Funktion zum Beenden der Subscription
+     * 
+     * @example
+     * ```typescript
+     * // In CardViewDialog.svelte:
+     * let unsubscribe: () => void;
+     * onMount(() => {
+     *     unsubscribe = boardStore.subscribeToComments(card.id);
+     * });
+     * onDestroy(() => {
+     *     unsubscribe?.();
+     * });
+     * ```
+     */
+    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void): () => void {
+        // 1. Guard: NDK verfügbar?
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] subscribeToComments: NDK not initialized');
+            return () => {}; // Return no-op cleanup function
+        }
+
+        // 2. Finde die Card im Board
+        const result = board.findCardAndColumn(cardId);
+        if (!result) {
+            console.warn(`[NostrIntegration] subscribeToComments: Card ${cardId} not found`);
+            return () => {};
+        }
+
+        const { card } = result;
+
+        // 3. Build card reference für #a tag filter
+        const cardAuthor = card.author || board.author || 'unknown';
+        const cardRef = `30302:${cardAuthor}:${cardId}`;
+
+        console.log(`[NostrIntegration] 📡 Subscribing to comments for card: ${cardId} (${cardRef})`);
+
+        // 4. Cleanup existing subscription für diese Card (falls vorhanden)
+        const existingSub = this.commentSubscriptions.get(cardId);
+        if (existingSub && typeof existingSub.stop === 'function') {
+            try {
+                existingSub.stop();
+                console.log(`[NostrIntegration] 🛑 Stopped existing subscription for card ${cardId}`);
+            } catch (err) {
+                console.error('[NostrIntegration] Error stopping existing subscription:', err);
+            }
+        }
+
+        // 5. Create NDK subscription für Kind 1 events mit #a tag filter
+        const sub = this.ndk.subscribe(
+            {
+                kinds: [1],
+                '#a': [cardRef]
+            },
+            { closeOnEose: false } // ← WICHTIG: Persistent subscription für live updates!
+        );
+
+        // 6. Event handler: Convert → Merge → Persist → Trigger UI
+        sub.on('event', async (event: any) => {
+            try {
+                // Deduplication: Skip if already processed
+                if (this.processedEvents.has(event.id)) {
+                    console.log(`[NostrIntegration] ⏭️ Skipping duplicate comment event: ${event.id.substring(0, 8)}`);
+                    return;
+                }
+
+                // Mark as processed
+                this.processedEvents.add(event.id);
+
+                console.log(`[NostrIntegration] 💬 New comment received for card ${cardId}`);
+
+                // Convert Nostr event to Comment object
+                const newComment: Comment = {
+                    id: generateDTag(), // Local ID for UI
+                    eventId: event.id!, // Nostr event ID for deduplication
+                    text: event.content,
+                    author: event.pubkey,
+                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    syncStatus: 'synced' as const // Event kommt vom Relay = bereits synced
+                };
+
+                // Merge with existing comments (deduplication via eventId)
+                const currentComments = card.comments || [];
+                const merged = this.mergeComments(currentComments, [newComment]);
+                card.comments = merged;
+
+                // Persist to localStorage
+                BoardStorage.saveBoard(board);
+
+                console.log(`[NostrIntegration] ✅ Comment merged and persisted. Total: ${merged.length}`);
+
+                // Trigger UI update callback
+                if (onUpdate) {
+                    onUpdate();
+                }
+            } catch (error) {
+                console.error('[NostrIntegration] ❌ Error processing comment event:', error);
+            }
+        });
+
+        // 7. Store subscription in Map für späteren Cleanup
+        this.commentSubscriptions.set(cardId, sub);
+
+        console.log(`[NostrIntegration] ✅ Comment subscription active for card ${cardId}`);
+
+        // 8. Return cleanup function
+        return () => {
+            if (sub && typeof sub.stop === 'function') {
+                try {
+                    sub.stop();
+                    this.commentSubscriptions.delete(cardId);
+                    console.log(`[NostrIntegration] 🛑 Comment subscription stopped for card ${cardId}`);
+                } catch (err) {
+                    console.error('[NostrIntegration] Error stopping comment subscription:', err);
+                }
+            }
+        };
     }
 
     /**

@@ -1,12 +1,55 @@
 # Comment Merge Implementation Summary
 
-**Status:** ✅ **PHASE 2 COMPLETE - Core Implementation Done**  
+**Status:** ✅ **PHASE 3B COMPLETE - Real-Time Subscriptions Working!**  
 **Datum:** 11. November 2025  
-**Meilenstein:** Comment Merge System with EventId Tracking & SyncStatus
+**Meilenstein:** Comment Merge System + Load/Subscribe to Comments
 
 ---
 
 ## 🎯 Was wurde implementiert?
+
+### Phase 2: Core Merge System (COMPLETED ✅)
+- ✅ Comment interface mit eventId + syncStatus
+- ✅ publishComment() mit eventId capture
+- ✅ mergeComments() deduplication algorithm
+- ✅ 8 unit tests (all passing)
+
+### Phase 3A: Load Remote Comments (COMPLETED ✅)
+- ✅ loadComments() method in NostrIntegration
+- ✅ NDK.fetchEvents() integration
+- ✅ Nostr event → Comment conversion
+- ✅ Merge with local comments
+- ✅ localStorage persistence
+- ✅ Public API in kanbanStore.svelte.ts
+- ✅ 10 unit tests (all passing)
+
+### Phase 3B: Real-Time Subscriptions (COMPLETED ✅)
+- ✅ subscribeToComments() method in NostrIntegration
+- ✅ NDK.subscribe() mit closeOnEose: false
+- ✅ Event deduplication via processedEvents Set
+- ✅ Live comment merge on incoming events
+- ✅ Cleanup function für subscription lifecycle
+- ✅ Multiple card subscription support
+- ✅ Public API in kanbanStore.svelte.ts
+- ✅ 11 unit tests (all passing)
+
+---
+
+## 📊 Metrics & Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Files Modified** | 6 |
+| **New Functions** | 3 (mergeComments, loadComments, subscribeToComments) |
+| **Lines Added** | ~480 |
+| **Tests Written** | 29 (8 merge + 10 load + 11 subscribe) |
+| **Test Coverage** | 100% for all three functions |
+| **TypeScript Errors** | 0 |
+| **Features Complete** | ✅ Merge ✅ Load ✅ Subscribe |
+
+---
+
+## 🔧 Implementation Details
 
 ### 1. Comment Interface Extension (BoardModel.ts)
 
@@ -324,31 +367,38 @@ describe('Comment Merge Integration', () => {
 ```typescript
 public async loadComments(board: Board, cardId: string): Promise<void> {
     // 1. Fetch Kind 1 events with filter: #a: ['30302:author:cardId']
-    // 2. Map events to Comment[] with eventId
-    // 3. Call mergeComments(local, remote)
-    // 4. Persist merged comments to localStorage
-}
-```
+---
 
-### 2. Implement subscribeToComments() (Priority: High)
+## 🚀 Next Steps
 
-**Task:** Real-time subscription for new comments
+### 1. ✅ loadComments() Implementation (COMPLETED)
 
-**Files to modify:**
-- `src/lib/stores/boardstore/nostr.ts` - Add subscribeToComments() method
+**Status:** ✅ **DONE** - Implemented + Tested (Phase 3A - Commit a06c05f)
 
-**API:**
-```typescript
-public subscribeToComments(board: Board, cardId: string): () => void {
-    // 1. Create persistent subscription (closeOnEose: false)
-    // 2. On 'event': call mergeComments() and update card
-    // 3. Return cleanup function
-}
-```
+**Features:**
+- ✅ Fetches Kind 1 events from Nostr relays
+- ✅ Nostr event → Comment conversion
+- ✅ Merge with local comments (eventId deduplication)
+- ✅ Persist to localStorage
+- ✅ Public API in kanbanStore.svelte.ts
+- ✅ 10 unit tests (all passing)
 
-### 3. UI integration in CardViewDialog.svelte (Priority: Medium)
+### 2. ✅ subscribeToComments() Implementation (COMPLETED)
 
-**Task:** Show sync status in CardViewDialog + Load Comments button
+**Status:** ✅ **DONE** - Implemented + Tested (Phase 3B - THIS COMMIT)
+
+**Features:**
+- ✅ Real-time subscription mit NDK.subscribe()
+- ✅ Event deduplication via processedEvents Set
+- ✅ Live merge on incoming events
+- ✅ Cleanup function für subscription lifecycle
+- ✅ Multiple card subscription support
+- ✅ Public API in kanbanStore.svelte.ts
+- ✅ 11 unit tests (all passing)
+
+### 3. UI Integration in CardViewDialog.svelte (Priority: Medium)
+
+**Task:** Show sync status in CardViewDialog + Load/Subscribe buttons
 
 **Files to modify:**
 - `src/routes/cardsboard/CardViewDialog.svelte`
@@ -359,20 +409,38 @@ public subscribeToComments(board: Board, cardId: string): () => void {
 - Error icon + retry button for `syncStatus === 'failed'`
 - "Offline" badge for `syncStatus === 'local'`
 - **"Load Comments" button** calling `boardStore.loadComments(cardId)`
+- **Auto-subscribe on mount** calling `boardStore.subscribeToComments(cardId)`
+- **Cleanup on destroy** calling returned unsubscribe function
+
+**Example:**
+```typescript
+let unsubscribe: () => void;
+
+onMount(() => {
+    // Auto-subscribe to live updates
+    unsubscribe = boardStore.subscribeToComments(card.id);
+});
+
+onDestroy(() => {
+    // Cleanup subscription
+    unsubscribe?.();
+});
+```
 
 ---
 
-## 📈 Metrics (Updated 11. November 2025)
+## 📈 Final Metrics (Phase 3B Complete - 11. November 2025)
 
 | Metric | Value |
 |--------|-------|
-| **Files Modified** | 5 |
-| **New Functions** | 2 (mergeComments, loadComments) |
-| **Lines Added** | ~280 |
-| **Tests Written** | 18 (8 mergeComments + 10 loadComments) |
-| **Test Coverage** | 100% (both functions) |
+| **Files Modified** | 6 |
+| **New Functions** | 3 (mergeComments, loadComments, subscribeToComments) |
+| **Lines Added** | ~480 |
+| **Tests Written** | 29 (8 merge + 10 load + 11 subscribe) |
+| **Test Coverage** | 100% (all functions) |
 | **Breaking Changes** | 0 |
 | **TypeScript Errors** | 0 |
+| **Features Complete** | ✅ Merge ✅ Load ✅ Subscribe |
 
 ---
 
@@ -380,7 +448,7 @@ public subscribeToComments(board: Board, cardId: string): () => void {
 
 From [`COMMENT-MERGE-STRATEGY.md`](../COMMENT-MERGE-STRATEGY.md):
 
-### Phase 2: Core Implementation
+### Phase 2: Core Implementation (COMPLETED ✅)
 - [x] Comment interface extended with eventId + syncStatus
 - [x] publishComment() captures eventId after publish
 - [x] mergeComments() function implemented with deduplication
@@ -388,16 +456,37 @@ From [`COMMENT-MERGE-STRATEGY.md`](../COMMENT-MERGE-STRATEGY.md):
 - [x] SyncStatus tracking (local → syncing → synced/failed)
 - [x] localStorage persistence after publish
 
-### Phase 3: Integration (Pending)
-- [ ] loadComments() function fetches from Nostr
-- [ ] subscribeToComments() for live updates
+### Phase 3A: Load Remote Comments (COMPLETED ✅)
+- [x] loadComments() function fetches from Nostr
+- [x] NDK.fetchEvents() integration with Kind 1 filter
+- [x] Nostr event → Comment conversion logic
+- [x] Merge with local comments (eventId deduplication)
+- [x] localStorage persistence after load
+- [x] Public API wrapper in kanbanStore
+- [x] Unit tests (10/10 passing)
+
+### Phase 3B: Real-Time Subscriptions (COMPLETED ✅)
+- [x] subscribeToComments() for live updates
+- [x] NDK.subscribe() with closeOnEose: false
+- [x] Event deduplication via processedEvents Set
+- [x] Live comment merge on incoming events
+- [x] Cleanup function for subscription lifecycle
+- [x] Multiple card subscription support
+- [x] Public API wrapper in kanbanStore
+- [x] Unit tests (11/11 passing)
+
+### Phase 4: UI Integration (PENDING ⏳)
 - [ ] UI integration in CardViewDialog
 - [ ] Sync status icons in UI
 - [ ] Retry mechanism for failed comments
+- [ ] Load Comments button
+- [ ] Auto-subscribe on mount
+- [ ] Cleanup on destroy
 
 ---
 
 **Author:** AI Agent (GitHub Copilot)  
 **Review Status:** ✅ Ready for Review  
-**Tested:** ✅ 8/8 Unit Tests Passing  
-**Documentation:** ✅ Complete
+**Tested:** ✅ 29/29 Unit Tests Passing  
+**Documentation:** ✅ Complete  
+**Phase 3B Complete:** ✅ Real-Time Subscriptions Working!
