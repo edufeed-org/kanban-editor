@@ -143,6 +143,16 @@
 					localAttendees = updatedCard.attendees || [];
 				}
 				
+				// ✅ FIX: Aktualisiere links für sofortige Reaktivität
+				const linksJSON = JSON.stringify(updatedCard.links || []);
+				const cardLinksJSON = JSON.stringify(card.links || []);
+				
+				if (linksJSON !== cardLinksJSON) {
+					console.log('🔄 Card links updated:', (updatedCard.links || []).length, 'links');
+					// Triggere Prop-Update durch Reassignment
+					card = { ...card, links: updatedCard.links };
+				}
+				
 				break; // Karte gefunden, keine weitere Suche nötig
 			}
 		}
@@ -207,7 +217,8 @@
 			content: updates.content,
 			image: updates.image,
 			color: updates.color,
-			labels: updates.labels
+			labels: updates.labels,
+			links: updates.links // ← ✅ FIXED: links waren missing!
 		});
 
 		// WICHTIG: Triggere ein CardUpdated Event, damit Column.svelte die Items neuladen kann
@@ -384,9 +395,30 @@
 			</div>
 		{/if}
 
-		<!-- Link Section -->
-		{#if card.link}
-			<Button variant="outline" onclick={handleLinkClick}><LinkIcon class="mr-2 h-4 w-4" /> Link öffnen</Button>
+		<!-- Links Section -->
+		{#if card.links && card.links.length > 0}
+			<div class="space-y-2">
+				{#each card.links as link}
+					<Button 
+						variant="outline" 
+						size="sm"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							window.open(link.url, '_blank', 'noopener,noreferrer');
+						}}
+						class="w-full justify-start gap-2 text-xs"
+					>
+						<LinkIcon class="h-3 w-3 flex-shrink-0" />
+						<span class="truncate">{link.title}</span>
+					</Button>
+				{/each}
+			</div>
+		{:else if card.link}
+			<!-- Fallback für altes Format (nur card.link) -->
+			<Button variant="outline" onclick={handleLinkClick}>
+				<LinkIcon class="mr-2 h-4 w-4" /> Link öffnen
+			</Button>
 		{/if}
 	</Card.Content>
 

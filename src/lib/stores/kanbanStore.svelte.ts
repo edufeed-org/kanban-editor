@@ -144,6 +144,7 @@ export class BoardStore {
                 comments: card.comments,
                 attendees: card.attendees,
                 labels: card.labels,
+                links: card.links, // ← ✅ FIXED: Komplettes links Array hinzufügen!
                 color: card.color,
                 publishState: card.publishState,
                 author: card.author,

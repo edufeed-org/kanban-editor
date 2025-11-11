@@ -174,7 +174,8 @@ export class Card {
 
     getContextData(): Omit<CardProps, 'comments' | 'links' | 'attendees'> & {
         comments: { text: string; author: string }[],
-        links: { url: string; title: string }[]
+        links: { url: string; title: string }[],
+        attendees: string[]
     } {
         return {
             id: this.id,
@@ -190,7 +191,8 @@ export class Card {
             createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
             updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
-            links: this.links.map(l => ({ url: l.url, title: l.title }))
+            links: this.links.map(l => ({ url: l.url, title: l.title })),
+            attendees: this.attendees // ← ✅ FIXED: attendees serialisieren!
         };
     }
 }

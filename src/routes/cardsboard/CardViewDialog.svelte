@@ -245,6 +245,31 @@
 				</div>
 			{/if}
 
+			<!-- Links Section -->
+			{#if card.links && card.links.length > 0}
+				<div class="space-y-2">
+					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
+					<div class="space-y-2">
+						{#each card.links as link, index (link.id || `link-${index}`)}
+							<a
+								href={link.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="flex items-center gap-2 p-2 bg-muted/50 rounded-md hover:bg-muted transition-colors border text-sm"
+							>
+								<svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+								</svg>
+								<div class="flex-1 min-w-0">
+									<div class="font-medium truncate">{link.title}</div>
+									<div class="text-xs text-muted-foreground truncate">{link.url}</div>
+								</div>
+							</a>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
 			{#if attendees.length > 0}
 				<div class="space-y-2">

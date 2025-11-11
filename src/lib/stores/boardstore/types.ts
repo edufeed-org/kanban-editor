@@ -10,6 +10,7 @@ export type CardItem = {
     comments?: any[];
     attendees?: string[];
     labels?: string[];
+    links?: { id: string; url: string; title: string }[]; // ← ✅ FIXED: links Array hinzufügen!
     color?: string;
     publishState?: PublishState;
     author?: string;
