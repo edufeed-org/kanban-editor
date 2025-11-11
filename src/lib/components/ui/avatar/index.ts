@@ -16,11 +16,16 @@ function getInitials(name?: string): string {
 }
 
 /**
- * Generiert Avatar-Farbe basierend auf User-Name
+ * Generiert Avatar-Farbe basierend auf einem eindeutigen String (z.B. Pubkey)
  * Für konsistente Farbgebung pro Nutzer
+ * 
+ * @param identifier - Eindeutiger String (bevorzugt: Pubkey für Konsistenz)
+ * 
+ * WICHTIG: Diese Funktion nutzt die GLEICHE Logik wie authStore.getAvatarColor()
+ * für konsistente Farben zwischen Profil-Avatar und AvatarStack
  */
-function getAvatarColor(name?: string): string {
-	if (!name) return 'bg-slate-500';
+function getAvatarColor(identifier?: string): string {
+	if (!identifier) return 'bg-slate-500';
 	const colors = [
 		'bg-red-500',
 		'bg-blue-500',
@@ -31,7 +36,8 @@ function getAvatarColor(name?: string): string {
 		'bg-cyan-500',
 		'bg-orange-500'
 	];
-	const hash = name.charCodeAt(0);
+	// Hash über gesamten String für bessere Verteilung
+	const hash = identifier.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 	return colors[hash % colors.length];
 }
 

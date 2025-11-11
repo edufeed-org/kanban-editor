@@ -581,6 +581,33 @@ export class AuthStore {
   }
 
   /**
+   * 🎨 Get consistent avatar color based on user's pubkey
+   * Returns: Tailwind CSS class for background color
+   * 
+   * Uses pubkey for consistent color across all avatar instances
+   * (profile sidebar, avatar stack, comments, etc.)
+   */
+  public getAvatarColor(): string {
+    const pubkey = this.currentUser?.pubkey;
+    if (!pubkey) return 'bg-slate-500';
+    
+    const colors = [
+      'bg-red-500',
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-yellow-500',
+      'bg-purple-500',
+      'bg-pink-500',
+      'bg-cyan-500',
+      'bg-orange-500'
+    ];
+    
+    // Hash über gesamten Pubkey für konsistente Verteilung
+    const hash = pubkey.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
+
+  /**
    * 📊 Get current auth status
    */
   public getStatus() {
@@ -697,6 +724,9 @@ class AuthStoreProxy {
   getUserInitials() {
     return AuthStoreWrapper.getInstance().getUserInitials();
   }
+  getAvatarColor() {
+    return AuthStoreWrapper.getInstance().getAvatarColor();
+  }
   
   /**
    * Sichere Getter für SSR-Context (gibt null statt Error)
@@ -719,6 +749,11 @@ class AuthStoreProxy {
   getUserInitialsSafe(): string {
     const instance = AuthStoreWrapper.getInstanceSafe();
     return instance ? instance.getUserInitials() : 'NN';
+  }
+  
+  getAvatarColorSafe(): string {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getAvatarColor() : 'bg-slate-500';
   }
   updateProfile(profile: Partial<UserSession['profile']>) {
     return AuthStoreWrapper.getInstance().updateProfile(profile);

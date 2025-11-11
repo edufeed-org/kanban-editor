@@ -10,7 +10,6 @@
 
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
-	import { getAvatarColor } from "$lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import LoginDialog from "./LoginDialog.svelte";
@@ -73,7 +72,7 @@
 				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={authStore.getDisplayName()} />
-						<Avatar.Fallback class={`${getAvatarColor(authStore.getDisplayName())} text-white text-xs font-semibold`}>
+						<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
 							{authStore.getUserInitials()}
 						</Avatar.Fallback>
 					</Avatar.Root>
