@@ -172,7 +172,7 @@
                         <div class="font-medium truncate flex items-center gap-2 board-title">
                             {#if isActive}
                                 <!-- Active indicator icon -->
-                                 <SquareArrowRight class="active-board-indicator"/>
+                                <!-- <SquareArrowRight class="active-board-indicator"/> -->
                             {/if}
                             {board.name}
                             {#if board.hasUnseenChanges && !isActive}

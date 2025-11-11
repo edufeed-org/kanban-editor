@@ -287,13 +287,7 @@
 				<div class="flex items-center justify-between border-b pb-2">
 					<Card.Title class="text-sm flex-1">{card.name}</Card.Title>
 					
-					<!-- 🚀 NEW: Comment Count Badge -->
-					{#if localComments.length > 0}
-						<Badge variant="secondary" class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
-							<MessageSquareIcon class="h-3 w-3" />
-							{localComments.length}
-						</Badge>
-					{/if}
+					
 				</div>
 				
 				{#if card.labels && card.labels.length > 0}
@@ -437,18 +431,18 @@
 		<div class="footer-content">
 			<!-- Links anorden -->
 			<div class="flex items-center gap-2 scale-80">
-				<div class="comments-count">
-					<Button
-						variant="default"
-						size="sm"
-						class="btn"
+				<!-- 🚀 NEW: Comment Count Badge -->
+				<!-- {#if localComments.length > 0} -->
+					<Badge 
+						variant="secondary" 
+						class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
 						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
-						aria-label="Anzeigen"
-						title="Anzeigen"
-					>
-						<MessageSquareIcon class="mr-2 h-4 w-4" /> {#if localComments.length > 0}{localComments.length}{/if}
-					</Button>
-				</div>
+						>
+						<MessageSquareIcon class="h-3 w-3" />
+						{localComments.length>0?localComments.length:''}
+					</Badge>
+				<!-- {/if} -->
+				
 				{#if attendees.length > 0}
 					<AvatarStack {attendees} maxVisible={3} />
 				{/if}
