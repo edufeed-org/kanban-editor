@@ -17,6 +17,8 @@ export interface Comment extends NostrElement {
     text: string;
     author: string; // Nostr Public Key (npub)
     createdAt: string; // ISO 8601
+    eventId?: string; // ← NEU: Nostr Event-ID (für published comments & deduplizierung)
+    syncStatus?: 'local' | 'syncing' | 'synced' | 'failed'; // ← NEU: Publishing-Status
 }
 
 export interface Link extends NostrElement {

@@ -1,7 +1,7 @@
 // src/lib/stores/boardstore/nostr.ts
 // Nostr-Integration und Event-Publishing
 
-import type { Board, Card } from '../../classes/BoardModel.js';
+import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
@@ -877,6 +877,9 @@ export class NostrIntegration {
                 return;
             }
 
+            // Set status to 'syncing' before publishing
+            comment.syncStatus = 'syncing';
+
             const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
             const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
             const publishState = card.publishState || 'draft';
@@ -898,10 +901,83 @@ export class NostrIntegration {
                 targetRelays
             );
 
-            console.log(`✅ Comment ${commentId} queued for publishing`);
+            // ✅ CAPTURE EVENT-ID after publishing
+            // Note: syncManager.publishOrQueue() signs and publishes the event
+            // The event.id is available after signing
+            if (event.id) {
+                comment.eventId = event.id;
+                comment.syncStatus = 'synced';
+                
+                // Persist to localStorage
+                BoardStorage.saveBoard(board);
+                
+                console.log(`✅ Comment ${commentId} published with eventId: ${event.id}`);
+            } else {
+                // If eventId not available, mark as failed
+                comment.syncStatus = 'failed';
+                console.warn(`⚠️ Comment ${commentId} published but eventId not available`);
+            }
         } catch (error) {
             console.error(`❌ Error publishing comment:`, error);
+            
+            // Mark as failed on error
+            const result = board.findCardAndColumn(cardId);
+            if (result) {
+                const comment = result.card.comments?.find(c => c.id === commentId);
+                if (comment) {
+                    comment.syncStatus = 'failed';
+                    BoardStorage.saveBoard(board);
+                }
+            }
         }
+    }
+
+    /**
+     * Merges local comments with remote comments from Nostr
+     * Deduplicates by eventId, preserves local unpublished comments, sorts chronologically
+     * 
+     * @param localComments - Comments currently in localStorage
+     * @param remoteComments - Comments fetched from Nostr (Kind 1 events)
+     * @returns Merged and deduplicated comment array
+     * 
+     * @example
+     * ```typescript
+     * const local = [
+     *   { id: 'local-1', text: 'Unpublished', author: 'npub1...', createdAt: '2025-01-15T10:00:00Z', syncStatus: 'local' },
+     *   { id: 'local-2', text: 'Published', author: 'npub1...', createdAt: '2025-01-15T11:00:00Z', eventId: 'abc123', syncStatus: 'synced' }
+     * ];
+     * const remote = [
+     *   { id: 'remote-1', text: 'Published', author: 'npub1...', createdAt: '2025-01-15T11:00:00Z', eventId: 'abc123', syncStatus: 'synced' },
+     *   { id: 'remote-2', text: 'From other device', author: 'npub2...', createdAt: '2025-01-15T12:00:00Z', eventId: 'xyz789', syncStatus: 'synced' }
+     * ];
+     * const merged = mergeComments(local, remote);
+     * // Result: [local-1, remote-1 (deduplicated), remote-2] sorted by createdAt
+     * ```
+     */
+    private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comment[] {
+        // Step 1: Create Set of eventIds from local comments
+        const localEventIds = new Set<string>(
+            localComments
+                .filter(c => c.eventId) // Only comments with eventId
+                .map(c => c.eventId!)
+        );
+
+        // Step 2: Filter remote comments to exclude duplicates
+        const newRemoteComments = remoteComments.filter(
+            remote => remote.eventId && !localEventIds.has(remote.eventId)
+        );
+
+        // Step 3: Merge local + new remote comments
+        const merged = [...localComments, ...newRemoteComments];
+
+        // Step 4: Sort chronologically by createdAt (oldest first)
+        merged.sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateA - dateB;
+        });
+
+        return merged;
     }
 
     /**
