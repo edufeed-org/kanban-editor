@@ -33,6 +33,9 @@ export class AuthStore {
   public isLoading = $state(false);
   public errorMessage = $state<string | null>(null);
   
+  // 🚀 NEW: User Profile Cache (pubkey → profile.name)
+  private userProfileCache = $state<Map<string, string | null>>(new Map());
+  
   constructor(private ndk: NDK) {
     // ℹ️ restoreSessionOrCreateDemo ist jetzt async
     // Wird von +layout.svelte aufgerufen als await initializeAuth().restoreSession()
@@ -566,6 +569,95 @@ export class AuthStore {
   }
 
   /**
+   * 🌐 Get display name for ANY pubkey (not just current user)
+   * 
+   * USE CASES:
+   * - Comment authors (show name instead of truncated npub)
+   * - Card attendees
+   * - Board maintainers
+   * - Any Nostr user reference
+   * 
+   * BEHAVIOR:
+   * 1. If current user → return cached name immediately
+   * 2. If in cache → return cached name
+   * 3. If not cached → fetch from Nostr (async), return truncated npub meanwhile
+   * 
+   * CACHING:
+   * - Profiles are cached in memory (Map<pubkey, name>)
+   * - Cache persists during session
+   * - Re-fetched on app reload
+   * 
+   * @param pubkey - Hex pubkey (NOT npub!)
+   * @returns Display name or truncated pubkey (e.g. "0a1b2c3d...9e8f")
+   * 
+   * @example
+   * // In component:
+   * const authorName = authStore.getDisplayNameForPubkey(comment.author);
+   * // Returns: "Alice" (if profile found) or "0a1b2c3d...9e8f" (fallback)
+   */
+  public getDisplayNameForPubkey(pubkey: string): string {
+    if (!pubkey) return 'Anonym';
+    
+    // 1. Current user? → instant return
+    if (this.currentUser?.pubkey === pubkey) {
+      return this.getDisplayName();
+    }
+    
+    // 2. In cache? → return cached
+    if (this.userProfileCache.has(pubkey)) {
+      const cachedName = this.userProfileCache.get(pubkey);
+      if (cachedName) return cachedName;
+    }
+    
+    // 3. Not cached → fetch async (non-blocking)
+    this.fetchUserProfile(pubkey);
+    
+    // 4. Meanwhile: return truncated pubkey
+    return this.truncatePubkey(pubkey);
+  }
+
+  /**
+   * 🔍 Fetch user profile from Nostr (async, non-blocking)
+   * Caches result in userProfileCache
+   * 
+   * @private
+   */
+  private async fetchUserProfile(pubkey: string): Promise<void> {
+    try {
+      // Prevent duplicate fetches
+      if (this.userProfileCache.has(pubkey)) return;
+      
+      // Mark as "fetching" (null = fetching in progress)
+      this.userProfileCache.set(pubkey, null);
+      
+      // Fetch profile via NDK
+      const user = this.ndk.getUser({ pubkey });
+      await user.fetchProfile();
+      
+      // Cache result (name or null if no profile)
+      const displayName = user.profile?.name || null;
+      this.userProfileCache.set(pubkey, displayName);
+      
+      console.log(`📇 Cached profile for ${this.truncatePubkey(pubkey)}: ${displayName || 'no name'}`);
+      
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch profile for ${pubkey}:`, error);
+      // Keep null in cache to avoid re-fetching
+    }
+  }
+
+  /**
+   * 🔤 Truncate pubkey for display
+   * Returns: "0a1b2c3d...9e8f" (first 8 + last 4 chars)
+   * 
+   * @private
+   */
+  private truncatePubkey(pubkey: string): string {
+    if (pubkey.length < 20) return pubkey; // Short = display full
+    return `${pubkey.slice(0, 8)}...${pubkey.slice(-4)}`;
+  }
+
+  /**
    * 🎨 Get user initials for avatar
    * Returns: Initials from name OR "NN" for "Nostr Nutzer"
    */
@@ -721,6 +813,9 @@ class AuthStoreProxy {
   getDisplayName() {
     return AuthStoreWrapper.getInstance().getDisplayName();
   }
+  getDisplayNameForPubkey(pubkey: string) {
+    return AuthStoreWrapper.getInstance().getDisplayNameForPubkey(pubkey);
+  }
   getUserInitials() {
     return AuthStoreWrapper.getInstance().getUserInitials();
   }
@@ -744,6 +839,11 @@ class AuthStoreProxy {
   getDisplayNameSafe(): string {
     const instance = AuthStoreWrapper.getInstanceSafe();
     return instance ? instance.getDisplayName() : 'Nostr Nutzer';
+  }
+  
+  getDisplayNameForPubkeySafe(pubkey: string): string {
+    const instance = AuthStoreWrapper.getInstanceSafe();
+    return instance ? instance.getDisplayNameForPubkey(pubkey) : 'Anonym';
   }
   
   getUserInitialsSafe(): string {

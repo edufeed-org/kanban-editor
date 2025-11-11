@@ -886,6 +886,67 @@ export class BoardStore {
         );
     }
 
+    /**
+     * 🚀 Phase 4B: Load comments for ALL cards in the current board
+     * 
+     * Batch-loads comments from Nostr relays for all cards in parallel.
+     * This provides a much better UX than loading comments individually per card.
+     * 
+     * **Performance:** Uses Promise.all() for parallel fetching
+     * **Cache:** Results are persisted to localStorage via loadComments()
+     * **UI:** Triggers update after all comments are loaded
+     * 
+     * @example
+     * ```typescript
+     * // In Board.svelte onMount:
+     * onMount(async () => {
+     *     await boardStore.loadBoard(boardId);
+     *     await boardStore.loadAllComments(); // ← AUTO-LOAD!
+     * });
+     * ```
+     */
+    public async loadAllComments(): Promise<void> {
+        const board = this.board;
+        if (!board) {
+            console.warn('[BoardStore] loadAllComments: No board loaded');
+            return;
+        }
+        
+        console.log('📥 Batch-loading comments for all cards in board...');
+        
+        // Collect all card IDs from all columns
+        const cardIds: string[] = [];
+        for (const column of board.columns) {
+            for (const card of column.cards) {
+                cardIds.push(card.id);
+            }
+        }
+        
+        if (cardIds.length === 0) {
+            console.log('ℹ️ No cards in board, skipping comment load');
+            return;
+        }
+        
+        console.log(`📋 Found ${cardIds.length} cards, loading comments...`);
+        
+        // Batch load all comments in parallel
+        const startTime = performance.now();
+        
+        try {
+            await Promise.all(
+                cardIds.map(cardId => this.loadComments(cardId))
+            );
+            
+            const duration = (performance.now() - startTime).toFixed(0);
+            console.log(`✅ Loaded comments for ${cardIds.length} cards in ${duration}ms`);
+        } catch (error) {
+            console.error('❌ Error batch-loading comments:', error);
+        }
+        
+        // Single UI update after all loads complete
+        this.triggerUpdate();
+    }
+
     // ============================================================================
     // EXPORT/IMPORT (delegiert zu ExportImport)
     // ============================================================================

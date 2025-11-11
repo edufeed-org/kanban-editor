@@ -81,6 +81,26 @@ import { toast } from "svelte-sonner";
 		}
 	});
 
+	// Hook 3: Auto-load comments for all cards when board is ready
+	// 🚀 Phase 4B: UX Improvement - Batch-load all comments automatically
+	// ✅ CORRECT: onMount for initial data loading (runs ONCE)
+	onMount(async () => {
+		try {
+			// Wait a bit for board to be fully loaded from storage
+			// (boardStore.uiData is reactive and loads from localStorage in constructor)
+			await new Promise(resolve => setTimeout(resolve, 500));
+			
+			const boardId = boardStore.getCurrentBoardId();
+			if (boardId) {
+				console.log('🚀 Auto-loading comments for all cards in board...');
+				await boardStore.loadAllComments();
+				console.log('✅ All comments loaded automatically');
+			}
+		} catch (error) {
+			console.error('❌ Error auto-loading comments:', error);
+		}
+	});
+
 	// Konvertiere boardStore.uiData in das Format, das Board.svelte erwartet
 	let columns = $derived.by(() => {
 		return boardStore.uiData;

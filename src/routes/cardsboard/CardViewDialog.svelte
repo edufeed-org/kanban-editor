@@ -102,13 +102,23 @@
 
 	/**
 	 * Handles comment submission
+	 * 
+	 * 🚀 Author-Fallback-Kette:
+	 * 1. getUserName() → Nostr profile.name (z.B. "Alice")
+	 * 2. getDisplayName() → "Nostr Nutzer" (wenn kein Name im Profil)
+	 * 3. getPubkey() → Hex pubkey (wenn nicht eingeloggt)
+	 * 4. 'anonymous' → Last resort
 	 */
 	async function handleAddComment() {
 		if (!commentText.trim()) return;
 
 		try {
 			isSubmitting = true;
-			const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+			// 🎯 Bessere Fallback-Kette: Name → Display → Pubkey → anonymous
+			const author = authStore.getUserName() 
+						|| authStore.getDisplayName() 
+						|| authStore.getPubkey() 
+						|| 'anonymous';
 			boardStore.addComment(card.id as string, commentText.trim(), author);
 			commentText = '';
 		} catch (error) {
@@ -143,7 +153,12 @@
 			if (!comment) return;
 			
 			// Re-publish by adding it again (will trigger publish in addComment)
-			const author = comment.author || authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+			// 🎯 Same fallback chain as handleAddComment
+			const author = comment.author 
+						|| authStore.getUserName() 
+						|| authStore.getDisplayName() 
+						|| authStore.getPubkey() 
+						|| 'anonymous';
 			
 			// Delete the failed comment first
 			boardStore.deleteComment(String(cardId), commentId);
@@ -191,6 +206,28 @@
 	 */
 	function getInitials(pubkey: string): string {
 		return pubkey.slice(0, 2).toUpperCase();
+	}
+
+	/**
+	 * 🚀 NEW: Format author name for display
+	 * - Uses authStore.getDisplayNameForPubkey() to fetch Nostr profiles
+	 * - Short name (< 20 chars): Display full (e.g. "Alice", "Bob")
+	 * - Long pubkey: Fetch from Nostr or truncate to first 8 + last 4 chars
+	 * - Caches profiles for performance
+	 * 
+	 * @param author - Pubkey (hex) or name string
+	 * @returns Readable display name
+	 */
+	function formatAuthorName(author: string): string {
+		if (!author) return 'Anonym';
+		
+		// Short name (< 20 chars) → display full (likely already a name)
+		if (author.length < 20) {
+			return author;
+		}
+		
+		// Long pubkey → fetch from authStore (with cache + async fetch)
+		return authStore.getDisplayNameForPubkey(author);
 	}
 
 	/**
@@ -381,21 +418,7 @@
 				<h3 class="text-sm font-semibold text-muted-foreground">
 					Kommentare ({displayComments.length})
 				</h3>
-				<Button
-					variant="outline"
-					size="sm"
-					onclick={handleLoadComments}
-					disabled={isLoadingComments}
-					class="gap-2 h-8"
-				>
-					{#if isLoadingComments}
-						<LoaderIcon class="h-3 w-3 animate-spin" />
-						<span class="text-xs">Laden...</span>
-					{:else}
-						<DownloadIcon class="h-3 w-3" />
-						<span class="text-xs">Kommentare laden</span>
-					{/if}
-				</Button>
+				<!-- 🚀 Phase 4B: Load Comments button entfernt - Auto-Load aktiv -->
 			</div>
 
 			<!-- Existing Comments List -->
@@ -415,9 +438,11 @@
 								</Popover.Trigger>
 								<Popover.Content side="top" align="start" class="w-48">
 									<div class="space-y-2">
+										<!-- 🚀 Show formatted name (truncated if pubkey) -->
 										<div class="text-sm font-semibold px-2 py-1">
-											{comment.author}
+											{formatAuthorName(comment.author)}
 										</div>
+										<!-- Full pubkey in small text (for copy-paste) -->
 										<div class="text-xs text-muted-foreground px-2 font-mono break-all">
 											{comment.author}
 										</div>
@@ -430,7 +455,8 @@
 								<div class="flex justify-between items-start gap-2">
 									<div class="flex-1 min-w-0">
 										<div class="flex items-center gap-2">
-											<span class="font-medium text-sm">{comment.author}</span>
+											<!-- 🚀 Show formatted name instead of raw pubkey -->
+											<span class="font-medium text-sm">{formatAuthorName(comment.author)}</span>
 											
 											<!-- 🔥 Sync Status Icon -->
 											{#if comment.syncStatus === 'syncing'}

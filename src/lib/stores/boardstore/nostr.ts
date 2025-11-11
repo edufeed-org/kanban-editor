@@ -24,6 +24,59 @@ export class NostrIntegration {
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
 
+    // 🚀 NEW (Phase 3): IndexedDB Cache für Comments
+    private static COMMENTS_STORAGE_PREFIX = 'nostr-comments-';
+
+    /**
+     * 🚀 Phase 3: Save comments to localStorage cache
+     * Provides instant access to comments without network delay
+     */
+    private saveCommentsToStorage(cardId: string, comments: Comment[]): void {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            const data = JSON.stringify(comments);
+            localStorage.setItem(key, data);
+            console.log(`💾 Saved ${comments.length} comment(s) to cache for card ${cardId}`);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to save comments to cache:', error);
+        }
+    }
+
+    /**
+     * 🚀 Phase 3: Load comments from localStorage cache
+     * Returns cached comments instantly, no network delay
+     */
+    private loadCommentsFromStorage(cardId: string): Comment[] {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            const data = localStorage.getItem(key);
+            
+            if (!data) {
+                return [];
+            }
+            
+            const comments = JSON.parse(data) as Comment[];
+            console.log(`💿 Loaded ${comments.length} comment(s) from cache for card ${cardId}`);
+            return comments;
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to load comments from cache:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 🚀 Phase 3: Clear comments cache for a card
+     */
+    private clearCommentsCache(cardId: string): void {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            localStorage.removeItem(key);
+            console.log(`🗑️ Cleared comment cache for card ${cardId}`);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to clear cache:', error);
+        }
+    }
+
     /**
      * Initialisiert Nostr Integration
      */
@@ -957,7 +1010,7 @@ export class NostrIntegration {
      * ```
      */
     private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comment[] {
-        // Step 1: Create Set of eventIds from local comments
+        // Step 1: Create Set of eventIds from local comments (for synced comments)
         const localEventIds = new Set<string>(
             localComments
                 .filter(c => c.eventId) // Only comments with eventId
@@ -965,9 +1018,32 @@ export class NostrIntegration {
         );
 
         // Step 2: Filter remote comments to exclude duplicates
-        const newRemoteComments = remoteComments.filter(
-            remote => remote.eventId && !localEventIds.has(remote.eventId)
-        );
+        const newRemoteComments = remoteComments.filter(remote => {
+            // 2a. Skip if eventId already exists in local comments
+            if (remote.eventId && localEventIds.has(remote.eventId)) {
+                return false;
+            }
+
+            // 🚀 2b. NEW: Also check for text+timestamp duplicates (for pending local comments)
+            // This handles the case where local comment was sent but hasn't received eventId yet
+            // If text matches AND timestamp is within 5 seconds → it's the same comment
+            const isDuplicate = localComments.some(local => {
+                // Skip if local already has eventId (already synced)
+                if (local.eventId) return false;
+
+                // Check text match
+                if (local.text !== remote.text) return false;
+
+                // Check timestamp proximity (within 5 seconds)
+                const localTime = new Date(local.createdAt).getTime();
+                const remoteTime = new Date(remote.createdAt).getTime();
+                const timeDiff = Math.abs(localTime - remoteTime);
+
+                return timeDiff < 5000; // 5 seconds tolerance
+            });
+
+            return !isDuplicate;
+        });
 
         // Step 3: Merge local + new remote comments
         const merged = [...localComments, ...newRemoteComments];
@@ -1013,13 +1089,22 @@ export class NostrIntegration {
 
             const { card } = result;
 
-            // 2. Build card reference for Nostr filter
+            // 🚀 2. Load from cache FIRST (instant access)
+            const cachedComments = this.loadCommentsFromStorage(cardId);
+            if (cachedComments.length > 0) {
+                console.log(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
+                // Merge cache with current card comments
+                const merged = this.mergeComments(card.comments || [], cachedComments);
+                card.comments = merged;
+            }
+
+            // 3. Build card reference for Nostr filter
             // Format: "30302:<author-pubkey>:<card-d-tag>"
             const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
 
-            console.log(`[NostrIntegration] 📥 Loading comments for card: ${card.heading} (${cardRef})`);
+            console.log(`[NostrIntegration] 📥 Loading comments from Nostr for card: ${card.heading} (${cardRef})`);
 
-            // 3. Fetch Kind 1 (text note) events with #a tag referencing this card
+            // 4. Fetch Kind 1 (text note) events with #a tag referencing this card
             const events = await this.ndk.fetchEvents({
                 kinds: [1] as number[],
                 '#a': [cardRef]
@@ -1027,12 +1112,14 @@ export class NostrIntegration {
 
             if (!events || events.size === 0) {
                 console.log('[NostrIntegration] 📭 No remote comments found');
+                // Save current state to cache (might be empty or local-only)
+                this.saveCommentsToStorage(cardId, card.comments || []);
                 return;
             }
 
             console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s)`);
 
-            // 4. Convert Nostr events to Comment objects
+            // 5. Convert Nostr events to Comment objects
             const remoteComments: Comment[] = Array.from(events).map(event => {
                 return {
                     id: generateDTag(), // Local ID for UI
@@ -1044,14 +1131,17 @@ export class NostrIntegration {
                 };
             });
 
-            // 5. Merge with local comments using deduplication algorithm
+            // 6. Merge with current card comments (already contains cache)
             const localComments = card.comments || [];
             const merged = this.mergeComments(localComments, remoteComments);
 
-            // 6. Update card with merged comments
+            // 7. Update card with merged comments
             card.comments = merged;
 
-            // 7. Persist to localStorage
+            // 🚀 8. Save to cache for next time
+            this.saveCommentsToStorage(cardId, merged);
+
+            // 9. Persist to localStorage
             BoardStorage.saveBoard(board);
 
             console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
@@ -1154,8 +1244,11 @@ export class NostrIntegration {
                 const merged = this.mergeComments(currentComments, [newComment]);
                 card.comments = merged;
 
-                // Persist to localStorage
+                // Persist to localStorage (board storage)
                 BoardStorage.saveBoard(board);
+
+                // 🚀 Save to cache for instant access next time
+                this.saveCommentsToStorage(cardId, merged);
 
                 console.log(`[NostrIntegration] ✅ Comment merged and persisted. Total: ${merged.length}`);
 

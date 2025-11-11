@@ -283,7 +283,18 @@
 	<Card.Header class="px-1 py-1">
 		<div class="card-header-content gap-0">
 			<div class="flex flex-col gap-0 flex-1">
-				<Card.Title class="text-sm border-b pb-2">{card.name}</Card.Title>
+				<!-- Card Title mit Comment Badge -->
+				<div class="flex items-center justify-between border-b pb-2">
+					<Card.Title class="text-sm flex-1">{card.name}</Card.Title>
+					
+					<!-- 🚀 NEW: Comment Count Badge -->
+					{#if localComments.length > 0}
+						<Badge variant="secondary" class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+							<MessageSquareIcon class="h-3 w-3" />
+							{localComments.length}
+						</Badge>
+					{/if}
+				</div>
 				
 				{#if card.labels && card.labels.length > 0}
 					<div class="flex flex-wrap gap-1 mt-2 mb-0">
