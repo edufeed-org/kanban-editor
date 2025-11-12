@@ -65,18 +65,40 @@
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
     
-    // 🔥 Sync Status - reactive derived from SyncManager with initialization check
+    // 🔥 Sync Status - reactive derived from SyncManager
+    // ✅ FIX: syncManager.status is ALREADY a $derived that depends on triggers
+    // We just need to read it - the reactivity chain is in SyncManager!
     let syncStatus = $derived.by(() => {
         try {
             const syncManager = getSyncManager();
-            return syncManager?.status || { 
-                isOnline: true, 
-                isSyncing: false, 
-                queuedEvents: 0,
-                connectedRelays: 0,
-                totalRelays: 0,
-                hasRelaySigner: false
-            };
+            
+            if (!syncManager) {
+                console.warn('[Topbar] SyncManager not available yet');
+                return { 
+                    isOnline: true, 
+                    isSyncing: false, 
+                    queuedEvents: 0,
+                    connectedRelays: 0,
+                    totalRelays: 0,
+                    hasRelaySigner: false
+                };
+            }
+            
+            // ✅ CRITICAL: Just read status - it's already reactive!
+            // The triggers are read INSIDE syncManager.status $derived
+            const status = syncManager.status;
+            
+            // 🐛 DEBUG: Log derived computation
+            console.log('[Topbar $derived] Computed status:', {
+                status,
+                connectedRelays: status.connectedRelays,
+                totalRelays: status.totalRelays,
+                // Also log the trigger values for debugging
+                managerTrigger1: syncManager.lastConnectedCount,
+                managerTrigger2: syncManager.lastTotalCount
+            });
+            
+            return status;
         } catch (error) {
             // SyncManager not initialized yet - return default status
             return { 
@@ -385,6 +407,14 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
             
             <!-- 🟢 Sync Status Indicator -->
+            <!-- 🐛 DEBUG: Log actual values in template -->
+            {console.log('[Topbar Template] Rendering with:', {
+                connectedRelays: syncStatus.connectedRelays,
+                totalRelays: syncStatus.totalRelays,
+                isSyncing: syncStatus.isSyncing,
+                queuedEvents: syncStatus.queuedEvents,
+                fullStatus: syncStatus
+            })}
             <div 
                 class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
                 title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"

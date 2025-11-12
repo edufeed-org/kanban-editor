@@ -63,9 +63,10 @@ export class SyncManager {
   private retryTimeoutId: NodeJS.Timeout | undefined;
   private relayMonitoringIntervalId: NodeJS.Timeout | undefined;
   
-  // 🐛 Debug: Track last counts to avoid excessive logging (MUST be $state for reactivity!)
-  private lastConnectedCount = $state(-1);  // -1 = not yet initialized, will trigger first log
-  private lastTotalCount = $state(-1);
+  // ✅ REACTIVE TRACKING: Public $state for Topbar to track changes
+  // Changed from private to public so $derived in Topbar can depend on these
+  public lastConnectedCount = $state(-1);  // -1 = not yet initialized, will trigger first log
+  public lastTotalCount = $state(-1);
   
   // ⚡ CRITICAL: Tracke eigene publizierte Events (Echo-Prevention)
   // Key: Event-ID, Value: Timestamp wann getrackt
@@ -73,23 +74,11 @@ export class SyncManager {
   
   // ✅ FIX: Make status a $derived instead of a getter for Svelte 5 reactivity
   public status = $derived.by((): SyncStatus => {
-    // ✅ FIX: Count ALL relays (public from NDK pool + private from settings)
-    const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
-    
-    // Get private relays from settingsStore
-    const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
-    
-    // Count connected public relays
-    const connectedPublicRelays = allPublicRelays.filter(relay => relay.connectivity?.status === 1).length;
-    const connectingPublicRelays = allPublicRelays.filter(relay => relay.connectivity?.status === 2).length;
-    
-    // For private relays: Assume they're usable if events are being published successfully
-    // This is a simplification - in reality we'd need to track their connection state
-    const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
-    
-    const connectedRelays = connectedPublicRelays + connectedPrivateRelays;
-    const connectingRelays = connectingPublicRelays;
-    const totalRelays = allPublicRelays.length + privateRelayUrls.length;
+    // ✅ CRITICAL: Read triggers to create reactive dependency!
+    // The interval updates lastConnectedCount/lastTotalCount directly
+    // Reading them here creates the dependency chain
+    const connectedRelays = this.lastConnectedCount;
+    const totalRelays = this.lastTotalCount;
     
     return {
       isOnline: this.isOnline,
@@ -97,8 +86,8 @@ export class SyncManager {
       queuedEvents: this.eventQueue.length,
       lastSyncTime: this.lastSyncTime,
       nextRetryTime: this.nextRetryTime,
-      connectedRelays,
-      totalRelays,
+      connectedRelays, // ← From $state trigger!
+      totalRelays,     // ← From $state trigger!
       hasRelaySigner: !!this.signer,
     };
   });
@@ -353,21 +342,24 @@ export class SyncManager {
     
     // Check every 2 seconds for relay status changes
     this.relayMonitoringIntervalId = setInterval(() => {
-      const current = this.status; // Get current status
+      // ✅ CRITICAL FIX: Count relays DIRECTLY, don't read this.status!
+      // Reading this.status creates a chicken-and-egg problem
+      const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
+      const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
+      const connectedPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 1).length;
+      const connectingPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 2).length;
+      const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
       
-      if (this.lastConnectedCount !== current.connectedRelays || this.lastTotalCount !== current.totalRelays) {
-        const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
-        const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
-        const connectedPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 1).length;
-        const connectingPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 2).length;
-        const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
-        
+      const currentConnected = connectedPublicRelays + connectedPrivateRelays;
+      const currentTotal = allPublicRelays.length + privateRelayUrls.length;
+      
+      if (this.lastConnectedCount !== currentConnected || this.lastTotalCount !== currentTotal) {
         console.log('[SyncManager] Relay Status Changed:', {
-          connectedRelays: current.connectedRelays,
-          totalRelays: current.totalRelays,
+          connectedRelays: currentConnected,
+          totalRelays: currentTotal,
           change: {
             from: `${this.lastConnectedCount}/${this.lastTotalCount}`,
-            to: `${current.connectedRelays}/${current.totalRelays}`
+            to: `${currentConnected}/${currentTotal}`
           },
           publicRelays: {
             connected: connectedPublicRelays,
@@ -386,8 +378,9 @@ export class SyncManager {
           }
         });
         
-        this.lastConnectedCount = current.connectedRelays;
-        this.lastTotalCount = current.totalRelays;
+        // ✅ CRITICAL: Update $state to trigger reactivity chain!
+        this.lastConnectedCount = currentConnected;
+        this.lastTotalCount = currentTotal;
       }
     }, 2000); // Check every 2 seconds
   }
