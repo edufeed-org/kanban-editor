@@ -438,7 +438,7 @@
                 {:else}
                     <!-- Fallback: Unknown state -->
                     <WifiIcon class="h-3 w-3 text-gray-400" />
-                    <span class="text-muted-foreground">Unknown</span>
+                    <span class="text-muted-foreground">...</span>
                 {/if}
             </div>
             
