@@ -847,7 +847,7 @@ if (!card.authorName && card.author) {
   card.authorName = await authStore.getDisplayNameForPubkey(card.author);
   // Optional: Save enriched card back to storage
 }
-```
+
 
 // Display Name
 getUserName(): string | null
