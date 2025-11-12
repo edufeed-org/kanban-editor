@@ -144,6 +144,7 @@ export class BoardStore {
                 comments: card.comments,
                 attendees: card.attendees,
                 labels: card.labels,
+                links: card.links, // ← ✅ FIXED: Komplettes links Array hinzufügen!
                 color: card.color,
                 publishState: card.publishState,
                 author: card.author,
@@ -821,6 +822,129 @@ export class BoardStore {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
         }
+    }
+
+    /**
+     * Loads comments for a specific card from Nostr relays
+     * Fetches Kind 1 events and merges with local comments
+     * 
+     * @param cardId - ID of the card to load comments for
+     * 
+     * @example
+     * ```typescript
+     * await boardStore.loadComments('card-123');
+     * // Fetches all remote comments, merges with local, persists to storage
+     * ```
+     */
+    public async loadComments(cardId: string): Promise<void> {
+        if (!this.nostrIntegration) {
+            console.warn('[BoardStore] loadComments: Nostr integration not available');
+            return;
+        }
+
+        await this.nostrIntegration.loadComments(this.board, cardId);
+        
+        // Trigger UI update after comments are loaded
+        this.triggerUpdate();
+    }
+
+    /**
+     * ⚡ Phase 3B: Subscribes to live comment updates for a specific card
+     * 
+     * Creates a persistent subscription for all Kind 1 events targeting this card.
+     * New comments will be automatically merged with existing ones and trigger UI updates.
+     * 
+     * **WICHTIG:** Cleanup-Funktion MUSS aufgerufen werden (z.B. in onDestroy)!
+     * 
+     * @param cardId - ID of the card to subscribe to
+     * @returns Cleanup function to stop the subscription
+     * 
+     * @example
+     * ```typescript
+     * // In CardViewDialog.svelte:
+     * let unsubscribe: () => void;
+     * 
+     * onMount(() => {
+     *     unsubscribe = boardStore.subscribeToComments(card.id);
+     * });
+     * 
+     * onDestroy(() => {
+     *     unsubscribe?.();
+     * });
+     * ```
+     */
+    public subscribeToComments(cardId: string): () => void {
+        if (!this.nostrIntegration) {
+            console.warn('[BoardStore] subscribeToComments: Nostr integration not available');
+            return () => {}; // Return no-op cleanup function
+        }
+
+        return this.nostrIntegration.subscribeToComments(
+            this.board,
+            cardId,
+            () => this.triggerUpdate() // Callback for UI updates
+        );
+    }
+
+    /**
+     * 🚀 Phase 4B: Load comments for ALL cards in the current board
+     * 
+     * Batch-loads comments from Nostr relays for all cards in parallel.
+     * This provides a much better UX than loading comments individually per card.
+     * 
+     * **Performance:** Uses Promise.all() for parallel fetching
+     * **Cache:** Results are persisted to localStorage via loadComments()
+     * **UI:** Triggers update after all comments are loaded
+     * 
+     * @example
+     * ```typescript
+     * // In Board.svelte onMount:
+     * onMount(async () => {
+     *     await boardStore.loadBoard(boardId);
+     *     await boardStore.loadAllComments(); // ← AUTO-LOAD!
+     * });
+     * ```
+     */
+    public async loadAllComments(): Promise<void> {
+        const board = this.board;
+        if (!board) {
+            console.warn('[BoardStore] loadAllComments: No board loaded');
+            return;
+        }
+        
+        console.log('📥 Batch-loading comments for all cards in board...');
+        
+        // Collect all card IDs from all columns
+        const cardIds: string[] = [];
+        for (const column of board.columns) {
+            for (const card of column.cards) {
+                cardIds.push(card.id);
+            }
+        }
+        
+        if (cardIds.length === 0) {
+            console.log('ℹ️ No cards in board, skipping comment load');
+            return;
+        }
+        
+        console.log(`📋 Found ${cardIds.length} cards, loading comments...`);
+        
+        // Batch load all comments in parallel
+        const startTime = performance.now();
+        
+        try {
+            await Promise.all(
+                cardIds.map(cardId => this.loadComments(cardId))
+            );
+            
+            const duration = (performance.now() - startTime).toFixed(0);
+            console.log(`✅ Loaded comments for ${cardIds.length} cards in ${duration}ms`);
+        } catch (error) {
+            console.error('❌ Error batch-loading comments:', error);
+        }
+        
+        // Single UI update after all loads complete
+        this.triggerUpdate();
     }
 
     // ============================================================================

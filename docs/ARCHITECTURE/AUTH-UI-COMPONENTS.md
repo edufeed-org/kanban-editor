@@ -940,13 +940,13 @@ Benutzer-Anzeige im Footer der linken Sidebar mit Login/Logout und Demo-Session-
       <DropdownMenu.Trigger>
         <div class="px-3 py-3 flex items-center gap-2 hover:bg-muted/50 rounded-md cursor-pointer">
           <Avatar.Root class="h-8 w-8 flex-shrink-0">
-            <Avatar.Image src="" alt={currentUser.profile?.name || ''} />
-            <Avatar.Fallback class="{Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold">
-              {Avatar.getInitials(currentUser.profile?.name) || ''}
+            <Avatar.Image src="" alt={authStore.getDisplayName()} />
+            <Avatar.Fallback class="{authStore.getAvatarColor()} text-white text-xs font-semibold">
+              {authStore.getUserInitials()}
             </Avatar.Fallback>
           </Avatar.Root>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold truncate">{currentUser.profile?.name}</p>
+            <p class="text-sm font-semibold truncate">{authStore.getDisplayName()}</p>
             <p class="text-xs text-muted-foreground font-mono truncate">
               {formatPubkey(currentUser.pubkey)}
             </p>
@@ -1034,12 +1034,37 @@ Benutzer-Anzeige im Footer der linken Sidebar mit Login/Logout und Demo-Session-
 
 ### Features
 
-- ✅ **Avatar mit Initialen** (automatische Farbe basierend auf Name)
+- ✅ **Avatar mit Initialen** - `authStore.getUserInitials()` für konsistente Initialen
+- ✅ **Konsistente Avatar-Farbe** - `authStore.getAvatarColor()` basiert auf Pubkey für Konsistenz
+- ✅ **Display Name mit Fallback** - `authStore.getDisplayName()` zeigt Name oder "Nostr Nutzer"
 - ✅ **Pubkey-Kurzform** (z.B. "0000...0001")
 - ✅ **Demo-Session Support** (config-gesteuert)
 - ✅ **ProfileEditor Integration** (Settings-Button)
 - ✅ **LoginDialog Integration** (Login-Button)
 - ✅ **Responsive** (flex-shrink-0 für Avatar)
+
+### 🎨 Warum authStore-Methoden statt lokaler Helper?
+
+**WICHTIG:** Die Komponente nutzt **zentrale authStore-Methoden** statt lokaler Helper-Funktionen:
+
+```typescript
+// ✅ RICHTIG - Nutze authStore für konsistente Display-Logik
+{authStore.getDisplayName()}     // "Alice" oder "Nostr Nutzer"
+{authStore.getUserInitials()}    // "AL" oder "NN"
+{authStore.getAvatarColor()}     // "bg-blue-500" basierend auf Pubkey
+
+// ❌ FALSCH - Dupliziere NICHT die Logik lokal
+function getUserInitials(name?: string) { ... }  // Duplikat!
+function getAvatarColor(name?: string) { ... }   // Duplikat!
+```
+
+**Vorteile der zentralen Logik:**
+1. **Single Source of Truth** - Änderungen nur an einer Stelle
+2. **Konsistente Farben** - Profil-Avatar und AvatarStack haben gleiche Farbe
+3. **Bessere Wartbarkeit** - Keine duplizierten Funktionen
+4. **Pubkey-basiert** - Farbe bleibt gleich auch wenn Name ändert
+
+Siehe: **[STORES/AUTHSTORE.md](./STORES/AUTHSTORE.md)** für vollständige API-Dokumentation.
 
 ---
 

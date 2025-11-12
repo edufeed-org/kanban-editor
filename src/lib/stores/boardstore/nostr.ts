@@ -1,8 +1,9 @@
 // src/lib/stores/boardstore/nostr.ts
 // Nostr-Integration und Event-Publishing
 
-import type { Board, Card } from '../../classes/BoardModel.js';
+import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
+import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
@@ -14,6 +15,7 @@ import { toast } from 'svelte-sonner';
 export class NostrIntegration {
     private ndk?: NDK;
     private boardSubscription: any | null = null;
+    private commentSubscriptions = new Map<string, any>(); // cardId -> subscription
 
     // ⚡ NEU (v2.0): Event-Deduplication für Event-Driven Architecture
     private processedEvents = new Set<string>();
@@ -21,6 +23,59 @@ export class NostrIntegration {
     // ⚡ NEU (v2.0): Deletion-Timestamp-Tracking für Out-of-Order Events
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
+
+    // 🚀 NEW (Phase 3): IndexedDB Cache für Comments
+    private static COMMENTS_STORAGE_PREFIX = 'nostr-comments-';
+
+    /**
+     * 🚀 Phase 3: Save comments to localStorage cache
+     * Provides instant access to comments without network delay
+     */
+    private saveCommentsToStorage(cardId: string, comments: Comment[]): void {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            const data = JSON.stringify(comments);
+            localStorage.setItem(key, data);
+            console.log(`💾 Saved ${comments.length} comment(s) to cache for card ${cardId}`);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to save comments to cache:', error);
+        }
+    }
+
+    /**
+     * 🚀 Phase 3: Load comments from localStorage cache
+     * Returns cached comments instantly, no network delay
+     */
+    private loadCommentsFromStorage(cardId: string): Comment[] {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            const data = localStorage.getItem(key);
+            
+            if (!data) {
+                return [];
+            }
+            
+            const comments = JSON.parse(data) as Comment[];
+            console.log(`💿 Loaded ${comments.length} comment(s) from cache for card ${cardId}`);
+            return comments;
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to load comments from cache:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 🚀 Phase 3: Clear comments cache for a card
+     */
+    private clearCommentsCache(cardId: string): void {
+        try {
+            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
+            localStorage.removeItem(key);
+            console.log(`🗑️ Cleared comment cache for card ${cardId}`);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to clear cache:', error);
+        }
+    }
 
     /**
      * Initialisiert Nostr Integration
@@ -437,8 +492,8 @@ export class NostrIntegration {
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(boardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (1s): ${boardEvent.id.substring(0, 30)}...`);
-            }, 1000);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
+            }, 5000);
             
             return;
         }
@@ -542,8 +597,8 @@ export class NostrIntegration {
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(cardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (1s): ${cardEvent.id.substring(0, 30)}...`);
-            }, 1000);
+                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${cardEvent.id.substring(0, 30)}...`);
+            }, 5000);
             
             return;
         }
@@ -877,6 +932,9 @@ export class NostrIntegration {
                 return;
             }
 
+            // Set status to 'syncing' before publishing
+            comment.syncStatus = 'syncing';
+
             const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
             const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
             const publishState = card.publishState || 'draft';
@@ -898,10 +956,328 @@ export class NostrIntegration {
                 targetRelays
             );
 
-            console.log(`✅ Comment ${commentId} queued for publishing`);
+            // ✅ CAPTURE EVENT-ID after publishing
+            // Note: syncManager.publishOrQueue() signs and publishes the event
+            // The event.id is available after signing
+            if (event.id) {
+                comment.eventId = event.id;
+                comment.syncStatus = 'synced';
+                
+                // Persist to localStorage
+                BoardStorage.saveBoard(board);
+                
+                console.log(`✅ Comment ${commentId} published with eventId: ${event.id}`);
+            } else {
+                // If eventId not available, mark as failed
+                comment.syncStatus = 'failed';
+                console.warn(`⚠️ Comment ${commentId} published but eventId not available`);
+            }
         } catch (error) {
             console.error(`❌ Error publishing comment:`, error);
+            
+            // Mark as failed on error
+            const result = board.findCardAndColumn(cardId);
+            if (result) {
+                const comment = result.card.comments?.find(c => c.id === commentId);
+                if (comment) {
+                    comment.syncStatus = 'failed';
+                    BoardStorage.saveBoard(board);
+                }
+            }
         }
+    }
+
+    /**
+     * Merges local comments with remote comments from Nostr
+     * Deduplicates by eventId, preserves local unpublished comments, sorts chronologically
+     * 
+     * @param localComments - Comments currently in localStorage
+     * @param remoteComments - Comments fetched from Nostr (Kind 1 events)
+     * @returns Merged and deduplicated comment array
+     * 
+     * @example
+     * ```typescript
+     * const local = [
+     *   { id: 'local-1', text: 'Unpublished', author: 'npub1...', createdAt: '2025-01-15T10:00:00Z', syncStatus: 'local' },
+     *   { id: 'local-2', text: 'Published', author: 'npub1...', createdAt: '2025-01-15T11:00:00Z', eventId: 'abc123', syncStatus: 'synced' }
+     * ];
+     * const remote = [
+     *   { id: 'remote-1', text: 'Published', author: 'npub1...', createdAt: '2025-01-15T11:00:00Z', eventId: 'abc123', syncStatus: 'synced' },
+     *   { id: 'remote-2', text: 'From other device', author: 'npub2...', createdAt: '2025-01-15T12:00:00Z', eventId: 'xyz789', syncStatus: 'synced' }
+     * ];
+     * const merged = mergeComments(local, remote);
+     * // Result: [local-1, remote-1 (deduplicated), remote-2] sorted by createdAt
+     * ```
+     */
+    private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comment[] {
+        // Step 1: Create Set of eventIds from local comments (for synced comments)
+        const localEventIds = new Set<string>(
+            localComments
+                .filter(c => c.eventId) // Only comments with eventId
+                .map(c => c.eventId!)
+        );
+
+        // Step 2: Filter remote comments to exclude duplicates
+        const newRemoteComments = remoteComments.filter(remote => {
+            // 2a. Skip if eventId already exists in local comments
+            if (remote.eventId && localEventIds.has(remote.eventId)) {
+                return false;
+            }
+
+            // 🚀 2b. NEW: Also check for text+timestamp duplicates (for pending local comments)
+            // This handles the case where local comment was sent but hasn't received eventId yet
+            // If text matches AND timestamp is within 5 seconds → it's the same comment
+            const isDuplicate = localComments.some(local => {
+                // Skip if local already has eventId (already synced)
+                if (local.eventId) return false;
+
+                // Check text match
+                if (local.text !== remote.text) return false;
+
+                // Check timestamp proximity (within 5 seconds)
+                const localTime = new Date(local.createdAt).getTime();
+                const remoteTime = new Date(remote.createdAt).getTime();
+                const timeDiff = Math.abs(localTime - remoteTime);
+
+                return timeDiff < 5000; // 5 seconds tolerance
+            });
+
+            return !isDuplicate;
+        });
+
+        // Step 3: Merge local + new remote comments
+        const merged = [...localComments, ...newRemoteComments];
+
+        // Step 4: Sort chronologically by createdAt (oldest first)
+        merged.sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateA - dateB;
+        });
+
+        return merged;
+    }
+
+    /**
+     * Loads comments for a specific card from Nostr relays
+     * Fetches Kind 1 events with #a tag referencing the card, merges with local comments
+     * 
+     * @param board - Board containing the card
+     * @param cardId - ID of the card to load comments for
+     * 
+     * @example
+     * ```typescript
+     * await nostrIntegration.loadComments(board, 'card-123');
+     * // Fetches all Kind 1 events with #a: ['30302:author:card-123']
+     * // Merges with local comments in card.comments
+     * // Persists merged state to localStorage
+     * ```
+     */
+    public async loadComments(board: Board, cardId: string): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] loadComments: NDK not initialized');
+            return;
+        }
+
+        try {
+            // 1. Find the card in the board
+            const result = board.findCardAndColumn(cardId);
+            if (!result) {
+                console.warn(`[NostrIntegration] Card ${cardId} not found in board`);
+                return;
+            }
+
+            const { card } = result;
+
+            // 🚀 2. Load from cache FIRST (instant access)
+            const cachedComments = this.loadCommentsFromStorage(cardId);
+            if (cachedComments.length > 0) {
+                console.log(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
+                // Merge cache with current card comments
+                const merged = this.mergeComments(card.comments || [], cachedComments);
+                card.comments = merged;
+            }
+
+            // 3. Build card reference for Nostr filter
+            // Format: "30302:<author-pubkey>:<card-d-tag>"
+            const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
+
+            console.log(`[NostrIntegration] 📥 Loading comments from Nostr for card: ${card.heading} (${cardRef})`);
+
+            // 4. Fetch Kind 1 (text note) events with #a tag referencing this card
+            const events = await this.ndk.fetchEvents({
+                kinds: [1] as number[],
+                '#a': [cardRef]
+            });
+
+            if (!events || events.size === 0) {
+                console.log('[NostrIntegration] 📭 No remote comments found');
+                // Save current state to cache (might be empty or local-only)
+                this.saveCommentsToStorage(cardId, card.comments || []);
+                return;
+            }
+
+            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s)`);
+
+            // 5. Convert Nostr events to Comment objects
+            const remoteComments: Comment[] = Array.from(events).map(event => {
+                return {
+                    id: generateDTag(), // Local ID for UI
+                    eventId: event.id!, // Nostr event ID for deduplication
+                    text: event.content,
+                    author: event.pubkey,
+                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    syncStatus: 'synced' as const // Remote comments are always synced
+                };
+            });
+
+            // 6. Merge with current card comments (already contains cache)
+            const localComments = card.comments || [];
+            const merged = this.mergeComments(localComments, remoteComments);
+
+            // 7. Update card with merged comments
+            card.comments = merged;
+
+            // 🚀 8. Save to cache for next time
+            this.saveCommentsToStorage(cardId, merged);
+
+            // 9. Persist to localStorage
+            BoardStorage.saveBoard(board);
+
+            console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+        } catch (error) {
+            console.error('[NostrIntegration] ❌ Error loading comments:', error);
+        }
+    }
+
+    /**
+     * ⚡ Phase 3B: Abonniert Live-Updates für Kommentare einer Karte
+     * 
+     * Erstellt eine persistente Subscription für alle Kind 1 Events, die auf diese Card referenzieren.
+     * Neue Kommentare werden automatisch mit bestehenden gemerged und triggern UI-Updates.
+     * 
+     * @param board - Das Board mit der Card
+     * @param cardId - Die ID der Card
+     * @param onUpdate - Callback der nach jedem neuen Kommentar aufgerufen wird (z.B. triggerUpdate() für UI refresh)
+     * @returns Cleanup-Funktion zum Beenden der Subscription
+     * 
+     * @example
+     * ```typescript
+     * // In CardViewDialog.svelte:
+     * let unsubscribe: () => void;
+     * onMount(() => {
+     *     unsubscribe = boardStore.subscribeToComments(card.id);
+     * });
+     * onDestroy(() => {
+     *     unsubscribe?.();
+     * });
+     * ```
+     */
+    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void): () => void {
+        // 1. Guard: NDK verfügbar?
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] subscribeToComments: NDK not initialized');
+            return () => {}; // Return no-op cleanup function
+        }
+
+        // 2. Finde die Card im Board
+        const result = board.findCardAndColumn(cardId);
+        if (!result) {
+            console.warn(`[NostrIntegration] subscribeToComments: Card ${cardId} not found`);
+            return () => {};
+        }
+
+        const { card } = result;
+
+        // 3. Build card reference für #a tag filter
+        const cardAuthor = card.author || board.author || 'unknown';
+        const cardRef = `30302:${cardAuthor}:${cardId}`;
+
+        console.log(`[NostrIntegration] 📡 Subscribing to comments for card: ${cardId} (${cardRef})`);
+
+        // 4. Cleanup existing subscription für diese Card (falls vorhanden)
+        const existingSub = this.commentSubscriptions.get(cardId);
+        if (existingSub && typeof existingSub.stop === 'function') {
+            try {
+                existingSub.stop();
+                console.log(`[NostrIntegration] 🛑 Stopped existing subscription for card ${cardId}`);
+            } catch (err) {
+                console.error('[NostrIntegration] Error stopping existing subscription:', err);
+            }
+        }
+
+        // 5. Create NDK subscription für Kind 1 events mit #a tag filter
+        const sub = this.ndk.subscribe(
+            {
+                kinds: [1],
+                '#a': [cardRef]
+            },
+            { closeOnEose: false } // ← WICHTIG: Persistent subscription für live updates!
+        );
+
+        // 6. Event handler: Convert → Merge → Persist → Trigger UI
+        sub.on('event', async (event: any) => {
+            try {
+                // Deduplication: Skip if already processed
+                if (this.processedEvents.has(event.id)) {
+                    console.log(`[NostrIntegration] ⏭️ Skipping duplicate comment event: ${event.id.substring(0, 8)}`);
+                    return;
+                }
+
+                // Mark as processed
+                this.processedEvents.add(event.id);
+
+                console.log(`[NostrIntegration] 💬 New comment received for card ${cardId}`);
+
+                // Convert Nostr event to Comment object
+                const newComment: Comment = {
+                    id: generateDTag(), // Local ID for UI
+                    eventId: event.id!, // Nostr event ID for deduplication
+                    text: event.content,
+                    author: event.pubkey,
+                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    syncStatus: 'synced' as const // Event kommt vom Relay = bereits synced
+                };
+
+                // Merge with existing comments (deduplication via eventId)
+                const currentComments = card.comments || [];
+                const merged = this.mergeComments(currentComments, [newComment]);
+                card.comments = merged;
+
+                // Persist to localStorage (board storage)
+                BoardStorage.saveBoard(board);
+
+                // 🚀 Save to cache for instant access next time
+                this.saveCommentsToStorage(cardId, merged);
+
+                console.log(`[NostrIntegration] ✅ Comment merged and persisted. Total: ${merged.length}`);
+
+                // Trigger UI update callback
+                if (onUpdate) {
+                    onUpdate();
+                }
+            } catch (error) {
+                console.error('[NostrIntegration] ❌ Error processing comment event:', error);
+            }
+        });
+
+        // 7. Store subscription in Map für späteren Cleanup
+        this.commentSubscriptions.set(cardId, sub);
+
+        console.log(`[NostrIntegration] ✅ Comment subscription active for card ${cardId}`);
+
+        // 8. Return cleanup function
+        return () => {
+            if (sub && typeof sub.stop === 'function') {
+                try {
+                    sub.stop();
+                    this.commentSubscriptions.delete(cardId);
+                    console.log(`[NostrIntegration] 🛑 Comment subscription stopped for card ${cardId}`);
+                } catch (err) {
+                    console.error('[NostrIntegration] Error stopping comment subscription:', err);
+                }
+            }
+        };
     }
 
     /**

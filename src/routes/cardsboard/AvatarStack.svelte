@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { authStore } from "$lib/index.js";
+	
 	interface Props {
 		attendees?: string[];
 		maxVisible?: number;
@@ -26,9 +28,28 @@
 		return colors[hash % colors.length];
 	}
 
-	// Get initials from pubkey (first 2 chars)
+	// 🔧 FIX: Get proper initials - check if it's current user first
 	function getInitials(pubkey: string): string {
+		// Check if this is the current logged-in user
+		if (authStore.isAuthenticated && authStore.getPubkey() === pubkey) {
+			return authStore.getUserInitials();
+		}
+		
+		// For other users: fallback to pubkey (first 2 chars)
+		// TODO: Later könnte man hier einen User-Profil-Cache einbauen
 		return pubkey.slice(0, 2).toUpperCase();
+	}
+	
+	// 🔧 FIX: Get display name for tooltip
+	function getDisplayName(pubkey: string): string {
+		// Check if this is the current logged-in user
+		if (authStore.isAuthenticated && authStore.getPubkey() === pubkey) {
+			return authStore.getDisplayName();
+		}
+		
+		// For other users: show pubkey
+		// TODO: Later könnte man hier einen User-Profil-Cache einbauen
+		return pubkey;
 	}
 </script>
 
@@ -39,7 +60,7 @@
 			class="avatar w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white dark:border-slate-900 {getAvatarColor(
 				pubkey
 			)}"
-			title={pubkey}
+			title={getDisplayName(pubkey)}
 		>
 			{getInitials(pubkey)}
 		</div>

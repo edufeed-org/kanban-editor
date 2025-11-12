@@ -68,10 +68,11 @@
 	let localAuthorName = $state(card.authorName);
 	let localAttendees = $state(card.attendees || []);
 
-	// Ensure minimum 1 attendee (author should always be included)
+	// 🔧 FIX: AvatarStack erwartet PUBKEYS, nicht Display-Namen!
+	// Ensure minimum 1 attendee (author pubkey should always be included)
 	const attendees = $derived(localAttendees && localAttendees.length > 0
 		? localAttendees
-		: (localAuthorName ? [localAuthorName] : []));
+		: (localAuthor ? [localAuthor] : []));
 
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components
@@ -142,6 +143,16 @@
 					localAttendees = updatedCard.attendees || [];
 				}
 				
+				// ✅ FIX: Aktualisiere links für sofortige Reaktivität
+				const linksJSON = JSON.stringify(updatedCard.links || []);
+				const cardLinksJSON = JSON.stringify(card.links || []);
+				
+				if (linksJSON !== cardLinksJSON) {
+					console.log('🔄 Card links updated:', (updatedCard.links || []).length, 'links');
+					// Triggere Prop-Update durch Reassignment
+					card = { ...card, links: updatedCard.links };
+				}
+				
 				break; // Karte gefunden, keine weitere Suche nötig
 			}
 		}
@@ -206,7 +217,8 @@
 			content: updates.content,
 			image: updates.image,
 			color: updates.color,
-			labels: updates.labels
+			labels: updates.labels,
+			links: updates.links // ← ✅ FIXED: links waren missing!
 		});
 
 		// WICHTIG: Triggere ein CardUpdated Event, damit Column.svelte die Items neuladen kann
@@ -271,7 +283,12 @@
 	<Card.Header class="px-1 py-1">
 		<div class="card-header-content gap-0">
 			<div class="flex flex-col gap-0 flex-1">
-				<Card.Title class="text-sm border-b pb-2">{card.name}</Card.Title>
+				<!-- Card Title mit Comment Badge -->
+				<div class="flex items-center justify-between border-b pb-2">
+					<Card.Title class="text-sm flex-1">{card.name}</Card.Title>
+					
+					
+				</div>
 				
 				{#if card.labels && card.labels.length > 0}
 					<div class="flex flex-wrap gap-1 mt-2 mb-0">
@@ -383,9 +400,30 @@
 			</div>
 		{/if}
 
-		<!-- Link Section -->
-		{#if card.link}
-			<Button variant="outline" onclick={handleLinkClick}><LinkIcon class="mr-2 h-4 w-4" /> Link öffnen</Button>
+		<!-- Links Section -->
+		{#if card.links && card.links.length > 0}
+			<div class="space-y-2">
+				{#each card.links as link}
+					<Button 
+						variant="outline" 
+						size="sm"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							window.open(link.url, '_blank', 'noopener,noreferrer');
+						}}
+						class="w-full justify-start gap-2 text-xs"
+					>
+						<LinkIcon class="h-3 w-3 flex-shrink-0" />
+						<span class="truncate">{link.title}</span>
+					</Button>
+				{/each}
+			</div>
+		{:else if card.link}
+			<!-- Fallback für altes Format (nur card.link) -->
+			<Button variant="outline" onclick={handleLinkClick}>
+				<LinkIcon class="mr-2 h-4 w-4" /> Link öffnen
+			</Button>
 		{/if}
 	</Card.Content>
 
@@ -393,18 +431,18 @@
 		<div class="footer-content">
 			<!-- Links anorden -->
 			<div class="flex items-center gap-2 scale-80">
-				<div class="comments-count">
-					<Button
-						variant="default"
-						size="sm"
-						class="btn"
+				<!-- 🚀 NEW: Comment Count Badge -->
+				<!-- {#if localComments.length > 0} -->
+					<Badge 
+						variant="secondary" 
+						class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
 						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
-						aria-label="Anzeigen"
-						title="Anzeigen"
-					>
-						<MessageSquareIcon class="mr-2 h-4 w-4" /> {#if localComments.length > 0}{localComments.length}{/if}
-					</Button>
-				</div>
+						>
+						<MessageSquareIcon class="h-3 w-3" />
+						{localComments.length>0?localComments.length:''}
+					</Badge>
+				<!-- {/if} -->
+				
 				{#if attendees.length > 0}
 					<AvatarStack {attendees} maxVisible={3} />
 				{/if}

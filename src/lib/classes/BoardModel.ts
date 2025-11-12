@@ -17,6 +17,8 @@ export interface Comment extends NostrElement {
     text: string;
     author: string; // Nostr Public Key (npub)
     createdAt: string; // ISO 8601
+    eventId?: string; // ← NEU: Nostr Event-ID (für published comments & deduplizierung)
+    syncStatus?: 'local' | 'syncing' | 'synced' | 'failed'; // ← NEU: Publishing-Status
 }
 
 export interface Link extends NostrElement {
@@ -174,7 +176,8 @@ export class Card {
 
     getContextData(): Omit<CardProps, 'comments' | 'links' | 'attendees'> & {
         comments: { text: string; author: string }[],
-        links: { url: string; title: string }[]
+        links: { url: string; title: string }[],
+        attendees: string[]
     } {
         return {
             id: this.id,
@@ -190,7 +193,8 @@ export class Card {
             createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
             updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
             comments: this.comments.map(c => ({ text: c.text, author: c.author })),
-            links: this.links.map(l => ({ url: l.url, title: l.title }))
+            links: this.links.map(l => ({ url: l.url, title: l.title })),
+            attendees: this.attendees // ← ✅ FIXED: attendees serialisieren!
         };
     }
 }

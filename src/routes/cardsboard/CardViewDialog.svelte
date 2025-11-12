@@ -16,7 +16,13 @@
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import UserIcon from '@lucide/svelte/icons/user';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
+	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import DownloadIcon from '@lucide/svelte/icons/download';
 	import type { CardItem } from './types.js';
+	import { onMount, onDestroy } from 'svelte';
 
 	interface Props {
 		cardId: string | number;
@@ -27,10 +33,30 @@
 
 	let commentText = $state('');
 	let isSubmitting = $state(false);
+	let isLoadingComments = $state(false);
 	let selectedAuthorPopover = $state<string | null>(null);
 	let editName = $state('');
 	let selectedColor = $state('slate');
 	let localPublishState = $state<'draft' | 'published' | 'archived'>('draft');
+
+	// Subscription cleanup function
+	let unsubscribeComments: (() => void) | undefined;
+
+	/**
+	 * 🔥 Auto-subscribe to real-time comment updates on mount
+	 */
+	onMount(() => {
+		console.log('[CardViewDialog] Mounting - subscribing to comments for card:', cardId);
+		unsubscribeComments = boardStore.subscribeToComments(String(cardId));
+	});
+
+	/**
+	 * 🔥 Cleanup subscription on unmount to prevent leaks
+	 */
+	onDestroy(() => {
+		console.log('[CardViewDialog] Unmounting - cleaning up comment subscription');
+		unsubscribeComments?.();
+	});
 
 	/**
 	 * 🔥 Lese die Karte DIREKT aus boardStore.uiData
@@ -76,19 +102,73 @@
 
 	/**
 	 * Handles comment submission
+	 * 
+	 * 🚀 Author-Fallback-Kette:
+	 * 1. getUserName() → Nostr profile.name (z.B. "Alice")
+	 * 2. getDisplayName() → "Nostr Nutzer" (wenn kein Name im Profil)
+	 * 3. getPubkey() → Hex pubkey (wenn nicht eingeloggt)
+	 * 4. 'anonymous' → Last resort
 	 */
 	async function handleAddComment() {
 		if (!commentText.trim()) return;
 
 		try {
 			isSubmitting = true;
-			const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+			// 🎯 Bessere Fallback-Kette: Name → Display → Pubkey → anonymous
+			const author = authStore.getUserName() 
+						|| authStore.getDisplayName() 
+						|| authStore.getPubkey() 
+						|| 'anonymous';
 			boardStore.addComment(card.id as string, commentText.trim(), author);
 			commentText = '';
 		} catch (error) {
 			console.error('❌ Fehler beim Hinzufügen des Kommentars:', error);
 		} finally {
 			isSubmitting = false;
+		}
+	}
+
+	/**
+	 * 🔥 Load remote comments from Nostr relays
+	 */
+	async function handleLoadComments() {
+		try {
+			isLoadingComments = true;
+			await boardStore.loadComments(String(cardId));
+			console.log('✅ Comments loaded from Nostr');
+		} catch (error) {
+			console.error('❌ Failed to load comments:', error);
+		} finally {
+			isLoadingComments = false;
+		}
+	}
+
+	/**
+	 * 🔥 Retry publishing a failed comment
+	 */
+	async function handleRetryComment(commentId: string) {
+		try {
+			// Find the failed comment
+			const comment = displayComments.find(c => c.id === commentId);
+			if (!comment) return;
+			
+			// Re-publish by adding it again (will trigger publish in addComment)
+			// 🎯 Same fallback chain as handleAddComment
+			const author = comment.author 
+						|| authStore.getUserName() 
+						|| authStore.getDisplayName() 
+						|| authStore.getPubkey() 
+						|| 'anonymous';
+			
+			// Delete the failed comment first
+			boardStore.deleteComment(String(cardId), commentId);
+			
+			// Re-add it (this will trigger publish)
+			boardStore.addComment(String(cardId), comment.text, author);
+			
+			console.log('✅ Comment retry initiated');
+		} catch (error) {
+			console.error('❌ Comment retry failed:', error);
 		}
 	}
 
@@ -126,6 +206,28 @@
 	 */
 	function getInitials(pubkey: string): string {
 		return pubkey.slice(0, 2).toUpperCase();
+	}
+
+	/**
+	 * 🚀 NEW: Format author name for display
+	 * - Uses authStore.getDisplayNameForPubkey() to fetch Nostr profiles
+	 * - Short name (< 20 chars): Display full (e.g. "Alice", "Bob")
+	 * - Long pubkey: Fetch from Nostr or truncate to first 8 + last 4 chars
+	 * - Caches profiles for performance
+	 * 
+	 * @param author - Pubkey (hex) or name string
+	 * @returns Readable display name
+	 */
+	function formatAuthorName(author: string): string {
+		if (!author) return 'Anonym';
+		
+		// Short name (< 20 chars) → display full (likely already a name)
+		if (author.length < 20) {
+			return author;
+		}
+		
+		// Long pubkey → fetch from authStore (with cache + async fetch)
+		return authStore.getDisplayNameForPubkey(author);
 	}
 
 	/**
@@ -245,6 +347,31 @@
 				</div>
 			{/if}
 
+			<!-- Links Section -->
+			{#if card.links && card.links.length > 0}
+				<div class="space-y-2">
+					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
+					<div class="space-y-2">
+						{#each card.links as link, index (link.id || `link-${index}`)}
+							<a
+								href={link.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="flex items-center gap-2 p-2 bg-muted/50 rounded-md hover:bg-muted transition-colors border text-sm"
+							>
+								<svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+								</svg>
+								<div class="flex-1 min-w-0">
+									<div class="font-medium truncate">{link.title}</div>
+									<div class="text-xs text-muted-foreground truncate">{link.url}</div>
+								</div>
+							</a>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
 			{#if attendees.length > 0}
 				<div class="space-y-2">
@@ -286,10 +413,13 @@
 			<!-- Divider -->
 			<div class="my-2 border-t"></div>
 
-			<!-- Comments Section Header -->
-			<h3 class="text-sm font-semibold text-muted-foreground">
-				Kommentare ({displayComments.length})
-			</h3>
+			<!-- Comments Section Header with Load Button -->
+			<div class="flex items-center justify-between">
+				<h3 class="text-sm font-semibold text-muted-foreground">
+					Kommentare ({displayComments.length})
+				</h3>
+				<!-- 🚀 Phase 4B: Load Comments button entfernt - Auto-Load aktiv -->
+			</div>
 
 			<!-- Existing Comments List -->
 			{#if displayComments.length > 0}
@@ -308,9 +438,11 @@
 								</Popover.Trigger>
 								<Popover.Content side="top" align="start" class="w-48">
 									<div class="space-y-2">
+										<!-- 🚀 Show formatted name (truncated if pubkey) -->
 										<div class="text-sm font-semibold px-2 py-1">
-											{comment.author}
+											{formatAuthorName(comment.author)}
 										</div>
+										<!-- Full pubkey in small text (for copy-paste) -->
 										<div class="text-xs text-muted-foreground px-2 font-mono break-all">
 											{comment.author}
 										</div>
@@ -322,7 +454,29 @@
 							<div class="flex-1 min-w-0 space-y-2">
 								<div class="flex justify-between items-start gap-2">
 									<div class="flex-1 min-w-0">
-										<div class="font-medium text-sm">{comment.author}</div>
+										<div class="flex items-center gap-2">
+											<!-- 🚀 Show formatted name instead of raw pubkey -->
+											<span class="font-medium text-sm">{formatAuthorName(comment.author)}</span>
+											
+											<!-- 🔥 Sync Status Icon -->
+											{#if comment.syncStatus === 'syncing'}
+												<span title="Wird synchronisiert...">
+													<LoaderIcon class="h-3 w-3 animate-spin text-blue-500" />
+												</span>
+											{:else if comment.syncStatus === 'synced'}
+												<span title="Synchronisiert">
+													<CheckIcon class="h-3 w-3 text-green-500" />
+												</span>
+											{:else if comment.syncStatus === 'failed'}
+												<span title="Synchronisation fehlgeschlagen">
+													<CircleAlertIcon class="h-3 w-3 text-red-500" />
+												</span>
+											{:else if comment.syncStatus === 'local'}
+												<span title="Nur lokal (Offline)">
+													<WifiOffIcon class="h-3 w-3 text-amber-500" />
+												</span>
+											{/if}
+										</div>
 										<div class="text-xs text-muted-foreground">
 											{new Date(comment.createdAt).toLocaleDateString('de-DE', {
 												year: 'numeric',
@@ -333,14 +487,29 @@
 											})}
 										</div>
 									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
-										class="btn text-destructive bg-destructive h-6 w-6 p-0"
-									>
-										<TrashIcon class="size-3" />
-									</Button>
+									
+									<!-- Action Buttons: Retry (if failed) + Delete -->
+									<div class="flex gap-1">
+										{#if comment.syncStatus === 'failed'}
+											<Button
+												variant="ghost"
+												size="sm"
+												onclick={() => handleRetryComment(comment.id || `fallback-${index}`)}
+												class="h-6 w-6 p-0 text-amber-600 hover:text-amber-700"
+												title="Erneut versuchen"
+											>
+												<RefreshCwIcon class="size-3" />
+											</Button>
+										{/if}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => handleDeleteComment(comment.id || `fallback-${index}`)}
+											class="btn text-destructive bg-destructive h-6 w-6 p-0"
+										>
+											<TrashIcon class="size-3" />
+										</Button>
+									</div>
 								</div>
 								<p class="text-sm text-foreground whitespace-pre-wrap break-words">
 									{comment.text}

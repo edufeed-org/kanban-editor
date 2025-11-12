@@ -513,6 +513,37 @@ getPubkey(): string | null
 // NPub (Bech32)
 getNpub(): string | null
 
+// Display Name (with fallback)
+getUserName(): string | null        // Returns profile.name or null
+getDisplayName(): string            // Returns profile.name or "Nostr Nutzer" (never null)
+getUserInitials(): string           // Returns initials from name or "NN"
+getAvatarColor(): string            // Returns consistent Tailwind color class based on pubkey
+
+// SSR-Safe Variants (return fallback instead of throwing)
+getPubkeySafe(): string | null
+getUserNameSafe(): string | null
+getDisplayNameSafe(): string        // Returns "Nostr Nutzer" if not initialized
+getUserInitialsSafe(): string       // Returns "NN" if not initialized
+getAvatarColorSafe(): string        // Returns "bg-slate-500" if not initialized
+```
+
+**Verwendung in UI:**
+```typescript
+// ✅ RICHTIG - Nutze getDisplayName() für UI-Anzeige
+<p>{authStore.getDisplayName()}</p>  // "Alice" oder "Nostr Nutzer"
+
+// ✅ RICHTIG - Nutze getUserInitials() für Avatar
+<Avatar.Fallback>{authStore.getUserInitials()}</Avatar.Fallback>  // "AL" oder "NN"
+
+// ✅ RICHTIG - Nutze getAvatarColor() für konsistente Farbe
+<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white`}>
+  {authStore.getUserInitials()}
+</Avatar.Fallback>
+
+// ❌ FALSCH - Nutze nicht getUserName() direkt in UI (kann null sein)
+<p>{authStore.getUserName()}</p>  // Kann leer sein!
+```
+
 // Display Name
 getUserName(): string | null
 

@@ -71,14 +71,13 @@
 			<DropdownMenu.Trigger class="bg-secondary rounded-md">
 				<div class="px-3 py-3 flex items-center gap-2">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Image src="" alt={currentUser.profile?.name || ''} />
-						<Avatar.Fallback class={`${Avatar.getAvatarColor(currentUser.profile?.name) || ''} text-white text-xs font-semibold`}>
-							<!-- Avatar mit User-Initialen -->
-							{Avatar.getInitials(currentUser.profile?.name) || ''}
+						<Avatar.Image src="" alt={authStore.getDisplayName()} />
+						<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
+							{authStore.getUserInitials()}
 						</Avatar.Fallback>
 					</Avatar.Root>
 					<div>
-						<p class="text-sm font-semibold">{currentUser.profile?.name}</p>
+						<p class="text-sm font-semibold">{authStore.getDisplayName()}</p>
 						<p class="text-xs text-muted-foreground font-mono">
 							{formatPubkey(currentUser.pubkey)}
 						</p>

@@ -65,7 +65,7 @@
 		labels: z.array(z.string()),
 		links: z.array(
 			z.object({
-				id: z.string(),
+				id: z.string(), // ← REQUIRED: Alle Links haben jetzt IDs (generiert beim Laden)
 				url: z.string().url('Ungültige URL'),
 				title: z.string().min(1, 'Link-Titel erforderlich')
 			})
@@ -106,12 +106,18 @@
 			const content = ('content' in currentCard) ? currentCard.content : (currentCard as any).description;
 			const links = ('links' in currentCard) ? currentCard.links : [];
 			
+			// 🔧 FIX: Bestehende Links ohne ID bekommen eine generierte ID
+			const linksWithIds = (links || []).map(link => ({
+				...link,
+				id: link.id || crypto.randomUUID() // ← Generiere ID falls fehlend
+			}));
+			
 			formData = {
 				heading: heading || '',
 				content: content || '',
 				image: currentCard.image || '',
 				labels: [...(currentCard.labels || [])],
-				links: [...(links || [])],
+				links: linksWithIds,
 				publishState: currentCard.publishState || 'draft'
 			};
 			errors = {};
@@ -126,6 +132,7 @@
 
 		if (!result.success) {
 			errors = {};
+			console.error('❌ Validation failed:', result.error.issues);
 			result.error.issues.forEach((issue) => {
 				const path = String(issue.path[0] || 'general');
 				errors[path] = issue.message;
@@ -340,7 +347,7 @@
 							<!-- Links List -->
 							{#if formData.links && formData.links.length > 0}
 								<div class="space-y-2">
-									{#each formData.links as link (link.id)}
+									{#each formData.links as link, index (link.id || `link-${index}`)}
 										<div
 											class="flex items-center justify-between rounded border border-border bg-background p-2"
 										>
