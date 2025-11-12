@@ -124,5 +124,105 @@ describe('AuthStore (unit)', () => {
 		const status = store.getStatus();
 		expect(status.user).toBe(store.currentUser);
 	});
+
+	// 🆕 AUTHOR ATTRIBUTION TESTS (Dual-Field Strategy)
+	describe('getAuthorAttribution (Dual-Field Strategy)', () => {
+		it('returns both pubkey and displayName when user is logged in with profile', () => {
+			store.currentUser = { 
+				pubkey: 'test-pubkey-123', 
+				npub: 'npub-test', 
+				profile: { name: 'Alice' } 
+			} as any;
+
+			const result = store.getAuthorAttribution();
+
+			expect(result).toEqual({
+				pubkey: 'test-pubkey-123',
+				displayName: 'Alice'
+			});
+		});
+
+		it('returns pubkey and null displayName when user has no profile name', () => {
+			store.currentUser = { 
+				pubkey: 'test-pubkey-456', 
+				npub: 'npub-test2',
+				profile: {} 
+			} as any;
+
+			const result = store.getAuthorAttribution();
+
+			expect(result).toEqual({
+				pubkey: 'test-pubkey-456',
+				displayName: null
+			});
+		});
+
+		it('returns pubkey and null displayName when user has no profile object', () => {
+			store.currentUser = { 
+				pubkey: 'test-pubkey-789', 
+				npub: 'npub-test3'
+			} as any;
+
+			const result = store.getAuthorAttribution();
+
+			expect(result).toEqual({
+				pubkey: 'test-pubkey-789',
+				displayName: null
+			});
+		});
+
+		it('returns null pubkey and displayName when no user is logged in', () => {
+			store.currentUser = null;
+
+			const result = store.getAuthorAttribution();
+
+			expect(result).toEqual({
+				pubkey: null,
+				displayName: null
+			});
+		});
+
+		it('returns correct attribution for demo user', () => {
+			// Setup demo session
+			localStorage.setItem('kanban-config', JSON.stringify({ allow_demo_session: { enabled: true } }));
+			store.createDemoSession();
+
+			const result = store.getAuthorAttribution();
+
+			// Demo user should have pubkey starting with "demo-"
+			expect(result.pubkey).toMatch(/^demo-/);
+			expect(result.displayName).toBe('Demo User');
+		});
+
+		it('works correctly after profile update', async () => {
+			// Create demo session
+			localStorage.setItem('kanban-config', JSON.stringify({ allow_demo_session: { enabled: true } }));
+			store.createDemoSession();
+
+			// Update profile
+			await store.updateProfile({ name: 'Updated Name' });
+
+			const result = store.getAuthorAttribution();
+
+			expect(result.displayName).toBe('Updated Name');
+			expect(result.pubkey).toMatch(/^demo-/);
+		});
+
+		it('maintains consistent pubkey after multiple calls', () => {
+			store.currentUser = { 
+				pubkey: 'consistent-pubkey', 
+				npub: 'npub-consistent',
+				profile: { name: 'Bob' } 
+			} as any;
+
+			const result1 = store.getAuthorAttribution();
+			const result2 = store.getAuthorAttribution();
+			const result3 = store.getAuthorAttribution();
+
+			expect(result1.pubkey).toBe(result2.pubkey);
+			expect(result2.pubkey).toBe(result3.pubkey);
+			expect(result1.displayName).toBe(result2.displayName);
+		});
+	});
 });
 

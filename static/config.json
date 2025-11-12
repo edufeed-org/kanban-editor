@@ -13,9 +13,14 @@
 
   "nostr": {
     "relaysPublic": [
+      "wss://relay-rpi.edufeed.org",
       "ws://localhost:7000"
     ],
-    "relaysPrivate": []
+    "relaysPrivate": [
+      "ws://localhost:7000"
+    ],
+    "$comment": "⚠️ Development: Verwende 'ws://localhost:7000' nur wenn lokaler Docker-Relay läuft! Production: Nutze öffentliche wss:// Relays.",
+    "$comment_localhost": "Lokaler Relay für Tests: ws://localhost:7000 (erfordert: docker-compose up -d)"
   },
 
   "llm": {

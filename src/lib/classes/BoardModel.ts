@@ -15,7 +15,8 @@ export interface NostrElement {
 
 export interface Comment extends NostrElement {
     text: string;
-    author: string; // Nostr Public Key (npub)
+    author: string; // Nostr Public Key (hex pubkey)
+    authorName?: string; // 🆕 Display Name (optional, für UI)
     createdAt: string; // ISO 8601
     eventId?: string; // ← NEU: Nostr Event-ID (für published comments & deduplizierung)
     syncStatus?: 'local' | 'syncing' | 'synced' | 'failed'; // ← NEU: Publishing-Status
@@ -63,7 +64,8 @@ export interface BoardProps {
     description?: string;
     columns?: ColumnProps[];
     publishState?: PublishState;
-    author?: string;
+    author?: string; // Nostr Public Key (hex pubkey)
+    authorName?: string; // 🆕 Display Name (optional, für UI)
     maintainers?: string[]; // ← NEU: Nostr pubkeys mit Edit-Berechtigung
     createdAt?: number;
     updatedAt?: string; // ⚡ v4.0: ISO string für Last-Write-Wins
@@ -127,15 +129,15 @@ export class Card {
         this.updatedAt = props.updatedAt || this.createdAt;
         
         // Debug logging for timestamp tracking
-        if (props.updatedAt || props.createdAt) {
-            console.log(`🔍 Card Constructor DEBUG:`);
-            console.log(`  cardId:`, this.id);
-            console.log(`  heading:`, this.heading);
-            console.log(`  props.createdAt:`, props.createdAt);
-            console.log(`  props.updatedAt:`, props.updatedAt);
-            console.log(`  this.createdAt:`, this.createdAt);
-            console.log(`  this.updatedAt:`, this.updatedAt);
-        }
+        // if (props.updatedAt || props.createdAt) {
+        //     console.log(`🔍 Card Constructor DEBUG:`);
+        //     console.log(`  cardId:`, this.id);
+        //     console.log(`  heading:`, this.heading);
+        //     console.log(`  props.createdAt:`, props.createdAt);
+        //     console.log(`  props.updatedAt:`, props.updatedAt);
+        //     console.log(`  this.createdAt:`, this.createdAt);
+        //     console.log(`  this.updatedAt:`, this.updatedAt);
+        // }
     }
 
     update(props: Partial<CardProps>): void {
@@ -159,11 +161,12 @@ export class Card {
         this.updatedAt = generateTimestamp();
     }
 
-    addComment(text: string, author: string): void {
+    addComment(text: string, author: string, authorName?: string): void {
         const comment: Comment = {
             id: generateDTag('comment') || `comment-${Date.now()}-${Math.random()}`, // ← Fallback für Safety
             text,
             author,
+            authorName, // ← NEU: Display name speichern (optional)
             createdAt: generateTimestamp()
         };
         // WICHTIG: Reassigniere das Array für Svelte 5 Reaktivität
@@ -285,7 +288,8 @@ export class Board {
     public description?: string;
     public columns: Column[] = [];
     public publishState: PublishState = 'draft';
-    public author?: string;
+    public author?: string; // Nostr Public Key (hex pubkey)
+    public authorName?: string; // 🆕 Display Name (optional, für UI)
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
@@ -302,6 +306,7 @@ export class Board {
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
         this.publishState = props.publishState || 'draft';
         this.author = props.author;
+        this.authorName = props.authorName; // 🆕 Display Name laden
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
@@ -324,13 +329,13 @@ export class Board {
         this.updatedAt = props.updatedAt || this.createdAt;
         
         // ⚡ v4.2: DEBUG - Timestamp tracking
-        if (props.updatedAt || props.createdAt) {
-            console.log(`🔍 Board Constructor DEBUG:`);
-            console.log(`  props.createdAt:`, props.createdAt);
-            console.log(`  props.updatedAt:`, props.updatedAt);
-            console.log(`  this.createdAt:`, this.createdAt);
-            console.log(`  this.updatedAt:`, this.updatedAt);
-        }
+        // if (props.updatedAt || props.createdAt) {
+        //     console.log(`🔍 Board Constructor DEBUG:`);
+        //     console.log(`  props.createdAt:`, props.createdAt);
+        //     console.log(`  props.updatedAt:`, props.updatedAt);
+        //     console.log(`  this.createdAt:`, this.createdAt);
+        //     console.log(`  this.updatedAt:`, this.updatedAt);
+        // }
     }
 
     setPublishState(state: PublishState): void {
@@ -528,6 +533,7 @@ export class Board {
         lastAccessedAt: string, // ✅ NEW (REFACTORING): Include in serialization
         hasUnseenChanges: boolean, // ✅ NEW (REFACTORING): Include in serialization
         author?: string,
+        authorName?: string, // ← NEU: Display name für Author!
         maintainers?: string[], // ← NEU: maintainers zur Return Type hinzugefügt!
         columns: any[]
     } {
@@ -544,6 +550,7 @@ export class Board {
             lastAccessedAt: this.lastAccessedAt, // ✅ NEW (REFACTORING): Serialize new field
             hasUnseenChanges: this.hasUnseenChanges, // ✅ NEW (REFACTORING): Serialize new field
             author: this.author,
+            authorName: this.authorName, // ← NEU: Display name serialisieren!
             maintainers: this.maintainers, // ← NEU: maintainers serialisieren!
             columns: this.columns.map(col => col.getContextData(full))
         };

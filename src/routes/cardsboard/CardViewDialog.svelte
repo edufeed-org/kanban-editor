@@ -209,17 +209,24 @@
 	}
 
 	/**
-	 * 🚀 NEW: Format author name for display
-	 * - Uses authStore.getDisplayNameForPubkey() to fetch Nostr profiles
+	 * ✅ OPTIMIZED (Phase 1): Dual-Field Author Attribution
+	 * - Priority 1: Use authorName (stored display name, fastest - NO Nostr lookup!)
+	 * - Priority 2: Use authStore.getDisplayNameForPubkey() (async fetch from Nostr)
 	 * - Short name (< 20 chars): Display full (e.g. "Alice", "Bob")
 	 * - Long pubkey: Fetch from Nostr or truncate to first 8 + last 4 chars
 	 * - Caches profiles for performance
 	 * 
 	 * @param author - Pubkey (hex) or name string
+	 * @param authorName - Optional display name (from Comment.authorName field)
 	 * @returns Readable display name
 	 */
-	function formatAuthorName(author: string): string {
+	function formatAuthorName(author: string, authorName?: string): string {
 		if (!author) return 'Anonym';
+		
+		// ⚡ NEW (Phase 1): Prefer stored authorName (no lookup needed!)
+		if (authorName) {
+			return authorName;
+		}
 		
 		// Short name (< 20 chars) → display full (likely already a name)
 		if (author.length < 20) {
@@ -440,7 +447,7 @@
 									<div class="space-y-2">
 										<!-- 🚀 Show formatted name (truncated if pubkey) -->
 										<div class="text-sm font-semibold px-2 py-1">
-											{formatAuthorName(comment.author)}
+											{formatAuthorName(comment.author, comment.authorName)}
 										</div>
 										<!-- Full pubkey in small text (for copy-paste) -->
 										<div class="text-xs text-muted-foreground px-2 font-mono break-all">
@@ -456,7 +463,7 @@
 									<div class="flex-1 min-w-0">
 										<div class="flex items-center gap-2">
 											<!-- 🚀 Show formatted name instead of raw pubkey -->
-											<span class="font-medium text-sm">{formatAuthorName(comment.author)}</span>
+											<span class="font-medium text-sm">{formatAuthorName(comment.author, comment.authorName)}</span>
 											
 											<!-- 🔥 Sync Status Icon -->
 											{#if comment.syncStatus === 'syncing'}

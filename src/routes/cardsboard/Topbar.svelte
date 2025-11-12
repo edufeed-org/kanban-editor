@@ -31,6 +31,7 @@
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
+    import { toast } from 'svelte-sonner';
 	
     
 
@@ -64,15 +65,101 @@
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
     
-    // 🔥 Sync Status - reactive derived from SyncManager with initialization check
-    let syncStatus = $derived.by(() => {
-        try {
-            const syncManager = getSyncManager();
-            return syncManager?.status || { isOnline: true, isSyncing: false, queuedEvents: 0 };
-        } catch (error) {
-            // SyncManager not initialized yet - return default status
-            return { isOnline: true, isSyncing: false, queuedEvents: 0 };
+    // 🔥 Sync Status - reactive derived from SyncManager
+    // ✅ ALTERNATIVE APPROACH: Poll SyncManager directly from component with $effect
+    // This works better than setInterval in the store because $effect is in component context
+    let syncStatus = $state({
+        isOnline: true,
+        isSyncing: false,
+        queuedEvents: 0,
+        connectedRelays: 0,
+        totalRelays: 0,
+        hasRelaySigner: false
+    });
+    
+    // 🔥 NEW: Poll relay status with $effect + setInterval
+    // This runs in component context, so Svelte can track state changes properly
+    let pollIntervalId: NodeJS.Timeout | undefined;
+    
+    onMount(() => {
+        // Initial status read
+        setTimeout(() => {
+
+            try {
+                const syncManager = getSyncManager();
+                syncStatus = {
+                    isOnline: syncManager.status.isOnline,
+                    isSyncing: syncManager.status.isSyncing,
+                    queuedEvents: syncManager.status.queuedEvents,
+                    connectedRelays: syncManager.lastConnectedCount,
+                    totalRelays: syncManager.lastTotalCount,
+                    hasRelaySigner: syncManager.status.hasRelaySigner
+                };
+            } catch (error) {
+                console.warn('[Topbar] SyncManager not ready on mount');
+            }
+        
+            // Poll every 2 seconds
+            pollIntervalId = setInterval(() => {
+                try {
+                    const syncManager = getSyncManager();
+                    
+                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+                    syncStatus = {
+                        isOnline: syncManager.status.isOnline,
+                        isSyncing: syncManager.status.isSyncing,
+                        queuedEvents: syncManager.status.queuedEvents,
+                        connectedRelays: syncManager.lastConnectedCount,
+                        totalRelays: syncManager.lastTotalCount,
+                        hasRelaySigner: syncManager.status.hasRelaySigner
+                    };
+                } catch (error) {
+                    // SyncManager not initialized yet
+                }
+            }, 5000);
+            
+            // Cleanup on unmount
+            return () => {
+                if (pollIntervalId) clearInterval(pollIntervalId);
+            };
+         }, 500); // Delay to allow SyncManager initialization
+    });
+    
+    
+    // 🔔 Toast-Benachrichtigungen für Relay-Verbindung
+    let previousConnectedRelays = $state<number | undefined>(undefined);
+    
+    $effect(() => {
+        const currentConnected = syncStatus.connectedRelays ?? 0;
+        const currentTotal = syncStatus.totalRelays ?? 0;
+        
+        // Nur benachrichtigen wenn sich der Status ändert (nicht beim ersten Load)
+        if (previousConnectedRelays !== undefined) {
+            // Von verbunden → getrennt
+            if (currentConnected === 0 && previousConnectedRelays > 0) {
+                toast.error('⚠️ Keine Verbindung zu Relays', {
+                    description: 'Deine Änderungen werden lokal gespeichert und später synchronisiert.',
+                    duration: 5000
+                });
+            }
+            // Von getrennt → verbunden
+            else if (currentConnected > 0 && previousConnectedRelays === 0) {
+                toast.success('✅ Verbindung wiederhergestellt', {
+                    description: `Verbunden mit ${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays.`,
+                    duration: 3000
+                });
+            }
+            // Partielle Wiederverbindung (einige Relays kommen online)
+            else if (currentConnected > previousConnectedRelays && previousConnectedRelays > 0) {
+                toast.info('🔄 Relay-Verbindung verbessert', {
+                    description: `${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays verbunden.`,
+                    duration: 2000
+                });
+            }
         }
+        
+        // Update previous state für nächsten Vergleich
+        previousConnectedRelays = currentConnected;
     });
     
     // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
@@ -98,8 +185,8 @@
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
-        { url: 'ws://localhost:7000', type: 'local', enabled: true },
-        { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
+        // { url: 'ws://localhost:7000', type: 'local', enabled: true },
+        // { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
     ]);
     
     let webhookUrl = $state('');
@@ -168,9 +255,7 @@
         }
     });
 
-    function handleRelayToggle(index: number) {
-        relays[index].enabled = !relays[index].enabled;
-    }
+    
 
     function saveBoardMeta() {
         // Parse tags from comma-separated string to array
@@ -326,8 +411,15 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
             
             <!-- 🟢 Sync Status Indicator -->
-            <div class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50">
-                {#if syncStatus.isSyncing}
+            <div 
+                class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
+                title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
+            >
+                {#if syncStatus.connectedRelays === 0}
+                    <!-- No relays connected: Show error -->
+                    <WifiOffIcon class="h-3 w-3 text-red-500" />
+                    <span class="text-red-600 font-semibold">Offline</span>
+                {:else if syncStatus.isSyncing}
                     <!-- Syncing: Show spinner -->
                     <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />
                     <span class="text-muted-foreground">Syncing...</span>
@@ -335,14 +427,18 @@
                     <!-- Queued: Show queued count -->
                     <div class="h-2 w-2 rounded-full bg-amber-500"></div>
                     <span class="text-muted-foreground">{syncStatus.queuedEvents} queued</span>
-                {:else if syncStatus.isOnline}
-                    <!-- Online: Show checkmark -->
+                {:else if syncStatus.totalRelays > 0 && syncStatus.connectedRelays < syncStatus.totalRelays}
+                    <!-- Partially connected: Show warning (only if we know total relay count) -->
+                    <WifiIcon class="h-3 w-3 text-amber-500" />
+                    <span class="text-amber-600">{syncStatus.connectedRelays}/{syncStatus.totalRelays}</span>
+                {:else if syncStatus.connectedRelays > 0}
+                    <!-- At least one relay connected: Show online -->
                     <CheckCircle2Icon class="h-3 w-3 text-green-500" />
                     <span class="text-muted-foreground">Online</span>
                 {:else}
-                    <!-- Offline: Show warning -->
-                    <WifiOffIcon class="h-3 w-3 text-red-500" />
-                    <span class="text-muted-foreground">Offline</span>
+                    <!-- Fallback: Unknown state -->
+                    <WifiIcon class="h-3 w-3 text-gray-400" />
+                    <span class="text-muted-foreground">...</span>
                 {/if}
             </div>
             
@@ -500,41 +596,6 @@
                 <DownloadIcon class="h-4 w-4" />
             </Button>
 
-            <!-- AI Settings Sheet -->
-            <Sheet.Root>
-                <Sheet.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary"
-                >
-                    <BotIcon class="h-4 w-4"/>
-                </Sheet.Trigger>
-                <Sheet.Content>
-                    <Sheet.Header>
-                        <Sheet.Title>AI- Einstellungen</Sheet.Title>
-                    </Sheet.Header>
-                    <hr class="border-2">
-                    <div class="p-4 space-y-4">
-                        <Field.Group class="space-y-4 border-b pb-4">
-                            <Field.Set>
-                                <Field.Label class="text-sm font-semibold mb-2">Nostr Relays</Field.Label>
-                                    {#each relays as relay}
-                                        <div class="flex items-start gap-3">
-                                            <Checkbox bind:checked={relay.enabled} id={relay.url} />
-                                            <Label for={relay.url} class="ml-2">{relay.url}</Label>
-                                        </div>
-                                    {/each}
-                            </Field.Set>
-                        </Field.Group>
-                        <Field.Group  class="space-y-4 border-b pb-4">
-                            <Field.Set>
-                                <Field.Label for="n8n-url" class="text-sm font-semibold">n8n Webhook Url</Field.Label>
-                                <Field.Content>
-                                    <Input id="n8n-url" bind:value={webhookUrl} placeholder="https://..." />
-                                </Field.Content>
-                            </Field.Set>
-                        </Field.Group>
-                    </div>
-                </Sheet.Content>
-            </Sheet.Root>
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">

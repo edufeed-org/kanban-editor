@@ -259,14 +259,6 @@
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 6px solid {getCardColor(localColor)};"
-	role="button"
-	tabindex={0}
-	onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onSelect?.();
-		}
-	}}
 	onclick={(e) => {
 		// Nur bei interaktiven Elementen blockieren (Button, Links, etc.)
 		// ABER NICHT auf der Root selbst!
@@ -574,13 +566,7 @@
 
 		}
 		
-		.comments-count {
-			font-size: 0.8em;
-			color: var(--muted-foreground);
-			display: flex;
-			align-items: center;
-			gap: 0.25em;
-		}
+		
 
 		
 	
