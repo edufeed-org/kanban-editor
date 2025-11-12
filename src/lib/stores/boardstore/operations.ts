@@ -16,7 +16,8 @@ export class BoardOperations {
         columnId: string,
         heading: string,
         description?: string,
-        author?: string
+        author?: string,
+        authorName?: string
     ): string | null {
         const column = board.findColumn(columnId);
         if (!column) {
@@ -28,6 +29,7 @@ export class BoardOperations {
             heading,
             content: description,
             author: author || 'anonymous',
+            authorName, // ← NEU: Display name speichern
             publishState: 'draft'
         };
 
@@ -270,13 +272,14 @@ export class BoardOperations {
     }
 
     /**
-     * Fügt Kommentar zu Card hinzu
+     * Fügt Kommentar hinzu
      */
     public static addComment(
         board: Board,
         cardId: string,
         text: string,
-        author: string
+        author: string,
+        authorName?: string
     ): string | null {
         const result = board.findCardAndColumn(cardId);
         if (!result) {
@@ -284,7 +287,7 @@ export class BoardOperations {
             return null;
         }
 
-        result.card.addComment(text, author);
+        result.card.addComment(text, author, authorName);
         const commentId = result.card.comments[result.card.comments.length - 1].id;
         console.log(`✅ Kommentar hinzugefügt zu Karte ${cardId}`);
         return commentId;

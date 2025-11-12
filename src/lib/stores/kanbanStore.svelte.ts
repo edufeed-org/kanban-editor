@@ -284,11 +284,12 @@ export class BoardStore {
     }
 
     public createBoard(name: string, description?: string): string {
-        const author = this.getSafeAuthor();
+        const { author, authorName } = this.getAuthorFields();
         const board = new Board({
             name,
             description,
             author,
+            authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
             maintainers: [author],
             publishState: 'draft',
             columns: []
@@ -659,8 +660,15 @@ export class BoardStore {
     // ============================================================================
     
     public createCard(columnId: string, name: string, description?: string): string {
-        const author = this.getSafeAuthor();
-        const cardId = BoardOperations.createCard(this.board, columnId, name, description, author);
+        const { author, authorName } = this.getAuthorFields();
+        const cardId = BoardOperations.createCard(
+            this.board, 
+            columnId, 
+            name, 
+            description, 
+            author,
+            authorName || undefined // ← NEU: Display name (null → undefined)
+        );
         
         if (cardId) {
             this.triggerUpdate();
@@ -808,8 +816,18 @@ export class BoardStore {
     }
 
     public async addComment(cardId: string, text: string, authorOverride?: string): Promise<void> {
-        const author = authorOverride || this.getSafeAuthor();
-        const commentId = BoardOperations.addComment(this.board, cardId, text, author);
+        // ⚡ NEW: Get both author fields
+        const { author: defaultAuthor, authorName } = this.getAuthorFields();
+        const author = authorOverride || defaultAuthor;
+        
+        // ⚡ NEW: Pass authorName to BoardOperations
+        const commentId = BoardOperations.addComment(
+            this.board, 
+            cardId, 
+            text, 
+            author,
+            authorOverride ? undefined : (authorName || undefined) // ← NEU: Nur wenn kein Override
+        );
         
         if (commentId) {
             this.triggerUpdate();
@@ -927,7 +945,7 @@ export class BoardStore {
             return;
         }
         
-        console.log(`📋 Found ${cardIds.length} cards, loading comments...`);
+        // console.log(`📋 Found ${cardIds.length} cards, loading comments...`);
         
         // Batch load all comments in parallel
         const startTime = performance.now();
@@ -938,7 +956,7 @@ export class BoardStore {
             );
             
             const duration = (performance.now() - startTime).toFixed(0);
-            console.log(`✅ Loaded comments for ${cardIds.length} cards in ${duration}ms`);
+            // console.log(`✅ Loaded comments for ${cardIds.length} cards in ${duration}ms`);
         } catch (error) {
             console.error('❌ Error batch-loading comments:', error);
         }
@@ -1123,6 +1141,10 @@ export class BoardStore {
         return this.board.getContextData(full);
     }
 
+    /**
+     * ⚡ DEPRECATED: Use getAuthorFields() instead!
+     * This method only returns pubkey, but we need both pubkey AND displayName.
+     */
     private getSafeAuthor(): string {
         try {
             if (!authStore || typeof authStore.getPubkey !== 'function') {
@@ -1131,6 +1153,27 @@ export class BoardStore {
             return authStore.getPubkey() || 'anonymous';
         } catch {
             return 'anonymous';
+        }
+    }
+
+    /**
+     * ✅ NEW: Get both author fields (pubkey + displayName)
+     * Uses authStore.getAuthorAttribution() to implement dual-field strategy
+     * 
+     * @returns Object with author (pubkey) and authorName (display name)
+     */
+    private getAuthorFields(): { author: string; authorName: string | null } {
+        try {
+            if (!authStore || typeof authStore.getAuthorAttribution !== 'function') {
+                return { author: 'anonymous', authorName: null };
+            }
+            const { pubkey, displayName } = authStore.getAuthorAttribution();
+            return {
+                author: pubkey || 'anonymous',
+                authorName: displayName  // can be null
+            };
+        } catch {
+            return { author: 'anonymous', authorName: null };
         }
     }
 
@@ -1284,12 +1327,12 @@ export class BoardStore {
         }
         
         // ⚡ v4.2: DEBUG - Was kommt an?
-        console.log(`🔍 upsertBoardFromNostr DEBUG:`, {
-            id: boardProps.id,
-            name: boardProps.name,
-            updatedAt: boardProps.updatedAt,
-            updatedAtType: typeof boardProps.updatedAt
-        });
+        // console.log(`🔍 upsertBoardFromNostr DEBUG:`, {
+        //     id: boardProps.id,
+        //     name: boardProps.name,
+        //     updatedAt: boardProps.updatedAt,
+        //     updatedAtType: typeof boardProps.updatedAt
+        // });
         
         // ⚡ Konvertiere ColumnProps zu kompaktem Format
         const columns = boardProps.columns?.map(c => ({
@@ -1325,7 +1368,7 @@ export class BoardStore {
             // User soll es in der Board-Liste UND beim Öffnen sehen können
             // KRITISCH: Nutze updatedAt vom Event, nicht NOW!
             console.log(`📦 upsertBoardFromNostr: Neues Board ${boardProps.id}, erstelle & speichere`);
-            console.log(`🔍 DEBUG: boardProps.updatedAt =`, boardProps.updatedAt);
+            // console.log(`🔍 DEBUG: boardProps.updatedAt =`, boardProps.updatedAt);
             
             // 1. Erstelle vollständiges Board-Objekt aus boardProps
             const newBoard = new Board({
@@ -1340,7 +1383,7 @@ export class BoardStore {
                 columns: boardProps.columns
             });
             
-            console.log(`🔍 DEBUG: newBoard.updatedAt AFTER construction =`, newBoard.updatedAt);
+            // console.log(`🔍 DEBUG: newBoard.updatedAt AFTER construction =`, newBoard.updatedAt);
             
             // 2. Speichere vollständiges Board zu localStorage
             // (Board hat jetzt den korrekten updatedAt-Timestamp vom Event)

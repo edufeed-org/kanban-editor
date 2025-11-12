@@ -14,6 +14,7 @@ import type NDK from '@nostr-dev-kit/ndk';
 import { NDKEvent, NDKRelaySet } from '@nostr-dev-kit/ndk';
 import type { NDKSigner } from '@nostr-dev-kit/ndk';
 import type { PublishState } from '$lib/stores/settingsStore.svelte';
+import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
 // ============================================================================
 // TYPES
@@ -36,6 +37,9 @@ export interface SyncStatus {
   queuedEvents: number;
   lastSyncTime?: number;
   nextRetryTime?: number;
+  connectedRelays: number;
+  totalRelays: number;
+  hasRelaySigner: boolean;
 }
 
 export interface SyncConfig {
@@ -57,10 +61,47 @@ export class SyncManager {
   private config: Required<SyncConfig>;
   private syncIntervalId: NodeJS.Timeout | undefined;
   private retryTimeoutId: NodeJS.Timeout | undefined;
+  private relayMonitoringIntervalId: NodeJS.Timeout | undefined;
+  
+  // 🐛 Debug: Track last counts to avoid excessive logging (MUST be $state for reactivity!)
+  private lastConnectedCount = $state(-1);  // -1 = not yet initialized, will trigger first log
+  private lastTotalCount = $state(-1);
   
   // ⚡ CRITICAL: Tracke eigene publizierte Events (Echo-Prevention)
   // Key: Event-ID, Value: Timestamp wann getrackt
   private myPublishedEvents = $state(new Set<string>());
+  
+  // ✅ FIX: Make status a $derived instead of a getter for Svelte 5 reactivity
+  public status = $derived.by((): SyncStatus => {
+    // ✅ FIX: Count ALL relays (public from NDK pool + private from settings)
+    const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
+    
+    // Get private relays from settingsStore
+    const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
+    
+    // Count connected public relays
+    const connectedPublicRelays = allPublicRelays.filter(relay => relay.connectivity?.status === 1).length;
+    const connectingPublicRelays = allPublicRelays.filter(relay => relay.connectivity?.status === 2).length;
+    
+    // For private relays: Assume they're usable if events are being published successfully
+    // This is a simplification - in reality we'd need to track their connection state
+    const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
+    
+    const connectedRelays = connectedPublicRelays + connectedPrivateRelays;
+    const connectingRelays = connectingPublicRelays;
+    const totalRelays = allPublicRelays.length + privateRelayUrls.length;
+    
+    return {
+      isOnline: this.isOnline,
+      isSyncing: this.isSyncing,
+      queuedEvents: this.eventQueue.length,
+      lastSyncTime: this.lastSyncTime,
+      nextRetryTime: this.nextRetryTime,
+      connectedRelays,
+      totalRelays,
+      hasRelaySigner: !!this.signer,
+    };
+  });
 
   constructor(private ndk: NDK, initialSigner: NDKSigner | undefined, config: SyncConfig = {}) {
     this.signer = initialSigner;
@@ -78,6 +119,7 @@ export class SyncManager {
       this.syncQueue();
     }
     this.startPeriodicSync();
+    this.startRelayStatusMonitoring();
   }
 
   public updateSigner(signer: NDKSigner | undefined): void {
@@ -303,9 +345,57 @@ export class SyncManager {
     }, this.config.syncIntervalMs);
   }
 
+  /**
+   * 🐛 Debug: Monitor relay status changes with interval (not $effect - works outside component context!)
+   */
+  private startRelayStatusMonitoring(): void {
+    if (typeof window === 'undefined') return;
+    
+    // Check every 2 seconds for relay status changes
+    this.relayMonitoringIntervalId = setInterval(() => {
+      const current = this.status; // Get current status
+      
+      if (this.lastConnectedCount !== current.connectedRelays || this.lastTotalCount !== current.totalRelays) {
+        const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
+        const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
+        const connectedPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 1).length;
+        const connectingPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 2).length;
+        const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
+        
+        console.log('[SyncManager] Relay Status Changed:', {
+          connectedRelays: current.connectedRelays,
+          totalRelays: current.totalRelays,
+          change: {
+            from: `${this.lastConnectedCount}/${this.lastTotalCount}`,
+            to: `${current.connectedRelays}/${current.totalRelays}`
+          },
+          publicRelays: {
+            connected: connectedPublicRelays,
+            connecting: connectingPublicRelays,
+            total: allPublicRelays.length,
+            states: allPublicRelays.map(r => ({
+              url: r.url,
+              status: r.connectivity?.status, // 0=disconnected, 1=connected, 2=connecting
+              statusName: r.connectivity?.status === 1 ? 'CONNECTED' : r.connectivity?.status === 2 ? 'CONNECTING' : 'DISCONNECTED'
+            }))
+          },
+          privateRelays: {
+            connected: connectedPrivateRelays,
+            total: privateRelayUrls.length,
+            urls: privateRelayUrls
+          }
+        });
+        
+        this.lastConnectedCount = current.connectedRelays;
+        this.lastTotalCount = current.totalRelays;
+      }
+    }, 2000); // Check every 2 seconds
+  }
+
   public dispose(): void {
     if (this.syncIntervalId) clearInterval(this.syncIntervalId);
     if (this.retryTimeoutId) clearTimeout(this.retryTimeoutId);
+    if (this.relayMonitoringIntervalId) clearInterval(this.relayMonitoringIntervalId);
   }
 
   private saveQueueToStorage(): void {
@@ -367,16 +457,6 @@ export class SyncManager {
     if (deleted) {
       console.log(`[SyncManager] 🗑️ Cleared own event tracking: ${eventId.substring(0, 30)}...`);
     }
-  }
-
-  public get status(): SyncStatus {
-    return {
-      isOnline: this.isOnline,
-      isSyncing: this.isSyncing,
-      queuedEvents: this.eventQueue.length,
-      lastSyncTime: this.lastSyncTime,
-      nextRetryTime: this.nextRetryTime,
-    };
   }
 
   public getQueuedEvents(): QueuedEvent[] {

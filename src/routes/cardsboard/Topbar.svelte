@@ -31,6 +31,7 @@
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
+    import { toast } from 'svelte-sonner';
 	
     
 
@@ -68,11 +69,69 @@
     let syncStatus = $derived.by(() => {
         try {
             const syncManager = getSyncManager();
-            return syncManager?.status || { isOnline: true, isSyncing: false, queuedEvents: 0 };
+            return syncManager?.status || { 
+                isOnline: true, 
+                isSyncing: false, 
+                queuedEvents: 0,
+                connectedRelays: 0,
+                totalRelays: 0,
+                hasRelaySigner: false
+            };
         } catch (error) {
             // SyncManager not initialized yet - return default status
-            return { isOnline: true, isSyncing: false, queuedEvents: 0 };
+            return { 
+                isOnline: true, 
+                isSyncing: false, 
+                queuedEvents: 0,
+                connectedRelays: 0,
+                totalRelays: 0,
+                hasRelaySigner: false
+            };
         }
+    });
+    
+    // 🔔 Toast-Benachrichtigungen für Relay-Verbindung
+    let previousConnectedRelays = $state<number | undefined>(undefined);
+    
+    $effect(() => {
+        const currentConnected = syncStatus.connectedRelays ?? 0;
+        const currentTotal = syncStatus.totalRelays ?? 0;
+        
+        // 🐛 Debug: Log bei jeder Änderung
+        console.log('[Topbar] Relay Status Update:', {
+            currentConnected,
+            currentTotal,
+            previousConnected: previousConnectedRelays,
+            syncStatus
+        });
+        
+        // Nur benachrichtigen wenn sich der Status ändert (nicht beim ersten Load)
+        if (previousConnectedRelays !== undefined) {
+            // Von verbunden → getrennt
+            if (currentConnected === 0 && previousConnectedRelays > 0) {
+                toast.error('⚠️ Keine Verbindung zu Relays', {
+                    description: 'Deine Änderungen werden lokal gespeichert und später synchronisiert.',
+                    duration: 5000
+                });
+            }
+            // Von getrennt → verbunden
+            else if (currentConnected > 0 && previousConnectedRelays === 0) {
+                toast.success('✅ Verbindung wiederhergestellt', {
+                    description: `Verbunden mit ${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays.`,
+                    duration: 3000
+                });
+            }
+            // Partielle Wiederverbindung (einige Relays kommen online)
+            else if (currentConnected > previousConnectedRelays && previousConnectedRelays > 0) {
+                toast.info('🔄 Relay-Verbindung verbessert', {
+                    description: `${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays verbunden.`,
+                    duration: 2000
+                });
+            }
+        }
+        
+        // Update previous state für nächsten Vergleich
+        previousConnectedRelays = currentConnected;
     });
     
     // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
@@ -326,8 +385,15 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
             
             <!-- 🟢 Sync Status Indicator -->
-            <div class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50">
-                {#if syncStatus.isSyncing}
+            <div 
+                class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
+                title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
+            >
+                {#if syncStatus.connectedRelays === 0}
+                    <!-- No relays connected: Show error -->
+                    <WifiOffIcon class="h-3 w-3 text-red-500" />
+                    <span class="text-red-600 font-semibold">Offline</span>
+                {:else if syncStatus.isSyncing}
                     <!-- Syncing: Show spinner -->
                     <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />
                     <span class="text-muted-foreground">Syncing...</span>
@@ -335,14 +401,18 @@
                     <!-- Queued: Show queued count -->
                     <div class="h-2 w-2 rounded-full bg-amber-500"></div>
                     <span class="text-muted-foreground">{syncStatus.queuedEvents} queued</span>
-                {:else if syncStatus.isOnline}
-                    <!-- Online: Show checkmark -->
+                {:else if syncStatus.totalRelays > 0 && syncStatus.connectedRelays < syncStatus.totalRelays}
+                    <!-- Partially connected: Show warning (only if we know total relay count) -->
+                    <WifiIcon class="h-3 w-3 text-amber-500" />
+                    <span class="text-amber-600">{syncStatus.connectedRelays}/{syncStatus.totalRelays}</span>
+                {:else if syncStatus.connectedRelays > 0}
+                    <!-- At least one relay connected: Show online -->
                     <CheckCircle2Icon class="h-3 w-3 text-green-500" />
                     <span class="text-muted-foreground">Online</span>
                 {:else}
-                    <!-- Offline: Show warning -->
-                    <WifiOffIcon class="h-3 w-3 text-red-500" />
-                    <span class="text-muted-foreground">Offline</span>
+                    <!-- Fallback: Unknown state -->
+                    <WifiIcon class="h-3 w-3 text-gray-400" />
+                    <span class="text-muted-foreground">Unknown</span>
                 {/if}
             </div>
             

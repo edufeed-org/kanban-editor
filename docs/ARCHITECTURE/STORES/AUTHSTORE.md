@@ -14,9 +14,10 @@
 3. [Session-Management](#session-management)
 4. [Demo-Modus](#demo-modus)
 5. [User-Profile](#user-profile)
-6. [API-Referenz](#api-referenz)
-7. [Security-Rules](#security-rules)
-8. [Integration](#integration)
+6. [Author Attribution (Dual-Field Strategy)](#author-attribution-dual-field-strategy)
+7. [API-Referenz](#api-referenz)
+8. [Security-Rules](#security-rules)
+9. [Integration](#integration)
 
 ---
 
@@ -474,6 +475,243 @@ public async verifyNip05(identifier: string): Promise<boolean> {
 
 ---
 
+## Author Attribution (Dual-Field Strategy)
+
+### Problem: Inkonsistente Autoren-Attribution
+
+**Vor der Dual-Field Strategy:**
+
+```typescript
+// kanbanStore.svelte.ts - Nutzt nur pubkey
+const author = authStore.getPubkey() || 'anonymous';
+const board = new Board({ name, author });
+
+// CardViewDialog.svelte - Nutzt komplexe Fallback-Chain
+const author = authStore.getUserName() || authStore.getDisplayName() || authStore.getPubkey() || 'anonymous';
+```
+
+**Problem:**
+- ❌ Inkonsistent: Ein Store speichert nur pubkey, UI nutzt Name
+- ❌ UI zeigt Mix aus Namen ("Alice") und Hex-Keys ("0a1b2c3d...")
+- ❌ Nach Browser-Reload: authorName ist weg (nicht persistiert)
+- ❌ Keine einheitliche API für Author-Attribution
+
+### Lösung: Dual-Field Strategy
+
+Die `getAuthorAttribution()` Methode implementiert ein **konsistentes Pattern** für alle Entities (Board, Card, Comment):
+
+```typescript
+public getAuthorAttribution(): { 
+    pubkey: string | null; 
+    displayName: string | null 
+}
+```
+
+**Rückgabewert:**
+```typescript
+{
+    pubkey: "0a1b2c3d4e5f...",  // ← Nostr Identity (HEX, REQUIRED)
+    displayName: "Alice"        // ← UI Display Name (OPTIONAL)
+}
+```
+
+### Verwendung in BoardStore
+
+```typescript
+// src/lib/stores/kanbanStore.svelte.ts
+
+public createBoard(name: string, description?: string): string {
+    const { pubkey, displayName } = authStore.getAuthorAttribution();
+    
+    const board = new Board({
+        name,
+        description,
+        author: pubkey || 'anonymous',      // ← REQUIRED für Nostr
+        authorName: displayName             // ← OPTIONAL für UI (kann null sein)
+    });
+    
+    this.board = board;
+    this.triggerUpdate();
+    return board.id;
+}
+
+public createCard(columnId: string, heading: string): string {
+    const { pubkey, displayName } = authStore.getAuthorAttribution();
+    
+    const column = this.board.findColumn(columnId);
+    const card = new Card({
+        heading,
+        author: pubkey || 'anonymous',
+        authorName: displayName
+    });
+    
+    column?.addCard(card);
+    this.triggerUpdate();
+    return card.id;
+}
+
+public async addComment(cardId: string, text: string): Promise<void> {
+    const { pubkey, displayName } = authStore.getAuthorAttribution();
+    
+    const result = this.board.findCardAndColumn(cardId);
+    if (!result) return;
+    
+    const { card } = result;
+    card.addComment(text, pubkey || 'anonymous', displayName);
+    
+    this.triggerUpdate();
+}
+```
+
+### Verwendung in UI
+
+```svelte
+<!-- Card.svelte - Zeige Author Name -->
+<script lang="ts">
+    import { authStore } from '$lib/stores/authStore.svelte';
+    
+    let { card } = $props();
+    
+    // Nutze authorName ODER lade via pubkey
+    let authorDisplay = $derived(
+        card.authorName || authStore.getDisplayNameForPubkey(card.author)
+    );
+</script>
+
+<div class="card-footer">
+    <p class="text-sm text-muted-foreground">
+        Von: {authorDisplay}
+    </p>
+</div>
+```
+
+```svelte
+<!-- CardViewDialog.svelte - Kommentar-Liste -->
+{#each card.comments as comment}
+    <div class="comment">
+        <p class="comment-author">
+            {#if comment.authorName}
+                {comment.authorName}                                    <!-- ← Sofort lesbar -->
+            {:else}
+                {authStore.getDisplayNameForPubkey(comment.author)}     <!-- ← Async geladen -->
+            {/if}
+        </p>
+        <p class="comment-text">{comment.text}</p>
+    </div>
+{/each}
+```
+
+### TypeScript Interfaces
+
+```typescript
+// src/lib/classes/BoardModel.ts
+
+export interface Comment extends NostrElement {
+    text: string;
+    author: string;         // ← REQUIRED: Nostr pubkey (hex)
+    authorName?: string;    // ← OPTIONAL: Display name for UI
+    createdAt: string;
+}
+
+export interface CardProps {
+    id?: string;
+    heading: string;
+    content?: string;
+    author?: string;        // ← REQUIRED: Nostr pubkey (hex)
+    authorName?: string;    // ← OPTIONAL: Display name for UI
+    // ...
+}
+
+export interface BoardProps {
+    id?: string;
+    name: string;
+    description?: string;
+    author?: string;        // ← REQUIRED: Nostr pubkey (hex)
+    authorName?: string;    // ← OPTIONAL: Display name for UI
+    // ...
+}
+```
+
+### Backward Compatibility
+
+**Alte Boards ohne `authorName` funktionieren weiter:**
+
+```typescript
+// Alte Boards haben NUR author (pubkey)
+const oldBoard = {
+    id: '123',
+    name: 'Old Board',
+    author: '0a1b2c3d...',
+    // authorName: undefined  ← Fehlt!
+};
+
+// UI zeigt trotzdem Name (via async fetch)
+const displayName = oldBoard.authorName || authStore.getDisplayNameForPubkey(oldBoard.author);
+// → "Alice" (async geladen) oder "0a1b2c3d..." (fallback)
+```
+
+**Optional: Migration für bessere Performance**
+
+```typescript
+// Phase 3: Comment-Migration (Optional)
+// Reichert alte Comments mit authorName an
+async function enrichOldComments(board: Board): Promise<void> {
+    for (const column of board.columns) {
+        for (const card of column.cards) {
+            for (const comment of card.comments) {
+                if (!comment.authorName && comment.author) {
+                    // Lade Name asynchron
+                    const name = await authStore.getDisplayNameForPubkey(comment.author);
+                    
+                    // Speichere in Comment (nur wenn nicht "0a1b...")
+                    if (!name.startsWith('0')) {
+                        comment.authorName = name;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Save enriched board
+    boardStore.triggerUpdate();
+}
+```
+
+### Vorteile der Dual-Field Strategy
+
+| Vorteil | Beschreibung |
+|---------|-------------|
+| ✅ **Konsistenz** | Ein API-Aufruf für beide Felder |
+| ✅ **Lesbarkeit** | UI zeigt "Alice" statt "0a1b2c3d..." |
+| ✅ **Nostr-Compliance** | pubkey bleibt erhalten (REQUIRED) |
+| ✅ **Backward Compatible** | authorName ist OPTIONAL |
+| ✅ **Performance** | Kein Async-Fetch bei jedem Render |
+| ✅ **Einfache Migration** | Bestehende Boards funktionieren |
+
+### Anti-Patterns (NICHT machen!)
+
+```typescript
+// ❌ FALSCH - Inkonsistent
+const author1 = authStore.getPubkey() || 'anonymous';
+const author2 = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
+
+// ❌ FALSCH - Nur Name speichern (keine Nostr-Identity)
+const board = new Board({ author: authStore.getUserName() });
+
+// ❌ FALSCH - Beide Felder separat holen
+const pubkey = authStore.getPubkey();
+const name = authStore.getUserName();
+
+// ✅ RICHTIG - Dual-Field API nutzen
+const { pubkey, displayName } = authStore.getAuthorAttribution();
+const board = new Board({ 
+    author: pubkey || 'anonymous', 
+    authorName: displayName 
+});
+```
+
+---
+
 ## API-Referenz
 
 ### Public Properties
@@ -519,6 +757,11 @@ getDisplayName(): string            // Returns profile.name or "Nostr Nutzer" (n
 getUserInitials(): string           // Returns initials from name or "NN"
 getAvatarColor(): string            // Returns consistent Tailwind color class based on pubkey
 
+// 🆕 Author Attribution (DUAL-FIELD STRATEGY)
+getAuthorAttribution(): { pubkey: string | null; displayName: string | null }
+// Returns BOTH pubkey AND display name for storing in Board/Card/Comment
+// Use this when creating boards, cards, or comments to store proper author data
+
 // SSR-Safe Variants (return fallback instead of throwing)
 getPubkeySafe(): string | null
 getUserNameSafe(): string | null
@@ -540,8 +783,70 @@ getAvatarColorSafe(): string        // Returns "bg-slate-500" if not initialized
   {authStore.getUserInitials()}
 </Avatar.Fallback>
 
+// 🆕 RICHTIG - Nutze getAuthorAttribution() beim Erstellen von Entities
+const { pubkey, displayName } = authStore.getAuthorAttribution();
+const board = new Board({
+  name: 'My Board',
+  author: pubkey || 'anonymous',
+  authorName: displayName  // ← kann null sein, wird gespeichert
+});
+
 // ❌ FALSCH - Nutze nicht getUserName() direkt in UI (kann null sein)
 <p>{authStore.getUserName()}</p>  // Kann leer sein!
+```
+
+**Dual-Field Author Attribution Pattern:**
+
+Die neue `getAuthorAttribution()` Methode implementiert das **Dual-Field Strategy Pattern** für konsistente Autoren-Attribution:
+
+```typescript
+// 1. Beim Erstellen von Boards
+const { pubkey, displayName } = authStore.getAuthorAttribution();
+const board = new Board({
+  name: 'My Board',
+  author: pubkey || 'anonymous',      // ← Nostr Identity (REQUIRED)
+  authorName: displayName              // ← UI Display Name (OPTIONAL)
+});
+
+// 2. Beim Erstellen von Cards
+const { pubkey, displayName } = authStore.getAuthorAttribution();
+const card = new Card({
+  heading: 'Task',
+  author: pubkey || 'anonymous',
+  authorName: displayName
+});
+
+// 3. Beim Hinzufügen von Comments
+const { pubkey, displayName } = authStore.getAuthorAttribution();
+const comment = new Comment({
+  text: 'Great work!',
+  author: pubkey || 'anonymous',
+  authorName: displayName
+});
+
+// 4. In der UI: Zeige authorName ODER lade Name via pubkey
+{#if card.authorName}
+  <p>Von: {card.authorName}</p>                           <!-- ← Sofort lesbar -->
+{:else}
+  <p>Von: {authStore.getDisplayNameForPubkey(card.author)}</p>  <!-- ← Async geladen -->
+{/if}
+```
+
+**Warum Dual-Field?**
+- ✅ **author (pubkey)**: REQUIRED für Nostr-Protocol (Identity, Permissions)
+- ✅ **authorName (displayName)**: OPTIONAL für UI (Lesbarkeit, UX)
+- ✅ **Backward Compatible**: Alte Boards ohne authorName funktionieren weiter
+- ✅ **Consistent API**: Ein Aufruf liefert beide Werte
+- ✅ **No Redundancy**: Nur `getAuthorAttribution()` nutzen statt `getPubkey() + getUserName()`
+
+**Migration bestehender Boards:**
+```typescript
+// Alte Boards haben NUR author (pubkey), kein authorName
+// UI kann authorName via getDisplayNameForPubkey() nachladen
+if (!card.authorName && card.author) {
+  card.authorName = await authStore.getDisplayNameForPubkey(card.author);
+  // Optional: Save enriched card back to storage
+}
 ```
 
 // Display Name

@@ -198,11 +198,11 @@ export class NostrIntegration {
                     }
 
                     if (!acceptRemote) {
-                        console.log(`[BoardStore] ↩️ Keep newer local board for ${board.id}, skip remote version`);
+                        // console.log(`[BoardStore] ↩️ Keep newer local board for ${board.id}, skip remote version`);
                         // Relay gibt nur nicht-gelöschte Boards zurück - keine Deletion-Checks nötig
                         if (!loadedBoardIds.includes(board.id)) {
                             loadedBoardIds.push(board.id);
-                            console.log('[BoardStore] ✅ Added local board to loadedBoardIds:', board.id);
+                            // console.log('[BoardStore] ✅ Added local board to loadedBoardIds:', board.id);
                         }
                         continue;
                     }
@@ -216,7 +216,7 @@ export class NostrIntegration {
                         context.updatedAt = context.updatedAt || remoteCreated;
 
                         window.localStorage.setItem(storageKey, JSON.stringify(context));
-                        console.log('[BoardStore] 💾 Stored Nostr board from remote:', storageKey);
+                        // console.log('[BoardStore] 💾 Stored Nostr board from remote:', storageKey);
                     }
 
                     // Relay gibt nur nicht-gelöschte Boards zurück - keine Deletion-Checks nötig
@@ -617,7 +617,7 @@ export class NostrIntegration {
                 const parts = cardProps.boardRef.split(':');
                 if (parts.length === 3 && parts[0] === '30301') {
                     targetBoardId = parts[2];
-                    console.log(`📦 Card ${cardProps.id} gehört zu Board: ${targetBoardId}`);
+                    // console.log(`📦 Card ${cardProps.id} gehört zu Board: ${targetBoardId}`);
                 } else {
                     console.warn(`⚠️ Invalid boardRef format: ${cardProps.boardRef}`);
                     return;
@@ -674,7 +674,7 @@ export class NostrIntegration {
                 console.log(`✅ Card ${cardProps.id} ist für aktuelles Board - normale Verarbeitung`);
                 boardStore.upsertCardFromNostr(cardProps);
             } else {
-                console.log(`🔄 Card ${cardProps.id} ist für Background Board ${targetBoardId} - direkter localStorage Update`);
+                // console.log(`🔄 Card ${cardProps.id} ist für Background Board ${targetBoardId} - direkter localStorage Update`);
                 boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
                 
                 // ⚡ NEW: Set unseen changes flag for background board
@@ -710,7 +710,7 @@ export class NostrIntegration {
         deletionEvent: any,
         boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
-        console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
+        // console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
         
         // ⚡ v2.0: Event-Deduplication
         if (this.processedEvents.has(deletionEvent.id)) {
@@ -737,7 +737,7 @@ export class NostrIntegration {
                         
                         // Track deletion timestamp (für Ordering)
                         this.boardDeletionTimestamps.set(boardId, deleteTime);
-                        console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
+                        // console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteBoardFromNostr(boardId);
@@ -753,10 +753,11 @@ export class NostrIntegration {
                         
                         // Track deletion timestamp (für Ordering)
                         this.cardDeletionTimestamps.set(cardId, deleteTime);
-                        console.log(`🗑️ Tracked deletion timestamp for card ${cardId}: ${new Date(deleteTime).toISOString()}`);
+                        // console.log(`🗑️ Tracked deletion timestamp for card ${cardId}: ${new Date(deleteTime).toISOString()}`);
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteCardFromNostr(cardId);
+                        console.log(`✅ Called boardStore.deleteCardFromNostr(${cardId})`);
                     }
                 }
             }
@@ -896,7 +897,7 @@ export class NostrIntegration {
             // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
             if (publishedEvent?.id) {
                 card.eventId = publishedEvent.id;
-                console.log(`[NostrIntegration] 🔑 Card Event-ID captured: ${card.eventId}`);
+                // console.log(`[NostrIntegration] 🔑 Card Event-ID captured: ${card.eventId}`);
                 
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
                 const { BoardStorage } = await import('./storage.js');

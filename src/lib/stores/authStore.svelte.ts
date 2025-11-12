@@ -569,7 +569,67 @@ export class AuthStore {
   }
 
   /**
-   * 🌐 Get display name for ANY pubkey (not just current user)
+   * � Get Author Attribution (DUAL-FIELD STRATEGY)
+   * 
+   * Returns BOTH pubkey AND display name for storing in Board/Card/Comment
+   * 
+   * USE CASES:
+   * - Creating new boards: `new Board({ author, authorName, ... })`
+   * - Creating new cards: `new Card({ author, authorName, ... })`
+   * - Adding comments: `new Comment({ author, authorName, ... })`
+   * 
+   * RETURN VALUE:
+   * {
+   *   pubkey: "0a1b2c3d4e5f..." (hex format, REQUIRED for Nostr identity)
+   *   displayName: "Alice" | null (UI-friendly name, OPTIONAL)
+   * }
+   * 
+   * BEHAVIOR:
+   * - pubkey: ALWAYS present (or null if no session)
+   * - displayName: profile.name if available, otherwise null
+   * - This enables UI to show readable names while maintaining Nostr identity
+   * 
+   * STORAGE:
+   * - author: string → pubkey (hex) - REQUIRED for Nostr protocol
+   * - authorName?: string → displayName - OPTIONAL for UI display
+   * 
+   * @returns { pubkey: string | null, displayName: string | null }
+   * 
+   * @example
+   * // In BoardStore.createBoard()
+   * const { pubkey, displayName } = authStore.getAuthorAttribution();
+   * const board = new Board({
+   *   name: 'My Board',
+   *   author: pubkey || 'anonymous',
+   *   authorName: displayName  // ← kann null sein
+   * });
+   * 
+   * @example
+   * // In BoardStore.addComment()
+   * const { pubkey, displayName } = authStore.getAuthorAttribution();
+   * const comment = new Comment({
+   *   text: '...',
+   *   author: pubkey || 'anonymous',
+   *   authorName: displayName
+   * });
+   * 
+   * @example
+   * // In UI (Card display)
+   * {#if card.authorName}
+   *   <p>Von: {card.authorName}</p>
+   * {:else}
+   *   <p>Von: {authStore.getDisplayNameForPubkey(card.author)}</p>
+   * {/if}
+   */
+  public getAuthorAttribution(): { pubkey: string | null; displayName: string | null } {
+    const pubkey = this.getPubkey();
+    const displayName = this.getUserName(); // ← Returns null if no name
+    
+    return { pubkey, displayName };
+  }
+
+  /**
+   * �🌐 Get display name for ANY pubkey (not just current user)
    * 
    * USE CASES:
    * - Comment authors (show name instead of truncated npub)
@@ -821,6 +881,24 @@ class AuthStoreProxy {
   }
   getAvatarColor() {
     return AuthStoreWrapper.getInstance().getAvatarColor();
+  }
+  
+  /**
+   * ✅ NEW (Phase 1): Dual-Field Author Attribution
+   * Returns both pubkey and displayName for entity creation
+   * 
+   * @returns Object with pubkey (hex) and displayName (string | null)
+   * @example
+   * ```typescript
+   * const { pubkey, displayName } = authStore.getAuthorAttribution();
+   * const board = new Board({
+   *   author: pubkey || 'anonymous',
+   *   authorName: displayName
+   * });
+   * ```
+   */
+  getAuthorAttribution() {
+    return AuthStoreWrapper.getInstance().getAuthorAttribution();
   }
   
   /**
