@@ -68,6 +68,10 @@ export class SyncManager {
   public lastConnectedCount = $state(-1);  // -1 = not yet initialized, will trigger first log
   public lastTotalCount = $state(-1);
   
+  // 🔥 NEW: Add a simple counter that increments on EVERY status change
+  // This ensures Svelte sees the change even if the actual values are the same
+  public statusChangeCounter = $state(0);
+  
   // ⚡ CRITICAL: Tracke eigene publizierte Events (Echo-Prevention)
   // Key: Event-ID, Value: Timestamp wann getrackt
   private myPublishedEvents = $state(new Set<string>());
@@ -79,6 +83,7 @@ export class SyncManager {
     // Reading them here creates the dependency chain
     const connectedRelays = this.lastConnectedCount;
     const totalRelays = this.lastTotalCount;
+    const changeCounter = this.statusChangeCounter; // ← Force re-computation
     
     return {
       isOnline: this.isOnline,
@@ -104,7 +109,7 @@ export class SyncManager {
     this.loadQueueFromStorage();
     this.setupListeners();
     if (this.isOnline && this.eventQueue.length > 0) {
-      console.log('[SyncManager] Online at startup, syncing queued events...');
+      // console.log('[SyncManager] Online at startup, syncing queued events...');
       this.syncQueue();
     }
     this.startPeriodicSync();
@@ -115,7 +120,7 @@ export class SyncManager {
     const wasSigner = this.signer ? 'yes' : 'no';
     const isSigner = signer ? 'yes' : 'no';
     this.signer = signer;
-    console.log(`[SyncManager] Signer updated: ${wasSigner}  ${isSigner}`);
+    // console.log(`[SyncManager] Signer updated: ${wasSigner}  ${isSigner}`);
     if (signer && this.isOnline && this.eventQueue.length > 0) {
       console.log(`[SyncManager] New signer available! Syncing ${this.eventQueue.length} queued event(s)...`);
       this.syncQueue();
@@ -336,51 +341,59 @@ export class SyncManager {
 
   /**
    * 🐛 Debug: Monitor relay status changes with interval (not $effect - works outside component context!)
+   * 
+   * ✅ BEST METHOD: Use NDK's pool.stats() - most reliable!
+   * Fallback to individual relay checks if stats not available
+   * 
+   * 🔥 FIX: Private Relays werden NICHT separat gezählt!
+   * Alle Relays (public + private) sind in NDK pool.stats() enthalten!
    */
   private startRelayStatusMonitoring(): void {
     if (typeof window === 'undefined') return;
     
     // Check every 2 seconds for relay status changes
     this.relayMonitoringIntervalId = setInterval(() => {
-      // ✅ CRITICAL FIX: Count relays DIRECTLY, don't read this.status!
-      // Reading this.status creates a chicken-and-egg problem
-      const allPublicRelays = Array.from(this.ndk.pool?.relays?.values() || []);
-      const privateRelayUrls = settingsStore?.settings?.relaysPrivate || [];
-      const connectedPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 1).length;
-      const connectingPublicRelays = allPublicRelays.filter(r => r.connectivity?.status === 2).length;
-      const connectedPrivateRelays = privateRelayUrls.length > 0 && this.isOnline ? privateRelayUrls.length : 0;
+      // 🔥 METHOD 1: Try using NDK pool.stats() (most reliable!)
+      let currentConnected = 0;
+      let currentTotal = 0;
       
-      const currentConnected = connectedPublicRelays + connectedPrivateRelays;
-      const currentTotal = allPublicRelays.length + privateRelayUrls.length;
+      try {
+        // NDK's pool.stats() gibt die echten Connected/Total counts zurück
+        const poolStats = this.ndk.pool?.stats();
+        if (poolStats) {
+          currentConnected = poolStats.connected || 0;
+          currentTotal = poolStats.total || 0;
+        } else {
+          throw new Error('pool.stats() not available, using fallback');
+        }
+      } catch (error) {
+        // 🔥 FALLBACK: Manual relay iteration (wenn pool.stats() nicht existiert)
+        const allRelays = Array.from(this.ndk.pool?.relays?.values() || []);
+        
+        // Count relays with ACTIVE WebSocket connection
+        // ✅ IMPORTANT: This includes BOTH public AND private relays from NDK pool!
+        const connectedRelays = allRelays.filter(r => {
+          // Check if relay has an active WebSocket connection
+          // NDK sets status to 1 (CONNECTED) when ws.readyState === WebSocket.OPEN
+          return r.status === 1; // NDKRelayStatus.CONNECTED
+        }).length;
+        
+        currentConnected = connectedRelays;
+        currentTotal = allRelays.length;
+      }
+      
       
       if (this.lastConnectedCount !== currentConnected || this.lastTotalCount !== currentTotal) {
-        console.log('[SyncManager] Relay Status Changed:', {
-          connectedRelays: currentConnected,
-          totalRelays: currentTotal,
-          change: {
-            from: `${this.lastConnectedCount}/${this.lastTotalCount}`,
-            to: `${currentConnected}/${currentTotal}`
-          },
-          publicRelays: {
-            connected: connectedPublicRelays,
-            connecting: connectingPublicRelays,
-            total: allPublicRelays.length,
-            states: allPublicRelays.map(r => ({
-              url: r.url,
-              status: r.connectivity?.status, // 0=disconnected, 1=connected, 2=connecting
-              statusName: r.connectivity?.status === 1 ? 'CONNECTED' : r.connectivity?.status === 2 ? 'CONNECTING' : 'DISCONNECTED'
-            }))
-          },
-          privateRelays: {
-            connected: connectedPrivateRelays,
-            total: privateRelayUrls.length,
-            urls: privateRelayUrls
-          }
-        });
         
         // ✅ CRITICAL: Update $state to trigger reactivity chain!
         this.lastConnectedCount = currentConnected;
         this.lastTotalCount = currentTotal;
+        
+        // 🔥 NEW: Increment counter to force Svelte to see the change
+        // This ensures $derived and $effect are triggered even if values are the same
+        this.statusChangeCounter++;
+        
+        console.log(`[SyncManager] 🔔 Status change counter: ${this.statusChangeCounter}`);
       }
     }, 2000); // Check every 2 seconds
   }

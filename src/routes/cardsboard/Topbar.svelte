@@ -66,51 +66,65 @@
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
     
     // 🔥 Sync Status - reactive derived from SyncManager
-    // ✅ FIX: syncManager.status is ALREADY a $derived that depends on triggers
-    // We just need to read it - the reactivity chain is in SyncManager!
-    let syncStatus = $derived.by(() => {
-        try {
-            const syncManager = getSyncManager();
-            
-            if (!syncManager) {
-                console.warn('[Topbar] SyncManager not available yet');
-                return { 
-                    isOnline: true, 
-                    isSyncing: false, 
-                    queuedEvents: 0,
-                    connectedRelays: 0,
-                    totalRelays: 0,
-                    hasRelaySigner: false
-                };
-            }
-            
-            // ✅ CRITICAL: Just read status - it's already reactive!
-            // The triggers are read INSIDE syncManager.status $derived
-            const status = syncManager.status;
-            
-            // 🐛 DEBUG: Log derived computation
-            console.log('[Topbar $derived] Computed status:', {
-                status,
-                connectedRelays: status.connectedRelays,
-                totalRelays: status.totalRelays,
-                // Also log the trigger values for debugging
-                managerTrigger1: syncManager.lastConnectedCount,
-                managerTrigger2: syncManager.lastTotalCount
-            });
-            
-            return status;
-        } catch (error) {
-            // SyncManager not initialized yet - return default status
-            return { 
-                isOnline: true, 
-                isSyncing: false, 
-                queuedEvents: 0,
-                connectedRelays: 0,
-                totalRelays: 0,
-                hasRelaySigner: false
-            };
-        }
+    // ✅ ALTERNATIVE APPROACH: Poll SyncManager directly from component with $effect
+    // This works better than setInterval in the store because $effect is in component context
+    let syncStatus = $state({
+        isOnline: true,
+        isSyncing: false,
+        queuedEvents: 0,
+        connectedRelays: 0,
+        totalRelays: 0,
+        hasRelaySigner: false
     });
+    
+    // 🔥 NEW: Poll relay status with $effect + setInterval
+    // This runs in component context, so Svelte can track state changes properly
+    let pollIntervalId: NodeJS.Timeout | undefined;
+    
+    onMount(() => {
+        // Initial status read
+        setTimeout(() => {
+
+            try {
+                const syncManager = getSyncManager();
+                syncStatus = {
+                    isOnline: syncManager.status.isOnline,
+                    isSyncing: syncManager.status.isSyncing,
+                    queuedEvents: syncManager.status.queuedEvents,
+                    connectedRelays: syncManager.lastConnectedCount,
+                    totalRelays: syncManager.lastTotalCount,
+                    hasRelaySigner: syncManager.status.hasRelaySigner
+                };
+            } catch (error) {
+                console.warn('[Topbar] SyncManager not ready on mount');
+            }
+        
+            // Poll every 2 seconds
+            pollIntervalId = setInterval(() => {
+                try {
+                    const syncManager = getSyncManager();
+                    
+                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+                    syncStatus = {
+                        isOnline: syncManager.status.isOnline,
+                        isSyncing: syncManager.status.isSyncing,
+                        queuedEvents: syncManager.status.queuedEvents,
+                        connectedRelays: syncManager.lastConnectedCount,
+                        totalRelays: syncManager.lastTotalCount,
+                        hasRelaySigner: syncManager.status.hasRelaySigner
+                    };
+                } catch (error) {
+                    // SyncManager not initialized yet
+                }
+            }, 5000);
+            
+            // Cleanup on unmount
+            return () => {
+                if (pollIntervalId) clearInterval(pollIntervalId);
+            };
+         }, 500); // Delay to allow SyncManager initialization
+    });
+    
     
     // 🔔 Toast-Benachrichtigungen für Relay-Verbindung
     let previousConnectedRelays = $state<number | undefined>(undefined);
@@ -118,14 +132,6 @@
     $effect(() => {
         const currentConnected = syncStatus.connectedRelays ?? 0;
         const currentTotal = syncStatus.totalRelays ?? 0;
-        
-        // 🐛 Debug: Log bei jeder Änderung
-        console.log('[Topbar] Relay Status Update:', {
-            currentConnected,
-            currentTotal,
-            previousConnected: previousConnectedRelays,
-            syncStatus
-        });
         
         // Nur benachrichtigen wenn sich der Status ändert (nicht beim ersten Load)
         if (previousConnectedRelays !== undefined) {
@@ -179,8 +185,8 @@
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
     let relays = $state([
-        { url: 'ws://localhost:7000', type: 'local', enabled: true },
-        { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
+        // { url: 'ws://localhost:7000', type: 'local', enabled: true },
+        // { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
     ]);
     
     let webhookUrl = $state('');
@@ -249,9 +255,7 @@
         }
     });
 
-    function handleRelayToggle(index: number) {
-        relays[index].enabled = !relays[index].enabled;
-    }
+    
 
     function saveBoardMeta() {
         // Parse tags from comma-separated string to array
@@ -407,14 +411,6 @@
             <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
             
             <!-- 🟢 Sync Status Indicator -->
-            <!-- 🐛 DEBUG: Log actual values in template -->
-            {console.log('[Topbar Template] Rendering with:', {
-                connectedRelays: syncStatus.connectedRelays,
-                totalRelays: syncStatus.totalRelays,
-                isSyncing: syncStatus.isSyncing,
-                queuedEvents: syncStatus.queuedEvents,
-                fullStatus: syncStatus
-            })}
             <div 
                 class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
                 title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
@@ -600,41 +596,6 @@
                 <DownloadIcon class="h-4 w-4" />
             </Button>
 
-            <!-- AI Settings Sheet -->
-            <Sheet.Root>
-                <Sheet.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary"
-                >
-                    <BotIcon class="h-4 w-4"/>
-                </Sheet.Trigger>
-                <Sheet.Content>
-                    <Sheet.Header>
-                        <Sheet.Title>AI- Einstellungen</Sheet.Title>
-                    </Sheet.Header>
-                    <hr class="border-2">
-                    <div class="p-4 space-y-4">
-                        <Field.Group class="space-y-4 border-b pb-4">
-                            <Field.Set>
-                                <Field.Label class="text-sm font-semibold mb-2">Nostr Relays</Field.Label>
-                                    {#each relays as relay}
-                                        <div class="flex items-start gap-3">
-                                            <Checkbox bind:checked={relay.enabled} id={relay.url} />
-                                            <Label for={relay.url} class="ml-2">{relay.url}</Label>
-                                        </div>
-                                    {/each}
-                            </Field.Set>
-                        </Field.Group>
-                        <Field.Group  class="space-y-4 border-b pb-4">
-                            <Field.Set>
-                                <Field.Label for="n8n-url" class="text-sm font-semibold">n8n Webhook Url</Field.Label>
-                                <Field.Content>
-                                    <Input id="n8n-url" bind:value={webhookUrl} placeholder="https://..." />
-                                </Field.Content>
-                            </Field.Set>
-                        </Field.Group>
-                    </div>
-                </Sheet.Content>
-            </Sheet.Root>
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">
