@@ -149,11 +149,7 @@
 				});
 			
 			if (itemsChanged) {
-				console.log('🔄 Column.svelte: Items vom BoardStore aktualisiert', {
-					columnId,
-					oldCount: items.length,
-					newCount: updatedColumn.items.length
-				});
+				// Silent sync - items updated
 				items = updatedColumn.items;
 			}
 		}

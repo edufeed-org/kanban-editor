@@ -83,17 +83,17 @@
 	// ============================================================================
 	$effect(() => {
 		const uiColumns = boardStore.uiData; // ← Dependency tracking
-		console.log('🔍 Card.svelte $effect triggered for card:', card.id, 'found in', uiColumns.length, 'columns');
+		// Silent sync - no log spam
 		
 		// Finde die aktuelle Karte im Store
 		for (const col of uiColumns) {
 			const updatedCard = col.items.find(c => String(c.id) === String(card.id));
 			if (updatedCard) {
-				console.log('  ✓ Card found in column:', col.id);
+				// Silent sync - card found
 				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
 				// Das verhindert ownership_invalid_mutation Warnungen
 				if (updatedCard.publishState !== localPublishState) {
-					console.log('🔄 Card publishState updated:', updatedCard.publishState);
+					// Silent sync
 					localPublishState = updatedCard.publishState;
 				}
 				
@@ -109,7 +109,7 @@
 				}
 				
 				if (updatedCard.image !== localImage) {
-					console.log('🔄 Card image updated:', updatedCard.image);
+					// Silent sync
 					localImage = updatedCard.image || '';
 				}
 				
@@ -119,18 +119,18 @@
 				const localCommentsJSON = JSON.stringify(localComments);
 				
 				if (commentsJSON !== localCommentsJSON) {
-					console.log('🔄 Card comments updated:', (updatedCard.comments || []).length, 'comments');
+					// Silent sync
 					localComments = updatedCard.comments || [];
 				}
 				
 				// ✅ FIX: Aktualisiere author-bezogene Felder für sofortige Reaktivität
 				if (updatedCard.author !== localAuthor) {
-					console.log('🔄 Card author updated:', updatedCard.author);
+					// Silent sync
 					localAuthor = updatedCard.author;
 				}
 				
 				if (updatedCard.authorName !== localAuthorName) {
-					console.log('🔄 Card authorName updated:', updatedCard.authorName);
+					// Silent sync
 					localAuthorName = updatedCard.authorName;
 				}
 				

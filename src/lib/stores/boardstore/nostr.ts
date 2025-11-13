@@ -889,16 +889,11 @@ export class NostrIntegration {
             // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
             if (publishedEvent?.id) {
                 board.eventId = publishedEvent.id;
-                console.log(`[NostrIntegration] 🔑 Board Event-ID captured: ${board.eventId}`);
+                console.log(`[NostrIntegration] 🔑 Board Event-ID: ${board.eventId}`);
                 
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
-                // Grund: saveBoard() wurde bereits vor publishBoard() aufgerufen
-                // → eventId muss nachträglich gespeichert werden
                 const { BoardStorage } = await import('./storage.js');
                 await BoardStorage.saveBoard(board);
-                console.log(`[NostrIntegration] 💾 Board with eventId saved to localStorage`);
-            } else {
-                console.log(`[NostrIntegration] ⚠️ Board Event-ID not available (event queued or local-only)`);
             }
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
@@ -976,17 +971,11 @@ export class NostrIntegration {
             // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
             if (publishedEvent?.id) {
                 card.eventId = publishedEvent.id;
-                // console.log(`[NostrIntegration] 🔑 Card Event-ID captured: ${card.eventId}`);
                 
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
                 const { BoardStorage } = await import('./storage.js');
                 await BoardStorage.saveBoard(board);
-                console.log(`[NostrIntegration] 💾 Card with eventId saved to localStorage`);
-            } else {
-                console.log(`[NostrIntegration] ⚠️ Card Event-ID not available (event queued or local-only)`);
             }
-
-            console.log(`✅ Card ${cardId} queued for publishing`);
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
@@ -1282,12 +1271,10 @@ export class NostrIntegration {
                 // 9. Persist to localStorage (WITHOUT triggering Nostr publish)
                 BoardStorage.saveBoard(board);
 
-                console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+                console.log(`✅ ${remoteComments.length} new comment(s) merged`);
             } else {
                 // ⏭️ No changes - still update cache but DON'T save board
-                // This prevents unnecessary triggerUpdate() calls during app reload
                 this.saveCommentsToStorage(cardId, merged);
-                console.log(`⏭️ No new comments found - skipping board save (${merged.length} total)`);
             }
         } catch (error) {
             console.error('[NostrIntegration] ❌ Error loading comments:', error);
@@ -1364,14 +1351,11 @@ export class NostrIntegration {
             try {
                 // Deduplication: Skip if already processed
                 if (this.processedEvents.has(event.id)) {
-                    console.log(`[NostrIntegration] ⏭️ Skipping duplicate comment event: ${event.id.substring(0, 8)}`);
-                    return;
+                    return; // Silent skip - bereits verarbeitet
                 }
 
                 // Mark as processed
                 this.processedEvents.add(event.id);
-
-                console.log(`[NostrIntegration] 💬 New comment received for card ${cardId}`);
 
                 // Convert Nostr event to Comment object
                 const newComment: Comment = {
@@ -1393,8 +1377,6 @@ export class NostrIntegration {
 
                 // 🚀 Save to cache for instant access next time
                 this.saveCommentsToStorage(cardId, merged);
-
-                console.log(`[NostrIntegration] ✅ Comment merged and persisted. Total: ${merged.length}`);
 
                 // Trigger UI update callback
                 if (onUpdate) {

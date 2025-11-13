@@ -232,10 +232,10 @@ export class BoardStore {
         
         // NUR bei Primary Actions zu Nostr publishen (Default: true)
         if (options?.publish !== false) {
-            console.log('🚀 triggerUpdate: Publishing to Nostr (publish=' + (options?.publish ?? 'undefined (default true)') + ')');
             this.publishToNostr();
         } else {
-            console.log('⏭️ triggerUpdate: SKIP publish to Nostr (publish=false)');
+            // Debug: Log nur wenn explizit publish=false gesetzt wurde
+            // (verhindert Log-Spam bei comment loading, etc.)
         }
     }
 
