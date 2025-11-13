@@ -1307,11 +1307,17 @@ export class NostrIntegration {
     public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void): () => void {
         // 1. Guard: NDK verfügbar?
         if (!this.ndk) {
-            console.warn('[NostrIntegration] subscribeToComments: NDK not initialized');
+            console.debug('[NostrIntegration] subscribeToComments: NDK not initialized (normal during app startup)');
             return () => {}; // Return no-op cleanup function
         }
 
-        // 2. Finde die Card im Board
+        // 2. Guard: Ignore DnD placeholder cards
+        if (cardId.includes('dnd-shadow-placeholder')) {
+            console.debug(`[NostrIntegration] Skipping DnD placeholder: ${cardId}`);
+            return () => {};
+        }
+
+        // 3. Finde die Card im Board
         const result = board.findCardAndColumn(cardId);
         if (!result) {
             console.warn(`[NostrIntegration] subscribeToComments: Card ${cardId} not found`);

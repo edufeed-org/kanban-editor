@@ -46,6 +46,19 @@
 	 * 🔥 Load existing comments THEN subscribe to real-time updates
 	 */
 	onMount(async () => {
+		// Guard: Ignore DnD placeholder cards (they're temporary and have no real data)
+		if (String(cardId).includes('dnd-shadow-placeholder')) {
+			console.debug('[CardViewDialog] Skipping DnD placeholder card:', cardId);
+			return;
+		}
+
+		// Guard: Ensure card exists before loading comments
+		const result = boardStore.findCardAndColumn(String(cardId));
+		if (!result) {
+			console.warn('[CardViewDialog] Card not found:', cardId);
+			return;
+		}
+
 		// 1. Load existing comments from Nostr first
 		await boardStore.loadComments(String(cardId));
 		
