@@ -56,7 +56,7 @@ export class BoardStore {
         
         if (typeof window !== 'undefined') {
             this.initializeBoard();
-            this.scheduleAuthorFix();
+            // ⚠️ REMOVED: scheduleAuthorFix() - wird später aufgerufen nachdem NDK ready ist
             this.exposeCurrentBoardIdToWindow();
             this.initializeLearningManagerIfEnabled();
         }
@@ -93,22 +93,30 @@ export class BoardStore {
         }
     }
     
-    private fixAnonymousBoardAuthor(): void {
+    /**
+     * ⚡ Fix anonymous board author after auth
+     * Wird von +layout.svelte aufgerufen nachdem NDK ready ist
+     */
+    public fixAnonymousBoardAuthor(): void {
         try {
             if (!authStore || typeof authStore.getPubkey !== 'function') {
+                console.log('ℹ️ AuthStore noch nicht initialisiert - skip author fix');
                 return;
             }
             
             const pubkey = authStore.getPubkey();
             const isAuth = authStore.isAuthenticated;
             
-            if (!isAuth || !pubkey) return;
+            if (!isAuth || !pubkey) {
+                console.log('ℹ️ User nicht eingeloggt - skip author fix');
+                return;
+            }
             
             if (this.board.author === 'anonymous' || !this.board.author) {
                 this.board.author = pubkey;
                 this.board.maintainers = [pubkey];
                 this.saveToStorage();
-                console.log('✅ Board-Author aktualisiert');
+                console.log('✅ Board-Author aktualisiert:', pubkey);
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
