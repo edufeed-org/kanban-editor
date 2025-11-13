@@ -1396,6 +1396,41 @@ export class BoardStore {
         // 2. NostrIntegration.deleteBoard() → Deletion Event (Kind 5)
         // 3. Subscription handler ignoriert eigene Deletion Events via myPublishedEvents Set
     }
+    
+    /**
+     * ⚡ HELPER: Refresh board list after external deletion
+     * 
+     * Called when deletion event received from another device
+     */
+    public refreshBoardList(): void {
+        this.boardIds = BoardStorage.loadBoardIds();
+        console.log(`🔄 Board list refreshed: ${this.boardIds.length} boards`);
+    }
+    
+    /**
+     * ⚡ HELPER: Switch to another board after active board was deleted
+     * 
+     * Called when deletion event received for currently active board
+     * 
+     * @param deletedBoardId - ID of deleted board
+     */
+    public switchToAnotherBoardAfterDeletion(deletedBoardId: string): void {
+        console.log(`⚠️ Active board ${deletedBoardId} was deleted - switching to another board`);
+        
+        // Refresh board list (might have changed)
+        this.refreshBoardList();
+        
+        if (this.boardIds.length > 0) {
+            // Switch to first available board
+            const firstBoardId = this.boardIds[0];
+            console.log(`🔄 Switching to first available board: ${firstBoardId}`);
+            this.loadBoard(firstBoardId);
+        } else {
+            // No boards left → create new empty board
+            console.log(`📝 No boards left, creating new empty board`);
+            this.createBoard('Neues Board', 'Automatisch erstellt nach Board-Löschung');
+        }
+    }
 }
 
 // ============================================================================

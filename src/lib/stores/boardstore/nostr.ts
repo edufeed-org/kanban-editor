@@ -23,6 +23,11 @@ export class NostrIntegration {
     // ⚡ NEU (v2.0): Deletion-Timestamp-Tracking für Out-of-Order Events
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
+    
+    // ⚡ OPTIMIZATION (Nov 2025): Persistent Deletion Event Tracking
+    // Stores processed deletion event IDs to prevent re-processing after app restart
+    private static DELETION_EVENTS_STORAGE_KEY = 'nostr-processed-deletions';
+    private processedDeletionEvents = new Set<string>();
 
     // 🚀 NEW (Phase 3): IndexedDB Cache für Comments
     private static COMMENTS_STORAGE_PREFIX = 'nostr-comments-';
@@ -76,6 +81,46 @@ export class NostrIntegration {
             console.warn('[NostrIntegration] ⚠️ Failed to clear cache:', error);
         }
     }
+    
+    /**
+     * ⚡ OPTIMIZATION: Load processed deletion events from localStorage
+     * Prevents re-processing deletion events after app restart
+     */
+    private loadProcessedDeletions(): void {
+        try {
+            const stored = localStorage.getItem(NostrIntegration.DELETION_EVENTS_STORAGE_KEY);
+            if (stored) {
+                const deletions = JSON.parse(stored) as string[];
+                this.processedDeletionEvents = new Set(deletions);
+                console.log(`💿 Loaded ${deletions.length} processed deletion event(s) from cache`);
+            }
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to load processed deletions:', error);
+            this.processedDeletionEvents = new Set();
+        }
+    }
+    
+    /**
+     * ⚡ OPTIMIZATION: Save processed deletion events to localStorage
+     * Limits to last 1000 events to prevent unbounded growth
+     */
+    private saveProcessedDeletions(): void {
+        try {
+            // Limit to last 1000 deletion events (FIFO)
+            const deletions = Array.from(this.processedDeletionEvents);
+            const limited = deletions.slice(-1000); // Keep only last 1000
+            
+            localStorage.setItem(
+                NostrIntegration.DELETION_EVENTS_STORAGE_KEY,
+                JSON.stringify(limited)
+            );
+            
+            // Update Set with limited data
+            this.processedDeletionEvents = new Set(limited);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to save processed deletions:', error);
+        }
+    }
 
     /**
      * Initialisiert Nostr Integration
@@ -83,6 +128,9 @@ export class NostrIntegration {
     public async initialize(ndk: NDK, onBoardLoad?: () => Promise<void>): Promise<void> {
         this.ndk = ndk;
         console.log('[BoardStore] ✅ Nostr initialized - SyncManager ready');
+        
+        // ⚡ Load processed deletions from localStorage
+        this.loadProcessedDeletions();
 
         // Wenn bereits ein User authentifiziert ist, sofort Boards laden
         try {
@@ -437,12 +485,17 @@ export class NostrIntegration {
 
         console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Event-Driven v2.0)');
 
+        // ⚡ OPTIMIZATION: Filtere alte Deletion Events aus (nur letzte 7 Tage)
+        // Verhindert, dass hunderte alte Deletion Events bei jedem Start verarbeitet werden
+        const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+        
         // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
         // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
         const sub = this.ndk.subscribe(
             {
                 kinds: [30301, 30302, 5] as number[], // Board, Card, Deletion
-                authors: [pubkey] // Boards und Cards die dieser User erstellt hat
+                authors: [pubkey], // Boards und Cards die dieser User erstellt hat
+                since: sevenDaysAgo // ⚡ OPTIMIZATION: Nur Events der letzten 7 Tage
             } as any,
             { closeOnEose: false }
         );
@@ -712,13 +765,23 @@ export class NostrIntegration {
     ): Promise<void> {
         // console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
         
-        // ⚡ v2.0: Event-Deduplication
+        // ⚡ OPTIMIZATION: Check persistent deletion event cache FIRST
+        if (this.processedDeletionEvents.has(deletionEvent.id)) {
+            // Silently skip - already processed in previous session
+            return;
+        }
+        
+        // ⚡ v2.0: Event-Deduplication (in-memory for current session)
         if (this.processedEvents.has(deletionEvent.id)) {
             console.log('⏩ Deletion-Event already processed, skip');
             return;
         }
         
         this.processedEvents.add(deletionEvent.id);
+        
+        // ⚡ Track this deletion event persistently
+        this.processedDeletionEvents.add(deletionEvent.id);
+        this.saveProcessedDeletions(); // Persist to localStorage
         
         try {
             // NIP-09: Parse 'a' tags für replaceable events
@@ -735,13 +798,35 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const boardId = parts.slice(2).join(':');
                         
+                        // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
+                        if (this.boardDeletionTimestamps.has(boardId)) {
+                            // console.log(`⏩ Board deletion already tracked for ${boardId}, skip`);
+                            continue;
+                        }
+                        
                         // Track deletion timestamp (für Ordering)
                         this.boardDeletionTimestamps.set(boardId, deleteTime);
-                        // console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
+                        console.log(`🗑️ Board deletion event received for ${boardId}`);
                         
-                        // ⚡ Board deletion handled by boardStore.deleteBoard() already
-                        // No need to call deleteBoardFromNostr() - deprecated method
-                        console.log(`🗑️ Board deletion event received for ${boardId} - already deleted locally`);
+                        // Check if board exists locally
+                        const existsLocally = BoardStorage.loadBoard(boardId) !== null;
+                        
+                        if (existsLocally) {
+                            console.log(`🗑️ Deleting board ${boardId} locally (received deletion event)`);
+                            
+                            // Delete from localStorage (publish: false to avoid re-publishing deletion event)
+                            BoardStorage.deleteBoard(boardId);
+                            
+                            // Update board list in store
+                            boardStore.refreshBoardList();
+                            
+                            // If this was the active board, switch to another board
+                            if (boardStore.data.id === boardId) {
+                                boardStore.switchToAnotherBoardAfterDeletion(boardId);
+                            }
+                        } else {
+                            console.log(`🗑️ Board ${boardId} already deleted locally - ignoring deletion event`);
+                        }
                     }
                 }
                 
@@ -751,13 +836,18 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const cardId = parts.slice(2).join(':');
                         
+                        // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
+                        if (this.cardDeletionTimestamps.has(cardId)) {
+                            // console.log(`⏩ Card deletion already tracked for ${cardId}, skip`);
+                            continue;
+                        }
+                        
                         // Track deletion timestamp (für Ordering)
                         this.cardDeletionTimestamps.set(cardId, deleteTime);
-                        // console.log(`🗑️ Tracked deletion timestamp for card ${cardId}: ${new Date(deleteTime).toISOString()}`);
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteCardFromNostr(cardId);
-                        console.log(`✅ Called boardStore.deleteCardFromNostr(${cardId})`);
+                        console.log(`✅ Card deletion event processed: ${cardId}`);
                     }
                 }
             }
