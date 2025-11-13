@@ -520,32 +520,32 @@ export class NostrIntegration {
      * Handler für Board-Events (Kind 30301)
      * 
      * ⚡ v2.0: Event-Driven Architecture mit upsertBoardFromNostr()
+     * ⚡ v4.1: Optimiert - Silent Skip für bereits verarbeitete Events
      */
     private async handleBoardEvent(
         boardEvent: any,
         currentBoard: Board,
         boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
-        console.log('📥 Board-Event erhalten:', boardEvent.id);
-        
-        // ⚡ v2.0: Event-Deduplication
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
         if (this.processedEvents.has(boardEvent.id)) {
-            console.log('⏩ Board-Event already processed, skip');
-            return;
+            return; // Silent skip - Event bereits verarbeitet
         }
         
         this.processedEvents.add(boardEvent.id);
+        
+        // ⚡ v4.1: Nur bei NEUEN Events loggen
+        console.log('📥 Board-Event (new):', boardEvent.id.substring(0, 16));
         
         // ⚡ CRITICAL: Skip eigene Events (Echo-Loop Prevention!)
         const { getSyncManager } = await import('../syncManager.svelte.js');
         const syncManager = getSyncManager();
         if (syncManager.isMyEvent(boardEvent.id)) {
-            console.log(`⏭️ Eigenes Board-Event erkannt - SKIP: ${boardEvent.id.substring(0, 30)}...`);
+            // Silent skip - eigenes Event
             
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(boardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
             }, 5000);
             
             return;
@@ -578,27 +578,18 @@ export class NostrIntegration {
             const { BoardStorage } = await import('./storage.js');
             const localBoard = BoardStorage.loadBoard(boardProps.id);
             
-            console.log(`🔍 LWW Check: localBoard exists?`, !!localBoard, localBoard ? `updatedAt: ${localBoard.updatedAt}` : 'null');
-            
             if (localBoard && localBoard.updatedAt) {
                 // Parse ISO timestamp zu Number für Vergleich
                 const localTime = new Date(localBoard.updatedAt).getTime();
                 const eventTime = boardEvent.created_at * 1000; // Nostr timestamps sind in Sekunden
                 
                 if (eventTime <= localTime) {
-                    console.log(`⏭️ LWW: Skip older/equal event`);
-                    console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
-                    console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
-                    console.log(`  Diff: ${Math.round((localTime - eventTime) / 1000)}s newer in localStorage`);
+                    // Silent skip - lokale Daten sind neuer oder gleich
                     return; // Don't overwrite newer local data with stale event
                 }
                 
-                console.log(`✅ LWW: Apply newer event`);
-                console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
-                console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
-                console.log(`  Diff: ${Math.round((eventTime - localTime) / 1000)}s newer from Nostr`);
-            } else {
-                console.log(`✅ LWW: No local board, apply event unconditionally`);
+                // Nur bei tatsächlichem Update loggen
+                console.log(`✅ LWW: Apply newer event (${Math.round((eventTime - localTime) / 1000)}s newer)`);
             }
             
             // ⚡ NEW: Set unseen changes flag if board is NOT currently loaded
@@ -625,18 +616,16 @@ export class NostrIntegration {
      * Handler für Card-Events (Kind 30302)
      * 
      * ⚡ v2.0: Event-Driven Architecture mit direkter Store-API
+     * ⚡ v4.1: Optimiert - Silent Skip für bereits verarbeitete Events
      */
     private async handleCardEvent(
         cardEvent: any,
         currentBoard: Board,
         boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
-        console.log('📥 Card-Event erhalten:', cardEvent.id);
-        
-        // ⚡ v2.0: Event-Deduplication
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
         if (this.processedEvents.has(cardEvent.id)) {
-            console.log('⏩ Card-Event already processed, skip');
-            return;
+            return; // Silent skip - Event bereits verarbeitet
         }
         
         this.processedEvents.add(cardEvent.id);
@@ -645,12 +634,11 @@ export class NostrIntegration {
         const { getSyncManager } = await import('../syncManager.svelte.js');
         const syncManager = getSyncManager();
         if (syncManager.isMyEvent(cardEvent.id)) {
-            console.log(`⏭️ Eigenes Card-Event erkannt - SKIP: ${cardEvent.id.substring(0, 30)}...`);
+            // Silent skip - eigenes Event
             
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(cardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${cardEvent.id.substring(0, 30)}...`);
             }, 5000);
             
             return;
@@ -701,17 +689,12 @@ export class NostrIntegration {
                 const eventTime = cardEvent.created_at * 1000;
                 
                 if (eventTime <= localTime) {
-                    console.log(`⏭️ Card LWW: Skip older/equal event`);
-                    console.log(`  Card:        ${cardProps.heading || cardProps.id}`);
-                    console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
-                    console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
-                    console.log(`  Delta:       ${((localTime - eventTime) / 1000).toFixed(1)}s newer`);
+                    // Silent skip - lokale Daten sind neuer oder gleich
                     return;
                 }
                 
-                console.log(`✅ Card LWW: Apply newer event`);
-                console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
-                console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
+                // Nur bei tatsächlichem Update loggen
+                console.log(`✅ Card LWW: Apply newer (${((eventTime - localTime) / 1000).toFixed(1)}s newer)`);
             }
             
             // columnId ist KRITISCH - ohne geht nichts!
@@ -771,10 +754,9 @@ export class NostrIntegration {
             return;
         }
         
-        // ⚡ v2.0: Event-Deduplication (in-memory for current session)
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
         if (this.processedEvents.has(deletionEvent.id)) {
-            console.log('⏩ Deletion-Event already processed, skip');
-            return;
+            return; // Silent skip - Event bereits verarbeitet
         }
         
         this.processedEvents.add(deletionEvent.id);
@@ -800,19 +782,18 @@ export class NostrIntegration {
                         
                         // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
                         if (this.boardDeletionTimestamps.has(boardId)) {
-                            // console.log(`⏩ Board deletion already tracked for ${boardId}, skip`);
+                            // Silent skip - bereits getrackt
                             continue;
                         }
                         
                         // Track deletion timestamp (für Ordering)
                         this.boardDeletionTimestamps.set(boardId, deleteTime);
-                        console.log(`🗑️ Board deletion event received for ${boardId}`);
                         
                         // Check if board exists locally
                         const existsLocally = BoardStorage.loadBoard(boardId) !== null;
                         
                         if (existsLocally) {
-                            console.log(`🗑️ Deleting board ${boardId} locally (received deletion event)`);
+                            console.log(`🗑️ Deleting board ${boardId.substring(0, 16)}... (deletion event)`);
                             
                             // Delete from localStorage (publish: false to avoid re-publishing deletion event)
                             BoardStorage.deleteBoard(boardId);
@@ -824,9 +805,8 @@ export class NostrIntegration {
                             if (boardStore.data.id === boardId) {
                                 boardStore.switchToAnotherBoardAfterDeletion(boardId);
                             }
-                        } else {
-                            console.log(`🗑️ Board ${boardId} already deleted locally - ignoring deletion event`);
                         }
+                        // Silent skip wenn bereits gelöscht
                     }
                 }
                 
@@ -838,7 +818,7 @@ export class NostrIntegration {
                         
                         // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
                         if (this.cardDeletionTimestamps.has(cardId)) {
-                            // console.log(`⏩ Card deletion already tracked for ${cardId}, skip`);
+                            // Silent skip - bereits getrackt
                             continue;
                         }
                         
@@ -847,7 +827,7 @@ export class NostrIntegration {
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteCardFromNostr(cardId);
-                        console.log(`✅ Card deletion event processed: ${cardId}`);
+                        // Silent - kein Log bei Card-Deletion
                     }
                 }
             }
