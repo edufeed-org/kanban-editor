@@ -1270,16 +1270,25 @@ export class NostrIntegration {
             const localComments = card.comments || [];
             const merged = this.mergeComments(localComments, remoteComments);
 
-            // 7. Update card with merged comments
-            card.comments = merged;
+            // 7. Update card with merged comments ONLY if changed
+            const hasChanges = JSON.stringify(card.comments) !== JSON.stringify(merged);
+            
+            if (hasChanges) {
+                card.comments = merged;
 
-            // 🚀 8. Save to cache for next time
-            this.saveCommentsToStorage(cardId, merged);
+                // 🚀 8. Save to cache for next time
+                this.saveCommentsToStorage(cardId, merged);
 
-            // 9. Persist to localStorage
-            BoardStorage.saveBoard(board);
+                // 9. Persist to localStorage (WITHOUT triggering Nostr publish)
+                BoardStorage.saveBoard(board);
 
-            console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+                console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+            } else {
+                // ⏭️ No changes - still update cache but DON'T save board
+                // This prevents unnecessary triggerUpdate() calls during app reload
+                this.saveCommentsToStorage(cardId, merged);
+                console.log(`⏭️ No new comments found - skipping board save (${merged.length} total)`);
+            }
         } catch (error) {
             console.error('[NostrIntegration] ❌ Error loading comments:', error);
         }

@@ -161,8 +161,8 @@
 
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
-  	   console.warn("got consider", name);
-  	   isDraggingCards = true;
+  	    // console.warn("got consider", name);
+  	    isDraggingCards = true;
  		items = newItems;
    }
    

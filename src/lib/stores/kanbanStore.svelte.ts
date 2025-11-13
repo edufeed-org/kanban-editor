@@ -917,8 +917,9 @@ export class BoardStore {
 
         await this.nostrIntegration.loadComments(this.board, cardId);
         
-        // Trigger UI update after comments are loaded
-        this.triggerUpdate();
+        // Trigger UI update after comments are loaded (WITHOUT Nostr publish)
+        // Reason: Loading comments doesn't change board structure, only card data
+        this.triggerUpdate({ publish: false });
     }
 
     /**
@@ -955,7 +956,7 @@ export class BoardStore {
         return this.nostrIntegration.subscribeToComments(
             this.board,
             cardId,
-            () => this.triggerUpdate() // Callback for UI updates
+            () => this.triggerUpdate({ publish: false }) // Callback for UI updates (WITHOUT Nostr publish - comment already on relay)
         );
     }
 
@@ -1016,8 +1017,10 @@ export class BoardStore {
             console.error('❌ Error batch-loading comments:', error);
         }
         
-        // Single UI update after all loads complete
-        this.triggerUpdate();
+        // ⚡ OPTIMIZATION: Trigger UI update WITHOUT publishing to Nostr
+        // Reason: Loading comments doesn't change the board structure itself
+        // Only cards were updated with comments from Nostr
+        this.triggerUpdate({ publish: false }); // ← Skip publish!
     }
 
     // ============================================================================
