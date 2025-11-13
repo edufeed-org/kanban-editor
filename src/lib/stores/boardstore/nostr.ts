@@ -231,14 +231,23 @@ export class NostrIntegration {
                     if (existingRaw) {
                         try {
                             const existing = JSON.parse(existingRaw);
-                            const localTs = existing.updatedAt
-                                ? new Date(existing.updatedAt).getTime()
-                                : existing.createdAt
-                                    ? new Date(existing.createdAt).getTime()
-                                    : 0;
+                            
+                            // 🔥 FIX: Berücksichtige AUCH lastAccessedAt beim Timestamp-Vergleich!
+                            // Verhindert dass Nostr-Load neuere lokale lastAccessedAt überschreibt
+                            const localTs = existing.lastAccessedAt
+                                ? (typeof existing.lastAccessedAt === 'string' 
+                                    ? new Date(existing.lastAccessedAt).getTime()
+                                    : existing.lastAccessedAt)
+                                : existing.updatedAt
+                                    ? new Date(existing.updatedAt).getTime()
+                                    : existing.createdAt
+                                        ? new Date(existing.createdAt).getTime()
+                                        : 0;
+                            
                             const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
                             if (localTs && localTs > remoteTs) {
                                 acceptRemote = false;
+                                console.log(`[BoardStore] ↩️ Keep newer local board (lastAccessedAt: ${new Date(localTs).toISOString()}) - skip remote (createdAt: ${new Date(remoteTs).toISOString()})`);
                             }
                         } catch {
                             acceptRemote = true;

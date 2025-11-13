@@ -107,12 +107,9 @@ export class BoardStorage {
                                 : lastAccessed)
                             : 0;
                         
-                        console.log(`  Board: ${data.name} | lastAccessedAt: ${lastAccessed} | timestamp: ${timestamp}`);
-                        
                         if (timestamp > mostRecentTime) {
                             mostRecentTime = timestamp;
                             mostRecentBoardId = boardId;
-                            console.log(`    → Neuer Kandidat!`);
                         }
                     } catch (e) {
                         console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
@@ -120,7 +117,6 @@ export class BoardStorage {
                 }
             }
             
-            console.log(`✅ Zuletzt zugegriffenes Board: ${mostRecentBoardId}`);
             return mostRecentBoardId;
         } catch (error) {
             console.error('❌ Fehler beim Laden des letzten Boards:', error);

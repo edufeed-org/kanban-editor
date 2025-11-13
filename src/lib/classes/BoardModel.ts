@@ -312,7 +312,9 @@ export class Board {
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
         
         // ✅ NEW (REFACTORING): Initialize new fields from metadata migration
-        this.lastAccessedAt = props.lastAccessedAt || generateTimestamp();
+        // ⚡ FIX: DON'T auto-generate lastAccessedAt - only use if provided!
+        // This prevents race condition where all boards get same timestamp on load
+        this.lastAccessedAt = props.lastAccessedAt; // undefined if not provided
         this.hasUnseenChanges = props.hasUnseenChanges ?? false;
         
         // ⚡ v4.3: FIX - Verwende props.createdAt falls vorhanden (von Nostr), sonst NOW

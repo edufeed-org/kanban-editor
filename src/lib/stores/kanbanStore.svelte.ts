@@ -340,7 +340,7 @@ export class BoardStore {
         return board.id;
     }
 
-    public loadBoard(boardId: string): boolean {
+    public loadBoard(boardId: string, options?: { skipLastAccessed?: boolean }): boolean {
         const board = BoardStorage.loadBoard(boardId);
         if (!board) {
             console.error(`❌ Board ${boardId} nicht gefunden`);
@@ -350,8 +350,15 @@ export class BoardStore {
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         
-        // ✅ NEW (REFACTORING): Update board fields directly
-        board.updateLastAccessed();
+        // ⚡ NEW (13.11.2025): Update lastAccessed NUR bei manuellem Board-Switch
+        // Bei Nostr-Load: skipLastAccessed = true (Race Condition vermeiden!)
+        if (!options?.skipLastAccessed) {
+            board.updateLastAccessed();
+            console.log(`📌 lastAccessed updated: ${board.lastAccessedAt}`);
+        } else {
+            console.log(`⏭️ Skipped lastAccessed update (Nostr-Load)`);
+        }
+        
         board.clearChanges();
         BoardStorage.saveBoard(board); // Persist changes
         
@@ -359,6 +366,8 @@ export class BoardStore {
         // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
         // Das würde neuere Nostr-Daten überschreiben!
         // Aber: updateTrigger++ damit $derived neu berechnet wird
+        // 🔴 WICHTIG: Kein triggerUpdate() hier - nur updateTrigger++
+        // → Verhindert unnötiges Nostr-Publishing beim reinen Laden!
         this.updateTrigger++;
         
         ChatIntegration.reset();
@@ -446,10 +455,39 @@ export class BoardStore {
                 // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
                 console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
                 
+                // ⚡ NEW (13.11.2025): Lade das Board mit dem neuesten lastAccessedAt
+                // NICHT das "erste" Board, um Race Conditions zu vermeiden!
                 if (switched && newBoard) {
                     this.board = newBoard;
                     this._columnOrder = newBoard.columns.map(c => c.id);
-                    this.triggerUpdate();
+                    this.triggerUpdate({ publish: false }); // ← Kein Nostr Publishing bei Load!
+                } else {
+                    // ⚡ FIX: Re-load current board OHNE lastAccessed Update
+                    // Das verhindert, dass alle Boards den gleichen Timestamp bekommen
+                    const currentId = this.board.id;
+                    if (updatedBoardIds.includes(currentId)) {
+                        console.log(`✅ Re-loading current board without lastAccessed update: ${currentId}`);
+                        this.loadBoard(currentId, { skipLastAccessed: true });
+                    } else {
+                        // Aktuelles Board wurde gelöscht → Lade das neueste Board
+                        const allBoards = this.getAllBoards();
+                        if (allBoards.length > 0) {
+                            const mostRecent = allBoards.reduce((prev, curr) => {
+                                const prevTime = prev.lastAccessed || prev.updatedAt || prev.createdAt || 0;
+                                const currTime = curr.lastAccessed || curr.updatedAt || curr.createdAt || 0;
+                                
+                                // 🔥 FIX: Bei gleichen Timestamps → deterministischer Vergleich via ID!
+                                if (currTime === prevTime) {
+                                    // Lexikographischer Vergleich: kleinere ID = "neuer" (arbitrary but deterministic)
+                                    return curr.id < prev.id ? curr : prev;
+                                }
+                                
+                                return currTime > prevTime ? curr : prev;
+                            });
+                            console.log(`⚠️ Current board deleted, switching to most recent: ${mostRecent.name}`);
+                            this.loadBoard(mostRecent.id, { skipLastAccessed: true });
+                        }
+                    }
                 }
             }
         );
@@ -504,8 +542,9 @@ export class BoardStore {
             }
         );
         
-        // Nach dem Laden aller Cards: UI aktualisieren
-        this.triggerUpdate();
+        // Nach dem Laden aller Cards: UI aktualisieren (OHNE Nostr-Publishing!)
+        // 🔴 WICHTIG: publish: false - wir laden nur vom Relay, keine Änderungen!
+        this.triggerUpdate({ publish: false });
         console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
     }
 
@@ -593,7 +632,15 @@ export class BoardStore {
         const sorted = allBoards.sort((a, b) => {
             const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
             const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
-            return timeB - timeA; // DESC: newest first
+            
+            // Primary sort: by timestamp DESC (newest first)
+            if (timeB !== timeA) {
+                return timeB - timeA;
+            }
+            
+            // 🔥 FIX: Bei gleichen Timestamps → sortiere nach Board-ID (deterministisch!)
+            // Verhindert unstable sort wenn alle Boards gleichen Timestamp haben
+            return a.id.localeCompare(b.id);
         });
         
         // ✅ 2. FILTER by search query
