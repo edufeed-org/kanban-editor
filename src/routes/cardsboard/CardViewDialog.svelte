@@ -44,6 +44,7 @@
 
 	/**
 	 * 🔥 Load existing comments THEN subscribe to real-time updates
+	 * 🚀 Wait for NDK to be ready first (prevents race condition)
 	 */
 	onMount(async () => {
 		// Guard: Ignore DnD placeholder cards (they're temporary and have no real data)
@@ -57,6 +58,22 @@
 		if (!result) {
 			console.warn('[CardViewDialog] Card not found:', cardId);
 			return;
+		}
+
+		// 🚀 Wait for NDK to be ready before attempting Nostr operations
+		if (!boardStore.ndkReady) {
+			console.debug('[CardViewDialog] Waiting for NDK to be ready...');
+			// Wait up to 5 seconds for NDK
+			const maxWait = 5000;
+			const startTime = Date.now();
+			while (!boardStore.ndkReady && (Date.now() - startTime) < maxWait) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+			
+			if (!boardStore.ndkReady) {
+				console.warn('[CardViewDialog] NDK not ready after timeout - skipping Nostr operations');
+				return;
+			}
 		}
 
 		// 1. Load existing comments from Nostr first

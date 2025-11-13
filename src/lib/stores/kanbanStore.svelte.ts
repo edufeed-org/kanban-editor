@@ -41,6 +41,9 @@ export class BoardStore {
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
     public updateTrigger = $state(0);
     
+    // 🚀 NEW: NDK Ready Signal (prevents race conditions)
+    public ndkReady = $state(false);
+    
     // Module instances
     private nostrIntegration: NostrIntegration;
 
@@ -443,6 +446,10 @@ export class BoardStore {
         // Damit auch ohne Login neue Boards in anderen Browsern sichtbar werden
         this.subscribeToNostrUpdates();
         console.log('[BoardStore] ✅ Live subscription started - ready for multi-browser sync');
+        
+        // 🚀 Signal that NDK is ready - components can now safely use Nostr methods
+        this.ndkReady = true;
+        console.log('[BoardStore] ✅ NDK ready signal set - components can now use Nostr');
     }
 
     public async loadBoardsFromNostr(): Promise<void> {

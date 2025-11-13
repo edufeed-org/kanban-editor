@@ -1199,7 +1199,7 @@ export class NostrIntegration {
      */
     public async loadComments(board: Board, cardId: string): Promise<void> {
         if (!this.ndk) {
-            console.warn('[NostrIntegration] loadComments: NDK not initialized');
+            console.debug('[NostrIntegration] loadComments: NDK not initialized (will retry when ready)');
             return;
         }
 
