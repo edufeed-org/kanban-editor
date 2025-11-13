@@ -142,7 +142,11 @@ export class SyncManager {
           const relays = await this.signAndPublish(event, targetRelays, type);
           if (relays && relays.size > 0) {
             console.log(`[SyncManager] ✅ Event published to ${relays.size} relay(s)`);
-            console.log(`[SyncManager] 🔑 Event ID: ${event.id}`); // ← NEU: Log Event-ID!
+            if (event.id) {
+              console.log(`[SyncManager] 🔑 Event ID: ${event.id}`);
+            } else {
+              console.warn(`[SyncManager] ⚠️ Event published but has no ID!`);
+            }
             this.lastSyncTime = Date.now();
             return event; // ← NEU: Return signed event with ID!
           }
@@ -180,7 +184,8 @@ export class SyncManager {
       if (!event.sig) {
         throw new Error('Event signing failed - no signature generated');
       }
-      console.log('[SyncManager] Event signed');
+      console.log(`[SyncManager] Event signed successfully`);
+      console.log(`[SyncManager] Event ID after signing: ${event.id || 'UNDEFINED!'}`);
       
       // ⚡ VALIDATION: Check deletion events for auth issues
       if (event.kind === 5) {
@@ -205,6 +210,8 @@ export class SyncManager {
       if (event.id) {
         this.myPublishedEvents.add(event.id);
         console.log(`[SyncManager] 📌 Tracking own event: ${event.id.substring(0, 30)}...`);
+      } else {
+        console.error(`[SyncManager] ⚠️ CRITICAL: Event has no ID after signing! Cannot track for echo prevention!`);
       }
       
       const maxAttempts = 3;

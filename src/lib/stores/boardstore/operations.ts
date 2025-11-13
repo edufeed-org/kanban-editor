@@ -605,7 +605,10 @@ export class BoardOperations {
                 publishState: (boardProps.publishState as any) || 'draft',
                 tags: boardProps.tags || [],
                 columns: boardProps.columns || [],
-                lastAccessedAt: boardProps.updatedAt || new Date().toISOString(),
+                // 🔴 FIX: Neues Board von Nostr → KEIN lastAccessedAt!
+                // Grund: Board wurde NICHT vom User angesehen, nur vom Relay empfangen
+                // → Erscheint am ENDE der Liste (bis User es das erste Mal öffnet)
+                lastAccessedAt: undefined, // ← Wird erst beim loadBoard() gesetzt
                 hasUnseenChanges: true // ← Neues Board vom Nostr = unsichtbare Änderung
             });
             
