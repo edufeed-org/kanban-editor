@@ -43,10 +43,13 @@
 	let unsubscribeComments: (() => void) | undefined;
 
 	/**
-	 * 🔥 Auto-subscribe to real-time comment updates on mount
+	 * 🔥 Load existing comments THEN subscribe to real-time updates
 	 */
-	onMount(() => {
-		console.log('[CardViewDialog] Mounting - subscribing to comments for card:', cardId);
+	onMount(async () => {
+		// 1. Load existing comments from Nostr first
+		await boardStore.loadComments(String(cardId));
+		
+		// 2. Then subscribe to new comments
 		unsubscribeComments = boardStore.subscribeToComments(String(cardId));
 	});
 

@@ -178,7 +178,7 @@ export class Card {
     }
 
     getContextData(): Omit<CardProps, 'comments' | 'links' | 'attendees'> & {
-        comments: { text: string; author: string }[],
+        comments: Comment[], // ⚡ FIX: Vollständige Comment-Objekte statt nur text+author!
         links: { url: string; title: string }[],
         attendees: string[]
     } {
@@ -195,7 +195,7 @@ export class Card {
             authorName: this.authorName, // ← NEU: authorName serialisieren!
             createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
             updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
-            comments: this.comments.map(c => ({ text: c.text, author: c.author })),
+            comments: this.comments, // ⚡ FIX: Komplette Comments mit id, eventId, createdAt, syncStatus!
             links: this.links.map(l => ({ url: l.url, title: l.title })),
             attendees: this.attendees // ← ✅ FIXED: attendees serialisieren!
         };

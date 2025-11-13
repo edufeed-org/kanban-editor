@@ -413,8 +413,23 @@ export class BoardOperations {
         const existingCard = column.findCard(cardProps.id!);
         
         if (existingCard) {
+            // ⚡ PRESERVE COMMENTS: Behalte bestehende Kommentare beim Update
+            // Kommentare werden als separate Kind-1 Events gespeichert und
+            // sollten beim Card-Update nicht verloren gehen
+            const existingComments = existingCard.comments || [];
+            
             // Update existing card
             existingCard.update(cardProps);
+            
+            // ⚡ RESTORE COMMENTS: Wenn cardProps keine Kommentare hat,
+            // behalte die existierenden Kommentare
+            if (!cardProps.comments || cardProps.comments.length === 0) {
+                if (existingComments.length > 0) {
+                    existingCard.comments = existingComments;
+                    console.log(`  💬 Preserved ${existingComments.length} comment(s)`);
+                }
+            }
+            
             console.log(`🔄 Updated card ${cardProps.id} from Nostr`);
             
             // ⚡ v4.3: Handle rank (position) change
