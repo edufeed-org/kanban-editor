@@ -739,9 +739,9 @@ export class NostrIntegration {
                         this.boardDeletionTimestamps.set(boardId, deleteTime);
                         // console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                         
-                        // ⚡ v2.0: Direkte Store-API (SECONDARY action)
-                        boardStore.deleteBoardFromNostr(boardId);
-                        console.log(`✅ Called boardStore.deleteBoardFromNostr(${boardId})`);
+                        // ⚡ Board deletion handled by boardStore.deleteBoard() already
+                        // No need to call deleteBoardFromNostr() - deprecated method
+                        console.log(`🗑️ Board deletion event received for ${boardId} - already deleted locally`);
                     }
                 }
                 
@@ -1308,16 +1308,15 @@ export class NostrIntegration {
                 board.eventId // ← NEU: Actual event ID for relay deletion!
             );
             
-            // 🔍 DEBUG: Log deletion event details
+            // 🔍 DEBUG: Log deletion event details (BEFORE signing)
             console.log('[NostrIntegration] 📋 Board Deletion Event Details:');
             console.log('  Kind:', deletionEvent.kind);
-            console.log('  Pubkey (signer):', deletionEvent.pubkey || 'NOT SIGNED YET');
             console.log('  Board Author:', board.author);
             console.log('  Board Event ID:', board.eventId || 'NOT SET');
-            console.log('  ⚠️ MATCH?:', (deletionEvent.pubkey === board.author) ? '✅ YES' : '❌ NO - DELETION WILL FAIL!');
             console.log('  Tags:', JSON.stringify(deletionEvent.tags, null, 2));
             console.log('  Content:', deletionEvent.content);
             console.log('  Target Board ID:', boardEventId);
+            console.log('  ⚠️ Note: Event will be signed by SyncManager before publishing');
 
             // 3. Publiziere auf ALLEN Relays (sowohl public als private)
             // Grund: Board könnte auf beiden Relay-Sets existieren
@@ -1390,16 +1389,15 @@ export class NostrIntegration {
                 actualEventId // ← NEU: Übergebe echte Event-ID falls vorhanden
             );
             
-            // 🔍 DEBUG: Log deletion event details
-            console.log('[NostrIntegration] 📋 Deletion Event Details:');
+            // 🔍 DEBUG: Log deletion event details (BEFORE signing)
+            console.log('[NostrIntegration] 📋 Card Deletion Event Details:');
             console.log('  Kind:', deletionEvent.kind);
-            console.log('  Pubkey (signer):', deletionEvent.pubkey || 'NOT SIGNED YET');
             console.log('  Card Author:', card.author);
-            console.log('  ⚠️ MATCH?:', (deletionEvent.pubkey === card.author) ? '✅ YES' : '❌ NO - DELETION WILL FAIL!');
             console.log('  Tags:', JSON.stringify(deletionEvent.tags, null, 2));
             console.log('  Content:', deletionEvent.content);
             console.log('  Target Card Identifier:', cardEventIdentifier);
             console.log('  Actual Event ID:', actualEventId || 'NOT FOUND');
+            console.log('  ⚠️ Note: Event will be signed by SyncManager before publishing');
 
             // 3. Bestimme Target-Relays basierend auf Card's publishState
             const publishState = card.publishState || 'draft';

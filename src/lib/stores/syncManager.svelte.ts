@@ -182,6 +182,24 @@ export class SyncManager {
       }
       console.log('[SyncManager] Event signed');
       
+      // ⚡ VALIDATION: Check deletion events for auth issues
+      if (event.kind === 5) {
+        const aTags = event.tags.filter(tag => tag[0] === 'a');
+        if (aTags.length > 0) {
+          const targetCoordinate = aTags[0][1]; // e.g., "30301:author:d-tag"
+          const [kind, targetAuthor] = targetCoordinate.split(':');
+          
+          if (targetAuthor && event.pubkey !== targetAuthor) {
+            console.warn('[SyncManager] ⚠️ DELETION AUTH MISMATCH:');
+            console.warn(`  Event pubkey: ${event.pubkey}`);
+            console.warn(`  Target author: ${targetAuthor}`);
+            console.warn(`  → Deletion will likely fail on relay!`);
+          } else if (targetAuthor && event.pubkey === targetAuthor) {
+            console.log('[SyncManager] ✅ Deletion auth verified: pubkey matches target author');
+          }
+        }
+      }
+      
       // ⚡ CRITICAL: Tracke Event-ID SOFORT nach Signierung!
       // Verhindert Echo-Loop (eigenes Event wird beim Empfangen erkannt & geskipt)
       if (event.id) {

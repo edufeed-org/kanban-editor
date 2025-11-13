@@ -67,7 +67,7 @@ export class BoardStore {
         if (!this.boardIds.includes(currentBoardId)) {
             console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
             this.boardIds = [...this.boardIds, currentBoardId];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
         }
     }
@@ -307,7 +307,7 @@ export class BoardStore {
         // ⚡ FIX: Duplikate vermeiden! Nur hinzufügen wenn nicht bereits in Liste
         if (!this.boardIds.includes(board.id)) {
             this.boardIds = [...this.boardIds, board.id];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             console.log(`✅ Board ${board.name} added to list - now visible in sidebar`);
         } else {
             console.warn(`⚠️ Board ${board.id} bereits in boardIds-Liste - DUPLIKAT vermieden`);
@@ -386,7 +386,7 @@ export class BoardStore {
         // 3. Lokal löschen
         BoardStorage.deleteBoard(idToDelete);
         this.boardIds = this.boardIds.filter(id => id !== idToDelete);
-        BoardStorage.saveBoardIds(this.boardIds);
+        // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
 
         console.log(`✅ Board ${idToDelete} lokal gelöscht`);
 
@@ -435,7 +435,7 @@ export class BoardStore {
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
                 // ⚡ FIX: Duplikate vermeiden via Set-Deduplication
                 this.boardIds = [...new Set([...this.boardIds, ...updatedBoardIds])];
-                BoardStorage.saveBoardIds(this.boardIds);
+                // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
                 console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
                 
                 if (switched && newBoard) {
@@ -993,7 +993,7 @@ export class BoardStore {
             }
         }
 
-        BoardStorage.saveBoardIds(this.boardIds);
+        // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
         BoardStorage.saveBoard(board);
 
         this.board = board;
@@ -1010,7 +1010,7 @@ export class BoardStore {
         if (result.success && result.boards.length > 0) {
             const newBoardIds = result.boards.map(b => b.id);
             this.boardIds = [...new Set([...this.boardIds, ...newBoardIds])];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             
             this.board = result.boards[0];
             this._columnOrder = this.board.columns.map(c => c.id);
@@ -1178,15 +1178,14 @@ export class BoardStore {
     }
 
     /**
-     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
-     * SINGLE SOURCE OF TRUTH: kanban-boards-metadata
+     * ⚡ DEPRECATED & REMOVED: addBoardToMetadataList()
      * 
-     * Aktualisiert NUR:
-     * - 'kanban-boards-metadata' - Vollständige Metadaten + IDs
+     * Nach Storage-Refactoring (Nov 2025):
+     * - getAllBoardsMetadata() liest direkt aus kanban-{id} Keys
+     * - kanban-boards-metadata wird NICHT mehr verwendet
+     * - Metadaten sind Single Source of Truth im Board selbst
      * 
-     * ⚡ REFACTORING (9. Nov 2025): Eliminiert redundanten kanban-boards-list Key
-     * 
-     * @param metadata - Board-Metadaten (für Sidebar-Liste)
+     * @deprecated Entfernt am 13.11.2025 - Nicht mehr nötig
      */
     private addBoardToMetadataList(metadata: {
         id: string;
@@ -1196,31 +1195,8 @@ export class BoardStore {
         author: string;
         publishState: string;
     }): void {
-        if (typeof window === 'undefined') {
-            console.warn('⚠️ localStorage not available (SSR?)');
-            return;
-        }
-        
-        // === Single Key Update ===
-        const metadataKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(metadataKey);
-        const boardList = stored ? JSON.parse(stored) : [];
-        
-        // Prüfe: Board bereits in Liste?
-        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
-        
-        if (existingIndex >= 0) {
-            // Update existing entry
-            boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
-            console.log(`🔄 Updated metadata for board ${metadata.id}`);
-        } else {
-            // Add new entry
-            boardList.push(metadata);
-            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
-        }
-        
-        // Speichere aktualisierte Metadata-Liste (Single Source of Truth)
-        localStorage.setItem(metadataKey, JSON.stringify(boardList));
+        // NO-OP: Metadaten werden nicht mehr separat gespeichert
+        // getAllBoardsMetadata() liest direkt aus kanban-{id} Keys
     }
 
     private getDefaultColorForColumn(name: string): string {
@@ -1398,46 +1374,27 @@ export class BoardStore {
     }
     
     /**
-     * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
-     * KEIN Publish zu Nostr (publish: false)
+     * ⚠️ DEPRECATED & REMOVED: deleteBoardFromNostr()
+     * 
+     * Nach Storage-Refactoring (Nov 2025):
+     * - Board deletion wird über deleteBoard() + NostrIntegration.deleteBoard() gehandelt
+     * - kanban-boards-metadata wird nicht mehr verwendet
+     * - Board-IDs werden automatisch aus localStorage Keys gescannt
+     * - Board-switching bei Deletion erfolgt automatisch über activeBoard-Mechanismus
+     * 
+     * @deprecated Entfernt am 13.11.2025 - Nicht mehr benötigt
      * 
      * Wird aufgerufen wenn ein Deletion-Event (Kind 5) für ein Board empfangen wird.
      * 
      * @param boardId - ID des zu löschenden Boards
      */
     public deleteBoardFromNostr(boardId: string): void {
-        console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
-        
-        // Lösche Board aus Metadaten-Liste
-        const wasDeleted = BoardOperations.deleteBoardFromNostr(boardId);
-        
-        if (wasDeleted) {
-            // Board-Liste aktualisieren
-            this.boardIds = BoardStorage.loadBoardIds();
-            
-            // Wenn aktuell geladenes Board gelöscht wurde → zu anderem Board wechseln
-            if (this.board.id === boardId) {
-                console.log(`⚠️ Active board ${boardId} was deleted`);
-                
-                if (this.boardIds.length > 0) {
-                    // Wechsel zum ersten verfügbaren Board
-                    const firstBoardId = this.boardIds[0];
-                    console.log(`🔄 Switching to first available board: ${firstBoardId}`);
-                    
-                    const raw = BoardStorage.loadBoard(firstBoardId);
-                    if (raw) {
-                        this.board = BoardStorage.reconstructBoard(raw);
-                        this._columnOrder = this.board.columns.map(c => c.id);
-                    }
-                } else {
-                    // Keine Boards mehr → erstelle neues leeres Board
-                    console.log(`📝 No boards left, creating new empty board`);
-                    this.createBoard('Neues Board', 'Automatisch erstellt nach Board-Löschung');
-                }
-            }
-            
-            this.triggerUpdate({ publish: false });
-        }
+        console.warn(`⚠️ deleteBoardFromNostr() is deprecated - Board deletion handled by deleteBoard()`);
+        // NO-OP: Diese Methode wird nicht mehr benötigt
+        // Board-Deletion wird korrekt über:
+        // 1. boardStore.deleteBoard() → localStorage cleanup
+        // 2. NostrIntegration.deleteBoard() → Deletion Event (Kind 5)
+        // 3. Subscription handler ignoriert eigene Deletion Events via myPublishedEvents Set
     }
 }
 

@@ -4,10 +4,10 @@
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
   import { setContext, onMount } from 'svelte';
   import { Toaster } from "svelte-sonner";
-  import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
-  import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
-  import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
-  import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
+  // import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
+  // import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
+  // import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
+  // import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
   import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
   import { boardStore } from '$lib/stores/kanbanStore.svelte';
   import { settingsStore } from '$lib/stores/settingsStore.svelte';

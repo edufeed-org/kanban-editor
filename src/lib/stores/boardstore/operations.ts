@@ -477,49 +477,22 @@ export class BoardOperations {
     }
 
     /**
-     * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
-     * KEIN Publish zu Nostr (wird von triggerUpdate mit publish: false aufgerufen)
+     * ⚡ DEPRECATED & REMOVED: deleteBoardFromNostr()
      * 
-     * @param boardId - ID des zu löschenden Boards
-     * @returns true wenn Board aus Liste entfernt wurde
+     * Nach Storage-Refactoring (Nov 2025):
+     * - Board-IDs werden automatisch aus localStorage Keys gescannt
+     * - kanban-boards-metadata existiert NICHT mehr
+     * - Board-Löschung erfolgt über BoardStorage.deleteBoard()
+     * 
+     * @deprecated Entfernt am 13.11.2025 - Verwendet veraltete Metadata-Liste
      */
     public static deleteBoardFromNostr(boardId: string): boolean {
-        if (typeof window === 'undefined') {
-            console.warn('⚠️ localStorage not available (SSR?)');
-            return false;
-        }
-        
-        console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
-        
-        // Lade Board-Liste aus localStorage
-        const boardListKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(boardListKey);
-        
-        if (!stored) {
-            console.warn(`⚠️ No board metadata list found in localStorage`);
-            return false;
-        }
-        
-        try {
-            const boardList = JSON.parse(stored);
-            const initialLength = boardList.length;
-            
-            // Filter Board aus Liste
-            const newBoardList = boardList.filter((b: any) => b.id !== boardId);
-            
-            if (newBoardList.length < initialLength) {
-                // Board wurde gefunden und entfernt
-                localStorage.setItem(boardListKey, JSON.stringify(newBoardList));
-                console.log(`✅ Board ${boardId} removed from metadata list`);
-                return true;
-            } else {
-                console.warn(`⚠️ Board ${boardId} not found in metadata list`);
-                return false;
-            }
-        } catch (error) {
-            console.error(`❌ Error deleting board from metadata list:`, error);
-            return false;
-        }
+        console.warn(`⚠️ deleteBoardFromNostr() is deprecated - Use BoardStorage.deleteBoard() instead`);
+        // NO-OP: Diese Methode sollte nicht mehr verwendet werden
+        // Board-Deletion erfolgt über:
+        // 1. boardStore.deleteBoard() → BoardStorage.deleteBoard()
+        // 2. NostrIntegration.deleteBoard() für Nostr-Event
+        return false;
     }
 
     /**

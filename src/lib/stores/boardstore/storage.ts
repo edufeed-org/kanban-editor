@@ -57,11 +57,7 @@ export class BoardStorage {
                 .map(key => key.replace('kanban-', ''))
                 .filter(id => id && id.length > 0); // ✅ Extra safety: filter empty strings
             
-            console.log(`📋 Board-IDs gefunden aus localStorage Keys: ${boardIds.length} Boards`);
-            if (boardIds.length > 0) {
-                console.log(`  IDs: ${boardIds.slice(0, 5).join(', ')}${boardIds.length > 5 ? '...' : ''}`);
-            }
-            
+                        
             return boardIds;
             
         } catch (error) {
@@ -73,15 +69,16 @@ export class BoardStorage {
     /**
      * ⚠️ DEPRECATED: saveBoardIds() - Nicht mehr nötig!
      * 
-     * Nach Metadata-Refactoring (Jan 2026):
+     * Nach Metadata-Refactoring (Nov 2025):
      * - Board-IDs werden automatisch aus localStorage.keys() geladen (loadBoardIds())
      * - Keine separate Board-Liste mehr notwendig
+     * - Alle Aufrufe aus kanbanStore.svelte.ts entfernt
      * 
-     * @deprecated Wird nicht mehr verwendet - loadBoardIds() scannt localStorage-Keys
+     * @deprecated Entfernt am 13.11.2025 - loadBoardIds() scannt localStorage-Keys
      */
     public static saveBoardIds(boardIds: string[]): void {
-        console.warn('⚠️ saveBoardIds() deprecated - Board IDs are auto-discovered from localStorage keys!');
-        // NO-OP: Methode für Rückwärts-Kompatibilität erhalten, aber macht nichts
+        // NO-OP: Methode für alte externe Referenzen erhalten, aber macht nichts
+        // Keine Warning mehr, da alle internen Aufrufe entfernt wurden
     }
 
     /**
