@@ -41,7 +41,7 @@ export class NostrIntegration {
             const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
             const data = JSON.stringify(comments);
             localStorage.setItem(key, data);
-            console.log(`💾 Saved ${comments.length} comment(s) to cache for card ${cardId}`);
+            console.debug(`💾 Saved ${comments.length} comment(s) to cache`);
         } catch (error) {
             console.warn('[NostrIntegration] ⚠️ Failed to save comments to cache:', error);
         }
@@ -61,7 +61,7 @@ export class NostrIntegration {
             }
             
             const comments = JSON.parse(data) as Comment[];
-            console.log(`💿 Loaded ${comments.length} comment(s) from cache for card ${cardId}`);
+            console.debug(`💿 Loaded ${comments.length} comment(s) from cache`);
             return comments;
         } catch (error) {
             console.warn('[NostrIntegration] ⚠️ Failed to load comments from cache:', error);
@@ -1186,8 +1186,12 @@ export class NostrIntegration {
      * Loads comments for a specific card from Nostr relays
      * Fetches Kind 1 events with #a tag referencing the card, merges with local comments
      * 
+     * **🔄 Retry-Mechanismus:** Wenn die Card noch nicht im Board gefunden wird (z.B. weil sie noch vom Relay geladen wird),
+     * wird der Load-Vorgang automatisch bis zu 5x mit 500ms Verzögerung erneut versucht.
+     * 
      * @param board - Board containing the card
      * @param cardId - ID of the card to load comments for
+     * @param retryCount - Interner Parameter für Retry-Logik (nicht von außen setzen!)
      * 
      * @example
      * ```typescript
@@ -1197,7 +1201,7 @@ export class NostrIntegration {
      * // Persists merged state to localStorage
      * ```
      */
-    public async loadComments(board: Board, cardId: string): Promise<void> {
+    public async loadComments(board: Board, cardId: string, retryCount = 0): Promise<void> {
         if (!this.ndk) {
             console.debug('[NostrIntegration] loadComments: NDK not initialized (will retry when ready)');
             return;
@@ -1207,7 +1211,15 @@ export class NostrIntegration {
             // 1. Find the card in the board
             const result = board.findCardAndColumn(cardId);
             if (!result) {
-                console.warn(`[NostrIntegration] Card ${cardId} not found in board`);
+                // 🔄 RETRY LOGIC: Card könnte noch vom Relay geladen werden
+                if (retryCount < 5) {
+                    console.debug(`[NostrIntegration] loadComments: Card ${cardId} not found yet - retry ${retryCount + 1}/5 in 500ms`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    return this.loadComments(board, cardId, retryCount + 1);
+                }
+                
+                console.warn(`[NostrIntegration] Card ${cardId} not found in board after ${retryCount} retries`);
                 return;
             }
 
@@ -1216,7 +1228,8 @@ export class NostrIntegration {
             // 🚀 2. Load from cache FIRST (instant access)
             const cachedComments = this.loadCommentsFromStorage(cardId);
             if (cachedComments.length > 0) {
-                console.log(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
+                // Silent cache load - only log in debug
+                console.debug(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
                 // Merge cache with current card comments
                 const merged = this.mergeComments(card.comments || [], cachedComments);
                 card.comments = merged;
@@ -1226,7 +1239,8 @@ export class NostrIntegration {
             // Format: "30302:<author-pubkey>:<card-d-tag>"
             const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
 
-            console.log(`[NostrIntegration] 📥 Loading comments from Nostr for card: ${card.heading} (${cardRef})`);
+            // Only log in debug mode - reduces noise
+            console.debug(`[NostrIntegration] 📥 Loading comments for: ${card.heading}`);
 
             // 4. Fetch Kind 1 (text note) events with #a tag referencing this card
             const events = await this.ndk.fetchEvents({
@@ -1235,13 +1249,14 @@ export class NostrIntegration {
             });
 
             if (!events || events.size === 0) {
-                console.log('[NostrIntegration] 📭 No remote comments found');
+                console.debug('[NostrIntegration] 📭 No remote comments found');
                 // Save current state to cache (might be empty or local-only)
                 this.saveCommentsToStorage(cardId, card.comments || []);
                 return;
             }
 
-            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s)`);
+            // Only log if comments were actually found
+            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s) for ${card.heading}`);
 
             // 5. Convert Nostr events to Comment objects
             const remoteComments: Comment[] = Array.from(events).map(event => {
@@ -1287,10 +1302,14 @@ export class NostrIntegration {
      * Erstellt eine persistente Subscription für alle Kind 1 Events, die auf diese Card referenzieren.
      * Neue Kommentare werden automatisch mit bestehenden gemerged und triggern UI-Updates.
      * 
+     * **🔄 Retry-Mechanismus:** Wenn die Card noch nicht im Board gefunden wird (z.B. weil sie noch vom Relay geladen wird),
+     * wird die Subscription automatisch bis zu 5x mit 500ms Verzögerung erneut versucht.
+     * 
      * @param board - Das Board mit der Card
      * @param cardId - Die ID der Card
      * @param onUpdate - Callback der nach jedem neuen Kommentar aufgerufen wird (z.B. triggerUpdate() für UI refresh)
-     * @returns Cleanup-Funktion zum Beenden der Subscription
+     * @param retryCount - Interner Parameter für Retry-Logik (nicht von außen setzen!)
+     * @returns Cleanup-Funktion zum Beenden der Subscription (und ggf. laufender Retries)
      * 
      * @example
      * ```typescript
@@ -1304,7 +1323,7 @@ export class NostrIntegration {
      * });
      * ```
      */
-    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void): () => void {
+    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void, retryCount = 0): () => void {
         // 1. Guard: NDK verfügbar?
         if (!this.ndk) {
             console.debug('[NostrIntegration] subscribeToComments: NDK not initialized (normal during app startup)');
@@ -1320,7 +1339,31 @@ export class NostrIntegration {
         // 3. Finde die Card im Board
         const result = board.findCardAndColumn(cardId);
         if (!result) {
-            console.warn(`[NostrIntegration] subscribeToComments: Card ${cardId} not found`);
+            // 🔄 RETRY LOGIC: Card könnte noch vom Relay geladen werden
+            if (retryCount < 5) {
+                // Silent retry - only log first attempt
+                if (retryCount === 0) {
+                    console.debug(`[NostrIntegration] 🔄 subscribeToComments: Card ${cardId} not ready yet, retrying...`);
+                }
+                
+                // Store retry cleanup function reference
+                let retryCleanup: (() => void) | null = null;
+                
+                // Schedule retry after 500ms
+                const retryTimer = setTimeout(() => {
+                    retryCleanup = this.subscribeToComments(board, cardId, onUpdate, retryCount + 1);
+                }, 500);
+                
+                // Return cleanup function that cancels retry AND any eventual subscription
+                return () => {
+                    clearTimeout(retryTimer);
+                    if (retryCleanup) {
+                        retryCleanup();
+                    }
+                };
+            }
+            
+            console.warn(`[NostrIntegration] ⚠️ subscribeToComments: Card ${cardId} not found after ${retryCount} retries`);
             return () => {};
         }
 
@@ -1330,14 +1373,14 @@ export class NostrIntegration {
         const cardAuthor = card.author || board.author || 'unknown';
         const cardRef = `30302:${cardAuthor}:${cardId}`;
 
-        console.log(`[NostrIntegration] 📡 Subscribing to comments for card: ${cardId} (${cardRef})`);
+        console.debug(`[NostrIntegration] 📡 Subscribing to comments for: ${cardId.substring(5, 12)}...`);
 
         // 4. Cleanup existing subscription für diese Card (falls vorhanden)
         const existingSub = this.commentSubscriptions.get(cardId);
         if (existingSub && typeof existingSub.stop === 'function') {
             try {
                 existingSub.stop();
-                console.log(`[NostrIntegration] 🛑 Stopped existing subscription for card ${cardId}`);
+                console.debug(`[NostrIntegration] 🛑 Stopped duplicate subscription for ${cardId.substring(5, 12)}...`);
             } catch (err) {
                 console.error('[NostrIntegration] Error stopping existing subscription:', err);
             }
@@ -1396,7 +1439,10 @@ export class NostrIntegration {
         // 7. Store subscription in Map für späteren Cleanup
         this.commentSubscriptions.set(cardId, sub);
 
-        console.log(`[NostrIntegration] ✅ Comment subscription active for card ${cardId}`);
+        // Only log if retry was needed or in debug mode
+        if (retryCount > 0) {
+            console.log(`[NostrIntegration] ✅ Comment subscription active for ${cardId.substring(5, 12)}... (after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'})`);
+        }
 
         // 8. Return cleanup function
         return () => {

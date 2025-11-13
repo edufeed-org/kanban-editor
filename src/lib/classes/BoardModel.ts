@@ -293,7 +293,7 @@ export class Board {
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
-    public lastAccessedAt: string; // ✅ NEW (REFACTORING): Moved from metadata
+    public lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
     public hasUnseenChanges: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     public tags: string[] = [];
     public ccLicense: string = 'cc-by-4.0';
@@ -544,7 +544,7 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
-        lastAccessedAt: string, // ✅ NEW (REFACTORING): Include in serialization
+        lastAccessedAt?: string, // ✅ NEW (REFACTORING): Include in serialization (optional!)
         hasUnseenChanges: boolean, // ✅ NEW (REFACTORING): Include in serialization
         author?: string,
         authorName?: string, // ← NEU: Display name für Author!
