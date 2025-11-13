@@ -1,6 +1,7 @@
 # Project Specific
 test-results
 archive/
+playwright-report/
 
 # Node
 node_modules

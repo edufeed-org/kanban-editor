@@ -1,13 +1,83 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	webServer: {
-		command: 'npm run build && npm run preview',
-		port: 4173,
-		reuseExistingServer: false,
-		timeout: 120 * 1000 // 2 Minuten für Server-Startup/Shutdown
+	testDir: './e2e',
+	
+	/* Run tests in files in parallel */
+	fullyParallel: true,
+	
+	/* Fail the build on CI if you accidentally left test.only in the source code. */
+	forbidOnly: !!process.env.CI,
+	
+	/* Retry on CI only */
+	retries: process.env.CI ? 2 : 0,
+	
+	/* Opt out of parallel tests on CI. */
+	workers: process.env.CI ? 1 : undefined,
+	
+	/* Reporter to use. See https://playwright.dev/docs/test-reporters */
+	reporter: [
+		['html'],
+		['json', { outputFile: 'test-results/results.json' }],
+		['junit', { outputFile: 'test-results/results.xml' }]
+	],
+	
+	/* Shared settings for all the projects below. */
+	use: {
+		/* Base URL to use in actions like `await page.goto('/')`. */
+		baseURL: 'http://127.0.0.1:5173',
+		
+		/* Collect trace when retrying the failed test. */
+		trace: 'on-first-retry',
+		
+		/* Screenshot on failure */
+		screenshot: 'only-on-failure',
+		
+		/* Video recording for debugging */
+		video: 'retain-on-failure',
+		
+		/* Global test timeout */
+		actionTimeout: 10000,
+		navigationTimeout: 30000,
 	},
-	testDir: 'e2e',
-	timeout: 30 * 1000, // Test Timeout
-	globalTimeout: 600 * 1000 // Globales Timeout für alle Tests
+
+	/* Configure projects for major browsers */
+	projects: [
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'] },
+		},
+
+		{
+			name: 'firefox',
+			use: { ...devices['Desktop Firefox'] },
+		},
+
+		{
+			name: 'webkit',
+			use: { ...devices['Desktop Safari'] },
+		},
+
+		/* Test against mobile viewports. */
+		{
+			name: 'Mobile Chrome',
+			use: { ...devices['Pixel 5'] },
+		},
+	],
+
+	webServer: {
+		command: 'pnpm run build && pnpm run preview',
+		port: 4173,
+		reuseExistingServer: !process.env.CI,
+		timeout: 120 * 1000 // 2 minutes for build + server startup
+	},
+	
+	/* Global test configuration */
+	timeout: 30 * 1000, // 30 seconds per test
+	globalTimeout: 600 * 1000, // 10 minutes for entire test suite
+	
+	/* Expect configuration */
+	expect: {
+		timeout: 5000, // 5 seconds for assertions
+	},
 });
