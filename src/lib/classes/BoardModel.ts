@@ -437,6 +437,18 @@ export class Board {
         return this.findCardAndColumn(cardId);
     }
 
+    /**
+     * Gibt alle Karten aus allen Spalten zurück
+     * Nützlich für kaskadierende Löschung
+     */
+    getAllCards(): Card[] {
+        const allCards: Card[] = [];
+        for (const column of this.columns) {
+            allCards.push(...column.cards);
+        }
+        return allCards;
+    }
+
     moveCard(cardId: string, fromColId: string, toColId: string): void {
         const fromColumn = this.findColumn(fromColId);
         const toColumn = this.findColumn(toColId);

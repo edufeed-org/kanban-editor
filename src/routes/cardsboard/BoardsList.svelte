@@ -27,7 +27,7 @@
         const trigger = boardStore.updateTrigger;
         
         const results = boardStore.filterBoards(searchQuery);
-        console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}", trigger: ${trigger})`);
+        // console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}", trigger: ${trigger})`);
         return results;
     });
 

@@ -1304,7 +1304,13 @@ export class BoardStore {
      * KEIN triggerUpdate (kein UI-Update, da Board nicht geöffnet)
      */
     public upsertCardToBackgroundBoard(boardId: string, cardProps: CardProps): void {
-        console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        // console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        
+        // ⚡ FIX: Prüfe ob Board noch in boardIds existiert (nicht gelöscht!)
+        if (!this.boardIds.includes(boardId)) {
+            console.log(`⏭️ Board ${boardId} wurde gelöscht - skip card update`);
+            return;
+        }
         
         // 1. Lade Board aus localStorage
         const storageKey = `kanban-${boardId}`;
@@ -1354,6 +1360,14 @@ export class BoardStore {
     public upsertBoardFromNostr(boardProps: BoardProps): void {
         if (!boardProps.id) {
             console.warn('⚠️ upsertBoardFromNostr: Board has no ID, skip');
+            return;
+        }
+        
+        // ⚡ FIX: Prüfe ob Board noch existiert (nicht gelöscht!)
+        // Wenn Board gelöscht wurde, ignoriere Updates
+        const boardExists = this.boardIds.includes(boardProps.id) || boardProps.id === this.board.id;
+        if (!boardExists) {
+            console.log(`⏭️ Board ${boardProps.id} wurde gelöscht - skip board update`);
             return;
         }
         
@@ -1480,6 +1494,13 @@ export class BoardStore {
             const firstBoardId = this.boardIds[0];
             console.log(`🔄 Switching to first available board: ${firstBoardId}`);
             this.loadBoard(firstBoardId);
+            
+            // ⚡ FIX: Expliziter triggerUpdate() nach Board-Wechsel
+            // Grund: loadBoard() ruft nur updateTrigger++ auf, aber nach deleteBoard()
+            // muss die UI sofort aktualisiert werden (sonst wird gelöschtes Board noch angezeigt)
+            // publish: false → kein Nostr-Publishing (Board wurde nur geladen, nicht geändert)
+            this.triggerUpdate({ publish: false });
+            console.log(`✅ UI forced update after board switch`);
         } else {
             // No boards left → create new empty board
             console.log(`📝 No boards left, creating new empty board`);

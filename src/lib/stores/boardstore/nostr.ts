@@ -405,7 +405,7 @@ export class NostrIntegration {
             // Baue die a-tag Referenz: "30301:pubkey:board-id"
             const boardRef = `30301:${board.author}:${board.id}`;
             
-            console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
+            // console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
 
             // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
             const cardFilter = {
@@ -1068,6 +1068,61 @@ export class NostrIntegration {
     }
 
     /**
+     * ⚡ NEU: Löscht einen Comment auf Nostr (Kind 5 Deletion Event)
+     * Wird bei kaskadierender Card-Löschung aufgerufen
+     */
+    public async deleteComment(comment: Comment, card: Card): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] deleteComment: NDK nicht initialisiert');
+            return;
+        }
+
+        // Nur published comments (mit eventId) können auf Nostr gelöscht werden
+        if (!comment.eventId) {
+            console.log(`[NostrIntegration] ⏭️ Comment ${comment.id} ist lokal, keine Nostr-Löschung nötig`);
+            return;
+        }
+
+        try {
+            console.log(`[NostrIntegration] 🗑️ Deleting comment on Nostr: ${comment.text.substring(0, 50)}... (${comment.eventId})`);
+
+            // Erstelle Deletion Event (Kind 5)
+            // Comments sind reguläre Events (Kind 1), nicht replaceable
+            const deletionEvent = createDeletionEvent(
+                comment.eventId, // Event-ID des Comments
+                false, // isReplaceableEvent = false für Kind 1
+                `Comment deleted`,
+                this.ndk,
+                comment.eventId // Actual event ID
+            );
+
+            // Bestimme Target-Relays basierend auf Card's publishState
+            const publishState = card.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
+
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                deletionEvent,
+                'comment',
+                'high', // Hohe Priorität für Löschungen
+                normalizedState,
+                targetRelays
+            );
+
+            console.log(`✅ Comment deletion event queued for ${targetRelays.length} relay(s)`);
+        } catch (error) {
+            console.error(`❌ Error deleting comment on Nostr:`, error);
+        }
+    }
+
+    /**
      * Merges local comments with remote comments from Nostr
      * Deduplicates by eventId, preserves local unpublished comments, sorts chronologically
      * 
@@ -1371,6 +1426,17 @@ export class NostrIntegration {
         }
 
         try {
+            // 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Cards (inkl. Comments)
+            console.log(`[NostrIntegration] 🗑️ Cascading delete: Deleting ${board.getAllCards().length} card(s) in board "${board.name}"`);
+            
+            const allCards = board.getAllCards();
+            for (const card of allCards) {
+                await this.deleteCard(card);
+                console.log(`  ✓ Deleted card: ${card.heading}`);
+            }
+            
+            console.log(`✅ All ${allCards.length} card(s) deleted`);
+
             // 1. Bestimme die Event-ID des Board-Events
             // Format für addressable events: "30301:<author-pubkey>:<d-tag>"
             const boardEventId = `30301:${board.author || 'unknown'}:${board.id}`;
@@ -1433,6 +1499,18 @@ export class NostrIntegration {
         }
 
         try {
+            // 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Comments der Card
+            if (card.comments && card.comments.length > 0) {
+                console.log(`[NostrIntegration] 🗑️ Cascading delete: Deleting ${card.comments.length} comment(s) for card "${card.heading}"`);
+                
+                for (const comment of card.comments) {
+                    await this.deleteComment(comment, card);
+                    console.log(`  ✓ Deleted comment: ${comment.text.substring(0, 50)}...`);
+                }
+                
+                console.log(`✅ All ${card.comments.length} comment(s) deleted`);
+            }
+
             // 1. Bestimme die Event-ID des Card-Events
             // Format für addressable events: "30302:<author-pubkey>:<d-tag>"
             const cardEventIdentifier = `30302:${card.author || 'unknown'}:${card.id}`;

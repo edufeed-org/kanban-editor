@@ -250,7 +250,7 @@ export class BoardStorage {
             const data = board.getContextData(true);
             const storageKey = `kanban-${board.id}`;
             localStorage.setItem(storageKey, JSON.stringify(data));
-            console.log('💾 Board in localStorage gespeichert:', storageKey);
+            // console.log('💾 Board in localStorage gespeichert:', storageKey);
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
         }
@@ -266,7 +266,7 @@ export class BoardStorage {
             const storageKey = `kanban-${boardId}`;
             const stored = localStorage.getItem(storageKey);
             if (!stored) {
-                console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
+                // console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
                 return null;
             }
             
