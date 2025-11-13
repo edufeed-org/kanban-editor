@@ -57,11 +57,7 @@ export class BoardStorage {
                 .map(key => key.replace('kanban-', ''))
                 .filter(id => id && id.length > 0); // ✅ Extra safety: filter empty strings
             
-            console.log(`📋 Board-IDs gefunden aus localStorage Keys: ${boardIds.length} Boards`);
-            if (boardIds.length > 0) {
-                console.log(`  IDs: ${boardIds.slice(0, 5).join(', ')}${boardIds.length > 5 ? '...' : ''}`);
-            }
-            
+                        
             return boardIds;
             
         } catch (error) {
@@ -73,15 +69,16 @@ export class BoardStorage {
     /**
      * ⚠️ DEPRECATED: saveBoardIds() - Nicht mehr nötig!
      * 
-     * Nach Metadata-Refactoring (Jan 2026):
+     * Nach Metadata-Refactoring (Nov 2025):
      * - Board-IDs werden automatisch aus localStorage.keys() geladen (loadBoardIds())
      * - Keine separate Board-Liste mehr notwendig
+     * - Alle Aufrufe aus kanbanStore.svelte.ts entfernt
      * 
-     * @deprecated Wird nicht mehr verwendet - loadBoardIds() scannt localStorage-Keys
+     * @deprecated Entfernt am 13.11.2025 - loadBoardIds() scannt localStorage-Keys
      */
     public static saveBoardIds(boardIds: string[]): void {
-        console.warn('⚠️ saveBoardIds() deprecated - Board IDs are auto-discovered from localStorage keys!');
-        // NO-OP: Methode für Rückwärts-Kompatibilität erhalten, aber macht nichts
+        // NO-OP: Methode für alte externe Referenzen erhalten, aber macht nichts
+        // Keine Warning mehr, da alle internen Aufrufe entfernt wurden
     }
 
     /**
@@ -110,12 +107,9 @@ export class BoardStorage {
                                 : lastAccessed)
                             : 0;
                         
-                        console.log(`  Board: ${data.name} | lastAccessedAt: ${lastAccessed} | timestamp: ${timestamp}`);
-                        
                         if (timestamp > mostRecentTime) {
                             mostRecentTime = timestamp;
                             mostRecentBoardId = boardId;
-                            console.log(`    → Neuer Kandidat!`);
                         }
                     } catch (e) {
                         console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
@@ -123,7 +117,6 @@ export class BoardStorage {
                 }
             }
             
-            console.log(`✅ Zuletzt zugegriffenes Board: ${mostRecentBoardId}`);
             return mostRecentBoardId;
         } catch (error) {
             console.error('❌ Fehler beim Laden des letzten Boards:', error);
@@ -257,7 +250,7 @@ export class BoardStorage {
             const data = board.getContextData(true);
             const storageKey = `kanban-${board.id}`;
             localStorage.setItem(storageKey, JSON.stringify(data));
-            console.log('💾 Board in localStorage gespeichert:', storageKey);
+            // console.log('💾 Board in localStorage gespeichert:', storageKey);
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
         }
@@ -273,7 +266,7 @@ export class BoardStorage {
             const storageKey = `kanban-${boardId}`;
             const stored = localStorage.getItem(storageKey);
             if (!stored) {
-                console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
+                // console.warn(`⚠️ Board ${boardId} nicht gefunden unter ${storageKey}`);
                 return null;
             }
             

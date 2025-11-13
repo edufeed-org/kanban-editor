@@ -70,7 +70,7 @@
     // This works better than setInterval in the store because $effect is in component context
     let syncStatus = $state({
         isOnline: true,
-        isSyncing: false,
+        isSyncing: true,
         queuedEvents: 0,
         connectedRelays: 0,
         totalRelays: 0,
@@ -99,30 +99,30 @@
                 console.warn('[Topbar] SyncManager not ready on mount');
             }
         
-            // Poll every 2 seconds
-            pollIntervalId = setInterval(() => {
-                try {
-                    const syncManager = getSyncManager();
+            // // Poll every 2 seconds
+            // pollIntervalId = setInterval(() => {
+            //     try {
+            //         const syncManager = getSyncManager();
                     
-                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
-                    syncStatus = {
-                        isOnline: syncManager.status.isOnline,
-                        isSyncing: syncManager.status.isSyncing,
-                        queuedEvents: syncManager.status.queuedEvents,
-                        connectedRelays: syncManager.lastConnectedCount,
-                        totalRelays: syncManager.lastTotalCount,
-                        hasRelaySigner: syncManager.status.hasRelaySigner
-                    };
-                } catch (error) {
-                    // SyncManager not initialized yet
-                }
-            }, 5000);
+            //         // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+            //         syncStatus = {
+            //             isOnline: syncManager.status.isOnline,
+            //             isSyncing: syncManager.status.isSyncing,
+            //             queuedEvents: syncManager.status.queuedEvents,
+            //             connectedRelays: syncManager.lastConnectedCount,
+            //             totalRelays: syncManager.lastTotalCount,
+            //             hasRelaySigner: syncManager.status.hasRelaySigner
+            //         };
+            //     } catch (error) {
+            //         // SyncManager not initialized yet
+            //     }
+            // }, 5000);
             
-            // Cleanup on unmount
-            return () => {
-                if (pollIntervalId) clearInterval(pollIntervalId);
-            };
-         }, 500); // Delay to allow SyncManager initialization
+            // // Cleanup on unmount
+            // return () => {
+            //     if (pollIntervalId) clearInterval(pollIntervalId);
+            // };
+         }, 5000); // Delay to allow SyncManager initialization
     });
     
     
@@ -415,7 +415,7 @@
                 class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
                 title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
             >
-                {#if syncStatus.connectedRelays === 0}
+                {#if syncStatus.connectedRelays === 0 && syncStatus.isSyncing === false}
                     <!-- No relays connected: Show error -->
                     <WifiOffIcon class="h-3 w-3 text-red-500" />
                     <span class="text-red-600 font-semibold">Offline</span>
@@ -438,7 +438,7 @@
                 {:else}
                     <!-- Fallback: Unknown state -->
                     <WifiIcon class="h-3 w-3 text-gray-400" />
-                    <span class="text-muted-foreground">...</span>
+                    <span class="text-muted-foreground">Syncing...</span>
                 {/if}
             </div>
             

@@ -178,7 +178,7 @@ export class Card {
     }
 
     getContextData(): Omit<CardProps, 'comments' | 'links' | 'attendees'> & {
-        comments: { text: string; author: string }[],
+        comments: Comment[], // ⚡ FIX: Vollständige Comment-Objekte statt nur text+author!
         links: { url: string; title: string }[],
         attendees: string[]
     } {
@@ -195,7 +195,7 @@ export class Card {
             authorName: this.authorName, // ← NEU: authorName serialisieren!
             createdAt: this.createdAt, // ← CRITICAL: Timestamps für Serialisierung
             updatedAt: this.updatedAt, // ← CRITICAL: Timestamps für Serialisierung
-            comments: this.comments.map(c => ({ text: c.text, author: c.author })),
+            comments: this.comments, // ⚡ FIX: Komplette Comments mit id, eventId, createdAt, syncStatus!
             links: this.links.map(l => ({ url: l.url, title: l.title })),
             attendees: this.attendees // ← ✅ FIXED: attendees serialisieren!
         };
@@ -293,7 +293,7 @@ export class Board {
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
     public createdAt: string;
     public updatedAt: string;
-    public lastAccessedAt: string; // ✅ NEW (REFACTORING): Moved from metadata
+    public lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
     public hasUnseenChanges: boolean; // ✅ NEW (REFACTORING): Moved from metadata
     public tags: string[] = [];
     public ccLicense: string = 'cc-by-4.0';
@@ -312,7 +312,9 @@ export class Board {
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
         
         // ✅ NEW (REFACTORING): Initialize new fields from metadata migration
-        this.lastAccessedAt = props.lastAccessedAt || generateTimestamp();
+        // ⚡ FIX: DON'T auto-generate lastAccessedAt - only use if provided!
+        // This prevents race condition where all boards get same timestamp on load
+        this.lastAccessedAt = props.lastAccessedAt; // undefined if not provided
         this.hasUnseenChanges = props.hasUnseenChanges ?? false;
         
         // ⚡ v4.3: FIX - Verwende props.createdAt falls vorhanden (von Nostr), sonst NOW
@@ -435,6 +437,18 @@ export class Board {
         return this.findCardAndColumn(cardId);
     }
 
+    /**
+     * Gibt alle Karten aus allen Spalten zurück
+     * Nützlich für kaskadierende Löschung
+     */
+    getAllCards(): Card[] {
+        const allCards: Card[] = [];
+        for (const column of this.columns) {
+            allCards.push(...column.cards);
+        }
+        return allCards;
+    }
+
     moveCard(cardId: string, fromColId: string, toColId: string): void {
         const fromColumn = this.findColumn(fromColId);
         const toColumn = this.findColumn(toColId);
@@ -530,7 +544,7 @@ export class Board {
         publishState: PublishState,
         createdAt: string,
         updatedAt: string,
-        lastAccessedAt: string, // ✅ NEW (REFACTORING): Include in serialization
+        lastAccessedAt?: string, // ✅ NEW (REFACTORING): Include in serialization (optional!)
         hasUnseenChanges: boolean, // ✅ NEW (REFACTORING): Include in serialization
         author?: string,
         authorName?: string, // ← NEU: Display name für Author!

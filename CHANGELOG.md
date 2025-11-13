@@ -1,5 +1,46 @@
 # Changelog
 
+## Version 4.5 - Kaskadierende Löschung 🗑️
+
+**Datum:** 13. November 2025  
+**Branch:** `sync-fixes`  
+**Status:** ✅ **IMPLEMENTIERT - Cascading Deletion**
+
+### 🎯 Zusammenfassung
+
+**Problem gelöst:** Verwaiste Cards und Comments auf Nostr-Relays bei Board/Card-Löschung
+
+#### ✅ Implementiert
+- ✅ **Kaskadierende Board-Löschung** — Löscht automatisch alle zugehörigen Cards inkl. Comments
+  - `Board.getAllCards()` Utility-Methode hinzugefügt
+  - `NostrIntegration.deleteBoard()` erweitert mit Card-Kaskade
+  - Sequentielle Löschung für deterministische Reihenfolge
+- ✅ **Kaskadierende Card-Löschung** — Löscht automatisch alle zugehörigen Comments
+  - `NostrIntegration.deleteCard()` erweitert mit Comment-Kaskade
+  - Nur published Comments werden auf Nostr gelöscht (eventId Check)
+- ✅ **Comment-Deletion** — Neue `deleteComment()` Methode
+  - NIP-09 konforme Kind 5 Deletion Events
+  - Target-Relay-Selection basierend auf Card publishState
+  - Hohe Priorität für Löschungen
+
+#### 📋 Lösch-Hierarchie
+```
+Board löschen
+  └─> Alle Cards löschen
+      └─> Alle Comments löschen
+```
+
+#### 📊 Impact
+- **Vorher:** Board mit 100 Cards & 500 Comments → 600 verwaiste Events
+- **Nachher:** Board mit 100 Cards & 500 Comments → 0 verwaiste Events (601 Deletion Events)
+
+#### 📚 Dokumentation
+- Vollständige Feature-Doku: `docs/FEATURE/CASCADING-DELETION.md`
+- Test-Szenarien & Console-Output Beispiele
+- Performance-Optimierung & Best Practices
+
+---
+
 ## Version 4.4 - Nostr Sync Sprint Complete! 🚀
 
 **Datum:** 10. November 2025  

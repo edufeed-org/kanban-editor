@@ -41,6 +41,9 @@ export class BoardStore {
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
     public updateTrigger = $state(0);
     
+    // 🚀 NEW: NDK Ready Signal (prevents race conditions)
+    public ndkReady = $state(false);
+    
     // Module instances
     private nostrIntegration: NostrIntegration;
 
@@ -56,7 +59,7 @@ export class BoardStore {
         
         if (typeof window !== 'undefined') {
             this.initializeBoard();
-            this.scheduleAuthorFix();
+            // ⚠️ REMOVED: scheduleAuthorFix() - wird später aufgerufen nachdem NDK ready ist
             this.exposeCurrentBoardIdToWindow();
             this.initializeLearningManagerIfEnabled();
         }
@@ -67,7 +70,7 @@ export class BoardStore {
         if (!this.boardIds.includes(currentBoardId)) {
             console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
             this.boardIds = [...this.boardIds, currentBoardId];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
         }
     }
@@ -93,22 +96,30 @@ export class BoardStore {
         }
     }
     
-    private fixAnonymousBoardAuthor(): void {
+    /**
+     * ⚡ Fix anonymous board author after auth
+     * Wird von +layout.svelte aufgerufen nachdem NDK ready ist
+     */
+    public fixAnonymousBoardAuthor(): void {
         try {
             if (!authStore || typeof authStore.getPubkey !== 'function') {
+                console.log('ℹ️ AuthStore noch nicht initialisiert - skip author fix');
                 return;
             }
             
             const pubkey = authStore.getPubkey();
             const isAuth = authStore.isAuthenticated;
             
-            if (!isAuth || !pubkey) return;
+            if (!isAuth || !pubkey) {
+                console.log('ℹ️ User nicht eingeloggt - skip author fix');
+                return;
+            }
             
             if (this.board.author === 'anonymous' || !this.board.author) {
                 this.board.author = pubkey;
                 this.board.maintainers = [pubkey];
                 this.saveToStorage();
-                console.log('✅ Board-Author aktualisiert');
+                console.log('✅ Board-Author aktualisiert:', pubkey);
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
@@ -224,10 +235,10 @@ export class BoardStore {
         
         // NUR bei Primary Actions zu Nostr publishen (Default: true)
         if (options?.publish !== false) {
-            console.log('🚀 triggerUpdate: Publishing to Nostr (publish=' + (options?.publish ?? 'undefined (default true)') + ')');
             this.publishToNostr();
         } else {
-            console.log('⏭️ triggerUpdate: SKIP publish to Nostr (publish=false)');
+            // Debug: Log nur wenn explizit publish=false gesetzt wurde
+            // (verhindert Log-Spam bei comment loading, etc.)
         }
     }
 
@@ -307,7 +318,7 @@ export class BoardStore {
         // ⚡ FIX: Duplikate vermeiden! Nur hinzufügen wenn nicht bereits in Liste
         if (!this.boardIds.includes(board.id)) {
             this.boardIds = [...this.boardIds, board.id];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             console.log(`✅ Board ${board.name} added to list - now visible in sidebar`);
         } else {
             console.warn(`⚠️ Board ${board.id} bereits in boardIds-Liste - DUPLIKAT vermieden`);
@@ -332,7 +343,7 @@ export class BoardStore {
         return board.id;
     }
 
-    public loadBoard(boardId: string): boolean {
+    public loadBoard(boardId: string, options?: { skipLastAccessed?: boolean }): boolean {
         const board = BoardStorage.loadBoard(boardId);
         if (!board) {
             console.error(`❌ Board ${boardId} nicht gefunden`);
@@ -342,8 +353,15 @@ export class BoardStore {
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         
-        // ✅ NEW (REFACTORING): Update board fields directly
-        board.updateLastAccessed();
+        // ⚡ NEW (13.11.2025): Update lastAccessed NUR bei manuellem Board-Switch
+        // Bei Nostr-Load: skipLastAccessed = true (Race Condition vermeiden!)
+        if (!options?.skipLastAccessed) {
+            board.updateLastAccessed();
+            console.log(`📌 lastAccessed updated: ${board.lastAccessedAt}`);
+        } else {
+            console.log(`⏭️ Skipped lastAccessed update (Nostr-Load)`);
+        }
+        
         board.clearChanges();
         BoardStorage.saveBoard(board); // Persist changes
         
@@ -351,6 +369,8 @@ export class BoardStore {
         // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
         // Das würde neuere Nostr-Daten überschreiben!
         // Aber: updateTrigger++ damit $derived neu berechnet wird
+        // 🔴 WICHTIG: Kein triggerUpdate() hier - nur updateTrigger++
+        // → Verhindert unnötiges Nostr-Publishing beim reinen Laden!
         this.updateTrigger++;
         
         ChatIntegration.reset();
@@ -386,7 +406,7 @@ export class BoardStore {
         // 3. Lokal löschen
         BoardStorage.deleteBoard(idToDelete);
         this.boardIds = this.boardIds.filter(id => id !== idToDelete);
-        BoardStorage.saveBoardIds(this.boardIds);
+        // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
 
         console.log(`✅ Board ${idToDelete} lokal gelöscht`);
 
@@ -426,6 +446,10 @@ export class BoardStore {
         // Damit auch ohne Login neue Boards in anderen Browsern sichtbar werden
         this.subscribeToNostrUpdates();
         console.log('[BoardStore] ✅ Live subscription started - ready for multi-browser sync');
+        
+        // 🚀 Signal that NDK is ready - components can now safely use Nostr methods
+        this.ndkReady = true;
+        console.log('[BoardStore] ✅ NDK ready signal set - components can now use Nostr');
     }
 
     public async loadBoardsFromNostr(): Promise<void> {
@@ -435,13 +459,42 @@ export class BoardStore {
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
                 // ⚡ FIX: Duplikate vermeiden via Set-Deduplication
                 this.boardIds = [...new Set([...this.boardIds, ...updatedBoardIds])];
-                BoardStorage.saveBoardIds(this.boardIds);
+                // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
                 console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
                 
+                // ⚡ NEW (13.11.2025): Lade das Board mit dem neuesten lastAccessedAt
+                // NICHT das "erste" Board, um Race Conditions zu vermeiden!
                 if (switched && newBoard) {
                     this.board = newBoard;
                     this._columnOrder = newBoard.columns.map(c => c.id);
-                    this.triggerUpdate();
+                    this.triggerUpdate({ publish: false }); // ← Kein Nostr Publishing bei Load!
+                } else {
+                    // ⚡ FIX: Re-load current board OHNE lastAccessed Update
+                    // Das verhindert, dass alle Boards den gleichen Timestamp bekommen
+                    const currentId = this.board.id;
+                    if (updatedBoardIds.includes(currentId)) {
+                        console.log(`✅ Re-loading current board without lastAccessed update: ${currentId}`);
+                        this.loadBoard(currentId, { skipLastAccessed: true });
+                    } else {
+                        // Aktuelles Board wurde gelöscht → Lade das neueste Board
+                        const allBoards = this.getAllBoards();
+                        if (allBoards.length > 0) {
+                            const mostRecent = allBoards.reduce((prev, curr) => {
+                                const prevTime = prev.lastAccessed || prev.updatedAt || prev.createdAt || 0;
+                                const currTime = curr.lastAccessed || curr.updatedAt || curr.createdAt || 0;
+                                
+                                // 🔥 FIX: Bei gleichen Timestamps → deterministischer Vergleich via ID!
+                                if (currTime === prevTime) {
+                                    // Lexikographischer Vergleich: kleinere ID = "neuer" (arbitrary but deterministic)
+                                    return curr.id < prev.id ? curr : prev;
+                                }
+                                
+                                return currTime > prevTime ? curr : prev;
+                            });
+                            console.log(`⚠️ Current board deleted, switching to most recent: ${mostRecent.name}`);
+                            this.loadBoard(mostRecent.id, { skipLastAccessed: true });
+                        }
+                    }
                 }
             }
         );
@@ -496,8 +549,9 @@ export class BoardStore {
             }
         );
         
-        // Nach dem Laden aller Cards: UI aktualisieren
-        this.triggerUpdate();
+        // Nach dem Laden aller Cards: UI aktualisieren (OHNE Nostr-Publishing!)
+        // 🔴 WICHTIG: publish: false - wir laden nur vom Relay, keine Änderungen!
+        this.triggerUpdate({ publish: false });
         console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
     }
 
@@ -585,7 +639,15 @@ export class BoardStore {
         const sorted = allBoards.sort((a, b) => {
             const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
             const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
-            return timeB - timeA; // DESC: newest first
+            
+            // Primary sort: by timestamp DESC (newest first)
+            if (timeB !== timeA) {
+                return timeB - timeA;
+            }
+            
+            // 🔥 FIX: Bei gleichen Timestamps → sortiere nach Board-ID (deterministisch!)
+            // Verhindert unstable sort wenn alle Boards gleichen Timestamp haben
+            return a.id.localeCompare(b.id);
         });
         
         // ✅ 2. FILTER by search query
@@ -862,8 +924,9 @@ export class BoardStore {
 
         await this.nostrIntegration.loadComments(this.board, cardId);
         
-        // Trigger UI update after comments are loaded
-        this.triggerUpdate();
+        // Trigger UI update after comments are loaded (WITHOUT Nostr publish)
+        // Reason: Loading comments doesn't change board structure, only card data
+        this.triggerUpdate({ publish: false });
     }
 
     /**
@@ -900,7 +963,7 @@ export class BoardStore {
         return this.nostrIntegration.subscribeToComments(
             this.board,
             cardId,
-            () => this.triggerUpdate() // Callback for UI updates
+            () => this.triggerUpdate({ publish: false }) // Callback for UI updates (WITHOUT Nostr publish - comment already on relay)
         );
     }
 
@@ -961,8 +1024,10 @@ export class BoardStore {
             console.error('❌ Error batch-loading comments:', error);
         }
         
-        // Single UI update after all loads complete
-        this.triggerUpdate();
+        // ⚡ OPTIMIZATION: Trigger UI update WITHOUT publishing to Nostr
+        // Reason: Loading comments doesn't change the board structure itself
+        // Only cards were updated with comments from Nostr
+        this.triggerUpdate({ publish: false }); // ← Skip publish!
     }
 
     // ============================================================================
@@ -993,7 +1058,7 @@ export class BoardStore {
             }
         }
 
-        BoardStorage.saveBoardIds(this.boardIds);
+        // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
         BoardStorage.saveBoard(board);
 
         this.board = board;
@@ -1010,7 +1075,7 @@ export class BoardStore {
         if (result.success && result.boards.length > 0) {
             const newBoardIds = result.boards.map(b => b.id);
             this.boardIds = [...new Set([...this.boardIds, ...newBoardIds])];
-            BoardStorage.saveBoardIds(this.boardIds);
+            // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             
             this.board = result.boards[0];
             this._columnOrder = this.board.columns.map(c => c.id);
@@ -1178,15 +1243,14 @@ export class BoardStore {
     }
 
     /**
-     * ⚡ HELPER: Fügt Board-Metadaten zur Liste hinzu
-     * SINGLE SOURCE OF TRUTH: kanban-boards-metadata
+     * ⚡ DEPRECATED & REMOVED: addBoardToMetadataList()
      * 
-     * Aktualisiert NUR:
-     * - 'kanban-boards-metadata' - Vollständige Metadaten + IDs
+     * Nach Storage-Refactoring (Nov 2025):
+     * - getAllBoardsMetadata() liest direkt aus kanban-{id} Keys
+     * - kanban-boards-metadata wird NICHT mehr verwendet
+     * - Metadaten sind Single Source of Truth im Board selbst
      * 
-     * ⚡ REFACTORING (9. Nov 2025): Eliminiert redundanten kanban-boards-list Key
-     * 
-     * @param metadata - Board-Metadaten (für Sidebar-Liste)
+     * @deprecated Entfernt am 13.11.2025 - Nicht mehr nötig
      */
     private addBoardToMetadataList(metadata: {
         id: string;
@@ -1196,31 +1260,8 @@ export class BoardStore {
         author: string;
         publishState: string;
     }): void {
-        if (typeof window === 'undefined') {
-            console.warn('⚠️ localStorage not available (SSR?)');
-            return;
-        }
-        
-        // === Single Key Update ===
-        const metadataKey = 'kanban-boards-metadata';
-        const stored = localStorage.getItem(metadataKey);
-        const boardList = stored ? JSON.parse(stored) : [];
-        
-        // Prüfe: Board bereits in Liste?
-        const existingIndex = boardList.findIndex((b: any) => b.id === metadata.id);
-        
-        if (existingIndex >= 0) {
-            // Update existing entry
-            boardList[existingIndex] = { ...boardList[existingIndex], ...metadata };
-            console.log(`🔄 Updated metadata for board ${metadata.id}`);
-        } else {
-            // Add new entry
-            boardList.push(metadata);
-            console.log(`➕ Added new board to metadata list: ${metadata.name}`);
-        }
-        
-        // Speichere aktualisierte Metadata-Liste (Single Source of Truth)
-        localStorage.setItem(metadataKey, JSON.stringify(boardList));
+        // NO-OP: Metadaten werden nicht mehr separat gespeichert
+        // getAllBoardsMetadata() liest direkt aus kanban-{id} Keys
     }
 
     private getDefaultColorForColumn(name: string): string {
@@ -1273,7 +1314,13 @@ export class BoardStore {
      * KEIN triggerUpdate (kein UI-Update, da Board nicht geöffnet)
      */
     public upsertCardToBackgroundBoard(boardId: string, cardProps: CardProps): void {
-        console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        // console.log(`📦 upsertCardToBackgroundBoard: Board ${boardId}, Card ${cardProps.id}`);
+        
+        // ⚡ FIX: Prüfe ob Board noch in boardIds existiert (nicht gelöscht!)
+        if (!this.boardIds.includes(boardId)) {
+            console.log(`⏭️ Board ${boardId} wurde gelöscht - skip card update`);
+            return;
+        }
         
         // 1. Lade Board aus localStorage
         const storageKey = `kanban-${boardId}`;
@@ -1323,6 +1370,14 @@ export class BoardStore {
     public upsertBoardFromNostr(boardProps: BoardProps): void {
         if (!boardProps.id) {
             console.warn('⚠️ upsertBoardFromNostr: Board has no ID, skip');
+            return;
+        }
+        
+        // ⚡ FIX: Prüfe ob Board noch existiert (nicht gelöscht!)
+        // Wenn Board gelöscht wurde, ignoriere Updates
+        const boardExists = this.boardIds.includes(boardProps.id) || boardProps.id === this.board.id;
+        if (!boardExists) {
+            console.log(`⏭️ Board ${boardProps.id} wurde gelöscht - skip board update`);
             return;
         }
         
@@ -1398,45 +1453,68 @@ export class BoardStore {
     }
     
     /**
-     * ⚡ SEKUNDÄR: Board von Nostr-Event löschen
-     * KEIN Publish zu Nostr (publish: false)
+     * ⚠️ DEPRECATED & REMOVED: deleteBoardFromNostr()
+     * 
+     * Nach Storage-Refactoring (Nov 2025):
+     * - Board deletion wird über deleteBoard() + NostrIntegration.deleteBoard() gehandelt
+     * - kanban-boards-metadata wird nicht mehr verwendet
+     * - Board-IDs werden automatisch aus localStorage Keys gescannt
+     * - Board-switching bei Deletion erfolgt automatisch über activeBoard-Mechanismus
+     * 
+     * @deprecated Entfernt am 13.11.2025 - Nicht mehr benötigt
      * 
      * Wird aufgerufen wenn ein Deletion-Event (Kind 5) für ein Board empfangen wird.
      * 
      * @param boardId - ID des zu löschenden Boards
      */
     public deleteBoardFromNostr(boardId: string): void {
-        console.log(`🗑️ deleteBoardFromNostr: ${boardId}`);
+        console.warn(`⚠️ deleteBoardFromNostr() is deprecated - Board deletion handled by deleteBoard()`);
+        // NO-OP: Diese Methode wird nicht mehr benötigt
+        // Board-Deletion wird korrekt über:
+        // 1. boardStore.deleteBoard() → localStorage cleanup
+        // 2. NostrIntegration.deleteBoard() → Deletion Event (Kind 5)
+        // 3. Subscription handler ignoriert eigene Deletion Events via myPublishedEvents Set
+    }
+    
+    /**
+     * ⚡ HELPER: Refresh board list after external deletion
+     * 
+     * Called when deletion event received from another device
+     */
+    public refreshBoardList(): void {
+        this.boardIds = BoardStorage.loadBoardIds();
+        console.log(`🔄 Board list refreshed: ${this.boardIds.length} boards`);
+    }
+    
+    /**
+     * ⚡ HELPER: Switch to another board after active board was deleted
+     * 
+     * Called when deletion event received for currently active board
+     * 
+     * @param deletedBoardId - ID of deleted board
+     */
+    public switchToAnotherBoardAfterDeletion(deletedBoardId: string): void {
+        console.log(`⚠️ Active board ${deletedBoardId} was deleted - switching to another board`);
         
-        // Lösche Board aus Metadaten-Liste
-        const wasDeleted = BoardOperations.deleteBoardFromNostr(boardId);
+        // Refresh board list (might have changed)
+        this.refreshBoardList();
         
-        if (wasDeleted) {
-            // Board-Liste aktualisieren
-            this.boardIds = BoardStorage.loadBoardIds();
+        if (this.boardIds.length > 0) {
+            // Switch to first available board
+            const firstBoardId = this.boardIds[0];
+            console.log(`🔄 Switching to first available board: ${firstBoardId}`);
+            this.loadBoard(firstBoardId);
             
-            // Wenn aktuell geladenes Board gelöscht wurde → zu anderem Board wechseln
-            if (this.board.id === boardId) {
-                console.log(`⚠️ Active board ${boardId} was deleted`);
-                
-                if (this.boardIds.length > 0) {
-                    // Wechsel zum ersten verfügbaren Board
-                    const firstBoardId = this.boardIds[0];
-                    console.log(`🔄 Switching to first available board: ${firstBoardId}`);
-                    
-                    const raw = BoardStorage.loadBoard(firstBoardId);
-                    if (raw) {
-                        this.board = BoardStorage.reconstructBoard(raw);
-                        this._columnOrder = this.board.columns.map(c => c.id);
-                    }
-                } else {
-                    // Keine Boards mehr → erstelle neues leeres Board
-                    console.log(`📝 No boards left, creating new empty board`);
-                    this.createBoard('Neues Board', 'Automatisch erstellt nach Board-Löschung');
-                }
-            }
-            
+            // ⚡ FIX: Expliziter triggerUpdate() nach Board-Wechsel
+            // Grund: loadBoard() ruft nur updateTrigger++ auf, aber nach deleteBoard()
+            // muss die UI sofort aktualisiert werden (sonst wird gelöschtes Board noch angezeigt)
+            // publish: false → kein Nostr-Publishing (Board wurde nur geladen, nicht geändert)
             this.triggerUpdate({ publish: false });
+            console.log(`✅ UI forced update after board switch`);
+        } else {
+            // No boards left → create new empty board
+            console.log(`📝 No boards left, creating new empty board`);
+            this.createBoard('Neues Board', 'Automatisch erstellt nach Board-Löschung');
         }
     }
 }

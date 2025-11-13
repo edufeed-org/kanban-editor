@@ -23,6 +23,11 @@ export class NostrIntegration {
     // ⚡ NEU (v2.0): Deletion-Timestamp-Tracking für Out-of-Order Events
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
+    
+    // ⚡ OPTIMIZATION (Nov 2025): Persistent Deletion Event Tracking
+    // Stores processed deletion event IDs to prevent re-processing after app restart
+    private static DELETION_EVENTS_STORAGE_KEY = 'nostr-processed-deletions';
+    private processedDeletionEvents = new Set<string>();
 
     // 🚀 NEW (Phase 3): IndexedDB Cache für Comments
     private static COMMENTS_STORAGE_PREFIX = 'nostr-comments-';
@@ -36,7 +41,7 @@ export class NostrIntegration {
             const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
             const data = JSON.stringify(comments);
             localStorage.setItem(key, data);
-            console.log(`💾 Saved ${comments.length} comment(s) to cache for card ${cardId}`);
+            console.debug(`💾 Saved ${comments.length} comment(s) to cache`);
         } catch (error) {
             console.warn('[NostrIntegration] ⚠️ Failed to save comments to cache:', error);
         }
@@ -56,7 +61,7 @@ export class NostrIntegration {
             }
             
             const comments = JSON.parse(data) as Comment[];
-            console.log(`💿 Loaded ${comments.length} comment(s) from cache for card ${cardId}`);
+            console.debug(`💿 Loaded ${comments.length} comment(s) from cache`);
             return comments;
         } catch (error) {
             console.warn('[NostrIntegration] ⚠️ Failed to load comments from cache:', error);
@@ -76,6 +81,46 @@ export class NostrIntegration {
             console.warn('[NostrIntegration] ⚠️ Failed to clear cache:', error);
         }
     }
+    
+    /**
+     * ⚡ OPTIMIZATION: Load processed deletion events from localStorage
+     * Prevents re-processing deletion events after app restart
+     */
+    private loadProcessedDeletions(): void {
+        try {
+            const stored = localStorage.getItem(NostrIntegration.DELETION_EVENTS_STORAGE_KEY);
+            if (stored) {
+                const deletions = JSON.parse(stored) as string[];
+                this.processedDeletionEvents = new Set(deletions);
+                console.log(`💿 Loaded ${deletions.length} processed deletion event(s) from cache`);
+            }
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to load processed deletions:', error);
+            this.processedDeletionEvents = new Set();
+        }
+    }
+    
+    /**
+     * ⚡ OPTIMIZATION: Save processed deletion events to localStorage
+     * Limits to last 1000 events to prevent unbounded growth
+     */
+    private saveProcessedDeletions(): void {
+        try {
+            // Limit to last 1000 deletion events (FIFO)
+            const deletions = Array.from(this.processedDeletionEvents);
+            const limited = deletions.slice(-1000); // Keep only last 1000
+            
+            localStorage.setItem(
+                NostrIntegration.DELETION_EVENTS_STORAGE_KEY,
+                JSON.stringify(limited)
+            );
+            
+            // Update Set with limited data
+            this.processedDeletionEvents = new Set(limited);
+        } catch (error) {
+            console.warn('[NostrIntegration] ⚠️ Failed to save processed deletions:', error);
+        }
+    }
 
     /**
      * Initialisiert Nostr Integration
@@ -83,6 +128,9 @@ export class NostrIntegration {
     public async initialize(ndk: NDK, onBoardLoad?: () => Promise<void>): Promise<void> {
         this.ndk = ndk;
         console.log('[BoardStore] ✅ Nostr initialized - SyncManager ready');
+        
+        // ⚡ Load processed deletions from localStorage
+        this.loadProcessedDeletions();
 
         // Wenn bereits ein User authentifiziert ist, sofort Boards laden
         try {
@@ -183,14 +231,23 @@ export class NostrIntegration {
                     if (existingRaw) {
                         try {
                             const existing = JSON.parse(existingRaw);
-                            const localTs = existing.updatedAt
-                                ? new Date(existing.updatedAt).getTime()
-                                : existing.createdAt
-                                    ? new Date(existing.createdAt).getTime()
-                                    : 0;
+                            
+                            // 🔥 FIX: Berücksichtige AUCH lastAccessedAt beim Timestamp-Vergleich!
+                            // Verhindert dass Nostr-Load neuere lokale lastAccessedAt überschreibt
+                            const localTs = existing.lastAccessedAt
+                                ? (typeof existing.lastAccessedAt === 'string' 
+                                    ? new Date(existing.lastAccessedAt).getTime()
+                                    : existing.lastAccessedAt)
+                                : existing.updatedAt
+                                    ? new Date(existing.updatedAt).getTime()
+                                    : existing.createdAt
+                                        ? new Date(existing.createdAt).getTime()
+                                        : 0;
+                            
                             const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
                             if (localTs && localTs > remoteTs) {
                                 acceptRemote = false;
+                                console.log(`[BoardStore] ↩️ Keep newer local board (lastAccessedAt: ${new Date(localTs).toISOString()}) - skip remote (createdAt: ${new Date(remoteTs).toISOString()})`);
                             }
                         } catch {
                             acceptRemote = true;
@@ -348,7 +405,7 @@ export class NostrIntegration {
             // Baue die a-tag Referenz: "30301:pubkey:board-id"
             const boardRef = `30301:${board.author}:${board.id}`;
             
-            console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
+            // console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
 
             // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
             const cardFilter = {
@@ -437,12 +494,17 @@ export class NostrIntegration {
 
         console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Event-Driven v2.0)');
 
+        // ⚡ OPTIMIZATION: Filtere alte Deletion Events aus (nur letzte 7 Tage)
+        // Verhindert, dass hunderte alte Deletion Events bei jedem Start verarbeitet werden
+        const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+        
         // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
         // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
         const sub = this.ndk.subscribe(
             {
                 kinds: [30301, 30302, 5] as number[], // Board, Card, Deletion
-                authors: [pubkey] // Boards und Cards die dieser User erstellt hat
+                authors: [pubkey], // Boards und Cards die dieser User erstellt hat
+                since: sevenDaysAgo // ⚡ OPTIMIZATION: Nur Events der letzten 7 Tage
             } as any,
             { closeOnEose: false }
         );
@@ -467,32 +529,32 @@ export class NostrIntegration {
      * Handler für Board-Events (Kind 30301)
      * 
      * ⚡ v2.0: Event-Driven Architecture mit upsertBoardFromNostr()
+     * ⚡ v4.1: Optimiert - Silent Skip für bereits verarbeitete Events
      */
     private async handleBoardEvent(
         boardEvent: any,
         currentBoard: Board,
         boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
-        console.log('📥 Board-Event erhalten:', boardEvent.id);
-        
-        // ⚡ v2.0: Event-Deduplication
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
         if (this.processedEvents.has(boardEvent.id)) {
-            console.log('⏩ Board-Event already processed, skip');
-            return;
+            return; // Silent skip - Event bereits verarbeitet
         }
         
         this.processedEvents.add(boardEvent.id);
+        
+        // ⚡ v4.1: Nur bei NEUEN Events loggen
+        console.log('📥 Board-Event (new):', boardEvent.id.substring(0, 16));
         
         // ⚡ CRITICAL: Skip eigene Events (Echo-Loop Prevention!)
         const { getSyncManager } = await import('../syncManager.svelte.js');
         const syncManager = getSyncManager();
         if (syncManager.isMyEvent(boardEvent.id)) {
-            console.log(`⏭️ Eigenes Board-Event erkannt - SKIP: ${boardEvent.id.substring(0, 30)}...`);
+            // Silent skip - eigenes Event
             
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(boardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${boardEvent.id.substring(0, 30)}...`);
             }, 5000);
             
             return;
@@ -525,27 +587,18 @@ export class NostrIntegration {
             const { BoardStorage } = await import('./storage.js');
             const localBoard = BoardStorage.loadBoard(boardProps.id);
             
-            console.log(`🔍 LWW Check: localBoard exists?`, !!localBoard, localBoard ? `updatedAt: ${localBoard.updatedAt}` : 'null');
-            
             if (localBoard && localBoard.updatedAt) {
                 // Parse ISO timestamp zu Number für Vergleich
                 const localTime = new Date(localBoard.updatedAt).getTime();
                 const eventTime = boardEvent.created_at * 1000; // Nostr timestamps sind in Sekunden
                 
                 if (eventTime <= localTime) {
-                    console.log(`⏭️ LWW: Skip older/equal event`);
-                    console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
-                    console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
-                    console.log(`  Diff: ${Math.round((localTime - eventTime) / 1000)}s newer in localStorage`);
+                    // Silent skip - lokale Daten sind neuer oder gleich
                     return; // Don't overwrite newer local data with stale event
                 }
                 
-                console.log(`✅ LWW: Apply newer event`);
-                console.log(`  Event time:  ${new Date(eventTime).toISOString()} (${eventTime})`);
-                console.log(`  Local time:  ${new Date(localTime).toISOString()} (${localTime})`);
-                console.log(`  Diff: ${Math.round((eventTime - localTime) / 1000)}s newer from Nostr`);
-            } else {
-                console.log(`✅ LWW: No local board, apply event unconditionally`);
+                // Nur bei tatsächlichem Update loggen
+                console.log(`✅ LWW: Apply newer event (${Math.round((eventTime - localTime) / 1000)}s newer)`);
             }
             
             // ⚡ NEW: Set unseen changes flag if board is NOT currently loaded
@@ -572,18 +625,16 @@ export class NostrIntegration {
      * Handler für Card-Events (Kind 30302)
      * 
      * ⚡ v2.0: Event-Driven Architecture mit direkter Store-API
+     * ⚡ v4.1: Optimiert - Silent Skip für bereits verarbeitete Events
      */
     private async handleCardEvent(
         cardEvent: any,
         currentBoard: Board,
         boardStore: any // ⚡ v2.0: Store-Referenz für direkte API-Aufrufe
     ): Promise<void> {
-        console.log('📥 Card-Event erhalten:', cardEvent.id);
-        
-        // ⚡ v2.0: Event-Deduplication
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
         if (this.processedEvents.has(cardEvent.id)) {
-            console.log('⏩ Card-Event already processed, skip');
-            return;
+            return; // Silent skip - Event bereits verarbeitet
         }
         
         this.processedEvents.add(cardEvent.id);
@@ -592,12 +643,11 @@ export class NostrIntegration {
         const { getSyncManager } = await import('../syncManager.svelte.js');
         const syncManager = getSyncManager();
         if (syncManager.isMyEvent(cardEvent.id)) {
-            console.log(`⏭️ Eigenes Card-Event erkannt - SKIP: ${cardEvent.id.substring(0, 30)}...`);
+            // Silent skip - eigenes Event
             
             // ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
             setTimeout(() => {
                 syncManager.clearMyEvent(cardEvent.id);
-                console.log(`[SyncManager] 🗑️ Delayed cleanup (5s): ${cardEvent.id.substring(0, 30)}...`);
             }, 5000);
             
             return;
@@ -648,17 +698,12 @@ export class NostrIntegration {
                 const eventTime = cardEvent.created_at * 1000;
                 
                 if (eventTime <= localTime) {
-                    console.log(`⏭️ Card LWW: Skip older/equal event`);
-                    console.log(`  Card:        ${cardProps.heading || cardProps.id}`);
-                    console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
-                    console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
-                    console.log(`  Delta:       ${((localTime - eventTime) / 1000).toFixed(1)}s newer`);
+                    // Silent skip - lokale Daten sind neuer oder gleich
                     return;
                 }
                 
-                console.log(`✅ Card LWW: Apply newer event`);
-                console.log(`  Event time:  ${new Date(eventTime).toISOString()}`);
-                console.log(`  Local time:  ${new Date(localTime).toISOString()}`);
+                // Nur bei tatsächlichem Update loggen
+                console.log(`✅ Card LWW: Apply newer (${((eventTime - localTime) / 1000).toFixed(1)}s newer)`);
             }
             
             // columnId ist KRITISCH - ohne geht nichts!
@@ -712,13 +757,22 @@ export class NostrIntegration {
     ): Promise<void> {
         // console.log('🗑️ Deletion-Event erhalten:', deletionEvent.id);
         
-        // ⚡ v2.0: Event-Deduplication
-        if (this.processedEvents.has(deletionEvent.id)) {
-            console.log('⏩ Deletion-Event already processed, skip');
+        // ⚡ OPTIMIZATION: Check persistent deletion event cache FIRST
+        if (this.processedDeletionEvents.has(deletionEvent.id)) {
+            // Silently skip - already processed in previous session
             return;
         }
         
+        // ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
+        if (this.processedEvents.has(deletionEvent.id)) {
+            return; // Silent skip - Event bereits verarbeitet
+        }
+        
         this.processedEvents.add(deletionEvent.id);
+        
+        // ⚡ Track this deletion event persistently
+        this.processedDeletionEvents.add(deletionEvent.id);
+        this.saveProcessedDeletions(); // Persist to localStorage
         
         try {
             // NIP-09: Parse 'a' tags für replaceable events
@@ -735,13 +789,33 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const boardId = parts.slice(2).join(':');
                         
+                        // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
+                        if (this.boardDeletionTimestamps.has(boardId)) {
+                            // Silent skip - bereits getrackt
+                            continue;
+                        }
+                        
                         // Track deletion timestamp (für Ordering)
                         this.boardDeletionTimestamps.set(boardId, deleteTime);
-                        // console.log(`🗑️ Tracked deletion timestamp for board ${boardId}: ${new Date(deleteTime).toISOString()}`);
                         
-                        // ⚡ v2.0: Direkte Store-API (SECONDARY action)
-                        boardStore.deleteBoardFromNostr(boardId);
-                        console.log(`✅ Called boardStore.deleteBoardFromNostr(${boardId})`);
+                        // Check if board exists locally
+                        const existsLocally = BoardStorage.loadBoard(boardId) !== null;
+                        
+                        if (existsLocally) {
+                            console.log(`🗑️ Deleting board ${boardId.substring(0, 16)}... (deletion event)`);
+                            
+                            // Delete from localStorage (publish: false to avoid re-publishing deletion event)
+                            BoardStorage.deleteBoard(boardId);
+                            
+                            // Update board list in store
+                            boardStore.refreshBoardList();
+                            
+                            // If this was the active board, switch to another board
+                            if (boardStore.data.id === boardId) {
+                                boardStore.switchToAnotherBoardAfterDeletion(boardId);
+                            }
+                        }
+                        // Silent skip wenn bereits gelöscht
                     }
                 }
                 
@@ -751,13 +825,18 @@ export class NostrIntegration {
                     if (parts.length >= 3) {
                         const cardId = parts.slice(2).join(':');
                         
+                        // ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
+                        if (this.cardDeletionTimestamps.has(cardId)) {
+                            // Silent skip - bereits getrackt
+                            continue;
+                        }
+                        
                         // Track deletion timestamp (für Ordering)
                         this.cardDeletionTimestamps.set(cardId, deleteTime);
-                        // console.log(`🗑️ Tracked deletion timestamp for card ${cardId}: ${new Date(deleteTime).toISOString()}`);
                         
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteCardFromNostr(cardId);
-                        console.log(`✅ Called boardStore.deleteCardFromNostr(${cardId})`);
+                        // Silent - kein Log bei Card-Deletion
                     }
                 }
             }
@@ -810,16 +889,11 @@ export class NostrIntegration {
             // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
             if (publishedEvent?.id) {
                 board.eventId = publishedEvent.id;
-                console.log(`[NostrIntegration] 🔑 Board Event-ID captured: ${board.eventId}`);
+                console.log(`[NostrIntegration] 🔑 Board Event-ID: ${board.eventId}`);
                 
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
-                // Grund: saveBoard() wurde bereits vor publishBoard() aufgerufen
-                // → eventId muss nachträglich gespeichert werden
                 const { BoardStorage } = await import('./storage.js');
                 await BoardStorage.saveBoard(board);
-                console.log(`[NostrIntegration] 💾 Board with eventId saved to localStorage`);
-            } else {
-                console.log(`[NostrIntegration] ⚠️ Board Event-ID not available (event queued or local-only)`);
             }
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
@@ -897,17 +971,11 @@ export class NostrIntegration {
             // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
             if (publishedEvent?.id) {
                 card.eventId = publishedEvent.id;
-                // console.log(`[NostrIntegration] 🔑 Card Event-ID captured: ${card.eventId}`);
                 
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
                 const { BoardStorage } = await import('./storage.js');
                 await BoardStorage.saveBoard(board);
-                console.log(`[NostrIntegration] 💾 Card with eventId saved to localStorage`);
-            } else {
-                console.log(`[NostrIntegration] ⚠️ Card Event-ID not available (event queued or local-only)`);
             }
-
-            console.log(`✅ Card ${cardId} queued for publishing`);
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
@@ -989,6 +1057,61 @@ export class NostrIntegration {
     }
 
     /**
+     * ⚡ NEU: Löscht einen Comment auf Nostr (Kind 5 Deletion Event)
+     * Wird bei kaskadierender Card-Löschung aufgerufen
+     */
+    public async deleteComment(comment: Comment, card: Card): Promise<void> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] deleteComment: NDK nicht initialisiert');
+            return;
+        }
+
+        // Nur published comments (mit eventId) können auf Nostr gelöscht werden
+        if (!comment.eventId) {
+            console.log(`[NostrIntegration] ⏭️ Comment ${comment.id} ist lokal, keine Nostr-Löschung nötig`);
+            return;
+        }
+
+        try {
+            console.log(`[NostrIntegration] 🗑️ Deleting comment on Nostr: ${comment.text.substring(0, 50)}... (${comment.eventId})`);
+
+            // Erstelle Deletion Event (Kind 5)
+            // Comments sind reguläre Events (Kind 1), nicht replaceable
+            const deletionEvent = createDeletionEvent(
+                comment.eventId, // Event-ID des Comments
+                false, // isReplaceableEvent = false für Kind 1
+                `Comment deleted`,
+                this.ndk,
+                comment.eventId // Actual event ID
+            );
+
+            // Bestimme Target-Relays basierend auf Card's publishState
+            const publishState = card.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
+            
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate
+            });
+
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                deletionEvent,
+                'comment',
+                'high', // Hohe Priorität für Löschungen
+                normalizedState,
+                targetRelays
+            );
+
+            console.log(`✅ Comment deletion event queued for ${targetRelays.length} relay(s)`);
+        } catch (error) {
+            console.error(`❌ Error deleting comment on Nostr:`, error);
+        }
+    }
+
+    /**
      * Merges local comments with remote comments from Nostr
      * Deduplicates by eventId, preserves local unpublished comments, sorts chronologically
      * 
@@ -1063,8 +1186,12 @@ export class NostrIntegration {
      * Loads comments for a specific card from Nostr relays
      * Fetches Kind 1 events with #a tag referencing the card, merges with local comments
      * 
+     * **🔄 Retry-Mechanismus:** Wenn die Card noch nicht im Board gefunden wird (z.B. weil sie noch vom Relay geladen wird),
+     * wird der Load-Vorgang automatisch bis zu 5x mit 500ms Verzögerung erneut versucht.
+     * 
      * @param board - Board containing the card
      * @param cardId - ID of the card to load comments for
+     * @param retryCount - Interner Parameter für Retry-Logik (nicht von außen setzen!)
      * 
      * @example
      * ```typescript
@@ -1074,9 +1201,9 @@ export class NostrIntegration {
      * // Persists merged state to localStorage
      * ```
      */
-    public async loadComments(board: Board, cardId: string): Promise<void> {
+    public async loadComments(board: Board, cardId: string, retryCount = 0): Promise<void> {
         if (!this.ndk) {
-            console.warn('[NostrIntegration] loadComments: NDK not initialized');
+            console.debug('[NostrIntegration] loadComments: NDK not initialized (will retry when ready)');
             return;
         }
 
@@ -1084,7 +1211,15 @@ export class NostrIntegration {
             // 1. Find the card in the board
             const result = board.findCardAndColumn(cardId);
             if (!result) {
-                console.warn(`[NostrIntegration] Card ${cardId} not found in board`);
+                // 🔄 RETRY LOGIC: Card könnte noch vom Relay geladen werden
+                if (retryCount < 5) {
+                    console.debug(`[NostrIntegration] loadComments: Card ${cardId} not found yet - retry ${retryCount + 1}/5 in 500ms`);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    return this.loadComments(board, cardId, retryCount + 1);
+                }
+                
+                console.warn(`[NostrIntegration] Card ${cardId} not found in board after ${retryCount} retries`);
                 return;
             }
 
@@ -1093,7 +1228,8 @@ export class NostrIntegration {
             // 🚀 2. Load from cache FIRST (instant access)
             const cachedComments = this.loadCommentsFromStorage(cardId);
             if (cachedComments.length > 0) {
-                console.log(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
+                // Silent cache load - only log in debug
+                console.debug(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
                 // Merge cache with current card comments
                 const merged = this.mergeComments(card.comments || [], cachedComments);
                 card.comments = merged;
@@ -1103,7 +1239,8 @@ export class NostrIntegration {
             // Format: "30302:<author-pubkey>:<card-d-tag>"
             const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
 
-            console.log(`[NostrIntegration] 📥 Loading comments from Nostr for card: ${card.heading} (${cardRef})`);
+            // Only log in debug mode - reduces noise
+            console.debug(`[NostrIntegration] 📥 Loading comments for: ${card.heading}`);
 
             // 4. Fetch Kind 1 (text note) events with #a tag referencing this card
             const events = await this.ndk.fetchEvents({
@@ -1112,13 +1249,14 @@ export class NostrIntegration {
             });
 
             if (!events || events.size === 0) {
-                console.log('[NostrIntegration] 📭 No remote comments found');
+                console.debug('[NostrIntegration] 📭 No remote comments found');
                 // Save current state to cache (might be empty or local-only)
                 this.saveCommentsToStorage(cardId, card.comments || []);
                 return;
             }
 
-            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s)`);
+            // Only log if comments were actually found
+            console.log(`[NostrIntegration] 📬 Found ${events.size} remote comment(s) for ${card.heading}`);
 
             // 5. Convert Nostr events to Comment objects
             const remoteComments: Comment[] = Array.from(events).map(event => {
@@ -1136,16 +1274,23 @@ export class NostrIntegration {
             const localComments = card.comments || [];
             const merged = this.mergeComments(localComments, remoteComments);
 
-            // 7. Update card with merged comments
-            card.comments = merged;
+            // 7. Update card with merged comments ONLY if changed
+            const hasChanges = JSON.stringify(card.comments) !== JSON.stringify(merged);
+            
+            if (hasChanges) {
+                card.comments = merged;
 
-            // 🚀 8. Save to cache for next time
-            this.saveCommentsToStorage(cardId, merged);
+                // 🚀 8. Save to cache for next time
+                this.saveCommentsToStorage(cardId, merged);
 
-            // 9. Persist to localStorage
-            BoardStorage.saveBoard(board);
+                // 9. Persist to localStorage (WITHOUT triggering Nostr publish)
+                BoardStorage.saveBoard(board);
 
-            console.log(`✅ Comments merged: ${localComments.length} local + ${remoteComments.length} remote = ${merged.length} total`);
+                console.log(`✅ ${remoteComments.length} new comment(s) merged`);
+            } else {
+                // ⏭️ No changes - still update cache but DON'T save board
+                this.saveCommentsToStorage(cardId, merged);
+            }
         } catch (error) {
             console.error('[NostrIntegration] ❌ Error loading comments:', error);
         }
@@ -1157,10 +1302,14 @@ export class NostrIntegration {
      * Erstellt eine persistente Subscription für alle Kind 1 Events, die auf diese Card referenzieren.
      * Neue Kommentare werden automatisch mit bestehenden gemerged und triggern UI-Updates.
      * 
+     * **🔄 Retry-Mechanismus:** Wenn die Card noch nicht im Board gefunden wird (z.B. weil sie noch vom Relay geladen wird),
+     * wird die Subscription automatisch bis zu 5x mit 500ms Verzögerung erneut versucht.
+     * 
      * @param board - Das Board mit der Card
      * @param cardId - Die ID der Card
      * @param onUpdate - Callback der nach jedem neuen Kommentar aufgerufen wird (z.B. triggerUpdate() für UI refresh)
-     * @returns Cleanup-Funktion zum Beenden der Subscription
+     * @param retryCount - Interner Parameter für Retry-Logik (nicht von außen setzen!)
+     * @returns Cleanup-Funktion zum Beenden der Subscription (und ggf. laufender Retries)
      * 
      * @example
      * ```typescript
@@ -1174,17 +1323,47 @@ export class NostrIntegration {
      * });
      * ```
      */
-    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void): () => void {
+    public subscribeToComments(board: Board, cardId: string, onUpdate?: () => void, retryCount = 0): () => void {
         // 1. Guard: NDK verfügbar?
         if (!this.ndk) {
-            console.warn('[NostrIntegration] subscribeToComments: NDK not initialized');
+            console.debug('[NostrIntegration] subscribeToComments: NDK not initialized (normal during app startup)');
             return () => {}; // Return no-op cleanup function
         }
 
-        // 2. Finde die Card im Board
+        // 2. Guard: Ignore DnD placeholder cards
+        if (cardId.includes('dnd-shadow-placeholder')) {
+            console.debug(`[NostrIntegration] Skipping DnD placeholder: ${cardId}`);
+            return () => {};
+        }
+
+        // 3. Finde die Card im Board
         const result = board.findCardAndColumn(cardId);
         if (!result) {
-            console.warn(`[NostrIntegration] subscribeToComments: Card ${cardId} not found`);
+            // 🔄 RETRY LOGIC: Card könnte noch vom Relay geladen werden
+            if (retryCount < 5) {
+                // Silent retry - only log first attempt
+                if (retryCount === 0) {
+                    console.debug(`[NostrIntegration] 🔄 subscribeToComments: Card ${cardId} not ready yet, retrying...`);
+                }
+                
+                // Store retry cleanup function reference
+                let retryCleanup: (() => void) | null = null;
+                
+                // Schedule retry after 500ms
+                const retryTimer = setTimeout(() => {
+                    retryCleanup = this.subscribeToComments(board, cardId, onUpdate, retryCount + 1);
+                }, 500);
+                
+                // Return cleanup function that cancels retry AND any eventual subscription
+                return () => {
+                    clearTimeout(retryTimer);
+                    if (retryCleanup) {
+                        retryCleanup();
+                    }
+                };
+            }
+            
+            console.warn(`[NostrIntegration] ⚠️ subscribeToComments: Card ${cardId} not found after ${retryCount} retries`);
             return () => {};
         }
 
@@ -1194,14 +1373,14 @@ export class NostrIntegration {
         const cardAuthor = card.author || board.author || 'unknown';
         const cardRef = `30302:${cardAuthor}:${cardId}`;
 
-        console.log(`[NostrIntegration] 📡 Subscribing to comments for card: ${cardId} (${cardRef})`);
+        console.debug(`[NostrIntegration] 📡 Subscribing to comments for: ${cardId.substring(5, 12)}...`);
 
         // 4. Cleanup existing subscription für diese Card (falls vorhanden)
         const existingSub = this.commentSubscriptions.get(cardId);
         if (existingSub && typeof existingSub.stop === 'function') {
             try {
                 existingSub.stop();
-                console.log(`[NostrIntegration] 🛑 Stopped existing subscription for card ${cardId}`);
+                console.debug(`[NostrIntegration] 🛑 Stopped duplicate subscription for ${cardId.substring(5, 12)}...`);
             } catch (err) {
                 console.error('[NostrIntegration] Error stopping existing subscription:', err);
             }
@@ -1221,14 +1400,11 @@ export class NostrIntegration {
             try {
                 // Deduplication: Skip if already processed
                 if (this.processedEvents.has(event.id)) {
-                    console.log(`[NostrIntegration] ⏭️ Skipping duplicate comment event: ${event.id.substring(0, 8)}`);
-                    return;
+                    return; // Silent skip - bereits verarbeitet
                 }
 
                 // Mark as processed
                 this.processedEvents.add(event.id);
-
-                console.log(`[NostrIntegration] 💬 New comment received for card ${cardId}`);
 
                 // Convert Nostr event to Comment object
                 const newComment: Comment = {
@@ -1251,8 +1427,6 @@ export class NostrIntegration {
                 // 🚀 Save to cache for instant access next time
                 this.saveCommentsToStorage(cardId, merged);
 
-                console.log(`[NostrIntegration] ✅ Comment merged and persisted. Total: ${merged.length}`);
-
                 // Trigger UI update callback
                 if (onUpdate) {
                     onUpdate();
@@ -1265,7 +1439,10 @@ export class NostrIntegration {
         // 7. Store subscription in Map für späteren Cleanup
         this.commentSubscriptions.set(cardId, sub);
 
-        console.log(`[NostrIntegration] ✅ Comment subscription active for card ${cardId}`);
+        // Only log if retry was needed or in debug mode
+        if (retryCount > 0) {
+            console.log(`[NostrIntegration] ✅ Comment subscription active for ${cardId.substring(5, 12)}... (after ${retryCount} ${retryCount === 1 ? 'retry' : 'retries'})`);
+        }
 
         // 8. Return cleanup function
         return () => {
@@ -1292,6 +1469,17 @@ export class NostrIntegration {
         }
 
         try {
+            // 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Cards (inkl. Comments)
+            console.log(`[NostrIntegration] 🗑️ Cascading delete: Deleting ${board.getAllCards().length} card(s) in board "${board.name}"`);
+            
+            const allCards = board.getAllCards();
+            for (const card of allCards) {
+                await this.deleteCard(card);
+                console.log(`  ✓ Deleted card: ${card.heading}`);
+            }
+            
+            console.log(`✅ All ${allCards.length} card(s) deleted`);
+
             // 1. Bestimme die Event-ID des Board-Events
             // Format für addressable events: "30301:<author-pubkey>:<d-tag>"
             const boardEventId = `30301:${board.author || 'unknown'}:${board.id}`;
@@ -1308,16 +1496,15 @@ export class NostrIntegration {
                 board.eventId // ← NEU: Actual event ID for relay deletion!
             );
             
-            // 🔍 DEBUG: Log deletion event details
+            // 🔍 DEBUG: Log deletion event details (BEFORE signing)
             console.log('[NostrIntegration] 📋 Board Deletion Event Details:');
             console.log('  Kind:', deletionEvent.kind);
-            console.log('  Pubkey (signer):', deletionEvent.pubkey || 'NOT SIGNED YET');
             console.log('  Board Author:', board.author);
             console.log('  Board Event ID:', board.eventId || 'NOT SET');
-            console.log('  ⚠️ MATCH?:', (deletionEvent.pubkey === board.author) ? '✅ YES' : '❌ NO - DELETION WILL FAIL!');
             console.log('  Tags:', JSON.stringify(deletionEvent.tags, null, 2));
             console.log('  Content:', deletionEvent.content);
             console.log('  Target Board ID:', boardEventId);
+            console.log('  ⚠️ Note: Event will be signed by SyncManager before publishing');
 
             // 3. Publiziere auf ALLEN Relays (sowohl public als private)
             // Grund: Board könnte auf beiden Relay-Sets existieren
@@ -1355,6 +1542,18 @@ export class NostrIntegration {
         }
 
         try {
+            // 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Comments der Card
+            if (card.comments && card.comments.length > 0) {
+                console.log(`[NostrIntegration] 🗑️ Cascading delete: Deleting ${card.comments.length} comment(s) for card "${card.heading}"`);
+                
+                for (const comment of card.comments) {
+                    await this.deleteComment(comment, card);
+                    console.log(`  ✓ Deleted comment: ${comment.text.substring(0, 50)}...`);
+                }
+                
+                console.log(`✅ All ${card.comments.length} comment(s) deleted`);
+            }
+
             // 1. Bestimme die Event-ID des Card-Events
             // Format für addressable events: "30302:<author-pubkey>:<d-tag>"
             const cardEventIdentifier = `30302:${card.author || 'unknown'}:${card.id}`;
@@ -1390,16 +1589,15 @@ export class NostrIntegration {
                 actualEventId // ← NEU: Übergebe echte Event-ID falls vorhanden
             );
             
-            // 🔍 DEBUG: Log deletion event details
-            console.log('[NostrIntegration] 📋 Deletion Event Details:');
+            // 🔍 DEBUG: Log deletion event details (BEFORE signing)
+            console.log('[NostrIntegration] 📋 Card Deletion Event Details:');
             console.log('  Kind:', deletionEvent.kind);
-            console.log('  Pubkey (signer):', deletionEvent.pubkey || 'NOT SIGNED YET');
             console.log('  Card Author:', card.author);
-            console.log('  ⚠️ MATCH?:', (deletionEvent.pubkey === card.author) ? '✅ YES' : '❌ NO - DELETION WILL FAIL!');
             console.log('  Tags:', JSON.stringify(deletionEvent.tags, null, 2));
             console.log('  Content:', deletionEvent.content);
             console.log('  Target Card Identifier:', cardEventIdentifier);
             console.log('  Actual Event ID:', actualEventId || 'NOT FOUND');
+            console.log('  ⚠️ Note: Event will be signed by SyncManager before publishing');
 
             // 3. Bestimme Target-Relays basierend auf Card's publishState
             const publishState = card.publishState || 'draft';

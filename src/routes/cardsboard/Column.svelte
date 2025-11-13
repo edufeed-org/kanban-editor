@@ -149,11 +149,7 @@
 				});
 			
 			if (itemsChanged) {
-				console.log('🔄 Column.svelte: Items vom BoardStore aktualisiert', {
-					columnId,
-					oldCount: items.length,
-					newCount: updatedColumn.items.length
-				});
+				// Silent sync - items updated
 				items = updatedColumn.items;
 			}
 		}
@@ -161,8 +157,8 @@
 
  	function handleDndConsiderCards(e: any) {
  		const { items: newItems } = e.detail;
-  	   console.warn("got consider", name);
-  	   isDraggingCards = true;
+  	    // console.warn("got consider", name);
+  	    isDraggingCards = true;
  		items = newItems;
    }
    

@@ -28,7 +28,7 @@
 		// Lese updateTrigger als Dependency-Tracking-Trick
 		// Jedes Mal wenn triggerUpdate() aufgerufen wird, wird diese $derived neu berechnet
 		const trigger = boardStore.updateTrigger;
-		console.log('🔍 CardDialog: currentCard aktualisiert, trigger:', trigger);
+		// Silent sync - no log spam
 		
 		for (const col of boardStore.uiData) {
 			const found = col.items.find(c => String(c.id) === String(card.id));
@@ -42,14 +42,14 @@
 	let previewCard = $derived.by(() => {
 		// Lese updateTrigger explizit als Dependency
 		const trigger = boardStore.updateTrigger;
-		console.log('🔍 previewCard: updateTrigger =', trigger);
+		// Silent sync - no log spam
 		
 		// Finde die aktuelle Karte im Store
 		for (const col of boardStore.uiData) {
-			console.log('  Checking column:', col.id, 'with', col.items.length, 'items');
+			// Silent search
 			const found = col.items.find(c => String(c.id) === String(card?.id));
 			if (found) {
-				console.log('  ✓ Found card in column:', col.id, 'image:', found.image);
+				// Silent sync - card found
 				return found;
 			}
 		}

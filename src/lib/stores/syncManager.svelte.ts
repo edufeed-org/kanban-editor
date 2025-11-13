@@ -142,7 +142,11 @@ export class SyncManager {
           const relays = await this.signAndPublish(event, targetRelays, type);
           if (relays && relays.size > 0) {
             console.log(`[SyncManager] ✅ Event published to ${relays.size} relay(s)`);
-            console.log(`[SyncManager] 🔑 Event ID: ${event.id}`); // ← NEU: Log Event-ID!
+            if (event.id) {
+              console.log(`[SyncManager] 🔑 Event ID: ${event.id}`);
+            } else {
+              console.warn(`[SyncManager] ⚠️ Event published but has no ID!`);
+            }
             this.lastSyncTime = Date.now();
             return event; // ← NEU: Return signed event with ID!
           }
@@ -180,13 +184,34 @@ export class SyncManager {
       if (!event.sig) {
         throw new Error('Event signing failed - no signature generated');
       }
-      console.log('[SyncManager] Event signed');
+      console.log(`[SyncManager] Event signed successfully`);
+      console.log(`[SyncManager] Event ID after signing: ${event.id || 'UNDEFINED!'}`);
+      
+      // ⚡ VALIDATION: Check deletion events for auth issues
+      if (event.kind === 5) {
+        const aTags = event.tags.filter(tag => tag[0] === 'a');
+        if (aTags.length > 0) {
+          const targetCoordinate = aTags[0][1]; // e.g., "30301:author:d-tag"
+          const [kind, targetAuthor] = targetCoordinate.split(':');
+          
+          if (targetAuthor && event.pubkey !== targetAuthor) {
+            console.warn('[SyncManager] ⚠️ DELETION AUTH MISMATCH:');
+            console.warn(`  Event pubkey: ${event.pubkey}`);
+            console.warn(`  Target author: ${targetAuthor}`);
+            console.warn(`  → Deletion will likely fail on relay!`);
+          } else if (targetAuthor && event.pubkey === targetAuthor) {
+            console.log('[SyncManager] ✅ Deletion auth verified: pubkey matches target author');
+          }
+        }
+      }
       
       // ⚡ CRITICAL: Tracke Event-ID SOFORT nach Signierung!
       // Verhindert Echo-Loop (eigenes Event wird beim Empfangen erkannt & geskipt)
       if (event.id) {
         this.myPublishedEvents.add(event.id);
         console.log(`[SyncManager] 📌 Tracking own event: ${event.id.substring(0, 30)}...`);
+      } else {
+        console.error(`[SyncManager] ⚠️ CRITICAL: Event has no ID after signing! Cannot track for echo prevention!`);
       }
       
       const maxAttempts = 3;

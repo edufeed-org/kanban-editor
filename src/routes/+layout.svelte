@@ -4,10 +4,10 @@
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
   import { setContext, onMount } from 'svelte';
   import { Toaster } from "svelte-sonner";
-  import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
-  import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
-  import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
-  import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
+  // import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
+  // import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
+  // import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
+  // import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
   import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
   import { boardStore } from '$lib/stores/kanbanStore.svelte';
   import { settingsStore } from '$lib/stores/settingsStore.svelte';
@@ -21,22 +21,33 @@
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 
+  // 🚀 Start connection immediately (async)
   ndk.connect();
 
   const authStore = initializeAuth(ndk);
 
   onMount(async () => {
-    // 🔑 CRITICAL: Initialize SyncManager FIRST (before AuthStore restores session)
+    // 🔌 FIRST: Wait for NDK to connect before proceeding
+    // This prevents "NDK not initialized" race conditions
+    try {
+      console.log('⏳ Waiting for NDK connection...');
+      await ndk.connect();
+      console.log('✅ NDK connected to relays');
+    } catch (error) {
+      console.warn('⚠️ NDK connection failed (continuing anyway):', error);
+    }
+
+    // 🔑 SECOND: Initialize SyncManager (before AuthStore restores session)
     // This ensures SyncManager.updateSigner() works when AuthStore restores NIP-07
     try {
       const { initializeSyncManager } = await import('$lib/stores/syncManager.svelte');
       initializeSyncManager(ndk, undefined);
-      console.log('✅ SyncManager initialized first');
+      console.log('✅ SyncManager initialized');
     } catch (error) {
       console.warn('⚠️ SyncManager init failed:', error);
     }
 
-    // 🔐 SECOND: Restore AuthStore session
+    // 🔐 THIRD: Restore AuthStore session
     // At this point, SyncManager is ready to receive updateSigner() calls
     try {
       await authStore.restoreSession();
@@ -45,9 +56,8 @@
       console.warn('⚠️ AuthStore session restore failed:', error);
     }
 
-    // ✅ THIRD: Initialize BoardStore with NDK for Nostr publishing
-    // At this point, authStore is fully ready with restored session & signer
-    // AND SyncManager is initialized and has the signer
+    // ✅ FOURTH: Initialize BoardStore with NDK for Nostr publishing
+    // At this point: NDK is connected, authStore has session, SyncManager has signer
     try {
       boardStore.initializeNostr(ndk);
       console.log('✅ BoardStore initialized with NDK - publishing ready');
