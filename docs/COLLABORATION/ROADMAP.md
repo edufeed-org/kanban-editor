@@ -1248,7 +1248,9 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 ### Meilenstein 4.1: Board-Sharing & Permissions (01.12. - 10.12., ~8 Tage)
 
 **Ziel:** Mehrere Nutzer können gemeinsam an Board arbeiten (mit Zugriffskontrolle)  
-**Status:** 🟡 **~40% FERTIG** - Maintainers in Events, Permission-Infrastruktur fehlt
+**Status:** 🟡 **~50% FERTIG** - AuthStore komplett, Backend bereit, API-Layer + UI fehlen  
+**Branch:** `feature/board-sharing` (geplant)  
+**Dokumentation:** [`docs/ARCHITECTURE/BOARD-SHARING.md`](../ARCHITECTURE/BOARD-SHARING.md) (neu erstellt 13.11.2025)
 
 **✅ BEREITS IMPLEMENTIERT:**
 - ✅ Maintainers Support in Board Events (p-tags, nostrEvents.ts Line 96)
@@ -1257,11 +1259,26 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 **❌ NOCH ZU IMPLEMENTIEREN:**
 
-- [ ] **NIP-51 Integration** (Kontaktlisten für Board-Sharing)
-  - [ ] `readBoardShares()` - Liste der Boards mit Zugriff
-  - [ ] `addBoardShare(boardId, pubkey, role)` - Nutzer hinzufügen
-  - [ ] `removeBoardShare(boardId, pubkey)` - Nutzer entfernen
-  - [ ] Store als Kind 30051 Event
+**Phase 4.1A: Core API (2-3 Tage)**
+
+- [ ] **BoardRole & Types** (~0.5 Tage)
+  - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`
+  - [ ] `interface BoardShare { pubkey, role, addedAt }`
+  - [ ] TypeScript Typen in `src/lib/types/sharing.ts`
+
+- [ ] **BoardStore Maintainer Methods** (~1 Tag)
+  - [ ] `addMaintainer(pubkey: string, role: BoardRole): Promise<void>`
+  - [ ] `removeMaintainer(pubkey: string): Promise<void>`
+  - [ ] `getMaintainers(): BoardShare[]`
+  - [ ] Integration mit triggerUpdate() + publishToNostr()
+
+- [ ] **NIP-51 Integration** (~1 Tag)
+  - [ ] `readBoardShares()` - Fetch Kind 30051 Events
+  - [ ] `publishBoardShares()` - Create/Update Contact List Event
+  - [ ] p-tags mit Role-Information (tag[3])
+  - [ ] Event-Deserialisierung für BoardShare[]
+
+**Phase 4.1B: Permission System (1 Tag)**
 
 - [ ] **Permission System** 
   - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`
