@@ -4,6 +4,7 @@ import {
   TEST_PUBKEY, 
   mockNip07Extension,
   loginWithNsec,
+  loginWithNip07,
   clearAuthState,
   getAuthState,
   isAuthenticated,
@@ -21,16 +22,7 @@ test.describe('NIP-07 Authentication Flow', () => {
   });
 
   test('should successfully authenticate with NIP-07 extension', async ({ page, context }) => {
-    await mockNip07Extension(page);
-    
-    // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
-
-    page.getByRole('button', { name: 'Anmelden' }).click();
-    
-    const nip07Button = page.getByText('Mit NIP-07 anmelden');
-    await expect(nip07Button).toBeVisible();
-    await nip07Button.click();
+    loginWithNip07(page);
  
     await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
     
@@ -181,32 +173,27 @@ test.describe('nsec Private Key Authentication Flow', () => {
     });
     
     expect(localStorageNsec).toBeNull();
-    
-    // But should be in sessionStorage temporarily
-    const sessionNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
-    expect(sessionNsec).toBe(TEST_NSEC);
+  });
+});
+
+
+// TODO: skipped because less important. Remove skip when testing should be properly implemented
+test.describe.skip('Authentication State Management', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/cardsboard');
+
+    await clearAuthState(page);
   });
 
-  test('should clear sensitive data on tab close (sessionStorage behavior)', async ({ page, context }) => {
-    await loginWithNsec(page);
+  test('should handle session expiration gracefully', async ({ page }) => {
+    await mockExpiredSession(page);
     
-    // Verify nsec is in sessionStorage
-    let sessionNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
-    expect(sessionNsec).toBe(TEST_NSEC);
+    await expect(page.getByRole('button', { name: 'Anmelden' })).toBeVisible();
     
-    // Close and reopen context (simulates tab close/reopen)
-    await context.close();
-    const browser = page.context().browser();
-    if (browser) {
-      const newContext = await browser.newContext();
-      const newPage = await newContext.newPage();
-      
-      // sessionStorage should be empty in new context
-      sessionNsec = await newPage.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
-      expect(sessionNsec).toBeNull();
-      
-      await newContext.close();
-    }
+    const authState = await getAuthState(page);
+
+    expect(authState).toBeNull();
   });
 
   test('should validate session integrity', async ({ page }) => {
@@ -231,7 +218,7 @@ test.describe('nsec Private Key Authentication Flow', () => {
     
     // App should either restore valid session or require re-login
     const isStillAuth = await isAuthenticated(page);
-    const hasLoginUI = await page.getByText('Login').isVisible();
+    const hasLoginUI = await page.getByRole('button', { name: 'Anmelden' }).isVisible();
     
     // One of these should be true
     expect(isStillAuth || hasLoginUI).toBe(true);

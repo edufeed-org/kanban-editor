@@ -55,6 +55,7 @@ export async function mockNip07Extension(page: Page, options: {
 
 /**
  * Login with nsec private key
+ * need to be at /cardsboard first!
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
   await page.getByRole('button', { name: 'Anmelden' }).click();
@@ -71,37 +72,61 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
 
 /**
  * Login with NIP-07 (requires mocked extension)
+ * need to be at /cardsboard first!
  */
 export async function loginWithNip07(page: Page) {
-  await mockNip07Extension(page);
-  await page.goto('/cardsboard');
-  
-  // Click NIP-07 login
-  await page.getByRole('button', { name: /nip.07|extension|browser extension/i }).click();
-  
-  // Wait for authentication
-  await page.waitForSelector('[data-testid="authenticated-user"]', { timeout: 10000 });
+    await mockNip07Extension(page);
+    
+    // assure demo settings are loaded, otherwise it will interfere clicking login
+    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
+
+    page.getByRole('button', { name: 'Anmelden' }).click();
+    
+    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    await expect(nip07Button).toBeVisible();
+    await nip07Button.click();
 }
 
 /**
- * Clear all authentication state
+ * Clear all authentication-related storage and state
  */
-export async function clearAuthState(page: Page) {
-  await page.context().clearCookies();
-  await page.evaluate(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+export async function clearAuthState(page: Page): Promise<void> {
+  try {
+    await page.evaluate(() => {
+      try {
+        // Clear localStorage
+        localStorage.removeItem('nostr-user-session');
+        localStorage.removeItem('nostr-nsec-temp');
+        
+        // Clear sessionStorage
+        sessionStorage.removeItem('nostr-nsec-temp');
+        sessionStorage.removeItem('nostr-user-session');
+        
+        console.log('🧹 Auth state cleared');
+      } catch (error) {
+        console.log('⚠️ Error clearing storage:', error);
+      }
+    });
+  } catch (error) {
+    console.log('⚠️ Security error accessing storage in clearAuthState:', error);
+    // If localStorage/sessionStorage access is denied, continue without throwing
+  }
 }
 // {"kanban-config":"{\"$comment\":\"Kanban Board Configuration - Single Source of Truth\",\"$schema_version\":\"1.1.0\",\"$last_updated\":\"2025-11-04\",\"ui\":{\"maxCardsBeforeScroll\":20,\"alignColumnsToMaxHeight\":true,\"columnWidth\":350,\"theme\":\"auto\",\"$comment\":\"UI-spezifische Einstellungen für Layout und Darstellung\"},\"nostr\":{\"relaysPublic\":[\"ws://localhost:7000\"],\"relaysPrivate\":[]},\"llm\":{\"model\":\"ollama/mistral\",\"baseUrl\":\"http://localhost:11434\",\"apiKey\":\"\",\"$comment_apiKey\":\"⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!\",\"systemPrompt\":\"Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben.\",\"useLlmIntent\":false,\"$comment_useLlmIntent\":\"LLM-basierte Intent Detection (experimentell). false = regelbasiert (schneller, offline), true = LLM-basiert (flexibler, benötigt API)\"},\"oidc\":{\"authority\":\"http://localhost:8080/realms/master\",\"clientId\":\"kanban-board\"},\"mcp\":{\"urls\":[]},\"shareTokenMaxSize\":200000,\"defaults\":{\"columns\":[\"Material\",\"Einstieg\",\"Erarbeitung\",\"Sicherung\"],\"boardPublishState\":\"private\",\"cardPublishState\":\"private\"},\"sidebar\":{\"showLeft\":true,\"showRight\":true},\"learning\":{\"useLearningManager\":true,\"confidenceThreshold\":0.7,\"initialConfidence\":0.3,\"confidenceIncrement\":0.15,\"minUsageCount\":3,\"$comment_useLearningManager\":\"Aktiviert das Cross-Board Learning System (UserPreferencesStore + BoardLearningManager)\",\"$comment_confidenceThreshold\":\"Ab diesem Wert (0.0-1.0) werden KI-Aktionen automatisch ausgeführt ohne User-Confirmation\",\"$comment_initialConfidence\":\"Startwert für neu gelernte Patterns\",\"$comment_confidenceIncrement\":\"Um wie viel steigt Confidence bei jeder erfolgreichen Nutzung\",\"$comment_minUsageCount\":\"Mindestanzahl Nutzungen bevor Pattern als 'learned' gilt\"},\"allow_demo_session\":{\"enabled\":false}}","kanban-board-7edb4afa2e637b302828b9dca5f128ec23ea879622948b0c1547e42d1445bc74":"{\"id\":\"board-7edb4afa2e637b302828b9dca5f128ec23ea879622948b0c1547e42d1445bc74\",\"name\":\"Mein KI Kanban Board\",\"description\":\"Ein intelligentes Kanban-Board mit KI-Unterstützung\",\"tags\":[],\"ccLicense\":\"cc-by-4.0\",\"publishState\":\"draft\",\"createdAt\":\"2025-11-13T14:54:56.010Z\",\"updatedAt\":\"2025-11-13T14:54:56.010Z\",\"lastAccessedAt\":\"2025-11-13T14:54:56.010Z\",\"hasUnseenChanges\":false,\"author\":\"e7270a4bede9167e2e03eaa4f1bb59fb62c9b2ad4a2639b1bb88b40d0001a2b8\",\"maintainers\":[\"e7270a4bede9167e2e03eaa4f1bb59fb62c9b2ad4a2639b1bb88b40d0001a2b8\"],\"columns\":[{\"id\":\"column-a8cffab7326b8ae3e616014b7249f75d36cfe1e2de745e2014185af458e8e6e5\",\"name\":\"To Do\",\"color\":\"blue\",\"cards\":[]},{\"id\":\"column-45721b74f01cb6488dfde28e84246617b54ec3b6adb5847f5a49f5ac03856f1b\",\"name\":\"In Progress\",\"color\":\"orange\",\"cards\":[]},{\"id\":\"column-10febceefd2ab8347b39b641e075af5df7596c7b57c4a614daa565474f09777d\",\"name\":\"Done\",\"color\":\"green\",\"cards\":[]}]}","kanban-settings":"{\"maxCardsBeforeScroll\":20,\"alignColumnsToMaxHeight\":true,\"columnWidth\":350,\"theme\":\"auto\",\"relaysPublic\":[\"ws://localhost:7000\"],\"relaysPrivate\":[],\"draftPublishingMode\":\"private-relays\",\"llmModel\":\"ollama/mistral\",\"llmBaseUrl\":\"http://localhost:11434\",\"llmApiKey\":\"\",\"llmUseLlmIntent\":false,\"llmSystemPrompt\":\"Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben.\",\"mcpUrls\":[],\"defaultColumns\":[\"Material\",\"Einstieg\",\"Erarbeitung\",\"Sicherung\"],\"defaultBoardPublishState\":\"private\",\"defaultCardPublishState\":\"private\",\"showLeftSidebar\":true,\"showRightSidebar\":true,\"maxBoardsInSidebar\":10,\"useLearningManager\":true,\"learningConfidenceThreshold\":0.7,\"learningInitialConfidence\":0.3,\"learningConfidenceIncrement\":0.15,\"learningMinUsageCount\":3}"}
 /**
- * Get current authentication state from localStorage
+ * Get the current auth state from localStorage
  */
-export async function getAuthState(page: Page) {
-  return await page.evaluate(() => {
-    const authData = localStorage.getItem('nostr-user-session');
-    return authData ? JSON.parse(authData) : null;
-  });
+export async function getAuthState(page: Page): Promise<any> {
+  try {
+    return await page.evaluate(() => {
+      const session = localStorage.getItem('nostr-user-session');
+      console.log({session})
+      return session ? JSON.parse(session) : null;
+    });
+  } catch (error) {
+    console.log('⚠️ Error accessing localStorage in getAuthState:', error);
+    return null;
+  }
 }
 
 /**
@@ -155,32 +180,44 @@ export async function waitForBoardLoaded(page: Page) {
 }
 
 /**
- * Check if user is authenticated by looking for UI indicators
+ * Check if user is authenticated by looking for the authenticated user dropdown
  */
 export async function isAuthenticated(page: Page): Promise<boolean> {
-  return await page.evaluate(() => {
-    return localStorage.getItem('nostr-user-session') !== null;
-  });
+  try {
+    // Check for the authenticated user dropdown in the sidebar
+    return await page.locator('button.bg-secondary.rounded-md').isVisible({ timeout: 1000 });
+  } catch {
+    // If that fails, check localStorage as backup
+    try {
+      return await page.evaluate(() => {
+        return localStorage.getItem('nostr-user-session') !== null;
+      });
+    } catch {
+      return false;
+    }
+  }
 }
 
 /**
  * Logout the current user
  */
 export async function logout(page: Page) {
-  const logoutButton = page.getByRole('button', { name: /logout|sign out/i });
+  const userDropdown = page.getByText('Nostr Nutzer');
+  await userDropdown.click();
+  
+  const logoutButton = page.getByText('Abmelden');
   if (await logoutButton.isVisible()) {
     await logoutButton.click();
   }
   
-  // Wait for logout to complete
-  await page.waitForSelector('text=Login', { timeout: 5000 });
+  await page.waitForSelector('button:has-text("Anmelden")', { timeout: 5000 });
 }
 
 /**
  * Mock expired session in localStorage
  */
 export async function mockExpiredSession(page: Page) {
-  await page.addInitScript(() => {
+  await page.evaluate(() => {
     const expiredSession = {
       pubkey: 'e7270a4bede9167e2e03eaa4f1bb59fb62c9b2ad4a2639b1bb88b40d0001a2b8',
       npub: 'npub1ufns5j7mngv80w8rn2j0rd2elds6ltd6ev6d5j3ex7dw3wpq6qqsz2uqmfhpm0',
@@ -189,7 +226,7 @@ export async function mockExpiredSession(page: Page) {
       expires: Date.now() - 24 * 60 * 60 * 1000, // expired yesterday
       profile: {}
     };
-    localStorage.setItem('nostr-user-session', JSON.stringify(expiredSession));
+    return localStorage.setItem('nostr-user-session', JSON.stringify(expiredSession));
   });
 }
 
