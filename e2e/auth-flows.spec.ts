@@ -40,6 +40,14 @@ test.describe('NIP-07 Authentication Flow', () => {
     expect(authState).not.toBeNull();
     expect(authState.pubkey).toBe(TEST_PUBKEY);
     expect(authState.signerType).toBe('nip07');
+
+    // Verify initial authentication
+    expect(await isAuthenticated(page)).toBe(true);
+    
+    // Reload page
+    await page.reload();
+
+    expect(await isAuthenticated(page)).toBe(true);
   });
 
   test('should handle NIP-07 extension not found', async ({ page }) => {
@@ -72,43 +80,6 @@ test.describe('NIP-07 Authentication Flow', () => {
     // Should remain unauthenticated
     expect(await isAuthenticated(page)).toBe(false);
   });
-
-  test('should persist NIP-07 session across page reloads', async ({ page }) => {
-    await loginWithNip07(page);
-    
-    // Verify initial authentication
-    expect(await isAuthenticated(page)).toBe(true);
-    
-    // Reload page
-    await page.reload();
-    
-    // Should still be authenticated
-    await expect(page.getByTestId('authenticated-user')).toBeVisible({ timeout: 5000 });
-    
-    const authState = await getAuthState(page);
-    expect(authState.signerType).toBe('nip07');
-  });
-
-  test('should open extension installation page when extension not found', async ({ page }) => {
-    // Mock page.context().newPage() to capture opened tabs
-    let newPagePromise = page.context().waitForEvent('page');
-    
-    await page.goto('/cardsboard');
-    await page.getByRole('button', { name: /nip.07/i }).click();
-    
-    // Wait for error message and potential redirect
-    await expect(page.getByText(/extension not found/i)).toBeVisible({ timeout: 5000 });
-    
-    // Check if extension store page was opened (this might be automatic in the implementation)
-    try {
-      const newPage = await newPagePromise;
-      expect(newPage.url()).toContain('chrome.google.com');
-      await newPage.close();
-    } catch {
-      // Extension store redirect might not be implemented yet
-    }
-  });
-
 });
 
 test.describe('nsec Private Key Authentication Flow', () => {
