@@ -21,7 +21,7 @@ test.describe('NIP-07 Authentication Flow', () => {
     await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
   });
 
-  test('should successfully authenticate with NIP-07 extension', async ({ page }) => {
+  test('should successfully authenticate with NIP-07 extension', async ({ page, context }) => {
     await mockNip07Extension(page);
     
     // assure demo settings are loaded, otherwise it will interfere clicking login
@@ -40,14 +40,23 @@ test.describe('NIP-07 Authentication Flow', () => {
     expect(authState).not.toBeNull();
     expect(authState.pubkey).toBe(TEST_PUBKEY);
     expect(authState.signerType).toBe('nip07');
-
-    // Verify initial authentication
     expect(await isAuthenticated(page)).toBe(true);
     
-    // Reload page
+    // Stay logged in even after page reload
     await page.reload();
+    expect(await isAuthenticated(page)).toBe(true);
+
+    // Stay logged in even after leaving page
+    await page.goto('/');
+    await page.goto('/cardsboard');
 
     expect(await isAuthenticated(page)).toBe(true);
+    
+    // Stay logged in after closing browser
+    await page.close();
+    const newPage = await context.newPage();
+    await newPage.goto('/cardsboard');
+    expect(await isAuthenticated(newPage)).toBe(true);
   });
 
   test('should handle NIP-07 extension not found', async ({ page }) => {
