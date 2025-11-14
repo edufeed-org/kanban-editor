@@ -46,8 +46,8 @@ test.describe('NIP-07 Authentication Flow', () => {
     page.getByRole('button', { name: 'Anmelden' }).click();
     
     const nip07Button = page.getByText('Mit NIP-07 anmelden');
-    await expect(nip07Button).toBeVisible();
     await nip07Button.click();
+  
     // Should show error about missing extension
     await expect(page.getByText('Nostr-Browser-Extension nicht gefunden')).toBeVisible();
     
@@ -56,16 +56,18 @@ test.describe('NIP-07 Authentication Flow', () => {
   });
 
   test('should handle NIP-07 user rejection', async ({ page }) => {
+    const errorMessage = 'User rejected the request';
     await mockNip07Extension(page, { 
       shouldFail: true, 
-      errorMessage: 'User rejected the request' 
+      errorMessage
     });
     
-    await page.goto('/cardsboard');
-    await page.getByRole('button', { name: /nip.07/i }).click();
-    
+    page.getByRole('button', { name: 'Anmelden' }).click();
+    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    await nip07Button.click();
+
     // Should show user rejection error
-    await expect(page.getByText(/user rejected|rejected/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(errorMessage)).toBeVisible();
     
     // Should remain unauthenticated
     expect(await isAuthenticated(page)).toBe(false);

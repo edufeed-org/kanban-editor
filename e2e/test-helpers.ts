@@ -15,18 +15,18 @@ export async function mockNip07Extension(page: Page, options: {
 } = {}) {
   const publicKey = options.publicKey || TEST_PUBKEY;
   const shouldFail = options.shouldFail || false;
-  const errorMessage = options.errorMessage || 'User rejected the request';
+  const errorMessage = options.errorMessage || '';
   
   page.evaluate(({ shouldFail, publicKey, errorMessage }) => {
     if (shouldFail) {
       (window as any).nostr = {
-        publicKey: async () => {
+        publicKey: () => {
           throw new Error(errorMessage);
         },
-        getPublicKey: async () => {
+        getPublicKey: () => {
           throw new Error(errorMessage);
         },
-        signEvent: async () => {
+        signEvent: () => {
           throw new Error(errorMessage);
         }
       };
@@ -162,12 +162,9 @@ export async function waitForBoardLoaded(page: Page) {
  * Check if user is authenticated by looking for UI indicators
  */
 export async function isAuthenticated(page: Page): Promise<boolean> {
-  try {
-    await page.waitForSelector('[data-testid="authenticated-user"]', { timeout: 2000 });
-    return true;
-  } catch {
-    return false;
-  }
+  return await page.evaluate(() => {
+    return localStorage.getItem('nostr-user-session') !== null;
+  });
 }
 
 /**

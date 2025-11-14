@@ -64,8 +64,7 @@ export class AuthStore {
       if (!window.nostr) {
         const message = 'Nostr-Browser-Extension nicht gefunden.';
         toast.error(message, {
-            description: 'Installiere Alby oder nos2x.',
-            duration: 3000
+          description: 'Installiere Alby oder nos2x.',
         });
         throw new Error(message);
       }
@@ -103,7 +102,7 @@ export class AuthStore {
 
       return user;
     } catch (error) {
-      console.error("NIP-07 login failed:", error);
+      toast.error((error as Error).message || 'NIP-07 Login fehlgeschlagen');
       throw error;
     } finally {
       this.isLoading = false;
