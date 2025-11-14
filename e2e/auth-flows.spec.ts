@@ -33,8 +33,6 @@ test.describe('NIP-07 Authentication Flow', () => {
  
     await expect(page.getByText('Nostr Nutzer')).toBeVisible();
     
-    await page.waitForEvent('load');
-
     // Verify session data
     const authState = await getAuthState(page);
     expect(authState).not.toBeNull();

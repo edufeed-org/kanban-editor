@@ -69,8 +69,9 @@ export class AuthStore {
 
       const user = await signer.user();
 
+      await user.fetchProfile();
+
       this.currentUser = user;
-      this.currentUser.profile = await user.fetchProfile() || undefined
 
       await this.saveSession(user, "nip07");
       
