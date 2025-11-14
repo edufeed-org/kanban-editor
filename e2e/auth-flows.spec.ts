@@ -35,7 +35,6 @@ test.describe('NIP-07 Authentication Flow', () => {
  
     await expect(page.getByText('Nostr Nutzer')).toBeVisible();
     
-    // Verify session data
     const authState = await getAuthState(page);
     expect(authState).not.toBeNull();
     expect(authState.pubkey).toBe(TEST_PUBKEY);
@@ -65,10 +64,8 @@ test.describe('NIP-07 Authentication Flow', () => {
     const nip07Button = page.getByText('Mit NIP-07 anmelden');
     await nip07Button.click();
   
-    // Should show error about missing extension
     await expect(page.getByText('Nostr-Browser-Extension nicht gefunden')).toBeVisible();
     
-    // Should remain unauthenticated
     expect(await isAuthenticated(page)).toBe(false);
   });
 
@@ -94,24 +91,26 @@ test.describe('NIP-07 Authentication Flow', () => {
 test.describe('nsec Private Key Authentication Flow', () => {
   
   test.beforeEach(async ({ page }) => {
+    await page.goto('/cardsboard');
     await clearAuthState(page);
+    // assure demo settings are loaded, otherwise it will interfere clicking login
+    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
   });
 
   test('should successfully authenticate with valid nsec', async ({ page }) => {
-    await page.goto('/cardsboard');
+    await page.getByRole('button', { name: 'Anmelden' }).click();
     
     // Switch to nsec tab
-    const nsecTab = page.getByRole('tab', { name: /private key|nsec/i });
-    if (await nsecTab.isVisible()) {
-      await nsecTab.click();
-    }
+    const nsecTab = page.getByRole('tab', { name: 'nsec' });
+    await expect(nsecTab).toBeVisible();
+    await nsecTab.click();
     
     // Enter nsec and login
-    await page.getByPlaceholder(/nsec1|private key/i).fill(TEST_NSEC);
-    await page.getByRole('button', { name: /login|sign in/i }).click();
+    await page.getByPlaceholder('nsec1...').fill(TEST_NSEC);
+    await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
     
-    // Verify authentication
-    await expect(page.getByTestId('authenticated-user')).toBeVisible({ timeout: 10000 });
+    // Verify authentication by checking for authenticated user dropdown in sidebar
+    await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
     
     // Verify session data
     const authState = await getAuthState(page);

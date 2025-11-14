@@ -2,7 +2,7 @@ import { type Page, type BrowserContext } from '@playwright/test';
 
 // Test constants
 export const TEST_NSEC = 'nsec1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85';
-export const TEST_PUBKEY = 'e7270a4bede9167e2e03eaa4f1bb59fb62c9b2ad4a2639b1bb88b40d0001a2b8';
+export const TEST_PUBKEY = '79dff8f82963424e0bb02708a22e44b4980893e3a4be0fa3cb60a43b946764e3';
 export const TEST_NPUB = 'npub1ufns5j7mngv80w8rn2j0rd2elds6ltd6ev6d5j3ex7dw3wpq6qqsz2uqmfhpm0';
 
 /**
