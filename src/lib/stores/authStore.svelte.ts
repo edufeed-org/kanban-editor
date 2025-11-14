@@ -66,7 +66,7 @@ export class AuthStore {
         toast.error(message, {
           description: 'Installiere Alby oder nos2x.',
         });
-        throw new Error(message);
+        return Promise.reject(message);
       }
 
       const signer = new NDKNip07Signer();
@@ -102,8 +102,9 @@ export class AuthStore {
 
       return user;
     } catch (error) {
-      toast.error((error as Error).message || 'NIP-07 Login fehlgeschlagen');
-      throw error;
+      const { message = 'NIP-07 Login fehlgeschlagen' } = error as Error;
+      toast.error(message);
+      return Promise.reject(message);
     } finally {
       this.isLoading = false;
     }
@@ -119,7 +120,11 @@ export class AuthStore {
       this.isLoading = true;
 
       if (!nsec.startsWith("nsec1") || nsec.length !== 63) {
-        throw new Error("Invalid nsec format");
+        const errorMessage = "Ungültiges nsec-Format";
+        toast.error("Ungültiges nsec-Format", {
+          description: "nsec muss mit 'nsec1' beginnen und 63 Zeichen lang sein.",
+        });
+        return Promise.reject(errorMessage);
       }
 
       const signer = new NDKPrivateKeySigner(nsec);
@@ -147,8 +152,9 @@ export class AuthStore {
 
       return user;
     } catch (error) {
-      console.error("nsec login failed:", error);
-      throw error;
+      const { message = 'Nsec login fehlgeschlagen' } = error as Error;
+      toast.error(message);
+      return Promise.reject(message);
     } finally {
       this.isLoading = false;
     }
