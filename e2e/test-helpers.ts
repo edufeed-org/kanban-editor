@@ -1,4 +1,4 @@
-import { type Page, type BrowserContext } from '@playwright/test';
+import { type Page, type BrowserContext, expect } from '@playwright/test';
 
 // Test constants
 export const TEST_NSEC = 'nsec1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85';
@@ -57,20 +57,16 @@ export async function mockNip07Extension(page: Page, options: {
  * Login with nsec private key
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
-  await page.goto('/cardsboard');
+  await page.getByRole('button', { name: 'Anmelden' }).click();
   
-  // Switch to nsec tab if needed
-  const nsecTab = page.getByRole('tab', { name: /private key|nsec/i });
-  if (await nsecTab.isVisible()) {
-    await nsecTab.click();
-  }
+  const nsecTab = page.getByRole('tab', { name: 'nsec' });
+  await expect(nsecTab).toBeVisible();
+  await nsecTab.click();
   
-  // Fill nsec and login
-  await page.getByPlaceholder(/nsec1|private key/i).fill(nsec);
-  await page.getByRole('button', { name: /login|sign in/i }).click();
+  await page.getByPlaceholder('nsec1...').fill(TEST_NSEC);
+  await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
   
-  // Wait for authentication
-  await page.waitForSelector('[data-testid="authenticated-user"]', { timeout: 10000 });
+  await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
 }
 
 /**

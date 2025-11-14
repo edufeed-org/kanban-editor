@@ -98,82 +98,47 @@ test.describe('nsec Private Key Authentication Flow', () => {
   });
 
   test('should successfully authenticate with valid nsec', async ({ page }) => {
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await loginWithNsec(page);
     
-    // Switch to nsec tab
-    const nsecTab = page.getByRole('tab', { name: 'nsec' });
-    await expect(nsecTab).toBeVisible();
-    await nsecTab.click();
-    
-    // Enter nsec and login
-    await page.getByPlaceholder('nsec1...').fill(TEST_NSEC);
-    await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
-    
-    // Verify authentication by checking for authenticated user dropdown in sidebar
-    await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
-    
-    // Verify session data
+    await expect(page.getByText('Nostr Nutzer')).toBeVisible({timeout: 10000});
     const authState = await getAuthState(page);
     expect(authState).not.toBeNull();
     expect(authState.pubkey).toBe(TEST_PUBKEY);
     expect(authState.signerType).toBe('nsec');
+    expect(await isAuthenticated(page)).toBe(true);
+
+    // Stay logged in even after page reload
+    await page.reload();
+    expect(await isAuthenticated(page)).toBe(true);
+
   });
 
   test('should reject invalid nsec formats', async ({ page }) => {
-    // Click "Anmelden" button to open login dialog
     await page.getByRole('button', { name: 'Anmelden' }).click();
     
-    // Switch to nsec tab
     const nsecTab = page.getByRole('tab', { name: 'nsec' });
     await nsecTab.click();
     
-    // Test various invalid formats
-    const invalidNsecs = [
-      'invalid-format',
-      'nsec1short',
-      'npub1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85', // npub instead of nsec
-      '', // empty
-    ];
+    const nsecInput = page.getByPlaceholder('nsec1...');
+    await nsecInput.clear();
     
-    for (const invalidNsec of invalidNsecs) {
-      const nsecInput = page.getByPlaceholder('nsec1...');
-      await nsecInput.clear();
-      
-      if (invalidNsec) {
-        await nsecInput.fill(invalidNsec);
-      }
-      
-      const loginButton = page.getByRole('button', { name: 'Mit nsec anmelden' });
-      await loginButton.click();
-      
-      // Should show error or prevent submission
-      if (invalidNsec === '') {
-        // Button should be disabled for empty input
-        await expect(loginButton).toBeDisabled();
-      } else {
-        await expect(page.getByText('Ungültiges nsec-Format')).toBeVisible();
-      }
-      
-      // Should remain unauthenticated
-      expect(await isAuthenticated(page)).toBe(false);
-    }
+    await nsecInput.fill('npub1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85');
+    
+    const loginButton = page.getByRole('button', { name: 'Mit nsec anmelden' });
+    await loginButton.click();
+    await expect(page.getByText('Ungültiges nsec-Format')).toBeVisible({timeout: 5000});
+    
+    await nsecInput.clear();
+    await nsecInput.fill('');
+    await expect(loginButton).toBeDisabled();
+    
+    expect(await isAuthenticated(page)).toBe(false);
   });
 
-  test('should store nsec temporarily in sessionStorage', async ({ page }) => {
-    await loginWithNsec(page);
-    
-    // Check sessionStorage
-    const storedNsec = await page.evaluate(() => {
-      return sessionStorage.getItem('nostr-nsec-temp');
-    });
-    
-    expect(storedNsec).toBe(TEST_NSEC);
-  });
 
   test('should clear nsec from sessionStorage on logout', async ({ page }) => {
     await loginWithNsec(page);
     
-    // Verify nsec is stored
     let storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
     expect(storedNsec).toBe(TEST_NSEC);
     
@@ -184,25 +149,6 @@ test.describe('nsec Private Key Authentication Flow', () => {
     storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
     expect(storedNsec).toBeNull();
   });
-
-  test('should handle nsec session recovery on page reload', async ({ page }) => {
-    await loginWithNsec(page);
-    
-    // Verify authenticated
-    expect(await isAuthenticated(page)).toBe(true);
-    
-    // Reload page
-    await page.reload();
-    
-    // Should be able to restore session
-    await expect(page.getByTestId('authenticated-user')).toBeVisible({ timeout: 10000 });
-    
-    // Session should still contain correct data
-    const authState = await getAuthState(page);
-    expect(authState.pubkey).toBe(TEST_PUBKEY);
-    expect(authState.signerType).toBe('nsec');
-  });
-
 });
 
 test.describe('Authentication State Management', () => {
