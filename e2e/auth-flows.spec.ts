@@ -17,6 +17,8 @@ test.describe('NIP-07 Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/cardsboard');
     await clearAuthState(page);
+    // assure demo settings are loaded, otherwise it will interfere clicking login
+    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
   });
 
   test('should successfully authenticate with NIP-07 extension', async ({ page }) => {
@@ -41,10 +43,13 @@ test.describe('NIP-07 Authentication Flow', () => {
   });
 
   test('should handle NIP-07 extension not found', async ({ page }) => {
-    const nip07Button = page.getByRole('button', { name: /nip.07|extension/i });
+    page.getByRole('button', { name: 'Anmelden' }).click();
+    
+    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    await expect(nip07Button).toBeVisible();
     await nip07Button.click();
     // Should show error about missing extension
-    await expect(page.getByText(/extension not found|install/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Nostr-Browser-Extension nicht gefunden')).toBeVisible();
     
     // Should remain unauthenticated
     expect(await isAuthenticated(page)).toBe(false);

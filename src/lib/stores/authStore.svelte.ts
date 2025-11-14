@@ -6,6 +6,7 @@ import { get } from 'svelte/store'
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { settingsStore } from "./settingsStore.svelte.js";
 import { getSyncManager } from "./syncManager.svelte.js";
+import { toast } from "svelte-sonner";
 
 export interface UserSession {
   pubkey: string;
@@ -61,7 +62,12 @@ export class AuthStore {
       this.isLoading = true;
 
       if (!window.nostr) {
-        throw new Error("Nostr extension not found. Install Alby or nos2x.");
+        const message = 'Nostr-Browser-Extension nicht gefunden.';
+        toast.error(message, {
+            description: 'Installiere Alby oder nos2x.',
+            duration: 3000
+        });
+        throw new Error(message);
       }
 
       const signer = new NDKNip07Signer();
