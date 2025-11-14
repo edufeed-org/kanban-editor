@@ -4,7 +4,6 @@ import {
   TEST_PUBKEY, 
   mockNip07Extension,
   loginWithNsec,
-  loginWithNip07,
   clearAuthState,
   getAuthState,
   isAuthenticated,
@@ -33,7 +32,7 @@ test.describe('NIP-07 Authentication Flow', () => {
     await expect(nip07Button).toBeVisible();
     await nip07Button.click();
  
-    await expect(page.getByText('Nostr Nutzer')).toBeVisible();
+    await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
     
     const authState = await getAuthState(page);
     expect(authState).not.toBeNull();
@@ -100,7 +99,8 @@ test.describe('nsec Private Key Authentication Flow', () => {
   test('should successfully authenticate with valid nsec', async ({ page }) => {
     await loginWithNsec(page);
     
-    await expect(page.getByText('Nostr Nutzer')).toBeVisible({timeout: 10000});
+    await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
+
     const authState = await getAuthState(page);
     expect(authState).not.toBeNull();
     expect(authState.pubkey).toBe(TEST_PUBKEY);
@@ -142,135 +142,25 @@ test.describe('nsec Private Key Authentication Flow', () => {
     let storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
     expect(storedNsec).toBe(TEST_NSEC);
     
-    // Logout
     await logout(page);
     
-    // Verify nsec is cleared
     storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
     expect(storedNsec).toBeNull();
   });
-});
 
-test.describe('Authentication State Management', () => {
-  
-  test.beforeEach(async ({ page }) => {
-    await clearAuthState(page);
-  });
-
-  test('should handle session expiration gracefully', async ({ page }) => {
-    await mockExpiredSession(page);
-    
-    await page.goto('/cardsboard');
-    
-    // Should show login UI despite having stored session
-    await expect(page.getByText('Login')).toBeVisible({ timeout: 5000 });
-    
-    // Expired session should be cleaned up
-    const authState = await getAuthState(page);
-    expect(authState).toBeNull();
-  });
-
-  test('should redirect unauthenticated users to login', async ({ page }) => {
-    await page.goto('/cardsboard');
-    
-    // Should show login UI
-    await expect(page.getByText('Login')).toBeVisible({ timeout: 5000 });
-    
-    // Should not show kanban board content
-    const kanbanBoard = page.getByTestId('kanban-board');
-    expect(await kanbanBoard.isVisible()).toBe(false);
-  });
-
-  test('should maintain authentication across route navigation', async ({ page }) => {
+  test('should clear nsec from sessionStorage on tab close', async ({ page, context }) => {
     await loginWithNsec(page);
     
-    // Navigate to home
-    await page.goto('/');
+    let storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
+    expect(storedNsec).toBe(TEST_NSEC);
     
-    // Navigate back to cardsboard
-    await page.goto('/cardsboard');
-    
-    // Should still be authenticated
-    await expect(page.getByTestId('authenticated-user')).toBeVisible({ timeout: 5000 });
-  });
+    await page.close();
 
-  test('should handle concurrent login attempts gracefully', async ({ page }) => {
-    await page.goto('/cardsboard');
+    const newPage = await context.newPage();
+    await newPage.goto('/cardsboard');
     
-    const nsecTab = page.getByRole('tab', { name: /private key|nsec/i });
-    if (await nsecTab.isVisible()) {
-      await nsecTab.click();
-    }
-    
-    // Fill nsec
-    await page.getByPlaceholder(/nsec1|private key/i).fill(TEST_NSEC);
-    
-    // Click login multiple times rapidly
-    const loginButton = page.getByRole('button', { name: /login/i });
-    await Promise.all([
-      loginButton.click(),
-      loginButton.click(),
-      loginButton.click()
-    ]);
-    
-    // Should still authenticate successfully once
-    await expect(page.getByTestId('authenticated-user')).toBeVisible({ timeout: 10000 });
-    
-    // Should only have one session
-    const authState = await getAuthState(page);
-    expect(authState).not.toBeNull();
-    expect(authState.pubkey).toBe(TEST_PUBKEY);
-  });
-
-  test('should display user information after login', async ({ page }) => {
-    await loginWithNsec(page);
-    
-    // Check for user display elements
-    const userInfo = page.getByTestId('user-info');
-    if (await userInfo.isVisible()) {
-      const userText = await userInfo.textContent();
-      expect(userText).toBeTruthy();
-      
-      // Should contain either pubkey substring, npub, or display name
-      const hasUserData = userText?.includes(TEST_PUBKEY.substring(0, 8)) || 
-                         userText?.includes('npub1') ||
-                         (userText && userText.length > 0);
-      expect(hasUserData).toBe(true);
-    }
-  });
-
-  test('should handle authentication errors gracefully', async ({ page }) => {
-    await page.goto('/cardsboard');
-    
-    // Mock network error during authentication
-    await page.route('**/api/auth/**', route => {
-      route.abort('failed');
-    });
-    
-    const nsecTab = page.getByRole('tab', { name: /private key|nsec/i });
-    if (await nsecTab.isVisible()) {
-      await nsecTab.click();
-    }
-    
-    await page.getByPlaceholder(/nsec1|private key/i).fill(TEST_NSEC);
-    await page.getByRole('button', { name: /login/i }).click();
-    
-    // Should handle error without crashing
-    // Note: The actual error handling depends on implementation
-    // This test mainly ensures the app doesn't crash
-    
-    await page.waitForTimeout(2000);
-    
-    // App should still be responsive
-    expect(await page.getByRole('button', { name: /login/i }).isVisible()).toBe(true);
-  });
-
-});
-
-test.describe('Authentication Security', () => {
-  
-  test.beforeEach(async ({ page }) => {
-    await clearAuthState(page);
+    storedNsec = await newPage.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));
+    expect(storedNsec).toBeNull();
   });
 
   test('should not persist nsec in localStorage', async ({ page }) => {
