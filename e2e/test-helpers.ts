@@ -149,21 +149,17 @@ export async function createTestCard(page: Page, columnIndex: number = 0, cardDa
   title: string;
   description?: string;
 }) {
-  // Find add card button in the specified column
   const addCardButtons = page.getByTestId('add-card-button');
   await addCardButtons.nth(columnIndex).click();
   
-  // Fill card details
   await page.getByPlaceholder(/card title|heading/i).fill(cardData.title);
   
   if (cardData.description) {
     await page.getByPlaceholder(/description/i).fill(cardData.description);
   }
   
-  // Save the card
   await page.getByRole('button', { name: /save|create/i }).click();
   
-  // Wait for card to appear
   await page.waitForSelector(`text=${cardData.title}`, { timeout: 5000 });
 }
 
