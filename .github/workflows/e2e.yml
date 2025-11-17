@@ -20,7 +20,7 @@ jobs:
     - name: Install pnpm
       uses: pnpm/action-setup@v2
       with:
-        version: 8
+        version: 10
         
     - name: Install dependencies
       run: pnpm install
@@ -33,7 +33,7 @@ jobs:
   
     - name: Spin up relay server
       run: docker compose up -d
-      
+
     - name: Run Playwright tests
       run: pnpm test:e2e
       
