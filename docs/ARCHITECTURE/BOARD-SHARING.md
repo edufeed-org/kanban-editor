@@ -1,8 +1,8 @@
 # Board-Sharing & Maintainer-System Architektur
 
-**Version:** 1.0  
-**Datum:** 13. November 2025  
-**Status:** 📋 **SPEZIFIKATION** - Implementierung geplant in Branch `feature/board-sharing`  
+**Version:** 2.0 (Korrigiert)  
+**Datum:** 18. November 2025  
+**Status:** 📋 **SPEZIFIKATION** - Implementierung geplant  
 **Zielgruppe:** Entwickler, die Board-Sharing-Features implementieren  
 **Phase:** 4.1 Board-Sharing & Permissions
 
@@ -10,7 +10,12 @@
 
 ## 🎯 Übersicht
 
-Dieses Dokument spezifiziert die Architektur des Board-Sharing-Systems, das es mehreren Nutzern ermöglicht, gemeinsam an einem Kanban-Board zu arbeiten. Das System basiert auf Nostr's dezentralem Protokoll (NIP-51 Contact Lists) und nutzt die bereits implementierte AuthStore-Infrastruktur.
+Dieses Dokument spezifiziert die korrekte Architektur des Board-Sharing-Systems mit **2-Layer Berechtigungen**:
+
+1. **Layer 1: Board Maintainers (Editor)** - Können Board bearbeiten
+2. **Layer 2: Board Followers (Viewer)** - Können Board nur anschauen
+
+Das System basiert auf dem **Kanban-NIP Standard** für Editor-Rechte und **NIP-51 Follow Sets** für Viewer-Rechte.
 
 ### Projektstatus
 
@@ -22,120 +27,128 @@ Dieses Dokument spezifiziert die Architektur des Board-Sharing-Systems, das es m
 - Board.maintainers: string[] - Datenstruktur existiert
 
 **❌ ZU IMPLEMENTIEREN (Phase 4.1):**
-- BoardStore API-Methoden: addMaintainer(), removeMaintainer(), readBoardShares()
-- NIP-51 Contact List Event Integration (Kind 30051)
-- BoardRole enum & Permission System (Owner/Editor/Viewer)
+- NIP-51 Follow Sets für Viewer (Kind 30000)
+- BoardStore API: addEditor(), removeEditor(), addViewer(), removeViewer()
+- UI-Integration: Linke Sidebar für Editor-Einladung, Follow-Button für Viewer
 - ShareDialog UI-Komponente
-- Maintainer-Liste Anzeige im Board
+- Erweiterte Permission-Checks (isViewer, isEditor, getUserRole)
 
 ---
 
 ## 📐 System-Architektur
 
-### Layer-Übersicht
+### 2-Layer Board-Sharing Model
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  UI Layer (Svelte 5 Components)                             │
-│  ├─ ShareDialog.svelte        (Nutzer hinzufügen/entfernen) │
-│  ├─ MaintainerList.svelte     (Anzeige aller Maintainer)    │
-│  └─ BoardHeader.svelte        (Share-Button Integration)    │
+│  ├─ Linke Sidebar: "Als Editor einladen"                    │
+│  ├─ Board Header: "Follow" Button (Viewer)                  │
+│  ├─ ShareDialog.svelte    (Erweiterte Optionen)            │
+│  └─ MaintainerList.svelte (Anzeige aller Editor)           │
 └─────────────────────────────────────────────────────────────┘
                            ↓ Ruft API auf
 ┌─────────────────────────────────────────────────────────────┐
 │  Store Layer (BoardStore API)                               │
-│  ├─ addMaintainer(pubkey, role)    → Board-State + Nostr    │
-│  ├─ removeMaintainer(pubkey)       → Board-State + Nostr    │
-│  ├─ getMaintainers()               → BoardShare[]           │
-│  └─ readBoardShares()              → NIP-51 Events laden    │
+│  ├─ addEditor(pubkey)      → Kind 30301 p-tag              │
+│  ├─ removeEditor(pubkey)   → Kind 30301 p-tag update      │
+│  ├─ addViewer(pubkey)      → Kind 30000 Follow Set         │
+│  ├─ removeViewer(pubkey)   → Kind 30000 Follow Set         │
+│  └─ getBoardParticipants() → Kombiniert beide Layer        │
 └─────────────────────────────────────────────────────────────┘
                            ↓ Nutzt
 ┌─────────────────────────────────────────────────────────────┐
 │  Model Layer (Board Klasse)                                 │
-│  ├─ maintainers: string[]          (Pubkey-Array)           │
-│  ├─ isMaintainer(pubkey)           (Permission-Check)       │
-│  └─ canAddCard(pubkey)             (Authorization-Check)    │
+│  ├─ maintainers: string[]     (Editor aus Kind 30301)      │
+│  ├─ followers: string[]       (Viewer aus Kind 30000)      │
+│  ├─ isEditor(pubkey)          → Permission-Check           │
+│  ├─ isViewer(pubkey)          → Permission-Check           │
+│  └─ getUserRole(pubkey)       → OWNER/EDITOR/VIEWER        │
 └─────────────────────────────────────────────────────────────┘
                            ↓ Serialisiert zu
 ┌─────────────────────────────────────────────────────────────┐
 │  Nostr Layer (NDK Events)                                   │
-│  ├─ Board Event (Kind 30301)       → p-tags für Maintainer  │
-│  └─ Contact List (Kind 30051)      → p-tags mit Rollen      │
+│  ├─ Board Event (Kind 30301)    → p-tags für Editor       │
+│  └─ Follow Set (Kind 30000)     → p-tags für Viewer       │
 └─────────────────────────────────────────────────────────────┘
                            ↓ Speichert in
 ┌─────────────────────────────────────────────────────────────┐
 │  Storage Layer                                              │
-│  ├─ localStorage                   (Board-State lokal)      │
-│  └─ Nostr Relays                   (Events dezentral)       │
+│  ├─ localStorage               (Board-State lokal)         │
+│  └─ Nostr Relays               (Events dezentral)          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔐 Permission System
-
-### BoardRole Enum
-
-```typescript
-// src/lib/types/sharing.ts
-
-/**
- * Rollen-Hierarchie für Board-Zugriff
- * Owner > Editor > Viewer
- */
-export enum BoardRole {
-    OWNER = 'owner',    // Ersteller, kann Maintainer verwalten
-    EDITOR = 'editor',  // Kann Karten/Spalten bearbeiten
-    VIEWER = 'viewer'   // Nur Lesezugriff
-}
-
-/**
- * Beschreibt einen geteilten Board-Zugriff
- */
-export interface BoardShare {
-    pubkey: string;      // Nostr Public Key (Hex)
-    role: BoardRole;     // Zugewiesene Rolle
-    addedAt: string;     // ISO 8601 Timestamp
-    addedBy?: string;    // Optional: Wer hat eingeladen
-}
-```
+## 🔐 2-Layer Permission System
 
 ### Berechtigungs-Matrix
 
-| Aktion | Owner | Editor | Viewer |
-|--------|:-----:|:------:|:------:|
+| Aktion | Owner | Editor (Maintainer) | Viewer (Follower) |
+|--------|:-----:|:-------------------:|:-----------------:|
 | **Board löschen** | ✅ | ❌ | ❌ |
-| **Maintainer hinzufügen/entfernen** | ✅ | ❌ | ❌ |
+| **Editor einladen/entfernen** | ✅ | ❌ | ❌ |
 | **Board umbenennen** | ✅ | ✅ | ❌ |
 | **Spalten erstellen/löschen** | ✅ | ✅ | ❌ |
-| **Karten erstellen** | ✅ | ✅ | ❌ |
-| **Karten bearbeiten** | ✅ | ✅ | ❌ |
-| **Karten verschieben** | ✅ | ✅ | ❌ |
-| **Kommentare schreiben** | ✅ | ✅ | ❌ |
+| **Karten erstellen/bearbeiten** | ✅ | ✅ | ❌ |
 | **Board ansehen** | ✅ | ✅ | ✅ |
 | **Export** | ✅ | ✅ | ✅ |
+| **Kommentare schreiben** | ✅ | ✅ | ❌ |
+| **Live-Updates erhalten** | ✅ | ✅ | ✅ |
 
-### Implementierung in Board-Klasse
+### Korrekte Implementierung in Board-Klasse
 
 ```typescript
 // src/lib/classes/BoardModel.ts
 
 export class Board {
     public author?: string;              // Creator (immer OWNER)
-    public maintainers?: string[];       // Array von Pubkeys
+    public maintainers?: string[] = [];  // Editor (Kind 30301 p-tags)
+    public followers?: string[] = [];    // Viewer (Kind 30000 Follow Set)
     
     /**
-     * Prüft ob Nutzer Maintainer ist
-     * Owner (author) ist automatisch Maintainer
+     * Prüft ob Nutzer Editor ist (Owner oder Maintainer)
      */
-    isMaintainer(pubkey?: string): boolean {
+    isEditor(pubkey?: string): boolean {
         if (!pubkey) return false;
-        
-        // Author ist immer Maintainer (OWNER-Rolle)
+        // Owner (author) ist automatisch Editor
         if (pubkey === this.author) return true;
-        
-        // Prüfe ob in Maintainer-Liste
+        // Prüfe Maintainer-Liste
         return (this.maintainers || []).includes(pubkey);
+    }
+    
+    /**
+     * Prüft ob Nutzer Viewer ist (in Follow Set)
+     */
+    isViewer(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        // Viewer-Check (inklusive Editor automatisch)
+        return this.isEditor(pubkey) || (this.followers || []).includes(pubkey);
+    }
+    
+    /**
+     * Ermittelt die Rolle eines Nutzers
+     */
+    getUserRole(pubkey?: string): BoardRole | null {
+        if (!pubkey) return null;
+        
+        // Owner
+        if (pubkey === this.author) {
+            return BoardRole.OWNER;
+        }
+        
+        // Editor (Maintainer)
+        if (this.isEditor(pubkey)) {
+            return BoardRole.EDITOR;
+        }
+        
+        // Viewer (Follower)
+        if (this.isViewer(pubkey)) {
+            return BoardRole.VIEWER;
+        }
+        
+        return null; // Kein Zugriff
     }
     
     /**
@@ -143,35 +156,23 @@ export class Board {
      * Mindestens EDITOR-Rolle erforderlich
      */
     canAddCard(pubkey?: string): boolean {
-        if (!pubkey) return false;
-        
-        // Wenn keine Maintainer: Nur Author
-        if ((this.maintainers || []).length === 0) {
-            return pubkey === this.author;
-        }
-        
-        // Sonst: Author oder Maintainer
-        return this.isMaintainer(pubkey);
+        return this.isEditor(pubkey);
     }
     
     /**
-     * NEU: Rolle eines Nutzers ermitteln
+     * Prüft ob Nutzer Board bearbeiten darf
+     * Mindestens EDITOR-Rolle erforderlich
      */
-    getUserRole(pubkey?: string): BoardRole | null {
-        if (!pubkey) return null;
-        
-        // Author ist immer OWNER
-        if (pubkey === this.author) {
-            return BoardRole.OWNER;
-        }
-        
-        // TODO: Rollen aus NIP-51 Event laden
-        // Aktuell: Alle Maintainer sind EDITOR
-        if (this.isMaintainer(pubkey)) {
-            return BoardRole.EDITOR;
-        }
-        
-        return null; // Kein Zugriff
+    canEditBoard(pubkey?: string): boolean {
+        return this.isEditor(pubkey);
+    }
+    
+    /**
+     * Prüft ob Nutzer Board löschen darf
+     * Nur OWNER kann löschen
+     */
+    canDeleteBoard(pubkey?: string): boolean {
+        return pubkey === this.author;
     }
 }
 ```
@@ -180,9 +181,9 @@ export class Board {
 
 ## 📦 BoardStore API-Methoden
 
-### 1. addMaintainer()
+### 1. addEditor() - Als Editor einladen
 
-**Zweck:** Fügt einen Nutzer zur Maintainer-Liste hinzu und publiziert Updates.
+**Zweck:** Fügt einen Nutzer als Editor (Maintainer) zum Board hinzu.
 
 ```typescript
 // src/lib/stores/kanbanStore.svelte.ts
@@ -190,28 +191,24 @@ export class Board {
 export class BoardStore {
     
     /**
-     * Fügt einen Maintainer zum aktuellen Board hinzu
+     * Fügt einen Editor (Maintainer) zum Board hinzu
      * 
-     * @param pubkey - Nostr Public Key (Hex) des neuen Maintainers
-     * @param role - Zugewiesene Rolle (OWNER, EDITOR, VIEWER)
+     * @param pubkey - Nostr Public Key (Hex) des neuen Editors
      * @throws Error wenn kein Board aktiv oder Nutzer keine Berechtigung
      */
-    public async addMaintainer(
-        pubkey: string, 
-        role: BoardRole = BoardRole.EDITOR
-    ): Promise<void> {
+    public async addEditor(pubkey: string): Promise<void> {
         // 1. Validierung
         if (!this.board) {
             throw new Error('Kein aktives Board');
         }
         
-        const currentUser = authStore.getPubkey();
-        if (!currentUser || this.board.author !== currentUser) {
-            throw new Error('Nur der Board-Owner kann Maintainer hinzufügen');
+        const currentUser = this.authStore.getPubkey();
+        if (!currentUser || !this.board.canEditBoard(currentUser)) {
+            throw new Error('Nur Editoren können neue Editoren einladen');
         }
         
-        if (this.board.isMaintainer(pubkey)) {
-            throw new Error('Nutzer ist bereits Maintainer');
+        if (this.board.isEditor(pubkey)) {
+            throw new Error('Nutzer ist bereits Editor');
         }
         
         // 2. Lokale State aktualisieren
@@ -224,76 +221,34 @@ export class BoardStore {
         this.triggerUpdate();           // localStorage
         await this.publishToNostr();    // Board Event (Kind 30301)
         
-        // 4. NIP-51 Contact List Event erstellen
-        await this.publishBoardShare(pubkey, role);
-        
-        console.log(`✅ Maintainer hinzugefügt: ${pubkey} (${role})`);
-    }
-    
-    /**
-     * Erstellt/Aktualisiert NIP-51 Contact List Event für Board-Sharing
-     */
-    private async publishBoardShare(
-        pubkey: string, 
-        role: BoardRole
-    ): Promise<void> {
-        if (!this.board) return;
-        
-        const contactListEvent = new NDKEvent(ndk);
-        contactListEvent.kind = 30051; // Categorized Contact Lists
-        
-        contactListEvent.tags = [
-            ['d', `board-${this.board.id}`],           // d-tag für Replaceable Event
-            ['p', pubkey, '', role],                   // Maintainer mit Rolle in tag[3]
-            ['title', `Board: ${this.board.name}`],    // Beschreibung
-            ['description', 'Kanban Board Sharing']
-        ];
-        
-        // Alle existierenden Maintainer hinzufügen
-        if (this.board.maintainers) {
-            this.board.maintainers.forEach(mp => {
-                if (mp !== pubkey) { // Nicht doppelt
-                    contactListEvent.tags.push(['p', mp, '', BoardRole.EDITOR]);
-                }
-            });
-        }
-        
-        contactListEvent.content = '';
-        
-        await contactListEvent.publish();
-        console.log('📤 NIP-51 Contact List Event publiziert');
+        console.log(`✅ Editor hinzugefügt: ${pubkey}`);
     }
 }
 ```
 
-### 2. removeMaintainer()
-
-**Zweck:** Entfernt einen Nutzer aus der Maintainer-Liste.
+### 2. removeEditor() - Editor entfernen
 
 ```typescript
 /**
- * Entfernt einen Maintainer vom aktuellen Board
- * 
- * @param pubkey - Nostr Public Key des zu entfernenden Maintainers
- * @throws Error wenn kein Board aktiv oder Nutzer keine Berechtigung
+ * Entfernt einen Editor vom Board
  */
-public async removeMaintainer(pubkey: string): Promise<void> {
+public async removeEditor(pubkey: string): Promise<void> {
     // 1. Validierung
     if (!this.board) {
         throw new Error('Kein aktives Board');
     }
     
-    const currentUser = authStore.getPubkey();
-    if (!currentUser || this.board.author !== currentUser) {
-        throw new Error('Nur der Board-Owner kann Maintainer entfernen');
-    }
-    
-    if (!this.board.isMaintainer(pubkey)) {
-        throw new Error('Nutzer ist kein Maintainer');
+    const currentUser = this.authStore.getPubkey();
+    if (!currentUser || !this.board.canDeleteBoard(currentUser)) {
+        throw new Error('Nur der Owner kann Editoren entfernen');
     }
     
     if (pubkey === this.board.author) {
         throw new Error('Board-Owner kann nicht entfernt werden');
+    }
+    
+    if (!this.board.isEditor(pubkey)) {
+        throw new Error('Nutzer ist kein Editor');
     }
     
     // 2. Lokale State aktualisieren
@@ -303,173 +258,414 @@ public async removeMaintainer(pubkey: string): Promise<void> {
     this.triggerUpdate();           // localStorage
     await this.publishToNostr();    // Board Event aktualisieren
     
-    // 4. NIP-51 Event aktualisieren (ohne entfernten Nutzer)
-    await this.updateBoardShares();
-    
-    console.log(`✅ Maintainer entfernt: ${pubkey}`);
-}
-
-/**
- * Aktualisiert NIP-51 Event mit aktueller Maintainer-Liste
- */
-private async updateBoardShares(): Promise<void> {
-    if (!this.board || !this.board.maintainers) return;
-    
-    const contactListEvent = new NDKEvent(ndk);
-    contactListEvent.kind = 30051;
-    
-    contactListEvent.tags = [
-        ['d', `board-${this.board.id}`],
-        ['title', `Board: ${this.board.name}`]
-    ];
-    
-    // Alle aktuellen Maintainer hinzufügen
-    this.board.maintainers.forEach(pubkey => {
-        contactListEvent.tags.push(['p', pubkey, '', BoardRole.EDITOR]);
-    });
-    
-    contactListEvent.content = '';
-    await contactListEvent.publish();
+    console.log(`✅ Editor entfernt: ${pubkey}`);
 }
 ```
 
-### 3. readBoardShares()
-
-**Zweck:** Lädt alle Board-Shares aus NIP-51 Events.
+### 3. addViewer() - Als Viewer einladen (Follow)
 
 ```typescript
 /**
- * Lädt alle Board-Shares aus Nostr (NIP-51)
- * 
- * @returns Array von BoardShare-Objekten mit Rollen
+ * Fügt einen Viewer (Follower) zum Board hinzu
+ * Nutzt NIP-51 Follow Sets (Kind 30000)
  */
-public async readBoardShares(): Promise<BoardShare[]> {
-    if (!this.board) return [];
-    
-    const currentUser = authStore.getPubkey();
-    if (!currentUser) return [];
-    
-    // NIP-51 Event laden
-    const event = await ndk.fetchEvent({
-        kinds: [30051],
-        authors: [currentUser],
-        '#d': [`board-${this.board.id}`]
-    });
-    
-    if (!event) {
-        console.log('ℹ️ Kein NIP-51 Event gefunden');
-        return [];
+public async addViewer(pubkey: string): Promise<void> {
+    // 1. Validierung
+    if (!this.board) {
+        throw new Error('Kein aktives Board');
     }
     
-    // p-tags zu BoardShare[] konvertieren
-    const shares: BoardShare[] = event.tags
-        .filter(tag => tag[0] === 'p')
-        .map(tag => ({
-            pubkey: tag[1],
-            role: (tag[3] || BoardRole.VIEWER) as BoardRole,
-            addedAt: new Date(event.created_at! * 1000).toISOString()
-        }));
+    const currentUser = this.authStore.getPubkey();
+    if (!currentUser || !this.board.canEditBoard(currentUser)) {
+        throw new Error('Nur Editoren können Viewer einladen');
+    }
     
-    console.log(`✅ ${shares.length} Board-Shares geladen`);
-    return shares;
+    if (this.board.isViewer(pubkey)) {
+        throw new Error('Nutzer ist bereits Viewer');
+    }
+    
+    // 2. NIP-51 Follow Set Event erstellen/aktualisieren
+    await this.updateBoardFollowers();
+    
+    // 3. Lokale State aktualisieren (für UI)
+    if (!this.board.followers) {
+        this.board.followers = [];
+    }
+    this.board.followers = [...this.board.followers, pubkey];
+    
+    // 4. Persistierung
+    this.triggerUpdate();
+    
+    console.log(`✅ Viewer hinzugefügt: ${pubkey}`);
 }
 
 /**
- * Lädt Maintainer-Liste und gibt sie formatiert zurück
+ * Erstellt/Aktualisiert NIP-51 Follow Set Event für Viewer
  */
-public getMaintainers(): BoardShare[] {
-    if (!this.board || !this.board.maintainers) return [];
+private async updateBoardFollowers(): Promise<void> {
+    if (!this.board) return;
     
-    // Lokal aus Board-State (für schnelle UI)
-    const shares: BoardShare[] = this.board.maintainers.map(pubkey => ({
-        pubkey,
-        role: pubkey === this.board!.author ? BoardRole.OWNER : BoardRole.EDITOR,
-        addedAt: new Date().toISOString() // Approximation, echte Zeit aus NIP-51
-    }));
+    const followEvent = new NDKEvent(this.ndk);
+    followEvent.kind = 30000; // Follow Sets
+    followEvent.tags = [
+        ['d', `board-followers-${this.board.id}`],
+        ['title', `Board Followers: ${this.board.name}`],
+        ['description', 'Users following this Kanban board']
+    ];
     
-    return shares;
+    // Alle Viewer hinzufügen (inklusive Editoren)
+    const allViewers = new Set([
+        ...(this.board.maintainers || []),
+        ...(this.board.followers || [])
+    ]);
+    
+    allViewers.forEach(pubkey => {
+        followEvent.tags.push(['p', pubkey]);
+    });
+    
+    followEvent.content = '';
+    await followEvent.publish();
+    console.log('📤 NIP-51 Follow Set Event aktualisiert');
+}
+```
+
+### 4. removeViewer() - Viewer entfernen (Unfollow)
+
+```typescript
+/**
+ * Entfernt einen Viewer vom Board
+ */
+public async removeViewer(pubkey: string): Promise<void> {
+    // 1. Validierung
+    if (!this.board) {
+        throw new Error('Kein aktives Board');
+    }
+    
+    const currentUser = this.authStore.getPubkey();
+    if (!currentUser || !this.board.canEditBoard(currentUser)) {
+        throw new Error('Nur Editoren können Viewer entfernen');
+    }
+    
+    if (!this.board.isViewer(pubkey)) {
+        throw new Error('Nutzer ist kein Viewer');
+    }
+    
+    // 2. Lokale State aktualisieren
+    // Editoren können nicht als Viewer entfernt werden
+    if (!this.board.isEditor(pubkey)) {
+        this.board.followers = this.board.followers?.filter(p => p !== pubkey) || [];
+    }
+    
+    // 3. NIP-51 Event aktualisieren
+    await this.updateBoardFollowers();
+    
+    // 4. Persistierung
+    this.triggerUpdate();
+    
+    console.log(`✅ Viewer entfernt: ${pubkey}`);
+}
+```
+
+### 5. getBoardParticipants() - Alle Teilnehmer laden
+
+```typescript
+/**
+ * Lädt alle Board-Teilnehmer (Editoren + Viewer)
+ */
+public async getBoardParticipants(): Promise<BoardShare[]> {
+    const participants: BoardShare[] = [];
+    
+    // Owner hinzufügen
+    if (this.board?.author) {
+        participants.push({
+            pubkey: this.board.author,
+            role: BoardRole.OWNER,
+            addedAt: new Date().toISOString()
+        });
+    }
+    
+    // Editoren hinzufügen
+    this.board?.maintainers?.forEach(pubkey => {
+        participants.push({
+            pubkey,
+            role: BoardRole.EDITOR,
+            addedAt: new Date().toISOString()
+        });
+    });
+    
+    // Viewer hinzufügen
+    this.board?.followers?.forEach(pubkey => {
+        // Nur hinzufügen wenn nicht bereits Editor
+        if (!this.board?.maintainers?.includes(pubkey)) {
+            participants.push({
+                pubkey,
+                role: BoardRole.VIEWER,
+                addedAt: new Date().toISOString()
+            });
+        }
+    });
+    
+    return participants;
 }
 ```
 
 ---
 
-## 🎨 UI-Komponenten
+## 🎨 UI-Komponenten & Integration
 
-### ShareDialog.svelte
+### 1. Linke Sidebar: Editor-Einladung
 
-**Zweck:** Modal zum Hinzufügen/Entfernen von Maintainern.
+**Standort:** `src/routes/cardsboard/LeftSidebarFooter.svelte`
 
 ```svelte
-<!-- src/lib/components/board/ShareDialog.svelte -->
+<script lang="ts">
+    import { Button } from "$lib/components/ui/button";
+    import { Input } from "$lib/components/ui/input";
+    import * as Dialog from "$lib/components/ui/dialog";
+    import UserPlusIcon from "@lucide/svelte/icons/user-plus";
+    import { boardStore } from "$lib/stores/kanbanStore.svelte";
+    import { authStore } from "$lib/stores/authStore.svelte";
+    
+    // State für Editor-Einladung
+    let showInviteEditor = $state(false);
+    let editorPubkey = $state('');
+    let isInviting = $state(false);
+    let errorMessage = $state('');
+    
+    // Prüfen ob current User Editor einladen darf
+    $: currentUserRole = boardStore.board?.getUserRole(authStore.getPubkey());
+    $: canInviteEditor = currentUserRole === 'owner' || currentUserRole === 'editor';
+    
+    async function handleInviteEditor() {
+        if (!editorPubkey.trim()) return;
+        
+        isInviting = true;
+        errorMessage = '';
+        
+        try {
+            await boardStore.addEditor(editorPubkey);
+            editorPubkey = '';
+            showInviteEditor = false;
+        } catch (error: any) {
+            errorMessage = error.message || 'Fehler beim Einladen';
+        } finally {
+            isInviting = false;
+        }
+    }
+</script>
 
+{#if canInviteEditor}
+    <div class="border-t pt-4 mt-4">
+        <h3 class="text-sm font-medium mb-2">Editor einladen</h3>
+        
+        <Dialog.Root bind:open={showInviteEditor}>
+            <Dialog.Trigger asChild>
+                <Button size="sm" class="w-full">
+                    <UserPlusIcon class="h-4 w-4 mr-2" />
+                    Als Editor einladen
+                </Button>
+            </Dialog.Trigger>
+            <Dialog.Content>
+                <Dialog.Header>
+                    <Dialog.Title>Als Editor einladen</Dialog.title>
+                    <Dialog.Description>
+                        Der eingeladene Nutzer kann das Board vollständig bearbeiten.
+                    </Dialog.Description>
+                </Dialog.Header>
+                
+                <div class="space-y-4">
+                    <Input 
+                        bind:value={editorPubkey}
+                        placeholder="Nostr Public Key (npub oder hex)"
+                        disabled={isInviting}
+                    />
+                    
+                    {#if errorMessage}
+                        <p class="text-sm text-destructive">{errorMessage}</p>
+                    {/if}
+                    
+                    <div class="flex gap-2">
+                        <Button 
+                            onclick={handleInviteEditor}
+                            disabled={isInviting || !editorPubkey.trim()}
+                            class="flex-1"
+                        >
+                            {isInviting ? 'Einladen...' : 'Einladen'}
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            onclick={() => showInviteEditor = false}
+                            disabled={isInviting}
+                        >
+                            Abbrechen
+                        </Button>
+                    </div>
+                </div>
+            </Dialog.Content>
+        </Dialog.Root>
+    </div>
+{/if}
+```
+
+### 2. Board Header: Follow-Button (Viewer)
+
+**Standort:** `src/routes/cardsboard/Topbar.svelte`
+
+```svelte
+<script lang="ts">
+    import { Button } from "$lib/components/ui/button";
+    import { Badge } from "$lib/components/ui/badge";
+    import EyeIcon from "@lucide/svelte/icons/eye";
+    import EyeOffIcon from "@lucide/svelte/icons/eye-off";
+    import { boardStore } from "$lib/stores/kanbanStore.svelte";
+    import { authStore } from "$lib/stores/authStore.svelte";
+    
+    // State für Follow/Unfollow
+    let isFollowing = $state(false);
+    let isUpdating = $state(false);
+    
+    // Prüfen ob current User dem Board folgt
+    $: currentUserPubkey = authStore.getPubkey();
+    $: currentUserRole = boardStore.board?.getUserRole(currentUserPubkey);
+    $: isFollowing = currentUserRole !== null; // Owner, Editor oder Viewer
+    
+    async function handleFollowUnfollow() {
+        if (!currentUserPubkey || !boardStore.board) return;
+        
+        isUpdating = true;
+        
+        try {
+            if (isFollowing) {
+                // Unfollow (nur für Viewer, nicht für Editor)
+                if (currentUserRole === 'viewer') {
+                    await boardStore.removeViewer(currentUserPubkey);
+                }
+            } else {
+                // Follow als Viewer
+                await boardStore.addViewer(currentUserPubkey);
+            }
+        } catch (error) {
+            console.error('Follow/Unfollow error:', error);
+        } finally {
+            isUpdating = false;
+        }
+    }
+</script>
+
+<header class="h-16 border-b bg-background flex items-center px-4 gap-4">
+    <!-- ... existing content ... -->
+    
+    <!-- Follow/Unfollow Button -->
+    <div class="flex items-center gap-2">
+        {#if isFollowing}
+            <Badge variant="secondary">
+                {currentUserRole === 'owner' ? 'Owner' : 
+                 currentUserRole === 'editor' ? 'Editor' : 'Viewer'}
+            </Badge>
+            
+            {#if currentUserRole === 'viewer'}
+                <Button 
+                    variant="outline" 
+                    size="sm"
+                    onclick={handleFollowUnfollow}
+                    disabled={isUpdating}
+                >
+                    <EyeOffIcon class="h-4 w-4 mr-2" />
+                    {isUpdating ? 'Entfernen...' : 'Nicht mehr folgen'}
+                </Button>
+            {/if}
+        {:else}
+            <Button 
+                variant="outline" 
+                size="sm"
+                onclick={handleFollowUnfollow}
+                disabled={isUpdating}
+            >
+                <EyeIcon class="h-4 w-4 mr-2" />
+                {isUpdating ? 'Folgen...' : 'Board folgen'}
+            </Button>
+        {/if}
+    </div>
+</header>
+```
+
+### 3. ShareDialog (Erweiterte Optionen)
+
+**Standort:** `src/lib/components/board/ShareDialog.svelte`
+
+```svelte
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog";
     import { Button } from "$lib/components/ui/button";
     import { Input } from "$lib/components/ui/input";
     import * as Select from "$lib/components/ui/select";
     import { Badge } from "$lib/components/ui/badge";
+    import { Tabs, TabsContent, TabsList, TabsTrigger } from "$lib/components/ui/tabs";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardRole, type BoardShare } from "$lib/types/sharing";
     import UserPlusIcon from "@lucide/svelte/icons/user-plus";
+    import EyeIcon from "@lucide/svelte/icons/eye";
     import TrashIcon from "@lucide/svelte/icons/trash";
-    import CopyIcon from "@lucide/svelte/icons/copy";
     
     let { open = $bindable(false) } = $props();
     
     // State
     let newUserPubkey = $state('');
     let selectedRole = $state<BoardRole>(BoardRole.EDITOR);
-    let maintainers = $state<BoardShare[]>([]);
+    let participants = $state<BoardShare[]>([]);
     let isLoading = $state(false);
     let errorMessage = $state('');
+    let activeTab = $state('editors'); // 'editors' | 'viewers'
     
-    // Maintainer-Liste laden
-    async function loadMaintainers() {
+    // Alle Teilnehmer laden
+    async function loadParticipants() {
         try {
-            maintainers = await boardStore.readBoardShares();
-            
-            // Fallback: Lokal aus Board-State
-            if (maintainers.length === 0) {
-                maintainers = boardStore.getMaintainers();
-            }
+            participants = await boardStore.getBoardParticipants();
         } catch (error) {
-            console.error('Fehler beim Laden der Maintainer:', error);
-            errorMessage = 'Maintainer konnten nicht geladen werden';
+            console.error('Fehler beim Laden der Teilnehmer:', error);
+            errorMessage = 'Teilnehmer konnten nicht geladen werden';
         }
     }
     
-    // Nutzer hinzufügen
-    async function handleAddMaintainer() {
-        if (!newUserPubkey.trim()) {
-            errorMessage = 'Bitte Public Key eingeben';
-            return;
-        }
+    // Nutzer einladen
+    async function handleInviteUser() {
+        if (!newUserPubkey.trim()) return;
         
         isLoading = true;
         errorMessage = '';
         
         try {
-            await boardStore.addMaintainer(newUserPubkey, selectedRole);
+            if (selectedRole === BoardRole.EDITOR) {
+                await boardStore.addEditor(newUserPubkey);
+            } else {
+                await boardStore.addViewer(newUserPubkey);
+            }
+            
             newUserPubkey = '';
-            await loadMaintainers();
+            await loadParticipants();
         } catch (error: any) {
-            errorMessage = error.message || 'Fehler beim Hinzufügen';
+            errorMessage = error.message || 'Fehler beim Einladen';
         } finally {
             isLoading = false;
         }
     }
     
     // Nutzer entfernen
-    async function handleRemoveMaintainer(pubkey: string) {
-        if (!confirm('Maintainer wirklich entfernen?')) return;
+    async function handleRemoveUser(pubkey: string, role: BoardRole) {
+        if (!confirm('Nutzer wirklich entfernen?')) return;
         
         isLoading = true;
         errorMessage = '';
         
         try {
-            await boardStore.removeMaintainer(pubkey);
-            await loadMaintainers();
+            if (role === BoardRole.EDITOR) {
+                await boardStore.removeEditor(pubkey);
+            } else {
+                await boardStore.removeViewer(pubkey);
+            }
+            
+            await loadParticipants();
         } catch (error: any) {
             errorMessage = error.message || 'Fehler beim Entfernen';
         } finally {
@@ -477,35 +673,35 @@ public getMaintainers(): BoardShare[] {
         }
     }
     
-    // Display Name für Pubkey holen
+    // Display Name für Pubkey
     function getDisplayName(pubkey: string): string {
         return authStore.getDisplayNameForPubkey(pubkey) || 
                `${pubkey.slice(0, 8)}...${pubkey.slice(-4)}`;
     }
     
-    // Bei Dialog-Öffnung Maintainer laden
+    // Bei Dialog-Öffnung laden
     $effect(() => {
         if (open) {
-            loadMaintainers();
+            loadParticipants();
         }
     });
 </script>
 
 <Dialog.Root bind:open>
-    <Dialog.Content class="max-w-md">
+    <Dialog.Content class="max-w-lg">
         <Dialog.Header>
             <Dialog.Title>Board teilen</Dialog.Title>
             <Dialog.Description>
-                Lade Nutzer ein, gemeinsam an diesem Board zu arbeiten.
+                Verwalte Editoren und Viewer für dieses Board.
             </Dialog.Description>
         </Dialog.Header>
         
-        <!-- Nutzer hinzufügen -->
+        <!-- Einladung -->
         <div class="space-y-4">
             <div class="flex gap-2">
                 <Input 
                     bind:value={newUserPubkey}
-                    placeholder="Nostr Public Key (npub oder hex)"
+                    placeholder="Nostr Public Key"
                     disabled={isLoading}
                 />
                 <Select.Root bind:selected={selectedRole}>
@@ -513,15 +709,21 @@ public getMaintainers(): BoardShare[] {
                         <Select.Value placeholder="Rolle" />
                     </Select.Trigger>
                     <Select.Content>
-                        <Select.Item value={BoardRole.EDITOR}>Editor</Select.Item>
-                        <Select.Item value={BoardRole.VIEWER}>Viewer</Select.Item>
+                        <Select.Item value={BoardRole.EDITOR}>
+                            <UserPlusIcon class="h-4 w-4 mr-2" />
+                            Editor
+                        </Select.Item>
+                        <Select.Item value={BoardRole.VIEWER}>
+                            <EyeIcon class="h-4 w-4 mr-2" />
+                            Viewer
+                        </Select.Item>
                     </Select.Content>
                 </Select.Root>
                 <Button 
-                    onclick={handleAddMaintainer}
+                    onclick={handleInviteUser}
                     disabled={isLoading || !newUserPubkey.trim()}
                 >
-                    <UserPlusIcon class="h-4 w-4" />
+                    Einladen
                 </Button>
             </div>
             
@@ -530,36 +732,71 @@ public getMaintainers(): BoardShare[] {
             {/if}
         </div>
         
-        <!-- Maintainer-Liste -->
-        <div class="mt-6 space-y-2">
-            <h4 class="text-sm font-medium">Zugriff ({maintainers.length})</h4>
+        <!-- Teilnehmer-Liste -->
+        <Tabs bind:value={activeTab} class="mt-6">
+            <TabsList class="grid w-full grid-cols-2">
+                <TabsTrigger value="editors">
+                    Editoren ({participants.filter(p => p.role === 'editor' || p.role === 'owner').length})
+                </TabsTrigger>
+                <TabsTrigger value="viewers">
+                    Viewer ({participants.filter(p => p.role === 'viewer').length})
+                </TabsTrigger>
+            </TabsList>
             
-            <div class="space-y-2 max-h-60 overflow-y-auto">
-                {#each maintainers as maintainer}
-                    <div class="flex items-center justify-between p-2 rounded-md border">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium">
-                                {getDisplayName(maintainer.pubkey)}
-                            </span>
-                            <Badge variant={maintainer.role === BoardRole.OWNER ? 'default' : 'secondary'}>
-                                {maintainer.role}
-                            </Badge>
+            <TabsContent value="editors" class="mt-4">
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                    {#each participants.filter(p => p.role === 'editor' || p.role === 'owner') as participant}
+                        <div class="flex items-center justify-between p-2 rounded-md border">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium">
+                                    {getDisplayName(participant.pubkey)}
+                                </span>
+                                <Badge variant={participant.role === 'owner' ? 'default' : 'secondary'}>
+                                    {participant.role}
+                                </Badge>
+                            </div>
+                            
+                            {#if participant.role !== 'owner'}
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onclick={() => handleRemoveUser(participant.pubkey, participant.role)}
+                                    disabled={isLoading}
+                                >
+                                    <TrashIcon class="h-4 w-4" />
+                                </Button>
+                            {/if}
                         </div>
-                        
-                        {#if maintainer.role !== BoardRole.OWNER}
+                    {/each}
+                </div>
+            </TabsContent>
+            
+            <TabsContent value="viewers" class="mt-4">
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                    {#each participants.filter(p => p.role === 'viewer') as participant}
+                        <div class="flex items-center justify-between p-2 rounded-md border">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium">
+                                    {getDisplayName(participant.pubkey)}
+                                </span>
+                                <Badge variant="outline">
+                                    {participant.role}
+                                </Badge>
+                            </div>
+                            
                             <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onclick={() => handleRemoveMaintainer(maintainer.pubkey)}
+                                onclick={() => handleRemoveUser(participant.pubkey, participant.role)}
                                 disabled={isLoading}
                             >
                                 <TrashIcon class="h-4 w-4" />
                             </Button>
-                        {/if}
-                    </div>
-                {/each}
-            </div>
-        </div>
+                        </div>
+                    {/each}
+                </div>
+            </TabsContent>
+        </Tabs>
         
         <Dialog.Footer>
             <Button variant="outline" onclick={() => open = false}>
@@ -570,39 +807,11 @@ public getMaintainers(): BoardShare[] {
 </Dialog.Root>
 ```
 
-### Integration in BoardHeader
-
-```svelte
-<!-- src/routes/cardsboard/Topbar.svelte -->
-
-<script lang="ts">
-    import ShareDialog from "$lib/components/board/ShareDialog.svelte";
-    import ShareIcon from "@lucide/svelte/icons/share-2";
-    
-    let showShareDialog = $state(false);
-</script>
-
-<header class="...">
-    <!-- ... existing content ... -->
-    
-    <Button 
-        variant="outline" 
-        size="sm"
-        onclick={() => showShareDialog = true}
-    >
-        <ShareIcon class="h-4 w-4 mr-2" />
-        Teilen
-    </Button>
-    
-    <ShareDialog bind:open={showShareDialog} />
-</header>
-```
-
 ---
 
-## 🔄 Nostr Event-Struktur
+## 🔄 Korrekte Nostr Event-Struktur
 
-### Board Event (Kind 30301)
+### Board Event (Kind 30301) - Editor (Maintainer)
 
 ```json
 {
@@ -612,9 +821,9 @@ public getMaintainers(): BoardShare[] {
     ["d", "board-abc123"],
     ["title", "Sprint Planning"],
     ["description", "Q4 2025 Sprint Board"],
-    ["p", "owner-pubkey-hex"],          // Author (OWNER)
-    ["p", "maintainer1-pubkey-hex"],    // Maintainer 1 (EDITOR)
-    ["p", "maintainer2-pubkey-hex"],    // Maintainer 2 (EDITOR)
+    ["p", "owner-pubkey-hex"],          // Owner/Author
+    ["p", "maintainer1-pubkey-hex"],    // Editor 1
+    ["p", "maintainer2-pubkey-hex"],    // Editor 2
     ["col", "col-1", "Backlog", "0"],
     ["col", "col-2", "In Progress", "1"]
   ],
@@ -625,19 +834,20 @@ public getMaintainers(): BoardShare[] {
 }
 ```
 
-### Contact List Event (Kind 30051) - NEU
+### Follow Set Event (Kind 30000) - Viewer (Follower)
 
 ```json
 {
-  "kind": 30051,
+  "kind": 30000,
   "created_at": 1699900000,
   "tags": [
-    ["d", "board-abc123"],                    // d-tag: board-{boardId}
-    ["title", "Board: Sprint Planning"],
-    ["description", "Kanban Board Sharing"],
-    ["p", "maintainer1-pubkey-hex", "", "editor"],   // Role in tag[3]
-    ["p", "maintainer2-pubkey-hex", "", "viewer"],
-    ["p", "maintainer3-pubkey-hex", "", "editor"]
+    ["d", "board-followers-abc123"],    // d-tag für Follow Set
+    ["title", "Board Followers: Sprint Planning"],
+    ["description", "Users following this Kanban board"],
+    ["p", "owner-pubkey-hex"],          // Owner (automatisch Viewer)
+    ["p", "maintainer1-pubkey-hex"],    // Editor (automatisch Viewer)
+    ["p", "viewer1-pubkey-hex"],        // Viewer 1
+    ["p", "viewer2-pubkey-hex"]         // Viewer 2
   ],
   "content": "",
   "pubkey": "owner-pubkey-hex",
@@ -647,10 +857,9 @@ public getMaintainers(): BoardShare[] {
 ```
 
 **Wichtig:**
-- Kind 30051 ist ein **Parametrized Replaceable Event** (NIP-33)
-- Der `d-tag` macht es eindeutig pro Board
-- Updates überschreiben automatisch alte Versionen
-- Rolle wird in `tag[3]` gespeichert (custom extension)
+- Kind 30000 ist ein **Standard Follow Set** aus NIP-51
+- p-tags in Follow Set = **Viewer-Rechte** (nur anschauen)
+- Owner und Editor sind **automatisch Viewer** (inclusion)
 
 ---
 
@@ -665,49 +874,44 @@ import { describe, it, expect, vi } from 'vitest';
 import { BoardStore } from '../kanbanStore.svelte';
 import { BoardRole } from '$lib/types/sharing';
 
-describe('BoardStore - Maintainer Management', () => {
+describe('BoardStore - 2-Layer Board Sharing', () => {
     
-    it('addMaintainer() fügt Pubkey hinzu', async () => {
+    it('addEditor() fügt Editor hinzu', async () => {
         const store = new BoardStore();
         await store.createBoard('Test Board');
         
-        await store.addMaintainer('test-pubkey-123', BoardRole.EDITOR);
+        await store.addEditor('test-editor-pubkey');
         
-        const maintainers = store.getMaintainers();
-        expect(maintainers).toHaveLength(1);
-        expect(maintainers[0].pubkey).toBe('test-pubkey-123');
-        expect(maintainers[0].role).toBe(BoardRole.EDITOR);
+        const board = store.board!;
+        expect(board.isEditor('test-editor-pubkey')).toBe(true);
+        expect(board.isViewer('test-editor-pubkey')).toBe(true);
     });
     
-    it('removeMaintainer() entfernt Pubkey', async () => {
+    it('addViewer() fügt Viewer hinzu', async () => {
         const store = new BoardStore();
         await store.createBoard('Test Board');
-        await store.addMaintainer('test-pubkey-123', BoardRole.EDITOR);
         
-        await store.removeMaintainer('test-pubkey-123');
+        await store.addViewer('test-viewer-pubkey');
         
-        const maintainers = store.getMaintainers();
-        expect(maintainers).toHaveLength(0);
+        const board = store.board!;
+        expect(board.isViewer('test-viewer-pubkey')).toBe(true);
+        expect(board.isEditor('test-viewer-pubkey')).toBe(false);
     });
     
-    it('readBoardShares() lädt NIP-51 Events', async () => {
-        // Mock NDK fetchEvent
-        vi.mock('@nostr-dev-kit/ndk', () => ({
-            fetchEvent: vi.fn().mockResolvedValue({
-                kind: 30051,
-                tags: [
-                    ['p', 'pubkey1', '', 'editor'],
-                    ['p', 'pubkey2', '', 'viewer']
-                ],
-                created_at: 1699900000
-            })
-        }));
-        
+    it('getUserRole() ermittelt korrekte Rollen', async () => {
         const store = new BoardStore();
-        const shares = await store.readBoardShares();
+        await store.createBoard('Test Board');
         
-        expect(shares).toHaveLength(2);
-        expect(shares[0].role).toBe(BoardRole.EDITOR);
+        // Owner
+        expect(store.board!.getUserRole(store.board!.author)).toBe(BoardRole.OWNER);
+        
+        // Editor
+        await store.addEditor('editor-pubkey');
+        expect(store.board!.getUserRole('editor-pubkey')).toBe(BoardRole.EDITOR);
+        
+        // Viewer
+        await store.addViewer('viewer-pubkey');
+        expect(store.board!.getUserRole('viewer-pubkey')).toBe(BoardRole.VIEWER);
     });
 });
 ```
@@ -719,89 +923,58 @@ describe('BoardStore - Maintainer Management', () => {
 
 import { test, expect } from '@playwright/test';
 
-test.describe('Board Sharing', () => {
+test.describe('2-Layer Board Sharing', () => {
     
-    test('Owner kann Maintainer hinzufügen', async ({ page, context }) => {
-        // Setup: Login als Owner
+    test('Editor-Einladung in linker Sidebar', async ({ page }) => {
         await page.goto('/cardsboard');
-        await page.click('[data-testid="share-button"]');
         
-        // Maintainer hinzufügen
-        await page.fill('[data-testid="pubkey-input"]', 'npub1test...');
-        await page.selectOption('[data-testid="role-select"]', 'editor');
-        await page.click('[data-testid="add-maintainer-button"]');
+        // Editor einladen über linke Sidebar
+        await page.click('[data-testid="invite-editor-button"]');
+        await page.fill('[data-testid="editor-pubkey-input"]', 'npub1test...');
+        await page.click('[data-testid="invite-editor-submit"]');
         
-        // Verify
-        await expect(page.locator('[data-testid="maintainer-list"]')).toContainText('npub1test');
+        // Verify Editor ist hinzugefügt
+        await expect(page.locator('[data-testid="share-dialog"]')).toContainText('Editor');
     });
     
-    test('Editor kann Karten erstellen', async ({ page }) => {
-        // TODO: Multi-Browser Setup
+    test('Follow/Unfollow Button im Header', async ({ page }) => {
+        await page.goto('/cardsboard');
+        
+        // Board folgen
+        await page.click('[data-testid="follow-board-button"]');
+        
+        // Verify Badge zeigt Viewer
+        await expect(page.locator('[data-testid="user-role-badge"]')).toContainText('Viewer');
+        
+        // Unfollow
+        await page.click('[data-testid="unfollow-board-button"]');
+        
+        // Verify Button zeigt "Folgen" wieder
+        await expect(page.locator('[data-testid="follow-board-button"]')).toContainText('Board folgen');
     });
 });
 ```
 
----
-
-## 📊 Implementierungs-Roadmap
-
-### Phase 4.1A: Core API (2-3 Tage)
-
-**Tag 1: Types & BoardStore Methods**
-- [ ] `src/lib/types/sharing.ts` erstellen
-  - BoardRole enum
-  - BoardShare interface
-- [ ] BoardStore.addMaintainer() implementieren
-- [ ] BoardStore.removeMaintainer() implementieren
-- [ ] Unit Tests schreiben
-
-**Tag 2: NIP-51 Integration**
-- [ ] publishBoardShare() implementieren
-- [ ] updateBoardShares() implementieren
-- [ ] readBoardShares() implementieren
-- [ ] Event Deserialisierung testen
-
-**Tag 3: Permission System**
-- [ ] Board.getUserRole() implementieren
-- [ ] canEditBoard(), canDeleteBoard() Methoden
-- [ ] Integration mit canAddCard()
-
-### Phase 4.1B: UI Components (2-3 Tage)
-
-**Tag 4: ShareDialog**
-- [ ] ShareDialog.svelte erstellen
-- [ ] Maintainer-Liste UI
-- [ ] Add/Remove Funktionalität
-
-**Tag 5: Integration**
-- [ ] Share-Button in Topbar
-- [ ] Maintainer-Anzeige im Board-Header
-- [ ] Error-Handling & Toasts
-
-**Tag 6: Testing**
-- [ ] E2E Tests (Playwright)
-- [ ] Manual Testing
-- [ ] Bug-Fixes
-
----
 
 ## 🔗 Referenzen
 
 ### Spezifikationen
-- **NIP-51:** Categorized Contact Lists - https://github.com/nostr-protocol/nips/blob/master/51.md
-- **NIP-33:** Parametrized Replaceable Events - https://github.com/nostr-protocol/nips/blob/master/33.md
-- **NIP-07:** Browser Extension Signing - https://github.com/nostr-protocol/nips/blob/master/07.md
+- **Kanban-NIP:** Board Events (Kind 30301) mit p-tags für Maintainer
+- **NIP-51:** Follow Sets (Kind 30000) für Viewer/Follower
+- **NIP-07:** Browser Extension Signing
+- **NIP-33:** Parametrized Replaceable Events
 
 ### Projekt-Dokumentation
-- **[ROADMAP.md](../COLLABORATION/ROADMAP.md)** - Phase 4.1 Board-Sharing Timeline
+- **[Kanban-NIP.md](../GUIDES/Kanban-NIP.md)** - Korrekter Standard für Board-Sharing
+- **[ROADMAP.md](../COLLABORATION/ROADMAP.md)** - Phase 4.1 Timeline
 - **[DEVELOPER-TASKS.md](../COLLABORATION/DEVELOPER-TASKS.md)** - Task 11 Implementierung
-- **[STORES/AUTHSTORE.md](./STORES/AUTHSTORE.md)** - AuthStore API Referenz
-- **[BoardModel.ts](../../src/lib/classes/BoardModel.ts)** - Board, Column, Card Klassen
+- **[BoardModel.ts](../../src/lib/classes/BoardModel.ts)** - Core Klassen
 - **[UX-RULES.md](../UX-RULES.md)** - shadcn-svelte UI Guidelines
 
 ### Code-Beispiele
-- **[nostrEvents.ts](../../src/lib/utils/nostrEvents.ts)** - Event Serialisierung (p-tags)
+- **[nostrEvents.ts](../../src/lib/utils/nostrEvents.ts)** - Event Serialisierung
 - **[operations.ts](../../src/lib/stores/boardstore/operations.ts)** - BoardStore Pattern
+- **[syncManager.svelte.ts](../../src/lib/stores/syncManager.svelte.ts)** - Nostr Sync
 
 ---
 
@@ -809,12 +982,13 @@ test.describe('Board Sharing', () => {
 
 | Version | Datum | Änderung |
 |---------|-------|----------|
-| 1.0 | 13.11.2025 | Initial: Vollständige Architektur-Spezifikation für Board-Sharing |
+| 2.0 | 18.11.2025 | Korrigiert: 2-Layer System (Kind 30301 + Kind 30000) |
+| 1.0 | 13.11.2025 | Initial: Fehlerhafte NIP-51 Spezifikation |
 
 ---
 
 **Status:** 📋 **READY FOR IMPLEMENTATION**  
-**Branch:** `feature/board-sharing` (zu erstellen)  
-**Geschätzter Aufwand:** 5-6 Tage (2-3 Tage Backend, 2-3 Tage UI)  
+**Branch:** `feature/board-sharing-v2` (zu erstellen)  
 **Dependencies:** AuthStore ✅, BoardModel ✅, nostrEvents.ts ✅  
+**Kernkorrektur:** Verwendung von Kind 30000 (Follow Sets) statt nicht-existentem Kind 30051  
 **Nächster Schritt:** Branch erstellen und mit Phase 4.1A starten
