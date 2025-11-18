@@ -175,9 +175,6 @@ export async function waitForBoardLoaded(page: Page) {
   await page.waitForSelector('text=Done', { timeout: 5000 });
 }
 
-/**
- * Check if user is authenticated by looking for the authenticated user dropdown
- */
 export async function isAuthenticated(page: Page): Promise<boolean> {
   try {
     // Check for the authenticated user dropdown in the sidebar
@@ -194,11 +191,8 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
   }
 }
 
-/**
- * Logout the current user
- */
 export async function logout(page: Page) {
-  const userDropdown = page.getByText('Nostr Nutzer');
+  const userDropdown = page.getByTestId('user-dropdown');
   await userDropdown.click();
   
   const logoutButton = page.getByText('Abmelden');
