@@ -23,13 +23,16 @@ jobs:
         version: 10
         
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
       
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
       
-    - name: Run application
-      run: pnpm run dev &
+    - name: Build SvelteKit
+      run: pnpm build
+
+    - name: Start server
+      run: pnpm preview &
   
     - name: Spin up relay server
       run: docker compose up -d
@@ -37,7 +40,7 @@ jobs:
     - name: Wait for server
       run: |
         for i in {1..30}; do
-          if curl -s http://localhost:5173 > /dev/null; then
+          if curl -s http://localhost:4173 > /dev/null; then
             echo "Server is up!"
             break
           fi
@@ -47,7 +50,9 @@ jobs:
 
     - name: Run Playwright tests
       run: pnpm test:e2e
-      
+      env:
+        PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4173
+
     - uses: actions/upload-artifact@v4
       if: always()
       with:
