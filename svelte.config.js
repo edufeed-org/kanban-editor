@@ -13,7 +13,11 @@ const config = {
 		}),
 		paths: {
 			base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
-		}
+		},
+		preview: {
+			host: '0.0.0.0',
+			port: 4173
+  		}
 	},
 	extensions: ['.svelte', '.svx'],
 	vitePlugin: {
