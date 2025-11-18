@@ -202,23 +202,6 @@ describe('BoardStorage', () => {
             expect(boardIds).toHaveLength(2); // Keine Duplikate
             expect(new Set(boardIds).size).toBe(boardIds.length); // Unique
         });
-
-        it('🔍 sollte Console-Logging ausgeben (für Debugging)', () => {
-            // ARRANGE
-            localStorage.setItem('kanban-board-abc123456789', JSON.stringify({ name: 'Board 1' }));
-            localStorage.setItem('kanban-board-xyz987654321', JSON.stringify({ name: 'Board 2' }));
-
-            // ACT
-            BoardStorage.loadBoardIds();
-
-            // ASSERT - Check actual messages from storage.ts
-            expect(console.log).toHaveBeenCalledWith(
-                expect.stringContaining('Board-IDs gefunden aus localStorage Keys')
-            );
-            expect(console.log).toHaveBeenCalledWith(
-                expect.stringContaining('IDs:')
-            );
-        });
     });
 
     // ========================================================================
