@@ -6,6 +6,7 @@ import { get } from 'svelte/store'
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { settingsStore } from "./settingsStore.svelte.js";
 import { getSyncManager } from "./syncManager.svelte.js";
+import { toast } from "svelte-sonner";
 
 export interface UserSession {
   pubkey: string;
@@ -61,7 +62,11 @@ export class AuthStore {
       this.isLoading = true;
 
       if (!window.nostr) {
-        throw new Error("Nostr extension not found. Install Alby or nos2x.");
+        const message = 'Nostr-Browser-Extension nicht gefunden.';
+        toast.error(message, {
+          description: 'Installiere Alby oder nos2x.',
+        });
+        return Promise.reject(message);
       }
 
       const signer = new NDKNip07Signer();
@@ -69,8 +74,9 @@ export class AuthStore {
 
       const user = await signer.user();
 
+      await user.fetchProfile();
+
       this.currentUser = user;
-      this.currentUser.profile = await user.fetchProfile() || undefined
 
       await this.saveSession(user, "nip07");
       
@@ -96,8 +102,9 @@ export class AuthStore {
 
       return user;
     } catch (error) {
-      console.error("NIP-07 login failed:", error);
-      throw error;
+      const { message = 'NIP-07 Login fehlgeschlagen' } = error as Error;
+      toast.error(message);
+      return Promise.reject(message);
     } finally {
       this.isLoading = false;
     }
@@ -113,7 +120,11 @@ export class AuthStore {
       this.isLoading = true;
 
       if (!nsec.startsWith("nsec1") || nsec.length !== 63) {
-        throw new Error("Invalid nsec format");
+        const errorMessage = "Ungültiges nsec-Format";
+        toast.error("Ungültiges nsec-Format", {
+          description: "nsec muss mit 'nsec1' beginnen und 63 Zeichen lang sein.",
+        });
+        return Promise.reject(errorMessage);
       }
 
       const signer = new NDKPrivateKeySigner(nsec);
@@ -141,8 +152,9 @@ export class AuthStore {
 
       return user;
     } catch (error) {
-      console.error("nsec login failed:", error);
-      throw error;
+      const { message = 'Nsec login fehlgeschlagen' } = error as Error;
+      toast.error(message);
+      return Promise.reject(message);
     } finally {
       this.isLoading = false;
     }

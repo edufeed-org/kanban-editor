@@ -64,7 +64,7 @@
 </script>
 
 <!-- User Section - sticky unten in der Sidebar -->
-<div class="mt-auto pt-4 border-t border-border/40">
+<div class="mt-auto pt-4 border-t border-border/40" data-testid="user-dropdown">
 	{#if isAuthenticated && currentUser}
 		<!-- User ist angemeldet -->
 		<DropdownMenu.Root>

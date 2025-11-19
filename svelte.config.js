@@ -2,6 +2,10 @@ import { mdsvex } from 'mdsvex';
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
+
+const isDev = process.argv.includes('dev');
+const isPreview = process.argv.includes('preview');
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: [vitePreprocess(), mdsvex()],
@@ -12,8 +16,8 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
-		}
+			base: isDev || isPreview || process.env.CI ? '' : (process.env.BASE_PATH || '')
+		},
 	},
 	extensions: ['.svelte', '.svx'],
 	vitePlugin: {
