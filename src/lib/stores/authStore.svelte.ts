@@ -93,6 +93,10 @@ export class AuthStore {
         const { boardStore } = await import('./kanbanStore.svelte.js');
         // Board-Author ggf. aktualisieren
         boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
         console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-07 login');
@@ -142,12 +146,27 @@ export class AuthStore {
       sessionStorage.setItem("nostr-nsec-temp", nsec);
       console.log("💾 nsec temporarily stored in sessionStorage (cleared on tab close)");
       
-      // �🔄 Update SyncManager with new signer
+      // 🔄 Update SyncManager with new signer
       try {
         getSyncManager().updateSigner(signer);
         console.log('✅ SyncManager signer updated after nsec login');
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+      
+      // 🔗 Nach erfolgreichem nsec-Login: Demo-Board Migration & Nostr Sync
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after nsec login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after nsec login:', error);
       }
 
       return user;
@@ -202,6 +221,10 @@ export class AuthStore {
       try {
         const { boardStore } = await import('./kanbanStore.svelte.js');
         boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
         console.log('[AuthStore] ✅ Boards synced from Nostr after OIDC login');

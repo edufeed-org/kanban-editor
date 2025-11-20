@@ -8,6 +8,7 @@ import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
 import { nostrEventToCard } from '../utils/nostrEvents.js';
+import { generateDTag } from '../utils/idGenerator.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
 // Module imports
@@ -96,6 +97,26 @@ export class BoardStore {
         } catch (error) {
             console.warn('⚠️ Fehler beim Laden von config.json:', error);
         }
+    }
+    
+    /**
+     * ⚡ Öffentliche Methode: Wird nach Login/Logout aufgerufen
+     * 
+     * Behandelt Demo-Board-Migration und Board-Liste-Aktualisierung
+     */
+    public onAuthChanged(): void {
+        console.log('🔄 Auth status changed - handling board migration');
+        
+        // Migriere Demo-Board falls nötig
+        this.migrateDemoBoardToRealBoard();
+        
+        // Board-IDs neu laden (um Demo-Board zu entfernen bei auth)
+        this.refreshBoardIds();
+        
+        // Update trigger für Board-Liste Reaktivität
+        this.triggerUpdate({ publish: false });
+        
+        console.log('✅ Auth change handled - board migration complete');
     }
     
     /**
@@ -263,22 +284,37 @@ export class BoardStore {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
-        // ⚡ WICHTIG: Metadata aus localStorage lesen
-        const boards = BoardStorage.getAllBoardsMetadata(this.boardIds);
+        // ⚡ BENUTZER-BASIERTE FILTERUNG
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        const isAnonymous = !currentUserPubkey;
+        
+        // Anonyme Benutzer: Nur Demo-Board anzeigen
+        if (isAnonymous) {
+            return this.getDemoBoardsForAnonymousUser();
+        }
+        
+        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board explizit ausschließen
+        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board');
+        const allBoards = BoardStorage.getAllBoardsMetadata(filteredBoardIds);
+        const userBoards = allBoards.filter(board => {
+            // Board gehört dem aktuellen Benutzer wenn:
+            // 1. author === currentUserPubkey ODER
+            // 2. maintainers enthält currentUserPubkey
+            return this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
+        });
         
         // ⚡ DEBUG: Duplikate-Check
-        const boardIdsInList = boards.map(b => b.id);
+        const boardIdsInList = userBoards.map(b => b.id);
         const duplicates = boardIdsInList.filter((id, index) => boardIdsInList.indexOf(id) !== index);
         if (duplicates.length > 0) {
             console.error(`🔴 DUPLIKATE in getAllBoards() gefunden:`, duplicates);
-            console.log('  boardIds:', this.boardIds);
-            console.log('  boards:', boards.map(b => ({ id: b.id, name: b.name })));
+            console.log('  userBoards:', userBoards.map(b => ({ id: b.id, name: b.name })));
         }
         
         // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
-        const currentBoardIndex = boards.findIndex(b => b.id === this.board.id);
+        const currentBoardIndex = userBoards.findIndex(b => b.id === this.board.id);
         if (currentBoardIndex !== -1) {
-            boards[currentBoardIndex] = {
+            userBoards[currentBoardIndex] = {
                 id: this.board.id,
                 name: this.board.name,
                 description: this.board.description,
@@ -293,7 +329,7 @@ export class BoardStore {
             };
         }
         
-        return boards;
+        return userBoards;
     }
 
     public createBoard(name: string, description?: string): string {
@@ -635,10 +671,11 @@ export class BoardStore {
     }
 
     public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
-        const allBoards = this.getAllBoards();
+        // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
+        const userBoards = this.getAllBoards();
         
         // ✅ 1. SORT by lastAccessed DESC (newest first)
-        const sorted = allBoards.sort((a, b) => {
+        const sorted = userBoards.sort((a, b) => {
             const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
             const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
             
@@ -663,6 +700,12 @@ export class BoardStore {
         
         // ✅ 3. LIMIT to maxBoardsInSidebar (unless searching)
         // User said: "alle durchsuchbar" - so no limit when query exists
+        if (!query) {
+            const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
+            return filtered.slice(0, maxBoards);
+        }
+        
+        return filtered;
         if (!query) {
             const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
             return filtered.slice(0, maxBoards);
@@ -1313,6 +1356,228 @@ export class BoardStore {
         return this.board.canDeleteBoard(currentUser || undefined);
     }
 
+    // ============================================================================
+    // DEMO BOARD & USER MANAGEMENT
+    // ============================================================================
+    
+    /**
+     * Erstellt oder lädt Demo-Board für anonyme Benutzer
+     */
+    private getDemoBoardsForAnonymousUser(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
+        const demoBoardId = 'demo-board';
+        let demoBoard = BoardStorage.loadBoard(demoBoardId);
+        
+        if (!demoBoard) {
+            // Erstelle Demo-Board mit vorgefertigtem Inhalt
+            demoBoard = this.createDemoBoard();
+            BoardStorage.saveBoard(demoBoard);
+            console.log('✅ Demo-Board für anonymen Benutzer erstellt');
+        }
+        
+        return [{
+            id: demoBoard.id,
+            name: demoBoard.name,
+            description: demoBoard.description,
+            createdAt: new Date(demoBoard.createdAt).getTime(),
+            updatedAt: demoBoard.updatedAt 
+                ? new Date(demoBoard.updatedAt).getTime() 
+                : new Date(demoBoard.createdAt).getTime(),
+            lastAccessed: demoBoard.lastAccessedAt 
+                ? new Date(demoBoard.lastAccessedAt).getTime() 
+                : new Date(demoBoard.createdAt).getTime(),
+            hasUnseenChanges: false
+        }];
+    }
+    
+    /**
+     * Erstellt ein Demo-Board mit Beispieldaten
+     */
+    private createDemoBoard(): Board {
+        const board = new Board({
+            id: 'demo-board',
+            name: '🎯 Demo-Board - Testen Sie die App!',
+            description: 'Willkommen! Dies ist ein Demo-Board zum Ausprobieren. Erstellen Sie Karten, verschieben Sie sie zwischen Spalten und testen Sie alle Funktionen. Nach der Anmeldung können Sie echte Boards erstellen.',
+            author: 'demo',
+            authorName: 'Demo User',
+            publishState: 'draft',
+            columns: []
+        });
+        
+        // Standard-Spalten hinzufügen
+        const todoColumn = board.addColumn({ name: '📋 Zu erledigen', color: 'blue' });
+        const progressColumn = board.addColumn({ name: '🔄 In Arbeit', color: 'yellow' });
+        const doneColumn = board.addColumn({ name: '✅ Erledigt', color: 'green' });
+        
+        // Beispiel-Karten hinzufügen
+        todoColumn.addCard({
+            heading: '👋 Willkommen im Demo-Board!',
+            content: 'Dies ist eine Beispielkarte. Klicken Sie darauf, um sie zu bearbeiten, oder ziehen Sie sie in eine andere Spalte.',
+            labels: ['demo', 'anleitung'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        todoColumn.addCard({
+            heading: '📝 Neue Karte erstellen',
+            content: 'Klicken Sie auf "Neue Karte" in einer Spalte, um eigene Inhalte hinzuzufügen.',
+            labels: ['tipp'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        progressColumn.addCard({
+            heading: '🚀 App erkunden',
+            content: 'Probieren Sie alle Funktionen aus: Karten bearbeiten, Kommentare hinzufügen, Labels verwenden.',
+            labels: ['in-progress'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        doneColumn.addCard({
+            heading: '🎉 Demo erfolgreich gestartet',
+            content: 'Sie haben das Demo-Board erfolgreich geladen! Melden Sie sich an, um echte Boards zu erstellen.',
+            labels: ['erfolg'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        return board;
+    }
+    
+    /**
+     * Wandelt Demo-Board in echtes Board um nach dem Login
+     */
+    public migrateDemoBoardToRealBoard(): void {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            console.warn('⚠️ Kann Demo-Board nicht migrieren: Kein authentifizierter Benutzer');
+            return;
+        }
+        
+        // Prüfe ob Benutzer bereits eigene Boards hat
+        const existingUserBoards = this.getUserBoardsForPubkey(currentUserPubkey);
+        
+        if (existingUserBoards.length > 0) {
+            // Benutzer hat bereits Boards → Demo-Board löschen
+            this.deleteDemoBoard();
+            
+            // ⚡ FIX: Demo-Board aus boardIds entfernen
+            this.boardIds = this.boardIds.filter(id => id !== 'demo-board');
+            
+            // ⚡ FIX: Zu erstem User-Board wechseln
+            if (existingUserBoards.length > 0) {
+                const firstUserBoardId = existingUserBoards[0].id;
+                this.loadBoard(firstUserBoardId);
+            }
+            
+            console.log(`✅ Demo-Board gelöscht - User hat ${existingUserBoards.length} eigene Boards, gewechselt zu: ${existingUserBoards[0]?.name}`);
+            return;
+        }
+        
+        // Benutzer hat noch keine Boards → Demo-Board in echtes Board umwandeln
+        const demoBoard = BoardStorage.loadBoard('demo-board');
+        if (demoBoard) {
+            // Aktualisiere Board-Metadaten
+            const { authorName } = this.getAuthorFields();
+            demoBoard.author = currentUserPubkey;
+            demoBoard.authorName = authorName || undefined;
+            demoBoard.maintainers = [currentUserPubkey];
+            
+            // Neuen Board-Namen und Beschreibung
+            demoBoard.name = '🏠 Mein erstes Board';
+            demoBoard.description = 'Willkommen bei Ihrem ersten echten Kanban-Board! Sie können den Namen und die Beschreibung jederzeit ändern.';
+            
+            // Neue Board-ID generieren
+            const newBoardId = generateDTag();
+            const oldId = demoBoard.id;
+            demoBoard.id = newBoardId;
+            
+            // Aktualisiere alle Karten-Autoren
+            demoBoard.columns.forEach(column => {
+                column.cards.forEach(card => {
+                    card.author = currentUserPubkey;
+                    card.authorName = authorName || undefined;
+                });
+            });
+            
+            // Speichere das neue Board
+            BoardStorage.saveBoard(demoBoard);
+            
+            // Lösche das alte Demo-Board
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('kanban-demo-board');
+            }
+            
+            // ⚡ FIX: Board-IDs korrekt aktualisieren
+            this.boardIds = [...this.boardIds.filter(id => id !== 'demo-board'), newBoardId];
+            this.board = demoBoard;
+            this._columnOrder = demoBoard.columns.map(c => c.id);
+            
+            // ⚡ FIX: Board-IDs neu laden um localStorage-Änderungen zu reflektieren
+            this.refreshBoardIds();
+            
+            this.triggerUpdate();
+            
+            console.log(`✅ Demo-Board zu echtem Board migriert: ${oldId} → ${newBoardId}`);
+            
+            // Optional: Toast-Benachrichtigung
+            if (typeof window !== 'undefined' && (window as any).toast) {
+                (window as any).toast.success('Demo-Board wurde zu Ihrem ersten echten Board!');
+            }
+        }
+    }
+    
+    /**
+     * Löscht das Demo-Board komplett
+     */
+    private deleteDemoBoard(): void {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('kanban-demo-board');
+            
+            // ⚡ FIX: Board-IDs neu laden nach Demo-Board Löschung
+            this.boardIds = this.boardIds.filter(id => id !== 'demo-board');
+            this.refreshBoardIds();
+            console.log('🗑️ Demo-Board gelöscht');
+        }
+    }
+    
+    /**
+     * Prüft ob ein Benutzer Owner oder Maintainer eines Boards ist
+     */
+    private isUserOwnerOrMaintainer(boardId: string, userPubkey: string): boolean {
+        const board = BoardStorage.loadBoard(boardId);
+        if (!board) return false;
+        
+        // Owner check
+        if (board.author === userPubkey) return true;
+        
+        // Maintainer check
+        if (board.maintainers && board.maintainers.includes(userPubkey)) return true;
+        
+        return false;
+    }
+    
+    /**
+     * Lädt alle Boards eines bestimmten Benutzers
+     */
+    private getUserBoardsForPubkey(pubkey: string): Array<{ id: string; name: string }> {
+        return this.boardIds
+            .map(id => BoardStorage.loadBoard(id))
+            .filter(board => board && (board.author === pubkey || (board.maintainers && board.maintainers.includes(pubkey))))
+            .map(board => ({ id: board!.id, name: board!.name }));
+    }
+    
+    /**
+     * Hilfsmethode: Aktueller Benutzer Pubkey
+     */
+    private getCurrentUserPubkey(): string | null {
+        try {
+            return authStore?.currentUser?.pubkey || null;
+        } catch (error) {
+            return null;
+        }
+    }
+    
     // ============================================================================
     // UTILITY METHODS
     // ============================================================================

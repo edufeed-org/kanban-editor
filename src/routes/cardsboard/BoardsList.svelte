@@ -51,6 +51,32 @@
         }
     }
 
+    // Event: Demo-Session für anonyme Benutzer erstellen
+    async function handleCreateDemoSession() {
+        isCreating = true;
+        try {
+            // Demo-Session erstellen
+            authStore.createDemoSession();
+            console.log('✅ Demo-Session erstellt');
+            
+            // ⚡ FIX: Triggere Board-Migration und Liste-Update
+            boardStore.onAuthChanged();
+            
+            // Demo-Board sollte jetzt automatisch geladen werden
+            const demoBoards = boardStore.getAllBoards();
+            if (demoBoards.length > 0) {
+                const demoBoardId = demoBoards[0].id;
+                boardStore.loadBoard(demoBoardId);
+                currentBoardId = demoBoardId;
+                console.log('✅ Demo-Board geladen:', demoBoardId);
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Erstellen der Demo-Session:', error);
+        } finally {
+            isCreating = false;
+        }
+    }
+
     // Event: Board auswählen/laden
     async function handleSelectBoard(boardId: string) {
         if (boardId === currentBoardId) {
@@ -114,23 +140,40 @@
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden">
+    <!-- Neues Board Button für authentifizierte Benutzer -->
     {#if authStore.isAuthenticated }
-    <!-- Neues Board Button -->
-    <Button
-        onclick={handleCreateBoard}
-        disabled={isCreating}
-        class="w-full gap-2"
-        variant="default"
-    >
-        {#if isCreating}
-            <LoaderIcon class="h-4 w-4 animate-spin" />
-        {:else}
-            <SquarePlusIcon class="h-4 w-4" />
-        {/if}
-        Neues Board
-    </Button>
+        <Button
+            onclick={handleCreateBoard}
+            disabled={isCreating}
+            class="w-full gap-2"
+            variant="default"
+        >
+            {#if isCreating}
+                <LoaderIcon class="h-4 w-4 animate-spin" />
+            {:else}
+                <SquarePlusIcon class="h-4 w-4" />
+            {/if}
+            Neues Board
+        </Button>
 
-    <Separator />
+        <Separator />
+    {:else}
+        <!-- Demo-Board Button für anonyme Benutzer -->
+        <Button
+            onclick={handleCreateDemoSession}
+            disabled={isCreating}
+            class="w-full gap-2"
+            variant="outline"
+        >
+            {#if isCreating}
+                <LoaderIcon class="h-4 w-4 animate-spin" />
+            {:else}
+                <CircleIcon class="h-4 w-4" />
+            {/if}
+            🎯 Demo ausprobieren
+        </Button>
+
+        <Separator />
     {/if}
 
     <!-- Suchfeld -->
@@ -145,7 +188,13 @@
 
     <!-- Boards-Liste -->
     <div class="flex-1 overflow-y-auto space-y-2 min-h-0">
-        {#if filteredBoards.length === 0}
+        {#if filteredBoards.length === 0 && !authStore.isAuthenticated}
+            <div class="flex flex-col items-center justify-center h-32 text-xs text-muted-foreground text-center space-y-2">
+                <p>👋 Willkommen!</p>
+                <p>Probieren Sie unsere Demo aus</p>
+                <p>oder melden Sie sich an.</p>
+            </div>
+        {:else if filteredBoards.length === 0}
             <div class="flex items-center justify-center h-32 text-xs text-muted-foreground">
                 {#if searchQuery.trim()}
                     Keine Boards gefunden
