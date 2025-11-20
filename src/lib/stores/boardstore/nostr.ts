@@ -153,6 +153,13 @@ export class NostrIntegration {
     }
 
     /**
+     * Gibt die NDK-Instanz zurück
+     */
+    public getNDK(): NDK | undefined {
+        return this.ndk;
+    }
+
+    /**
      * Lädt Boards des aktuellen Users aus Nostr
      */
     public async loadBoardsFromNostr(

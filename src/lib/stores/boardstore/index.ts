@@ -8,4 +8,5 @@ export { ExportImport } from './exportImport.js';
 export { BoardLearning } from './learning.js';
 export { PasteHandler } from './paste.js';
 export { ChatIntegration } from './chat.js';
+export { BoardSharingOperations } from './sharing.js';
 export type { CardItem, UIColumn } from './types.js';

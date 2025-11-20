@@ -32,6 +32,7 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import { toast } from 'svelte-sonner';
+    import { ShareButton, FollowButton } from '$lib/components/board';
 	
     
 
@@ -596,6 +597,9 @@
                 <DownloadIcon class="h-4 w-4" />
             </Button>
 
+            <!-- Board Sharing -->
+            <ShareButton boardId={boardStore.data?.id || ''} />
+            <FollowButton boardId={boardStore.data?.id || ''} />
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">

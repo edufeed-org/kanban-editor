@@ -2,6 +2,7 @@
 // REFACTORED: Hauptstore der alle Module zusammenführt
 
 import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
+import { BoardRole, type BoardShare } from '../types/sharing.js';
 import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
@@ -18,6 +19,7 @@ import {
     BoardLearning,
     PasteHandler,
     ChatIntegration,
+    BoardSharingOperations,
     type CardItem,
     type UIColumn
 } from './boardstore/index.js';
@@ -1192,6 +1194,123 @@ export class BoardStore {
 
     public get chatInstance(): Chat | null {
         return ChatIntegration.getChatInstance();
+    }
+
+    // ============================================================================
+    // BOARD SHARING & PERMISSIONS (2-Layer System)
+    // ============================================================================
+
+    /**
+     * Fügt einen Editor (Maintainer) zum Board hinzu
+     * @param pubkey - Nostr Public Key (Hex) des neuen Editors
+     */
+    public async addEditor(pubkey: string): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        await BoardSharingOperations.addEditor(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Entfernt einen Editor vom Board
+     * @param pubkey - Nostr Public Key des zu entfernenden Editors
+     */
+    public async removeEditor(pubkey: string): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        await BoardSharingOperations.removeEditor(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Fügt einen Viewer (Follower) zum Board hinzu
+     * @param pubkey - Nostr Public Key des neuen Viewers
+     */
+    public async addViewer(pubkey: string): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        await BoardSharingOperations.addViewer(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Entfernt einen Viewer vom Board
+     * @param pubkey - Nostr Public Key des zu entfernenden Viewers
+     */
+    public async removeViewer(pubkey: string): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        await BoardSharingOperations.removeViewer(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Lädt alle Board-Teilnehmer (Editoren + Viewer)
+     */
+    public async getBoardParticipants(): Promise<BoardShare[]> {
+        return await BoardSharingOperations.getBoardParticipants(
+            this.board
+        );
+    }
+
+    /**
+     * Lädt Board Followers aus NIP-51 Follow Set Events
+     */
+    public async loadBoardFollowers(): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk || !this.board.author) return;
+        
+        const followers = await BoardSharingOperations.loadBoardFollowers(
+            this.board,
+            ndk
+        );
+        
+        this.board.followers = followers;
+        this.triggerUpdate();
+    }
+
+    /**
+     * Prüft die Berechtigung des aktuellen Nutzers
+     */
+    public getCurrentUserRole(): BoardRole | null {
+        const currentUser = authStore.getPubkey();
+        return this.board.getUserRole(currentUser || undefined);
+    }
+
+    /**
+     * Prüft ob der aktuelle Nutzer Editor-Rechte hat
+     */
+    public canCurrentUserEdit(): boolean {
+        const currentUser = authStore.getPubkey();
+        return this.board.canEditBoard(currentUser || undefined);
+    }
+
+    /**
+     * Prüft ob der aktuelle Nutzer das Board löschen darf
+     */
+    public canCurrentUserDelete(): boolean {
+        const currentUser = authStore.getPubkey();
+        return this.board.canDeleteBoard(currentUser || undefined);
     }
 
     // ============================================================================
