@@ -78,7 +78,7 @@ export async function loginWithNip07(page: Page) {
     await mockNip07Extension(page);
     
     // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
 
     page.getByRole('button', { name: 'Anmelden' }).click();
     
