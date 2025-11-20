@@ -405,7 +405,6 @@
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
 			>
-				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
 					variant="default" 
@@ -440,9 +439,7 @@
 				>
 					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
-				{/if}
 				<!-- Spalten-Aktionen Popover -->
-				{#if authStore.isAuthenticated }
 				<Popover.Root bind:open={popoverOpen} onOpenChange={(open) => {
 					console.log('🔍 Popover open state changed:', open);
 					popoverOpen = open;
@@ -511,7 +508,6 @@
 						</div>
 					</Popover.Content>
 				</Popover.Root>
-				{/if}
 			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
