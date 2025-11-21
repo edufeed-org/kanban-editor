@@ -20,15 +20,31 @@
     let isCreating = $state(false);
     let isLoading = $state(false);
 
-    // Abgeleitete Boards-Liste (mit Filterung)
+    // Abgeleitete Boards-Liste (mit Filterung + geteilte Boards)
     let filteredBoards = $derived.by(() => {
         // ⚡ KRITISCH: updateTrigger für Reaktivität!
         // Ohne dies wird die Liste nicht aktualisiert bei neuen Boards von Nostr
         const trigger = boardStore.updateTrigger;
         
-        const results = boardStore.filterBoards(searchQuery);
-        // console.log(`🔍 Filtered boards: ${results.length} (query: "${searchQuery}", trigger: ${trigger})`);
-        return results;
+        // Eigene Boards + Boards bei denen User Maintainer/Follower ist
+        const ownBoards = boardStore.filterBoards(searchQuery);
+        const sharedBoards = boardStore.filterSharedBoards(searchQuery);
+        
+        // Füge isShared: false zu eigenen Boards hinzu
+        const enrichedOwnBoards = ownBoards.map(board => ({
+            ...board,
+            isShared: false,
+            userRole: 'owner'
+        }));
+        
+        // Kombiniere beide Listen und entferne Duplikate
+        const allBoards = [...enrichedOwnBoards, ...sharedBoards];
+        const uniqueBoards = allBoards.filter((board, index, self) => 
+            index === self.findIndex(b => b.id === board.id)
+        );
+        
+        // console.log(`🔍 Filtered boards: ${uniqueBoards.length} (own: ${ownBoards.length}, shared: ${sharedBoards.length}, query: "${searchQuery}", trigger: ${trigger})`);
+        return uniqueBoards;
     });
 
     // Event: Neues Board erstellen
@@ -98,17 +114,37 @@
         }
     }
 
-    // Event: Board löschen
+    // Event: Board löschen oder verlassen
     async function handleDeleteBoard(boardId: string, event: Event) {
         event.stopPropagation();
         
-        if (!confirm('⚠️ Dieses Board wirklich löschen? Die Aktion kann nicht rückgängig gemacht werden!')) {
+        // Finde das Board in der gefilterten Liste um isShared und userRole zu prüfen
+        const targetBoard = filteredBoards.find(b => b.id === boardId);
+        const isShared = targetBoard?.isShared || false;
+        const userRole = targetBoard?.userRole || 'owner';
+        
+        const actionText = isShared 
+            ? (userRole === 'owner' ? 'Board löschen' : 'Board verlassen')
+            : 'Board löschen';
+            
+        const warningText = isShared && userRole !== 'owner'
+            ? '⚠️ Dieses Board wirklich verlassen? Sie verlieren den Zugang!'
+            : '⚠️ Dieses Board wirklich löschen? Die Aktion kann nicht rückgängig gemacht werden!';
+        
+        if (!confirm(warningText)) {
             return;
         }
         
         try {
-            boardStore.deleteBoard(boardId);
-            console.log('🗑️ Board gelöscht:', boardId);
+            if (isShared && userRole !== 'owner') {
+                // Board verlassen: Nutzer aus Maintainer/Follower Liste entfernen
+                await boardStore.leaveBoard(boardId);
+                console.log('🚪 Board verlassen:', boardId);
+            } else {
+                // Normales Löschen (eigenes Board oder Owner von geteiltem Board)
+                boardStore.deleteBoard(boardId);
+                console.log('🗑️ Board gelöscht:', boardId);
+            }
             
             // Wenn das gelöschte Board das aktuelle war, wird loadBoard() automatisch ein anderes laden
             if (boardId === currentBoardId) {
@@ -118,7 +154,7 @@
                 }
             }
         } catch (error) {
-            console.error('❌ Fehler beim Löschen:', error);
+            console.error('❌ Fehler beim Löschen/Verlassen:', error);
         }
     }
 
@@ -224,6 +260,14 @@
                                 <!-- <SquareArrowRight class="active-board-indicator"/> -->
                             {/if}
                             {board.name}
+                            
+                            <!-- Shared Board Indicator -->
+                            {#if board.isShared}
+                                <span class="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px] flex-shrink-0">
+                                    {board.userRole === 'editor' ? '✏️' : '👁️'}
+                                </span>
+                            {/if}
+                            
                             {#if board.hasUnseenChanges && !isActive}
                                 <CircleIcon 
                                     class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
@@ -245,22 +289,24 @@
                         </div>
                     </button>
                     
-                    <!-- Delete Button (als absolute positioned overlay) -->
-                    <div
-                        class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                        <button
-                            onclick={(e) => handleDeleteBoard(board.id, e)}
-                            class="p-1 rounded transition-colors
-                                {isActive 
-                                    ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
-                                    : 'hover:bg-destructive hover:text-destructive-foreground'}"
-                            title="Board löschen"
-                            type="button"
+                    <!-- Delete Button (nur für eigene Boards oder wenn User Owner ist) -->
+                    {#if !board.isShared || board.userRole === 'owner'}
+                        <div
+                            class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                            <TrashIcon class="h-4 w-4" />
-                        </button>
-                    </div>
+                            <button
+                                onclick={(e) => handleDeleteBoard(board.id, e)}
+                                class="p-1 rounded transition-colors
+                                    {isActive 
+                                        ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
+                                        : 'hover:bg-destructive hover:text-destructive-foreground'}"
+                                title={board.isShared ? 'Board verlassen' : 'Board löschen'}
+                                type="button"
+                            >
+                                <TrashIcon class="h-4 w-4" />
+                            </button>
+                        </div>
+                    {/if}
                 </div>
             {/each}
         {/if}

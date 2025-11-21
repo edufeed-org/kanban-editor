@@ -46,6 +46,8 @@ export class BoardStore {
     private board = $state(this.loadFromStorage());
     private boardIds = $state<string[]>(BoardStorage.loadBoardIds());
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
+    private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string}>>([]); // Cache für geteilte Boards
+    private isLoadingSharedBoards = $state(false); // Loading-Flag für geteilte Boards
     public updateTrigger = $state(0);
     
     // 🚀 NEW: NDK Ready Signal (prevents race conditions)
@@ -110,6 +112,10 @@ export class BoardStore {
      */
     public onAuthChanged(): void {
         console.log('🔄 Auth status changed - handling board migration');
+        
+        // ⚡ NEW: Cache für geteilte Boards leeren bei Auth-Änderung
+        this.cachedSharedBoards = [];
+        this.isLoadingSharedBoards = false;
         
         // Migriere Demo-Board falls nötig
         this.migrateDemoBoardToRealBoard();
@@ -730,12 +736,107 @@ export class BoardStore {
         }
         
         return filtered;
-        if (!query) {
-            const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
-            return filtered.slice(0, maxBoards);
+    }
+
+    /**
+     * ✅ NEUE METHODE: Geteilte Boards filtern (wo User Maintainer oder Follower ist)
+     * 
+     * Diese Methode lädt Boards aus Nostr Events, bei denen der aktuelle Nutzer
+     * als Maintainer (p-tag) oder Follower (NIP-51 Follow Set) hinzugefügt wurde.
+     */
+    public filterSharedBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string}> {
+        // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
+        this.updateTrigger;
+        
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            return []; // Anonyme Nutzer haben keine geteilten Boards
         }
         
+        // Verwende gecachte geteilte Boards
+        const sharedBoards = this.cachedSharedBoards;
+        
+        // Trigger async loading of shared boards (fire-and-forget)
+        this.loadSharedBoardsAsync(currentUserPubkey);
+        
+        // ✅ FILTER by search query
+        const filtered = query 
+            ? sharedBoards.filter(board => {
+                const lowerQuery = query.toLowerCase();
+                return board.name.toLowerCase().includes(lowerQuery) ||
+                    (board.description && board.description.toLowerCase().includes(lowerQuery));
+            })
+            : sharedBoards;
+        
         return filtered;
+    }
+
+    /**
+     * ✅ HELPER: Lädt geteilte Boards asynchron aus Nostr und triggert Update
+     */
+    private async loadSharedBoardsAsync(currentUserPubkey: string): Promise<void> {
+        try {
+            const ndk = this.nostrIntegration.getNDK();
+            if (!ndk) {
+                // console.warn('⚠️ NDK nicht verfügbar für Shared Boards Loading');
+                return;
+            }
+
+            // Verhindere mehrfaches gleichzeitiges Laden
+            if (this.isLoadingSharedBoards) {
+                return;
+            }
+            this.isLoadingSharedBoards = true;
+
+            // Lade geteilte Boards aus Nostr
+            const sharedBoards = await BoardSharingOperations.loadSharedBoardsFromNostr(
+                currentUserPubkey,
+                ndk
+            );
+
+            // Cache aktualisieren und UI triggern
+            this.cachedSharedBoards = sharedBoards;
+            
+            if (sharedBoards.length > 0) {
+                console.log(`📥 ${sharedBoards.length} geteilte Boards gefunden und gecached`);
+                this.triggerUpdate({ publish: false }); // UI Update ohne Nostr Publishing
+            }
+
+        } catch (error) {
+            console.error('❌ Fehler beim Laden geteilter Boards:', error);
+        } finally {
+            this.isLoadingSharedBoards = false;
+        }
+    }
+
+    /**
+     * ✅ NEUE METHODE: Verlässt ein geteiltes Board
+     * 
+     * @param boardId - Board ID
+     */
+    public async leaveBoard(boardId: string): Promise<void> {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            throw new Error('Nutzer nicht authentifiziert');
+        }
+        
+        try {
+            const ndk = this.nostrIntegration.getNDK();
+            await BoardSharingOperations.leaveBoard(boardId, currentUserPubkey, ndk);
+            
+            // Entferne Board aus dem Cache der geteilten Boards
+            this.cachedSharedBoards = this.cachedSharedBoards.filter(b => b.id !== boardId);
+            
+            // Entferne auch aus localStorage falls vorhanden (sollte nicht der Fall sein für geteilte Boards)
+            this.boardIds = this.boardIds.filter(id => id !== boardId);
+            
+            this.triggerUpdate({ publish: false });
+            console.log(`✅ Board ${boardId} erfolgreich verlassen`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Verlassen des Boards:', error);
+            throw error;
+        }
     }
 
     /**

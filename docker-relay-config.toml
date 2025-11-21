@@ -21,5 +21,5 @@ level = "info"
 # Limits
 [limits]
 # Explicitly allow these event kinds
-event_kind_allowlist = [0, 1, 5, 30301, 30302, 20001]
+event_kind_allowlist = [0, 1, 5, 30000, 30301, 30302, 20001]
 

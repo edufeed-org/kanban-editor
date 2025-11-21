@@ -348,4 +348,127 @@ export class BoardSharingOperations {
             throw error;
         }
     }
+
+    /**
+     * Lädt alle Boards aus Nostr Events, bei denen der aktuelle Nutzer als Maintainer gelistet ist
+     * 
+     * @param currentUserPubkey - Aktueller Nutzer Pubkey
+     * @param ndk - NDK instance für Event-Loading
+     * @returns Array von geteilten Board-Metadaten
+     */
+    public static async loadSharedBoardsFromNostr(
+        currentUserPubkey: string,
+        ndk: NDK
+    ): Promise<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}>> {
+        if (!ndk || !currentUserPubkey) {
+            return [];
+        }
+        
+        try {
+            console.log('🔍 Lade geteilte Boards für Nutzer:', currentUserPubkey);
+            
+            // Suche nach Board Events (Kind 30301) wo currentUserPubkey als p-tag gelistet ist
+            const boardEvents = await ndk.fetchEvents({
+                kinds: [30301 as any], // Board Events
+                '#p': [currentUserPubkey], // Nutzer muss als p-tag gelistet sein
+                limit: 50 // Limit für Performance
+            });
+            
+            const sharedBoards: Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}> = [];
+            
+            for (const event of boardEvents) {
+                try {
+                    // Skip wenn Nutzer der Author (Owner) ist - das sind eigene Boards
+                    if (event.pubkey === currentUserPubkey) {
+                        continue;
+                    }
+                    
+                    // Board Metadaten aus Event extrahieren
+                    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+                    const title = event.tags.find(tag => tag[0] === 'title')?.[1];
+                    const description = event.tags.find(tag => tag[0] === 'description')?.[1];
+                    
+                    if (!dTag || !title) {
+                        console.warn('⚠️ Board Event ohne d-tag oder title:', event.id);
+                        continue;
+                    }
+                    
+                    // Bestimme die Rolle des Nutzers
+                    // p-tags: [0] = author, [1+] = maintainers
+                    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+                    const isAuthor = event.pubkey === currentUserPubkey;
+                    const isMaintainer = pTags.includes(currentUserPubkey);
+                    
+                    let userRole = 'viewer'; // Default
+                    if (isAuthor) {
+                        userRole = 'owner';
+                    } else if (isMaintainer) {
+                        userRole = 'editor';
+                    }
+                    
+                    // Board-Metadaten zusammenstellen
+                    const boardMetadata = {
+                        id: dTag,
+                        name: title,
+                        description: description || undefined,
+                        createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                        updatedAt: event.created_at ? event.created_at * 1000 : undefined,
+                        lastAccessed: undefined, // Nicht verfügbar für remote boards
+                        hasUnseenChanges: false, // TODO: Implementiere Unseen Changes Detection
+                        isShared: true,
+                        userRole: userRole,
+                        author: event.pubkey
+                    };
+                    
+                    sharedBoards.push(boardMetadata);
+                    
+                } catch (error) {
+                    console.error('❌ Fehler beim Parsen des Board Events:', event.id, error);
+                    continue;
+                }
+            }
+            
+            console.log(`📥 ${sharedBoards.length} geteilte Boards geladen aus ${boardEvents.size} Events`);
+            return sharedBoards;
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der geteilten Boards:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Verlässt ein geteiltes Board (entfernt den aktuellen Nutzer aus den Maintainern/Followern)
+     * 
+     * @param boardId - Board ID
+     * @param currentUserPubkey - Aktueller Nutzer Pubkey
+     * @param ndk - NDK instance für Event-Publishing
+     */
+    public static async leaveBoard(
+        boardId: string,
+        currentUserPubkey: string,
+        ndk?: NDK
+    ): Promise<void> {
+        if (!ndk || !currentUserPubkey) {
+            throw new Error('NDK oder Nutzer-Pubkey nicht verfügbar');
+        }
+        
+        try {
+            console.log('🚪 Verlasse Board:', boardId);
+            
+            // TODO: Implementiere das Entfernen des Nutzers aus dem Board
+            // Das erfordert:
+            // 1. Board Event laden
+            // 2. Nutzer aus p-tags entfernen
+            // 3. Neues Board Event publizieren (falls Owner)
+            // 4. ODER NIP-51 Follow Set aktualisieren (falls nur Follower)
+            
+            // Vorerst als Placeholder - das wird vom BoardStore.deleteBoard() behandelt
+            console.log(`✅ Board ${boardId} verlassen (Placeholder-Implementation)`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Verlassen des Boards:', error);
+            throw error;
+        }
+    }
 }
