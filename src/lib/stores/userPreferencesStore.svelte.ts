@@ -123,7 +123,11 @@ export class UserPreferencesStore {
 
 	constructor() {
 		// Guard against SSR: only attempt localStorage read in browser environment
-		if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+		// Check both globalThis (Node.js tests) and window (browser)
+		const hasLocalStorage = (typeof globalThis !== 'undefined' && globalThis.localStorage) ||
+			(typeof window !== 'undefined' && window.localStorage);
+		
+		if (hasLocalStorage) {
 			this.preferencesState = this.loadFromStorage();
 		}
 	}
@@ -134,11 +138,15 @@ export class UserPreferencesStore {
 
 	private loadFromStorage(): PreferencesState {
 		try {
-			// Robust SSR + environment guard
-			if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+			// Robust SSR + environment guard - check globalThis first (works in both browser and Node.js test environments)
+			const ls = typeof globalThis !== 'undefined' && globalThis.localStorage
+				? globalThis.localStorage
+				: (typeof window !== 'undefined' && window.localStorage ? window.localStorage : null);
+			
+			if (!ls) {
 				return this.getDefaultState();
 			}
-			const ls = window.localStorage;
+			
 			const stored = ls.getItem('user-preferences');
 			if (!stored) return this.getDefaultState();
 
@@ -159,8 +167,13 @@ export class UserPreferencesStore {
 
 	private saveToStorage(): void {
 		try {
-			if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return;
-			const ls = window.localStorage;
+			// Robust SSR + environment guard - check globalThis first (works in both browser and Node.js test environments)
+			const ls = typeof globalThis !== 'undefined' && globalThis.localStorage
+				? globalThis.localStorage
+				: (typeof window !== 'undefined' && window.localStorage ? window.localStorage : null);
+			
+			if (!ls) return;
+			
 			const stateWithPatterns: PreferencesState = {
 				...this.preferencesState,
 				learnedPatterns: Object.fromEntries(this.learnedPatterns)
