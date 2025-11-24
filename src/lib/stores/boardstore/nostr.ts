@@ -561,10 +561,17 @@ export class NostrIntegration {
                 const description = event.tags.find((t: any) => t[0] === 'description')?.[1];
                 if (!dTag || !title) return; // Ungültiges Event
 
-                // Rolle bestimmen: Wenn p-tags den Nutzer enthalten → editor sonst viewer
-                const pTags = event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
-                const isMaintainer = pTags.includes(pubkey);
-                const userRole = isMaintainer ? 'editor' : 'viewer';
+                // Teilnehmer (p-tags) extrahieren
+                const pTagsAll = event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
+                // Kanonischer Owner = erster p-tag falls vorhanden, sonst Publisher
+                const canonicalOwner = pTagsAll.length > 0 ? pTagsAll[0] : event.pubkey;
+                // Rolle relativ zum kanonischen Owner bestimmen
+                let userRole = 'viewer';
+                if (canonicalOwner === pubkey) {
+                    userRole = 'owner';
+                } else if (pTagsAll.includes(pubkey)) {
+                    userRole = 'editor';
+                }
 
                 // Spalten (optional) aus Tags extrahieren
                 const columnTags = event.tags.filter((t: any) => t[0] === 'col');
@@ -582,8 +589,8 @@ export class NostrIntegration {
                     name: title,
                     description: description || undefined,
                     columns: columns,
-                    author: event.pubkey,
-                    maintainers: pTags,
+                    author: canonicalOwner,
+                    maintainers: pTagsAll.filter((p: string) => p !== canonicalOwner),
                     createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
                     updatedAt: undefined
                 };
@@ -602,7 +609,7 @@ export class NostrIntegration {
                         updatedAt: event.created_at ? event.created_at * 1000 : undefined,
                         isShared: true,
                         userRole,
-                        author: event.pubkey
+                        author: canonicalOwner
                     });
                 }
 

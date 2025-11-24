@@ -430,7 +430,7 @@ export class BoardSharingOperations {
         try {
             console.log('🔍 Lade geteilte Boards für Nutzer:', currentUserPubkey);
             
-            // Suche nach Board Events (Kind 30301) wo currentUserPubkey als p-tag gelistet ist
+            // Suche nach Board Events (Kind 30301) wo currentUserPubkey als p-tag gelistet ist (Viewer/Editor)
             const boardEvents = await ndk.fetchEvents({
                 kinds: [30301 as any], // Board Events
                 '#p': [currentUserPubkey], // Nutzer muss als p-tag gelistet sein
@@ -441,8 +441,12 @@ export class BoardSharingOperations {
             
             for (const event of boardEvents) {
                 try {
-                    // Skip wenn Nutzer der Author (Owner) ist - das sind eigene Boards
-                    if (event.pubkey === currentUserPubkey) {
+                    // Extrahiere alle p-tags (participants)
+                    const pTagsAll = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+                    // Kanonischer Owner ist der erste p-tag, falls vorhanden, sonst der Event-Publisher
+                    const canonicalOwner = pTagsAll.length > 0 ? pTagsAll[0] : event.pubkey;
+                    // Skip eigene Boards nur wenn Nutzer der kanonische Owner ist
+                    if (canonicalOwner === currentUserPubkey) {
                         continue;
                     }
                     
@@ -456,14 +460,10 @@ export class BoardSharingOperations {
                         continue;
                     }
                     
-                    // Bestimme die Rolle des Nutzers
-                    // p-tags: [0] = author, [1+] = maintainers
-                    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-                    const isAuthor = event.pubkey === currentUserPubkey;
-                    const isMaintainer = pTags.includes(currentUserPubkey);
-                    
-                    let userRole = 'viewer'; // Default
-                    if (isAuthor) {
+                    // Bestimme Rolle des Nutzers relativ zur kanonischen Owner-Bestimmung
+                    const isMaintainer = pTagsAll.includes(currentUserPubkey) && canonicalOwner !== currentUserPubkey;
+                    let userRole = 'viewer';
+                    if (canonicalOwner === currentUserPubkey) {
                         userRole = 'owner';
                     } else if (isMaintainer) {
                         userRole = 'editor';
@@ -480,7 +480,7 @@ export class BoardSharingOperations {
                         hasUnseenChanges: false, // TODO: Implementiere Unseen Changes Detection
                         isShared: true,
                         userRole: userRole,
-                        author: event.pubkey
+                        author: canonicalOwner
                     };
                     
                     sharedBoards.push(boardMetadata);

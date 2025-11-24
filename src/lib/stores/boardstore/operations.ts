@@ -550,10 +550,18 @@ export class BoardOperations {
             currentBoard.description = boardProps.description || '';
             currentBoard.tags = boardProps.tags || [];
             
-            // ⚡ KRITISCH: Author MUSS synchronisiert werden!
-            // Sonst stimmt boardRef nicht (30301:author:id)
+            // ⚡ KRITISCH: Author MUSS synchronisiert werden, aber nicht ungeprüft überschrieben!
+            // Kanonischer Owner wird aus erstem p-tag (nostrEventToBoard) geliefert.
+            // Falls ein bestehender Author vorhanden ist und verschieden vom neuen → Warnung + Skip (drift prevention).
             if (boardProps.author) {
-                currentBoard.author = boardProps.author;
+                if (currentBoard.author && currentBoard.author !== boardProps.author) {
+                    console.warn(`⚠️ Ownership drift prevented: existing=${currentBoard.author} incoming=${boardProps.author}`);
+                } else if (!currentBoard.author) {
+                    currentBoard.author = boardProps.author;
+                } else {
+                    // Identisch → normaler Sync
+                    currentBoard.author = boardProps.author;
+                }
             }
             
             // ⚡ v4.0: CRITICAL: updatedAt synchronisieren!
