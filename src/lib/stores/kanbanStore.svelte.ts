@@ -402,10 +402,24 @@ export class BoardStore {
     }
 
     public loadBoard(boardId: string, options?: { skipLastAccessed?: boolean }): boolean {
-        const board = BoardStorage.loadBoard(boardId);
+        let board = BoardStorage.loadBoard(boardId);
         if (!board) {
-            console.error(`❌ Board ${boardId} nicht gefunden`);
-            return false;
+            // Versuch: Shared Board Rekonstruktion asynchronously (wenn über p-tag entdeckt, aber noch nicht lokal persistiert)
+            const isShared = this.cachedSharedBoards.some(b => b.id === boardId);
+            if (isShared) {
+                console.warn(`⚠️ Shared Board ${boardId} nicht lokal – starte Rekonstruktion...`);
+                this.reconstructSharedBoard(boardId).then(success => {
+                    if (success) {
+                        console.log(`🔁 Rekonstruktion abgeschlossen – lade Board ${boardId} erneut`);
+                        this.loadBoard(boardId, { skipLastAccessed: true });
+                    } else {
+                        console.error(`❌ Rekonstruktion für Shared Board ${boardId} fehlgeschlagen`);
+                    }
+                });
+            } else {
+                console.error(`❌ Board ${boardId} nicht gefunden`);
+            }
+            return false; // Aktueller synchroner Aufruf schlägt fehl; bei Erfolg wird später reload ausgeführt
         }
 
         this.board = board;
@@ -438,6 +452,49 @@ export class BoardStore {
         this.loadCardsFromNostr(board);
         
         return true;
+    }
+
+    /**
+     * Rekonstruiert ein geteiltes Board aus einem Nostr Event falls es nur im Shared-Cache existiert.
+     * Persistiert das Board unter 'kanban-{id}' damit loadBoard() funktioniert und Karten nachgeladen werden können.
+     * Rückgabe: true wenn Rekonstruktion erfolgreich oder bereits vorhanden, sonst false.
+     */
+    private async reconstructSharedBoard(boardId: string): Promise<boolean> {
+        // Bereits vorhanden?
+        const existing = BoardStorage.loadBoard(boardId);
+        if (existing) return true;
+
+        const sharedMeta = this.cachedSharedBoards.find(b => b.id === boardId);
+        if (!sharedMeta) return false;
+
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.warn(`⚠️ NDK nicht initialisiert – Rekonstruktion von ${boardId} verschoben`);
+            return false;
+        }
+
+        const author = sharedMeta.author;
+        const filter: any = author
+            ? { kinds: [30301], authors: [author], '#d': [boardId] }
+            : { kinds: [30301], '#d': [boardId] };
+        try {
+            const event = await ndk.fetchEvent(filter);
+            if (!event) {
+                console.warn(`⚠️ Kein Remote-Event für Shared Board ${boardId} gefunden`);
+                return false;
+            }
+            const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+            const boardProps = nostrEventToBoard(event);
+            if (!boardProps.id) return false;
+            const reconstructed = new Board(boardProps);
+            BoardStorage.saveBoard(reconstructed);
+            this.refreshBoardIds();
+            console.log(`🛠️ Rekonstruiertes Shared Board gespeichert: ${reconstructed.name} (${reconstructed.id})`);
+            return true;
+        } catch (error) {
+            console.error(`❌ Fehler bei Rekonstruktion von Shared Board ${boardId}:`, error);
+            return false;
+        }
     }
 
     public deleteBoard(boardId?: string): boolean {
@@ -1554,6 +1611,10 @@ export class BoardStore {
         }
         
         const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('❌ NDK Instanz nicht verfügbar – addEditor abgebrochen');
+            throw new Error('NDK nicht verfügbar für addEditor');
+        }
         await BoardSharingOperations.addEditor(
             this.board,
             pubkey,
@@ -1578,6 +1639,10 @@ export class BoardStore {
         }
         
         const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('❌ NDK Instanz nicht verfügbar – removeEditor abgebrochen');
+            throw new Error('NDK nicht verfügbar für removeEditor');
+        }
         await BoardSharingOperations.removeEditor(
             this.board,
             pubkey,
