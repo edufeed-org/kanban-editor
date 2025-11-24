@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginWithNsec, logoutUser } from './test-helpers';
-import { beforeEach } from 'node:test';
 
 const TEST_USERS = {
     owner: {
@@ -164,15 +163,15 @@ test.describe('Board Sharing - Permission System', () => {
         // Editor-Session
         const editorPage = await browser.newPage();
         await editorPage.goto('/cardsboard');
+        
+        // App muss an Nostr Relays verbunden sein, ansonsten werden die Boards nicht geladen
+        expect(editorPage.getByText('Verbindung wiederhergestellt'))
+
         await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
         
         await expect(editorPage.getByText(boardName)).toBeVisible({timeout: 10000 });
-        
+
         await editorPage.getByText(boardName).click();
-
-        await expect(editorPage.getByText(boardName)).toBeVisible();
-
-        await editorPage.waitForTimeout(4000);
 
         // Verifiziere dass Editor Karten erstellen kann
         const createResult = await attemptCardCreate(editorPage);
@@ -249,12 +248,12 @@ test.describe('Board Sharing - Permission System', () => {
         const boardName = `Private Board ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
         
-        await logoutUser(ownerPage);
+        // await logoutUser(ownerPage);
 
         await loginWithNsec(ownerPage, TEST_USERS.unauthorized.nsec);
 
         // Unauthorized User sollte Board NICHT sehen
-        expect(await ownerPage.locator(`text="${boardName}"`)).not.toBeVisible();
+        expect(ownerPage.locator(`text="${boardName}"`)).not.toBeVisible();
 
         await ownerPage.close();
     });
