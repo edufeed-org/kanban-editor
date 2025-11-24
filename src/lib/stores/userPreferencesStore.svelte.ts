@@ -55,7 +55,9 @@ export class UserPreferencesStore {
 	// 1️⃣ REACTIVE STATE (Svelte 5 Runes)
 	// ========================================
 
-	private preferencesState = $state<PreferencesState>(this.loadFromStorage());
+	// IMPORTANT: Initialize with default to avoid SSR localStorage access during module import.
+	// Actual loading from storage is deferred to constructor when running in browser.
+	private preferencesState = $state<PreferencesState>(this.getDefaultState());
 	private updateTrigger = $state(0);
 	
 	/**
@@ -120,8 +122,10 @@ export class UserPreferencesStore {
 	// ========================================
 
 	constructor() {
-		// Auto-load from localStorage on instantiation
-		this.preferencesState = this.loadFromStorage();
+		// Guard against SSR: only attempt localStorage read in browser environment
+		if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+			this.preferencesState = this.loadFromStorage();
+		}
 	}
 
 	// ========================================
@@ -129,60 +133,41 @@ export class UserPreferencesStore {
 	// ========================================
 
 	private loadFromStorage(): PreferencesState {
-		// Note: In tests, localStorage is mocked via vitest-setup-server.ts
-		// In SSR, localStorage doesn't exist - catch block handles it
 		try {
-			// SSR Check: localStorage doesn't exist on server
-			if (typeof localStorage === 'undefined') {
+			// Robust SSR + environment guard
+			if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
 				return this.getDefaultState();
 			}
-			
-			const stored = localStorage.getItem('user-preferences');
-			if (!stored) {
-				return this.getDefaultState();
-			}
+			const ls = window.localStorage;
+			const stored = ls.getItem('user-preferences');
+			if (!stored) return this.getDefaultState();
 
 			const parsed = JSON.parse(stored) as PreferencesState;
-
-			// Migration logic (wenn Version unterschiedlich)
 			if (parsed.version !== '1.0') {
 				console.warn('⚠️ UserPreferences version mismatch, using defaults');
 				return this.getDefaultState();
 			}
-
-			// Lade learnedPatterns aus localStorage (Record → Map conversion)
 			if (parsed.learnedPatterns) {
 				this.learnedPatterns = new Map(Object.entries(parsed.learnedPatterns));
 			}
-
 			return parsed;
 		} catch (error) {
-			// Handles both SSR (no localStorage) and corrupted data
-			console.error('❌ Failed to load user preferences:', error);
+			console.error('❌ Failed to load user preferences (guarded):', error);
 			return this.getDefaultState();
 		}
 	}
 
 	private saveToStorage(): void {
-		// Note: In tests (Node.js), localStorage is mocked via vitest-setup-server.ts
-		// In browser, localStorage exists natively
-		// No window check needed - if localStorage doesn't exist, catch block handles it
 		try {
-			// SSR Check: localStorage doesn't exist on server
-			if (typeof localStorage === 'undefined') {
-				return;
-			}
-			
-			// Convert learnedPatterns Map → Record für JSON serialization
+			if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return;
+			const ls = window.localStorage;
 			const stateWithPatterns: PreferencesState = {
 				...this.preferencesState,
 				learnedPatterns: Object.fromEntries(this.learnedPatterns)
 			};
-			
-			const serialized = JSON.stringify(stateWithPatterns);
-			localStorage.setItem('user-preferences', serialized);
+			ls.setItem('user-preferences', JSON.stringify(stateWithPatterns));
 		} catch (error) {
-			console.error('❌ Failed to save user preferences:', error);
+			console.error('❌ Failed to save user preferences (guarded):', error);
 		}
 	}
 

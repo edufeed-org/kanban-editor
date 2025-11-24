@@ -46,7 +46,7 @@ export class BoardStore {
     private board = $state(this.loadFromStorage());
     private boardIds = $state<string[]>(BoardStorage.loadBoardIds());
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
-    private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string}>>([]); // Cache für geteilte Boards
+    private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}>>([]); // Cache für geteilte Boards (inkl. author)
     private isLoadingSharedBoards = $state(false); // Loading-Flag für geteilte Boards
     public updateTrigger = $state(0);
     
@@ -744,7 +744,7 @@ export class BoardStore {
      * Diese Methode lädt Boards aus Nostr Events, bei denen der aktuelle Nutzer
      * als Maintainer (p-tag) oder Follower (NIP-51 Follow Set) hinzugefügt wurde.
      */
-    public filterSharedBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string}> {
+    public filterSharedBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}> {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
@@ -769,6 +769,36 @@ export class BoardStore {
             : sharedBoards;
         
         return filtered;
+    }
+
+    /**
+     * ⭐ NEU (Board-Sharing v1): Direkter Handler für eingehende Shared Board Events
+     * Wird von NostrIntegration.subscribeToUpdates(sharedSub) aufgerufen, wenn ein Board-Event
+     * mit p-tag des aktuellen Nutzers eintrifft, dessen Author != aktueller Nutzer ist.
+     * Fügt das Board, falls noch nicht vorhanden, zu cachedSharedBoards hinzu und triggert ein UI-Update.
+     */
+    public handleSharedBoardEvent(eventData: { id: string; name: string; description?: string; createdAt: number; updatedAt?: number; isShared: boolean; userRole: string; author?: string }): void {
+        const exists = this.cachedSharedBoards.some(b => b.id === eventData.id);
+        if (!exists) {
+            this.cachedSharedBoards = [
+                ...this.cachedSharedBoards,
+                {
+                    id: eventData.id,
+                    name: eventData.name,
+                    description: eventData.description,
+                    createdAt: eventData.createdAt,
+                    updatedAt: eventData.updatedAt,
+                    lastAccessed: undefined,
+                    hasUnseenChanges: false,
+                    isShared: true,
+                    userRole: eventData.userRole,
+                    author: eventData.author
+                }
+            ];
+            // Nur UI Refresh, kein Publish nötig
+            this.triggerUpdate({ publish: false });
+            console.log(`✨ Shared Board hinzugefügt (auto): ${eventData.name} (${eventData.id})`);
+        }
     }
 
     /**

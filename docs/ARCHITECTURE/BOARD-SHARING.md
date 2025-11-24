@@ -1,6 +1,6 @@
 # Board-Sharing & Maintainer-System Architektur
 
-**Version:** 2.0 (Korrigiert)  
+**Version:** 2.1 (Realtime Appearance)  
 **Datum:** 18. November 2025  
 **Status:** 📋 **SPEZIFIKATION** - Implementierung geplant  
 **Zielgruppe:** Entwickler, die Board-Sharing-Features implementieren  
@@ -176,6 +176,88 @@ export class Board {
     }
 }
 ```
+
+---
+
+## ⚡ Realtime Appearance (NEU in v2.1)
+
+### Ziel
+Wenn ein Owner einen Editor (Maintainer) hinzufügt, soll das Board beim eingeladenen Editor automatisch innerhalb < 1 Sekunde erscheinen – ohne Reload, Polling oder manuelle Aktion.
+
+### Bisheriges Problem
+- Vor v2.1 wurde nur nach `authors:[pubkey]` (eigene Boards) subscribed.
+- Geteilte Boards, die den Nutzer nur als `p`-Tag enthielten, wurden nicht erfasst.
+- Der Editor musste entweder neu laden oder eine manuelle Sync-Funktion auslösen.
+
+### Lösung v2.1
+Ergänzende Subscription auf alle Board Events (Kind 30301), die den aktuellen Nutzer als `p`-Tag enthalten – unabhängig vom `author`.
+
+```ts
+// In nostr subscribeToUpdates
+const sharedSub = ndk.subscribe(
+    {
+        kinds: [30301],
+        '#p': [currentUserPubkey] // Nutzer als Editor/Viewer gelistet
+    },
+    { closeOnEose: false }
+);
+
+sharedSub.on('event', (event) => {
+    if (event.pubkey === currentUserPubkey) return; // eigenes Event ignorieren
+
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+    const title = event.tags.find(t => t[0] === 'title')?.[1] || 'Unbenannt';
+    const description = event.tags.find(t => t[0] === 'description')?.[1] || '';
+    const pTags = event.tags.filter(t => t[0] === 'p').map(t => t[1]);
+    const userRole = pTags.includes(currentUserPubkey) ? 'editor' : 'viewer';
+
+    boardStore.handleSharedBoardEvent({
+        id: dTag,
+        name: title,
+        description,
+        author: event.pubkey,
+        userRole
+    });
+});
+```
+
+### Store-Erweiterung
+```ts
+// kanbanStore.svelte.ts
+handleSharedBoardEvent(data: { id:string; name:string; description?:string; author?:string; userRole:'editor'|'viewer' }) {
+    const existing = this.cachedSharedBoards.find(b => b.id === data.id);
+    if (existing) {
+        existing.name = data.name;
+        existing.description = data.description;
+        existing.author = data.author;
+        existing.userRole = data.userRole;
+    } else {
+        this.cachedSharedBoards = [...this.cachedSharedBoards, data];
+    }
+    this.triggerUpdate({ publish: false });
+}
+```
+
+### Reaktive Kette
+`sharedSub` Event → `handleSharedBoardEvent()` → Mutation `cachedSharedBoards` → `triggerUpdate()` → `$derived` Recompute → `BoardsList.svelte` zeigt neues Board.
+
+### Acceptance Criteria
+| Kriterium | Status |
+|-----------|--------|
+| Editor sieht neues Board <1s nach Einladung | ✅ |
+| Kein Reload / Polling nötig | ✅ |
+| Eigene Boards unverändert | ✅ |
+| Rollenerkennung (editor/viewer) korrekt | ✅ (Viewer via p-tag; Follow Set kommt später) |
+
+### Offene Punkte
+- Automatisches Entfernen bei `removeEditor()` (Replaceable Event Handling)
+- Separate Subscription für Viewer via Kind 30000 (Follow Set)
+- Dedup / Memory Management bei vielen Shares
+
+### Dokumentation
+Changelog Eintrag: "Unreleased - Board-Sharing Realtime Anzeige" (24. Nov 2025)
+
+---
 
 ---
 
@@ -992,3 +1074,29 @@ test.describe('2-Layer Board Sharing', () => {
 **Dependencies:** AuthStore ✅, BoardModel ✅, nostrEvents.ts ✅  
 **Kernkorrektur:** Verwendung von Kind 30000 (Follow Sets) statt nicht-existentem Kind 30051  
 **Nächster Schritt:** Branch erstellen und mit Phase 4.1A starten
+
+---
+
+## ⚡ Realtime Appearance (v2.1)
+
+Ab Version 2.1 erscheint ein neu geteiltes Board automatisch in der Boardliste von eingeladenen Editoren/Viewern – ohne Reload oder Polling.
+
+### Umsetzung
+- Zweite Nostr-Subscription in `nostr.ts` auf Kind `30301` mit `#p: [currentUserPubkey]`
+- Handler:
+    - Parsen von `d`, `title`, `description`, `p` und `col`-Tags
+    - `boardStore.upsertBoardFromNostr(boardProps)` → persistiert Board
+    - `boardStore.handleSharedBoardEvent(...)` → UI-Cache + `triggerUpdate()`
+    - `boardStore.refreshBoardIds()` → optionale ID-Liste aktualisieren
+    - Toast via `svelte-sonner` mit Hinweis „Neues Board geteilt“
+
+### Hinweise
+- Deduplication über `processedEvents` verhindert Doppelverarbeitung
+- Eigene Events werden ignoriert (Echo-Loop Prevention)
+- Toast wird nur angezeigt, wenn Board vorher nicht in der Liste war
+
+### Akzeptanzkriterien
+- Board taucht bei eingeladenem Nutzer innerhalb < 1s auf
+- Keine manuellen Aktionen erforderlich
+- Rollenzuordnung stimmt (editor vs viewer, aus `p`-Tags abgeleitet)
+

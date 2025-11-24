@@ -2,6 +2,7 @@
 // Nostr-Integration und Event-Publishing
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
+import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
@@ -530,6 +531,110 @@ export class NostrIntegration {
         });
 
         this.boardSubscription = sub;
+
+        // =============================================================
+        // ⭐ NEU (Board-Sharing v1): Separate subscription für geteilte Boards
+        //    Holt Board-Events (Kind 30301), bei denen der aktuelle Nutzer
+        //    als p-tag (Maintainer/Viewer) eingetragen ist, aber NICHT Author ist.
+        //    Dadurch taucht ein neu geteiltes Board unmittelbar in der Liste auf,
+        //    ohne Polling oder manuelles Reload.
+        // =============================================================
+        const sharedSub = this.ndk.subscribe(
+            {
+                kinds: [30301] as number[],
+                '#p': [pubkey], // Nutzer muss als p-tag gelistet sein
+                since: sevenDaysAgo
+            } as any,
+            { closeOnEose: false }
+        );
+
+        sharedSub.on('event', async (event: any) => {
+            try {
+                // Dedup + Guards
+                if (event.kind !== 30301) return;
+                if (event.pubkey === pubkey) return; // eigene Events ignorieren
+                if (this.processedEvents.has(event.id)) return;
+
+                // Extrahiere Basisdaten
+                const dTag = event.tags.find((t: any) => t[0] === 'd')?.[1];
+                const title = event.tags.find((t: any) => t[0] === 'title')?.[1];
+                const description = event.tags.find((t: any) => t[0] === 'description')?.[1];
+                if (!dTag || !title) return; // Ungültiges Event
+
+                // Rolle bestimmen: Wenn p-tags den Nutzer enthalten → editor sonst viewer
+                const pTags = event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
+                const isMaintainer = pTags.includes(pubkey);
+                const userRole = isMaintainer ? 'editor' : 'viewer';
+
+                // Spalten (optional) aus Tags extrahieren
+                const columnTags = event.tags.filter((t: any) => t[0] === 'col');
+                const columns: ColumnProps[] = columnTags.map((t: any) => ({
+                    id: t[1],
+                    name: t[2] || 'Column',
+                    color: t[4] || undefined,
+                    cards: []
+                }));
+
+                // BoardProps aus Event ableiten und in Store upserten (persistiert + ID-Liste aktualisierbar)
+                const boardProps: BoardProps = {
+                    id: dTag,
+                    eventId: event.id,
+                    name: title,
+                    description: description || undefined,
+                    columns: columns,
+                    author: event.pubkey,
+                    maintainers: pTags,
+                    createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                    updatedAt: undefined
+                };
+
+                if (typeof boardStore?.upsertBoardFromNostr === 'function') {
+                    boardStore.upsertBoardFromNostr(boardProps); // publish: false (secondary)
+                }
+
+                // Sofort in Shared-Cache eintragen für UI (BoardsList)
+                if (typeof boardStore?.handleSharedBoardEvent === 'function') {
+                    boardStore.handleSharedBoardEvent({
+                        id: dTag,
+                        name: title,
+                        description: description || undefined,
+                        createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                        updatedAt: event.created_at ? event.created_at * 1000 : undefined,
+                        isShared: true,
+                        userRole,
+                        author: event.pubkey
+                    });
+                }
+
+                // Optional: Board-Liste neu laden, falls UI von IDs scannt
+                if (typeof boardStore?.refreshBoardIds === 'function') {
+                    boardStore.refreshBoardIds();
+                }
+
+                // Toast nur anzeigen, wenn Board neu ist (nicht bereits in Liste)
+                try {
+                    const existingShared = typeof boardStore?.filterSharedBoards === 'function'
+                        ? boardStore.filterSharedBoards('')
+                        : [];
+                    const alreadyThere = Array.isArray(existingShared) && existingShared.some((b: any) => b.id === dTag);
+                    if (!alreadyThere) {
+                        const { toast } = await import('svelte-sonner');
+                        const ownerShort = `${event.pubkey.slice(0, 8)}...${event.pubkey.slice(-4)}`;
+                        toast.success('Neues Board geteilt', {
+                            description: `${ownerShort} hat "${title}" mit dir geteilt`,
+                        });
+                    }
+                } catch (toastErr) {
+                    // Toast ist best-effort; Fehler still schlucken
+                }
+
+                this.processedEvents.add(event.id);
+            } catch (error) {
+                console.warn('⚠️ Fehler beim Verarbeiten eines Shared Board Events:', error);
+            }
+        });
+
+        // Keine Speicherung der Subscription nötig (fire-and-forget) – optional könnte man cleanup hinzufügen.
     }
 
     /**

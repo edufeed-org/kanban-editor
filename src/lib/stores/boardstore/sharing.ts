@@ -5,7 +5,7 @@ import { Board } from '../../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../../types/sharing.js';
 import { authStore } from '../authStore.svelte.js';
 import type NDK from '@nostr-dev-kit/ndk';
-import { NDKEvent } from '@nostr-dev-kit/ndk';
+import { NDKEvent, nip19 } from '@nostr-dev-kit/ndk';
 
 export class BoardSharingOperations {
     
@@ -21,8 +21,23 @@ export class BoardSharingOperations {
     public static async addEditor(
         board: Board,
         pubkey: string,
-        ndk?: NDK
+        ndk: NDK
     ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK Instanz erforderlich für addEditor (kein Publish ohne NDK)');
+        }
+        // Normalisiere npub → hex falls nötig
+        let normalizedPubkey = pubkey;
+        if (pubkey.startsWith('npub')) {
+            try {
+                const decoded = nip19.decode(pubkey);
+                if (typeof decoded.data === 'string') {
+                    normalizedPubkey = decoded.data;
+                }
+            } catch (e) {
+                console.warn('⚠️ Konnte npub nicht decodieren, verwende Originalwert:', pubkey, e);
+            }
+        }
         // 1. Validierung
         if (!board) {
             throw new Error('Kein aktives Board');
@@ -33,7 +48,7 @@ export class BoardSharingOperations {
             throw new Error('Nur Editoren können neue Editoren einladen');
         }
         
-        if (board.isEditor(pubkey)) {
+        if (board.isEditor(normalizedPubkey)) {
             throw new Error('Nutzer ist bereits Editor');
         }
         
@@ -41,22 +56,20 @@ export class BoardSharingOperations {
         if (!board.maintainers) {
             board.maintainers = [];
         }
-        board.maintainers = [...board.maintainers, pubkey];
+        board.maintainers = [...board.maintainers, normalizedPubkey];
         
         // 3. Nostr Event publizieren (Board Update)
-        if (ndk) {
-            try {
-                await this.publishBoardUpdate(board, ndk);
-                console.log(`🛰️ Board Event mit neuem Editor publiziert`);
-            } catch (error) {
-                console.error('❌ Fehler beim Publizieren des Board-Events:', error);
-                // Rollback
-                board.maintainers = board.maintainers.filter(p => p !== pubkey);
-                throw new Error('Fehler beim Publizieren des Board-Updates');
-            }
+        try {
+            await this.publishBoardUpdate(board, ndk);
+            console.log(`🛰️ Board Event mit neuem Editor publiziert (p-tags=${board.maintainers?.length || 0} maintainers, followers=${board.followers?.length || 0})`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Board-Events:', error);
+            // Rollback
+            board.maintainers = board.maintainers.filter(p => p !== normalizedPubkey);
+            throw new Error('Fehler beim Publizieren des Board-Updates');
         }
         
-        console.log(`✅ Editor hinzugefügt: ${pubkey}`);
+        console.log(`✅ Editor hinzugefügt: ${normalizedPubkey}`);
     }
 
     /**
@@ -65,8 +78,11 @@ export class BoardSharingOperations {
     public static async removeEditor(
         board: Board,
         pubkey: string,
-        ndk?: NDK
+        ndk: NDK
     ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK Instanz erforderlich für removeEditor');
+        }
         // 1. Validierung
         if (!board) {
             throw new Error('Kein aktives Board');
@@ -89,16 +105,14 @@ export class BoardSharingOperations {
         board.maintainers = board.maintainers?.filter(p => p !== pubkey) || [];
         
         // 3. Nostr Event publizieren (Board Update)
-        if (ndk) {
-            try {
-                await this.publishBoardUpdate(board, ndk);
-                console.log(`🛰️ Board Event ohne Editor publiziert`);
-            } catch (error) {
-                console.error('❌ Fehler beim Publizieren des Board-Events:', error);
-                // Rollback
-                board.maintainers = [...board.maintainers, pubkey];
-                throw new Error('Fehler beim Publizieren des Board-Updates');
-            }
+        try {
+            await this.publishBoardUpdate(board, ndk);
+            console.log(`🛰️ Board Event ohne Editor publiziert (maintainers=${board.maintainers.length}, followers=${board.followers?.length || 0})`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Board-Events:', error);
+            // Rollback
+            board.maintainers = [...board.maintainers, pubkey];
+            throw new Error('Fehler beim Publizieren des Board-Updates');
         }
         
         console.log(`✅ Editor entfernt: ${pubkey}`);
@@ -111,8 +125,23 @@ export class BoardSharingOperations {
     public static async addViewer(
         board: Board,
         pubkey: string,
-        ndk?: NDK
+        ndk: NDK
     ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK Instanz erforderlich für addViewer');
+        }
+        // Normalisiere npub → hex falls nötig
+        let normalizedPubkey = pubkey;
+        if (pubkey.startsWith('npub')) {
+            try {
+                const decoded = nip19.decode(pubkey);
+                if (typeof decoded.data === 'string') {
+                    normalizedPubkey = decoded.data;
+                }
+            } catch (e) {
+                console.warn('⚠️ Konnte npub nicht decodieren, verwende Originalwert:', pubkey, e);
+            }
+        }
         // 1. Validierung
         if (!board) {
             throw new Error('Kein aktives Board');
@@ -123,7 +152,7 @@ export class BoardSharingOperations {
             throw new Error('Nur Editoren können Viewer einladen');
         }
         
-        if (board.isViewer(pubkey)) {
+        if (board.isViewer(normalizedPubkey)) {
             throw new Error('Nutzer ist bereits Viewer');
         }
         
@@ -131,22 +160,31 @@ export class BoardSharingOperations {
         if (!board.followers) {
             board.followers = [];
         }
-        board.followers = [...board.followers, pubkey];
+        board.followers = [...board.followers, normalizedPubkey];
         
         // 3. NIP-51 Follow Set Event erstellen/aktualisieren
-        if (ndk) {
-            try {
-                await this.updateBoardFollowers(board, ndk);
-                console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
-            } catch (error) {
-                console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
-                // Rollback
-                board.followers = board.followers.filter(p => p !== pubkey);
-                throw new Error('Fehler beim Publizieren des Follow Set Updates');
-            }
+        try {
+            await this.updateBoardFollowers(board, ndk);
+            console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
+            // Rollback
+            board.followers = board.followers.filter(p => p !== normalizedPubkey);
+            throw new Error('Fehler beim Publizieren des Follow Set Updates');
+        }
+
+        // 4. Board Event publizieren damit Viewer das Board via #p Subscription sieht
+        try {
+            await this.publishBoardUpdate(board, ndk);
+            console.log(`🛰️ Board Event mit neuem Viewer publiziert (maintainers=${board.maintainers?.length || 0}, followers=${board.followers.length})`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Board Events für Viewer:', error);
+            // Rollback follower entfernen
+            board.followers = board.followers.filter(p => p !== normalizedPubkey);
+            throw new Error('Fehler beim Publizieren des Board-Updates');
         }
         
-        console.log(`✅ Viewer hinzugefügt: ${pubkey}`);
+        console.log(`✅ Viewer hinzugefügt: ${normalizedPubkey}`);
     }
 
     /**
@@ -155,8 +193,11 @@ export class BoardSharingOperations {
     public static async removeViewer(
         board: Board,
         pubkey: string,
-        ndk?: NDK
+        ndk: NDK
     ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK Instanz erforderlich für removeViewer');
+        }
         // 1. Validierung
         if (!board) {
             throw new Error('Kein aktives Board');
@@ -178,18 +219,29 @@ export class BoardSharingOperations {
         }
         
         // 3. NIP-51 Event aktualisieren
-        if (ndk) {
-            try {
-                await this.updateBoardFollowers(board, ndk);
-                console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
-            } catch (error) {
-                console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
-                // Rollback
-                if (!board.isEditor(pubkey)) {
-                    board.followers = [...board.followers, pubkey];
-                }
-                throw new Error('Fehler beim Publizieren des Follow Set Updates');
+        try {
+            await this.updateBoardFollowers(board, ndk);
+            console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
+            // Rollback
+            if (!board.isEditor(pubkey)) {
+                board.followers = [...board.followers, pubkey];
             }
+            throw new Error('Fehler beim Publizieren des Follow Set Updates');
+        }
+
+        // 4. Board Event publizieren damit Viewer das Board nicht mehr via #p sieht
+        try {
+            await this.publishBoardUpdate(board, ndk);
+            console.log(`🛰️ Board Event nach Viewer-Entfernung publiziert (maintainers=${board.maintainers?.length || 0}, followers=${board.followers?.length || 0})`);
+        } catch (error) {
+            console.error('❌ Fehler beim Publizieren des Board Events nach Viewer-Entfernung:', error);
+            // Rollback follower wieder hinzufügen
+            if (!board.isEditor(pubkey)) {
+                board.followers = [...board.followers, pubkey];
+            }
+            throw new Error('Fehler beim Publizieren des Board-Updates');
         }
         
         console.log(`✅ Viewer entfernt: ${pubkey}`);
@@ -328,6 +380,16 @@ export class BoardSharingOperations {
                 event.tags.push(['p', maintainer]);
             }
         }
+
+        // NEU: Follower ebenfalls als p-tags hinzufügen damit Viewer Boards via #p subscription sehen
+        if (board.followers) {
+            for (const follower of board.followers) {
+                // Verhindere doppelte p-tags
+                if (!event.tags.some(t => t[0] === 'p' && t[1] === follower)) {
+                    event.tags.push(['p', follower]);
+                }
+            }
+        }
         
         // Spalten als col-tags
         if (board.columns) {
@@ -340,8 +402,10 @@ export class BoardSharingOperations {
         event.content = '';
         
         try {
+            const tagSummary = event.tags.filter(t => t[0] === 'p').map(t => t[1].substring(0, 12));
+            console.log(`🔑 Publish Board Update: id=${board.id} p-tags(count=${tagSummary.length})=${JSON.stringify(tagSummary)}`);
             await event.publish();
-            console.log('✅ Board Event publiziert mit maintainers');
+            console.log('✅ Board Event publiziert (including maintainers + followers)');
         } catch (error) {
             console.error('❌ Fehler beim Publizieren des Board Events:', error);
             throw error;

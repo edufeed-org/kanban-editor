@@ -1,5 +1,45 @@
 # Changelog
 
+## Unreleased - Board-Sharing Realtime Anzeige 🚀
+
+**Datum:** 24. November 2025  
+**Branch:** `feature/board-sharing`  
+**Status:** ✅ Implementiert (Auto-Erscheinung geteilter Boards beim Editor)
+
+### ✨ Feature
+Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das Board nun automatisch und ohne Reload in der Boardliste des Editors.
+
+### 🔧 Technische Umsetzung
+- Zweite Nostr Subscription (`sharedSub`) für Kind 30301 Events mit `#p` Filter auf Nutzer-Pubkey (nicht nur `authors`)
+- Direktes Event-Parsing (d, title, description, p-tags) → Ableitung `userRole: editor|viewer`
+- Neuer Store-Handler `handleSharedBoardEvent()` im `BoardStore` upsertet das Board in `cachedSharedBoards` und triggert `updateTrigger`
+- Kein Polling mehr nötig; keine künstliche Verzögerung
+
+### 📚 Dokumentation
+- `docs/ARCHITECTURE/BOARD-SHARING.md` aktualisiert (Abschnitt "Realtime Appearance")
+
+### ✅ Acceptance Criteria
+- Editor sieht neues geteiltes Board < 1s nach Publish
+- Kein manuelles Refresh nötig
+- BoardsList reagiert rein über Reaktivität (`updateTrigger`)
+
+### 🐛 Fix (SSR Guard UserPreferencesStore)
+- Behebt wiederholten Fehler `localStorage.getItem is not a function` beim SSR Build
+- Ursache: Zugriff auf `localStorage` während Modul-Initialisierung im `UserPreferencesStore`
+- Lösung: Initialisierung mit Default-State und Browser-Gate (`typeof window !== 'undefined'`)
+- Impact: Login-Flows & Demo-Board Button werden wieder zuverlässig gerendert, Board-Sharing Tests können fortgesetzt werden
+- Dateien: `src/lib/stores/userPreferencesStore.svelte.ts`
+
+### 🔧 Hinweis
+Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
+
+### 🧪 Test-Hinweise (manuell)
+1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
+2. Editor hat BoardsList offen → Board taucht automatisch auf
+3. Entfernt Owner den Editor wieder → (Folgt in nächstem Increment: Auto-Removal)
+
+---
+
 ## Version 4.6.1 - Demo Board Migration Fix 🔧
 
 **Datum:** 20. November 2025  
