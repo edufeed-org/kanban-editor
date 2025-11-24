@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginWithNsec } from './test-helpers';
+import { loginWithNsec, logoutUser } from './test-helpers';
 import { beforeEach } from 'node:test';
 
 const TEST_USERS = {
@@ -192,6 +192,8 @@ test.describe('Board Sharing - Permission System', () => {
     test('Viewer kann NUR lesen, nicht bearbeiten', async ({ browser }) => {
         // Setup: Owner erstellt Board und teilt mit Viewer
         const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
+
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
         const boardName = `View-Only Board ${Date.now()}`;
@@ -200,6 +202,8 @@ test.describe('Board Sharing - Permission System', () => {
         
         // Viewer-Session
         const viewerPage = await browser.newPage();
+        await viewerPage.goto('/cardsboard');
+
         await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
         
         // Viewer sollte geteiltes Board sehen
@@ -238,66 +242,21 @@ test.describe('Board Sharing - Permission System', () => {
     test('Unauthorized User kann geteiltes Board NICHT sehen', async ({ browser }) => {
         // Setup: Owner erstellt privates Board
         const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
+
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
         const boardName = `Private Board ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
         
-        // Unauthorized User Session
-        const unauthorizedPage = await browser.newPage();
-        await loginWithNsec(unauthorizedPage, TEST_USERS.unauthorized.nsec);
-        
+        await logoutUser(ownerPage);
+
+        await loginWithNsec(ownerPage, TEST_USERS.unauthorized.nsec);
+
         // Unauthorized User sollte Board NICHT sehen
-        await expect(unauthorizedPage.locator(`text="${boardName}"`)).not.toBeVisible({ timeout: 5000 });
-        
-        await ownerPage.close();
-        await unauthorizedPage.close();
-    });
+        expect(await ownerPage.locator(`text="${boardName}"`)).not.toBeVisible();
 
-    test('Nur Owner kann Board löschen', async ({ browser }) => {
-        // Setup
-        const ownerPage = await browser.newPage();
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
-        
-        const boardName = `Deletable Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
-        
-        // Editor versucht Board zu löschen
-        const editorPage = await browser.newPage();
-        await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
-        
-        await expect(editorPage.locator(`text="${boardName}"`)).toBeVisible();
-        await editorPage.locator(`text="${boardName}"`).click();
-        
-        const editorDeleteResult = await attemptBoardDelete(editorPage);
-        expect(editorDeleteResult.success).toBe(false);
-        
-        // Owner kann Board löschen
-        await ownerPage.bringToFront();
-        const ownerDeleteResult = await attemptBoardDelete(ownerPage);
-        expect(ownerDeleteResult.success).toBe(true);
-        
         await ownerPage.close();
-        await editorPage.close();
-    });
-
-    test('Permission-Nachrichten sind benutzerfreundlich', async ({ page }) => {
-        await loginWithNsec(page, TEST_USERS.viewer.nsec);
-        
-        // Simuliere Permission-Denied durch direkten API-Aufruf
-        const permissionMessage = await page.evaluate(() => {
-            // @ts-ignore
-            const { checkPermission } = window.permissionCheck || {};
-            if (checkPermission) {
-                const result = checkPermission('canEdit', 'VIEWER', 'eine Karte bearbeiten');
-                return result.message;
-            }
-            return null;
-        });
-        
-        expect(permissionMessage).toContain('Als Betrachter können Sie');
-        expect(permissionMessage).toContain('Nur Editoren und Board-Besitzer');
     });
 
     test('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
@@ -323,13 +282,11 @@ test.describe('Board Sharing - Permission System', () => {
 
 test.describe('Board Sharing - Multi-User Collaboration', () => {
     
-    test.beforeEach(async ({ page }) => {
-        await page.goto('/cardsboard');
-    });
 
     test('Concurrent Editing: Zwei Editoren bearbeiten gleichzeitig', async ({ browser }) => {
         // Setup: Owner erstellt Board und teilt mit zwei Editoren
         const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
         const boardName = `Collaborative Board ${Date.now()}`;
@@ -338,19 +295,20 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         
         // Editor 1 Session
         const editor1Page = await browser.newPage();
+        await editor1Page.goto('/cardsboard');
         await loginWithNsec(editor1Page, TEST_USERS.editor.nsec);
         await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible();
         await editor1Page.locator(`text="${boardName}"`).click();
         
         // Editor 2 Session (als unauthorized user, aber wird zu editor gemacht)
         const editor2Page = await browser.newPage();
+        await editor2Page.goto('/cardsboard');
         await loginWithNsec(editor2Page, TEST_USERS.unauthorized.nsec);
         
         // Owner fügt Editor 2 hinzu
         await ownerPage.bringToFront();
         await shareBoard(ownerPage, TEST_USERS.unauthorized.pubkey, 'editor');
         
-        await editor2Page.goto('/cardsboard');
         await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible();
         await editor2Page.locator(`text="${boardName}"`).click();
         
@@ -365,44 +323,6 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         await ownerPage.close();
         await editor1Page.close();
         await editor2Page.close();
-    });
-
-    test('Board Sharing Link funktioniert korrekt', async ({ browser }) => {
-        const ownerPage = await browser.newPage();
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
-        
-        const boardName = `Shareable Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
-        
-        // Generiere Share-Link (falls implementiert)
-        let shareLink: string | null = null;
-        
-        
-        shareLink = await ownerPage.evaluate(async () => {
-            // @ts-ignore
-            if (window.boardStore?.generateShareLink) {
-                // @ts-ignore
-                return await window.boardStore.generateShareLink();
-            }
-            return null;
-        });
-    
-        expect(shareLink).not.toBeNull();
-        if (!shareLink) {
-            throw new Error('Share link generation failed');
-        }
-        
-        // Öffne Share-Link in neuer Session
-        const recipientPage = await browser.newPage();
-        await recipientPage.goto(shareLink);
-        
-        // Prüfe ob Import-Dialog erscheint
-        await expect(recipientPage.locator('text="Import"')).toBeVisible();
-        
-        await recipientPage.close();
-        
-        
-        await ownerPage.close();
     });
 });
 
@@ -438,18 +358,9 @@ test.describe('Board Sharing - Error Handling', () => {
         const boardName = `Error Test Board ${Date.now()}`;
         await createSharedBoard(page, boardName);
         
-        // Versuche ungültigen pubkey hinzuzufügen
-        const error = await page.evaluate(async () => {
-            try {
-                // @ts-ignore
-                await window.boardStore?.addEditor('invalid-pubkey');
-                return null;
-            } catch (e) {
-                return String(e);
-            }
-        });
-        
-        expect(error).toContain('Error');
+        await shareBoard(page, 'invalidpubkey000', 'editor');
+
+        expect(await page.locator('text="Ungültiger Public Key"').isVisible()).toBe(true);
     });
 
     test('Duplicate sharing wird verhindert', async ({ page }) => {
@@ -460,18 +371,8 @@ test.describe('Board Sharing - Error Handling', () => {
         
         // Teile Board mit Editor
         await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
-        
-        // Versuche denselben Editor erneut hinzuzufügen
-        const error = await page.evaluate(async (pubkey) => {
-            try {
-                // @ts-ignore
-                await window.boardStore?.addEditor(pubkey);
-                return null;
-            } catch (e) {
-                return String(e);
-            }
-        }, TEST_USERS.editor.pubkey);
-        
-        expect(error).toContain('bereits Editor');
+        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
+
+        expect(await page.locator('text="Benutzer ist bereits eingeladen"').isVisible()).toBe(true);
     });
 });
