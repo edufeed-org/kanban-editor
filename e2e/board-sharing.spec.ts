@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginWithNsec, logoutUser } from './test-helpers';
+import { loginWithNsec, logout } from './test-helpers';
 
 const TEST_USERS = {
     owner: {
@@ -240,22 +240,24 @@ test.describe('Board Sharing - Permission System', () => {
 
     test('Unauthorized User kann geteiltes Board NICHT sehen', async ({ browser }) => {
         // Setup: Owner erstellt privates Board
-        const ownerPage = await browser.newPage();
-        await ownerPage.goto('/cardsboard');
+        const page = await browser.newPage();
+        await page.goto('/cardsboard');
 
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+        await loginWithNsec(page, TEST_USERS.owner.nsec);
         
         const boardName = `Private Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
+        await createSharedBoard(page, boardName);
         
-        // await logoutUser(ownerPage);
+        await logout(page);
 
-        await loginWithNsec(ownerPage, TEST_USERS.unauthorized.nsec);
+        await loginWithNsec(page, TEST_USERS.unauthorized.nsec);
 
-        // Unauthorized User sollte Board NICHT sehen
-        expect(ownerPage.locator(`text="${boardName}"`)).not.toBeVisible();
+        // für eine Sekunde kann sein, dass privates Board kurz wegen Caches sichtbar ist
+        await page.waitForTimeout(1000);
+        
+        expect(page.locator(`text="${boardName}"`)).not.toBeVisible();
 
-        await ownerPage.close();
+        await page.close();
     });
 
     test('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {

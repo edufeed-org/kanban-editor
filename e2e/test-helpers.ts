@@ -265,7 +265,7 @@ export async function loginWithTestUser(page: Page, user: TestUser) {
         }
         
         // Logout vom aktuellen User
-        await logoutUser(page);
+        await logout(page);
     }
     
     // Development-Login (wenn verfügbar)
@@ -307,38 +307,6 @@ export async function loginWithTestUser(page: Page, user: TestUser) {
     // Verifiziere erfolgreichen Login
     await expect(page.locator(`text="${user.name}"`)).toBeVisible({ timeout: 5000 });
     console.log(`✅ Angemeldet als: ${user.name}`);
-}
-
-/**
- * Logout vom aktuellen User
- */
-export async function logoutUser(page: Page) {
-    try {
-        // Suche Logout-Option in UI
-        const userMenu = page.locator('[data-testid="user-menu"]').or(
-            page.locator('button:has-text("Profil")')
-        ).first();
-        
-        if (await userMenu.isVisible()) {
-            await userMenu.click();
-            await page.locator('text="Logout"').click();
-        } else {
-            // Development-Logout
-            await page.evaluate(() => {
-                // @ts-ignore
-                if (window.authStore && window.authStore.logout) {
-                    // @ts-ignore
-                    window.authStore.logout();
-                }
-            });
-        }
-        
-        // Warte bis Logout abgeschlossen
-        await expect(page.locator('button:has-text("Login")')).toBeVisible({ timeout: 3000 });
-        console.log('✅ Logout erfolgreich');
-    } catch (e) {
-        console.log('Logout fehlgeschlagen oder bereits ausgeloggt');
-    }
 }
 
 /**
