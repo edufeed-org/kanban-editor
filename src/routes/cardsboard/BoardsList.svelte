@@ -183,6 +183,7 @@
             disabled={isCreating}
             class="w-full gap-2"
             variant="default"
+            data-testid="create-board-button"
         >
             {#if isCreating}
                 <LoaderIcon class="h-4 w-4 animate-spin" />
@@ -200,6 +201,7 @@
             disabled={isCreating}
             class="w-full gap-2"
             variant="outline"
+            data-testid="demo-board-button"
         >
             {#if isCreating}
                 <LoaderIcon class="h-4 w-4 animate-spin" />

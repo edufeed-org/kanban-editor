@@ -17,6 +17,7 @@
         size="sm" 
         onclick={() => showShareDialog = true}
         class="gap-2"
+        data-testid="share-button"
     >
         <ShareIcon class="h-4 w-4" />
         Teilen

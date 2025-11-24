@@ -269,7 +269,6 @@ export class BoardSharingOperations {
                 });
             }
         });
-        
         return participants;
     }
 

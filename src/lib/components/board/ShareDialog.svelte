@@ -114,7 +114,7 @@
 </script>
 
 <Dialog.Root bind:open>
-    <Dialog.Content class="max-w-lg">
+    <Dialog.Content class="max-w-lg" data-testid="share-dialog">
         <Dialog.Header>
             <Dialog.Title>Board teilen</Dialog.Title>
             <Dialog.Description>
