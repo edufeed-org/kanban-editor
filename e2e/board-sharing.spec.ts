@@ -69,26 +69,16 @@ async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?
     try {
         // Suche Add-Card-Button in Spalten (basierend auf Column.svelte)
         // Der Button ist ein SquarePlusIcon mit title="Neue Karte am Anfang"
-        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]')
-            .or(page.locator('button:has-text("Neue Karte")'))
-            .or(page.locator('button[title*="Karte"]'))
-            .first();
+        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
         
-        if (await addCardButton.isVisible({ timeout: 2000 })) {
-            await addCardButton.click();
-            
-            // Warte auf Card-Erstellung (automatisch durch boardStore.createCard)
-            await page.waitForTimeout(1000);
-            
-            // Verifiziere dass eine neue Karte erstellt wurde
-            const newCard = page.locator('text="Neue Karte"').first();
-            if (await newCard.isVisible({ timeout: 2000 })) {
-                return { success: true };
-            } else {
-                return { success: false, error: 'Card was not created successfully' };
-            }
+        await addCardButton.click();
+        
+        // Verifiziere dass eine neue Karte erstellt wurde
+        const newCard = page.locator('text="Neue Karte"').first();
+        if (await newCard.isVisible()) {
+            return { success: true };
         } else {
-            return { success: false, error: 'Add card button not visible or not accessible' };
+            return { success: false, error: 'Card was not created successfully' };
         }
     } catch (error) {
         return { success: false, error: String(error) };
@@ -179,34 +169,17 @@ test.describe('Board Sharing - Permission System', () => {
         await expect(editorPage.getByText(boardName)).toBeVisible({timeout: 10000 });
         
         await editorPage.getByText(boardName).click();
-        
+
         await expect(editorPage.getByText(boardName)).toBeVisible();
-        
+
+        await editorPage.waitForTimeout(5000);
+
         // Verifiziere dass Editor Karten erstellen kann
         const createResult = await attemptCardCreate(editorPage);
         if (!createResult.success) {
-            console.log('⚠️ Card creation failed:', createResult.error);
-            console.log('💡 This might be expected if permission system is active');
+            throw new Error(createResult.error);
         }
-        
-        // Verifiziere Permission-System über Store
-        const userRole = await editorPage.evaluate(() => {
-            // @ts-ignore
-            return window.boardStore?.getCurrentUserRole?.() || null;
-        });
-        
-        console.log('👤 Editor role in system:', userRole);
-        
-        // Teste ob User als Editor erkannt wird
-        if (userRole === 'editor') {
-            expect(createResult.success).toBe(true);
-            console.log('✅ Editor can create cards as expected');
-        } else {
-            console.log('ℹ️ User not recognized as editor, testing permission denial');
-            // Bei fehlenden Berechtigungen sollte Create fehlschlagen
-            expect(createResult.success).toBe(false);
-        }
-        
+
         // Verifiziere dass Editor NICHT Board löschen kann
         const deleteResult = await attemptBoardDelete(editorPage);
         expect(deleteResult.success).toBe(false);
