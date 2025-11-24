@@ -172,7 +172,7 @@ test.describe('Board Sharing - Permission System', () => {
 
         await expect(editorPage.getByText(boardName)).toBeVisible();
 
-        await editorPage.waitForTimeout(5000);
+        await editorPage.waitForTimeout(4000);
 
         // Verifiziere dass Editor Karten erstellen kann
         const createResult = await attemptCardCreate(editorPage);
