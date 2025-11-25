@@ -14,14 +14,14 @@
     
     // State
     let newUserPubkey = $state('');
-    let selectedRole = $state<{ value: BoardRole; label: string }>({ 
-        value: BoardRole.EDITOR, 
-        label: 'Editor' 
-    });
+    let selectedRoleValue = $state<string>(BoardRole.VIEWER);
     let participants = $state<BoardShare[]>([]);
     let isLoading = $state(false);
     let errorMessage = $state('');
     let activeTab = $state('editors'); // 'editors' | 'viewers'
+    
+    // Convert string to BoardRole enum
+    let selectedRole = $derived(selectedRoleValue as BoardRole);
     
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
@@ -57,7 +57,7 @@
         errorMessage = '';
         
         try {
-            if (selectedRole.value === BoardRole.EDITOR) {
+            if (selectedRole === BoardRole.EDITOR) {
                 await boardStore.addEditor(newUserPubkey);
             } else {
                 await boardStore.addViewer(newUserPubkey);
@@ -132,13 +132,13 @@
                     class="flex-1"
                 />
                 <select 
-                    bind:value={selectedRole}
+                    bind:value={selectedRoleValue}
                     class="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                 {#if canInviteEditors}
-                    <option value="editor">Editor</option>
+                    <option value={BoardRole.EDITOR}>{BoardRole.EDITOR}</option>
                 {/if}
-                    <option value="viewer">Viewer</option>
+                    <option value={BoardRole.VIEWER}>{BoardRole.VIEWER}</option>
                 </select>
                 <Button 
                     onclick={handleInviteUser}

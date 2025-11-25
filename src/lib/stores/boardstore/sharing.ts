@@ -369,27 +369,21 @@ export class BoardSharingOperations {
             ['description', board.description || '']
         ];
         
-        // Author als p-tag
+        // Author als p-tag (NIP-51 compliant: publisher)
         if (board.author) {
             event.tags.push(['p', board.author]);
         }
         
-        // Maintainers als p-tags hinzufügen
+        // Maintainers (Editors) als p-tags hinzufügen (NIP-51 compliant)
         if (board.maintainers) {
             for (const maintainer of board.maintainers) {
                 event.tags.push(['p', maintainer]);
             }
         }
 
-        // NEU: Follower ebenfalls als p-tags hinzufügen damit Viewer Boards via #p subscription sehen
-        if (board.followers) {
-            for (const follower of board.followers) {
-                // Verhindere doppelte p-tags
-                if (!event.tags.some(t => t[0] === 'p' && t[1] === follower)) {
-                    event.tags.push(['p', follower]);
-                }
-            }
-        }
+        // NOTE: Followers (Viewers) werden NICHT als p-tags hinzugefügt!
+        // Stattdessen werden sie via NIP-51 Follow Sets (Kind 30000) verwaltet
+        // Das ist NIP-51 compliant und verhindert Verwirrung zwischen Editoren und Viewern
         
         // Spalten als col-tags
         if (board.columns) {
@@ -441,11 +435,11 @@ export class BoardSharingOperations {
             
             for (const event of boardEvents) {
                 try {
-                    // Extrahiere alle p-tags (participants)
+                    // Extrahiere alle p-tags (NIP-51 compliant)
                     const pTagsAll = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-                    // Kanonischer Owner ist der erste p-tag, falls vorhanden, sonst der Event-Publisher
-                    const canonicalOwner = pTagsAll.length > 0 ? pTagsAll[0] : event.pubkey;
-                    // Skip eigene Boards nur wenn Nutzer der kanonische Owner ist
+                    const canonicalOwner = event.pubkey; // Der Event-Publisher ist der Owner
+                    
+                    // Skip eigene Boards
                     if (canonicalOwner === currentUserPubkey) {
                         continue;
                     }
@@ -460,13 +454,22 @@ export class BoardSharingOperations {
                         continue;
                     }
                     
-                    // Bestimme Rolle des Nutzers relativ zur kanonischen Owner-Bestimmung
-                    const isMaintainer = pTagsAll.includes(currentUserPubkey) && canonicalOwner !== currentUserPubkey;
-                    let userRole = 'viewer';
+                    // Bestimme Rolle des Nutzers (NIP-51 compliant)
+                    // - Owner: Event-Publisher (=canonicalOwner)
+                    // - Editor: In p-tags gelistet
+                    // - Viewer: Via Kind 30000 Follow Set (separate, nicht hier)
+                    let userRole = 'none';
                     if (canonicalOwner === currentUserPubkey) {
                         userRole = 'owner';
-                    } else if (isMaintainer) {
+                    } else if (pTagsAll.includes(currentUserPubkey)) {
+                        // Nutzer ist in p-tags = Editor (oder co-owner)
                         userRole = 'editor';
+                    }
+                    // NOTE: Viewer-Rolle wird via separate NIP-51 Follow Set Abfrage bestimmt
+                    
+                    // Ignoriere Boards die nicht mit diesem Nutzer geteilt sind
+                    if (userRole === 'none') {
+                        continue;
                     }
                     
                     // Board-Metadaten zusammenstellen
@@ -488,6 +491,35 @@ export class BoardSharingOperations {
                 } catch (error) {
                     console.error('❌ Fehler beim Parsen des Board Events:', event.id, error);
                     continue;
+                }
+            }
+            
+            // 🔴 KRITISCH: Lade Followers für alle geteilten Boards aus NIP-51 Kind 30000
+            // Dies ist nötig damit Viewer-Rollen korrekt angezeigt werden in der Board-Liste
+            for (const sharedBoard of sharedBoards) {
+                try {
+                    const followSetFilter = {
+                        kinds: [30000],
+                        authors: [sharedBoard.author!],
+                        '#d': [`board-followers-${sharedBoard.id}`]
+                    };
+                    
+                    const followEvent = await ndk.fetchEvent(followSetFilter);
+                    if (followEvent) {
+                        const followers = followEvent.tags
+                            .filter(tag => tag[0] === 'p')
+                            .map(tag => tag[1])
+                            .filter(pubkey => pubkey !== sharedBoard.author && pubkey !== currentUserPubkey);
+                        
+                        // Prüfe ob aktueller User ein Viewer ist
+                        if (followers.includes(currentUserPubkey)) {
+                            sharedBoard.userRole = 'viewer';
+                            console.log(`🔍 Board ${sharedBoard.id}: User ist Viewer (via Kind 30000)`);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Failed to load followers for board ${sharedBoard.id}:`, error);
+                    // Non-blocking - continue with other boards
                 }
             }
             

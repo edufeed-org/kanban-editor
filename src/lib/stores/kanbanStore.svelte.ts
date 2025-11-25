@@ -451,6 +451,13 @@ export class BoardStore {
         // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
         this.loadCardsFromNostr(board);
         
+        // 🔴 KRITISCH: Lade Followers (Viewer) aus NIP-51 Kind 30000 Follow Set Events
+        // Dies ist nötig um Viewer-Rollen korrekt zu rekonstruieren nach Reload
+        this.loadBoardFollowers().catch(err => {
+            console.warn('⚠️ Failed to load board followers:', err);
+            // Non-blocking error - board can still be used without followers loaded
+        });
+        
         return true;
     }
 
@@ -490,6 +497,14 @@ export class BoardStore {
             BoardStorage.saveBoard(reconstructed);
             this.refreshBoardIds();
             console.log(`🛠️ Rekonstruiertes Shared Board gespeichert: ${reconstructed.name} (${reconstructed.id})`);
+            
+            // 🔴 KRITISCH: Lade Followers aus Kind 30000 nach Rekonstruktion
+            // Der Event hat nur Maintainers in p-tags, Followers kommen aus separatem Follow Set
+            this.board = reconstructed;
+            await this.loadBoardFollowers().catch(err => {
+                console.warn('⚠️ Failed to load followers after shared board reconstruction:', err);
+            });
+            
             return true;
         } catch (error) {
             console.error(`❌ Fehler bei Rekonstruktion von Shared Board ${boardId}:`, error);
@@ -860,6 +875,10 @@ export class BoardStore {
 
     /**
      * ✅ HELPER: Lädt geteilte Boards asynchron aus Nostr und triggert Update
+     * 
+     * WICHTIG: Merged mit existierendem Cache statt zu ersetzen!
+     * Grund: Boards können via followerSub Events real-time hinzugefügt werden.
+     * Wenn wir den Cache ersetzen, verlieren wir diese real-time Boards!
      */
     private async loadSharedBoardsAsync(currentUserPubkey: string): Promise<void> {
         try {
@@ -881,11 +900,26 @@ export class BoardStore {
                 ndk
             );
 
-            // Cache aktualisieren und UI triggern
-            this.cachedSharedBoards = sharedBoards;
+            // ⚠️ KRITISCH: Merge mit existierendem Cache, nicht ersetzen!
+            // Sonst verlieren wir Boards, die via followerSub Events real-time hinzugefügt wurden
+            const boardMap = new Map<string, typeof sharedBoards[0]>();
             
-            if (sharedBoards.length > 0) {
-                console.log(`📥 ${sharedBoards.length} geteilte Boards gefunden und gecached`);
+            // Existierende Boards zuerst (prioritär, da sie real-time sind)
+            for (const board of this.cachedSharedBoards) {
+                boardMap.set(board.id, board);
+            }
+            
+            // Neue Boards aus Nostr hinzufügen (bei Duplikaten gewinnt Cache)
+            for (const board of sharedBoards) {
+                if (!boardMap.has(board.id)) {
+                    boardMap.set(board.id, board);
+                }
+            }
+            
+            this.cachedSharedBoards = Array.from(boardMap.values());
+            
+            if (sharedBoards.length > 0 || this.cachedSharedBoards.length > 0) {
+                console.log(`📥 ${sharedBoards.length} geteilte Boards von Nostr, ${this.cachedSharedBoards.length} total gecached (merged)`);
                 this.triggerUpdate({ publish: false }); // UI Update ohne Nostr Publishing
             }
 
