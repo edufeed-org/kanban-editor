@@ -1839,7 +1839,7 @@ export class BoardStore {
         
         // Standard-Spalten hinzufügen
         const todoColumn = board.addColumn({ name: '📋 Zu erledigen', color: 'blue' });
-        const progressColumn = board.addColumn({ name: '🔄 In Arbeit', color: 'yellow' });
+        const progressColumn = board.addColumn({ name: '🔄 In Arbeit', color: 'orange' });
         const doneColumn = board.addColumn({ name: '✅ Erledigt', color: 'green' });
         
         // Beispiel-Karten hinzufügen

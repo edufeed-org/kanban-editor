@@ -125,6 +125,7 @@ export async function loginWithNip07(page: Page) {
 
 /**
  * Clear all authentication-related storage and state
+ * TODO: Not working because browser is denying access to localStorage/sessionStorage
  */
 export async function clearAuthState(page: Page): Promise<void> {
   try {
@@ -146,6 +147,28 @@ export async function clearAuthState(page: Page): Promise<void> {
   } catch (error) {
     console.log('⚠️ Security error accessing storage in clearAuthState:', error);
     // If localStorage/sessionStorage access is denied, continue without throwing
+  }
+}
+
+/**
+ * Clear all cached board-related state
+ * TODO: Not working because browser is denying access to localStorage
+ */
+export async function clearBoardState(page: Page): Promise<void> {
+  try {
+    await page.evaluate(() => {
+      try {
+        localStorage.removeItem('kanban-config');
+        localStorage.removeItem('kanban-settings');
+        // Maybe add more keys to
+        
+        console.log('🧹 Board state cleared');
+      } catch (error) {
+        console.log('⚠️ Error clearing board storage:', error);
+      }
+    });
+  } catch (error) {
+    console.log('⚠️ Error accessing storage in clearBoardState:', error);
   }
 }
 
