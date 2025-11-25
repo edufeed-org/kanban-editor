@@ -65,16 +65,34 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
 }
 
 async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
-    const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
-    
-    await addCardButton.click();
-    
-    // Verifiziere dass eine neue Karte erstellt wurde
-    const newCard = page.locator('text="Neue Karte"').first();
-    if (await newCard.isVisible({ timeout: 3000 })) {
-        return { success: true };
-    } else {
-        return { success: false, error: 'Card was not created successfully' };
+    try {
+        // Find the add card button with title attribute
+        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
+        
+        // Wait for button to be visible and enabled
+        await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
+        
+        // Get button position to ensure it's in viewport
+        await addCardButton.scrollIntoViewIfNeeded();
+        
+        // Wait a bit for any pending renders
+        await page.waitForTimeout(500);
+        
+        // Click the button
+        await addCardButton.click();
+        
+        // Wait a bit for card to be added to DOM
+        await page.waitForTimeout(500);
+        
+        // Verifiziere dass eine neue Karte erstellt wurde
+        const newCard = page.locator('text="Neue Karte"').first();
+        if (await newCard.isVisible({ timeout: 3000 })) {
+            return { success: true };
+        } else {
+            return { success: false, error: 'Card was not created successfully - "Neue Karte" text not visible' };
+        }
+    } catch (error) {
+        return { success: false, error: `Card creation failed: ${error}` };
     }
 }
 
@@ -166,6 +184,10 @@ test.describe('Board Sharing - Permission System', () => {
         await expect(editorPage.getByText(boardName)).toBeVisible({timeout: 10000 });
 
         await editorPage.getByText(boardName).click();
+
+        // Warte dass das Board vollständig geladen ist (crucial!)
+        await editorPage.waitForLoadState('networkidle');
+        await editorPage.waitForTimeout(1000);
 
         // Verifiziere dass Editor Karten erstellen kann
         const createResult = await attemptCardCreate(editorPage);
