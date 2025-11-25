@@ -306,12 +306,26 @@ export class BoardStore {
         // ⚡ FIX: Authentifizierte Benutzer - Demo-Board explizit ausschließen
         const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board');
         const allBoards = BoardStorage.getAllBoardsMetadata(filteredBoardIds);
+        
+        // 🔍 DEBUG: Log all boards and their authors
+        console.log(`🔍 getAllBoards() - Checking ${allBoards.length} boards for user ${currentUserPubkey?.slice(0, 8)}...`);
+        allBoards.forEach(board => {
+            const fullBoard = BoardStorage.loadBoard(board.id);
+            console.log(`  📋 Board "${board.name}": author=${fullBoard?.author?.slice(0, 8)}... maintainers=${JSON.stringify(fullBoard?.maintainers?.map(m => m.slice(0, 8) + '...') || [])}`);
+        });
+        
         const userBoards = allBoards.filter(board => {
             // Board gehört dem aktuellen Benutzer wenn:
             // 1. author === currentUserPubkey ODER
             // 2. maintainers enthält currentUserPubkey
-            return this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
+            const isOwner = this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
+            if (!isOwner) {
+                console.log(`  ❌ Filtered out: "${board.name}" (not owner or maintainer)`);
+            }
+            return isOwner;
         });
+        
+        console.log(`✅ getAllBoards() returning ${userBoards.length}/${allBoards.length} boards for user ${currentUserPubkey?.slice(0, 8)}...`);
         
         // ⚡ DEBUG: Duplikate-Check
         const boardIdsInList = userBoards.map(b => b.id);
