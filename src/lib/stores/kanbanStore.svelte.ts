@@ -7,7 +7,6 @@ import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
-import { nostrEventToCard } from '../utils/nostrEvents.js';
 import { generateDTag } from '../utils/idGenerator.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
@@ -68,7 +67,6 @@ export class BoardStore {
         
         if (typeof window !== 'undefined') {
             this.initializeBoard();
-            // ⚠️ REMOVED: scheduleAuthorFix() - wird später aufgerufen nachdem NDK ready ist
             this.exposeCurrentBoardIdToWindow();
             this.initializeLearningManagerIfEnabled();
         }
@@ -82,10 +80,6 @@ export class BoardStore {
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
         }
-    }
-    
-    private scheduleAuthorFix(): void {
-        this.fixAnonymousBoardAuthor();
     }
     
     private async initializeLearningManagerIfEnabled(): Promise<void> {
