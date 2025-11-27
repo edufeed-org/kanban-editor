@@ -71,14 +71,9 @@ export function checkPermission(
  * Zeigt eine freundliche Toast-Nachricht für verweigerte Berechtigungen
  */
 export function showPermissionDeniedMessage(message: string): void {
-    // TODO: Integration mit Toast/Notification System
-    // Für jetzt: Console warning + Window alert als Fallback
+    // Toast-Nachrichten werden jetzt direkt in den Store-Methoden angezeigt
+    // Diese Funktion bleibt nur für Console-Logging
     console.warn('🚫 Permission denied:', message);
-    
-    // Temporär: Browser Alert (später durch Toast ersetzen)
-    if (typeof window !== 'undefined') {
-        alert(`Berechtigung verweigert\n\n${message}`);
-    }
 }
 
 /**
