@@ -263,9 +263,6 @@ export class BoardStore {
         // NUR bei Primary Actions zu Nostr publishen (Default: true)
         if (options?.publish !== false) {
             this.publishToNostr();
-        } else {
-            // Debug: Log nur wenn explizit publish=false gesetzt wurde
-            // (verhindert Log-Spam bei comment loading, etc.)
         }
     }
 
@@ -2229,6 +2226,8 @@ export class BoardStore {
             tags: boardProps.tags,
             columns, // ⚡ NEU: Spalten-Sync
             author: boardProps.author,
+            maintainers: boardProps.maintainers, // ⚡ CRITICAL FIX: Sync maintainers from Nostr!
+            followers: boardProps.followers, // ⚡ CRITICAL FIX: Sync followers from Nostr!
             publishState: boardProps.publishState,
             updatedAt: boardProps.updatedAt  // ⚡ v4.1: Timestamp MUSS weitergegeben werden!
         });
@@ -2259,6 +2258,8 @@ export class BoardStore {
                 description: boardProps.description,
                 tags: boardProps.tags,
                 author: boardProps.author,
+                maintainers: boardProps.maintainers || [], // ⚡ CRITICAL FIX: Include maintainers
+                followers: boardProps.followers || [], // ⚡ CRITICAL FIX: Include followers
                 publishState: boardProps.publishState,
                 updatedAt: boardProps.updatedAt,  // ⚡ v4.2: Timestamp vom Event!
                 columns: boardProps.columns

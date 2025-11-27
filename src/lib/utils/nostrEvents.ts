@@ -141,14 +141,15 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const stateTag = tags.find(t => t[0] === 'state');
   const publishState = stateTag ? (stateTag[1] as any) : 'draft';
 
-  // p-tags (NIP-51 compliant): all are maintainers/editors except event publisher
-  // Previous implementation incorrectly set author = event.pubkey (publisher),
-  // which caused ownership to jump to the editor when an editor published an update.
+  // p-tags (NIP-51 compliant): First p-tag is always the canonical owner (author)
+  // Remaining p-tags are maintainers/editors
+  // 🔴 CRITICAL FIX: Do NOT use event.pubkey as author, because when an editor
+  // publishes an update, event.pubkey would be the editor, causing ownership to shift!
   const pTags = tags.filter(t => t[0] === 'p').map(t => t[1]);
-  const author = event.pubkey; // Event publisher is always the owner
+  const author = pTags.length > 0 ? pTags[0] : event.pubkey; // First p-tag is canonical owner
   
-  // Maintainers = all distinct p-tags (editors who can edit the board)
-  const maintainers = pTags.filter(pubkey => pubkey !== author);
+  // Maintainers = all p-tags except the first one (which is the owner)
+  const maintainers = pTags.slice(1); // Skip first p-tag (author)
   
   // NOTE: Followers (viewers) come from separate Kind 30000 Follow Set events (NIP-51)
   // They should NOT be in the Kind 30301 event p-tags

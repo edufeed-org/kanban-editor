@@ -532,6 +532,8 @@ export class BoardOperations {
             tags?: string[];
             columns?: Array<{ id: string; name: string; color?: string }>;
             author?: string;
+            maintainers?: string[]; // ⚡ CRITICAL FIX: Add maintainers (editors)
+            followers?: string[]; // ⚡ CRITICAL FIX: Add followers (viewers)
             publishState?: string;
             updatedAt?: string;
         }
@@ -562,6 +564,19 @@ export class BoardOperations {
                     // Identisch → normaler Sync
                     currentBoard.author = boardProps.author;
                 }
+            }
+            
+            // ⚡ CRITICAL FIX: Synchronize maintainers (editors) from Nostr!
+            // This is the missing piece that prevented editors from having permissions
+            if (boardProps.maintainers !== undefined) {
+                currentBoard.maintainers = boardProps.maintainers;
+                console.log(`👥 Synchronized ${boardProps.maintainers.length} maintainers from Nostr`);
+            }
+            
+            // ⚡ CRITICAL FIX: Synchronize followers (viewers) from Nostr!
+            if (boardProps.followers !== undefined) {
+                currentBoard.followers = boardProps.followers;
+                console.log(`👀 Synchronized ${boardProps.followers.length} followers from Nostr`);
             }
             
             // ⚡ v4.0: CRITICAL: updatedAt synchronisieren!
@@ -625,6 +640,8 @@ export class BoardOperations {
                 name: boardProps.name,
                 description: boardProps.description || '',
                 author: boardProps.author || '',
+                maintainers: boardProps.maintainers || [], // ⚡ CRITICAL FIX: Include maintainers
+                followers: boardProps.followers || [], // ⚡ CRITICAL FIX: Include followers
                 publishState: (boardProps.publishState as any) || 'draft',
                 tags: boardProps.tags || [],
                 columns: boardProps.columns || [],
