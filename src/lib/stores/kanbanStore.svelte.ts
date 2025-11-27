@@ -364,7 +364,7 @@ export class BoardStore {
             description,
             author,
             authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
-            maintainers: [author],
+            maintainers: [], // ← FIX: Author should NOT be in maintainers (they're already the owner)
             publishState: 'draft',
             columns: []
         });
@@ -833,8 +833,9 @@ export class BoardStore {
         // Verwende gecachte geteilte Boards
         const sharedBoards = this.cachedSharedBoards;
         
-        // Trigger async loading of shared boards (fire-and-forget)
-        this.loadSharedBoardsAsync(currentUserPubkey);
+        // ⚠️ FIXED: Do NOT trigger async loading here!
+        // This causes state_unsafe_mutation when called from $derived
+        // Use triggerLoadSharedBoards() from component's $effect instead
         
         // ✅ FILTER by search query
         const filtered = query 
@@ -846,6 +847,19 @@ export class BoardStore {
             : sharedBoards;
         
         return filtered;
+    }
+
+    /**
+     * Trigger loading of shared boards (safe to call from $effect)
+     * This is a separate method to avoid state mutations in $derived context
+     */
+    public triggerLoadSharedBoards(): void {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            return;
+        }
+        // Fire-and-forget async loading
+        this.loadSharedBoardsAsync(currentUserPubkey);
     }
 
     /**

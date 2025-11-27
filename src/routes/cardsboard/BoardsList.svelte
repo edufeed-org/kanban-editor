@@ -19,6 +19,16 @@
     let isCreating = $state(false);
     let isLoading = $state(false);
 
+    // ⚠️ FIXED: Trigger shared boards loading in $effect (not in $derived!)
+    // This prevents state_unsafe_mutation error
+    $effect(() => {
+        // Trigger when user logs in/out
+        const user = authStore.currentUser;
+        if (user) {
+            boardStore.triggerLoadSharedBoards();
+        }
+    });
+
     // Abgeleitete Boards-Liste (mit Filterung + geteilte Boards)
     let filteredBoards = $derived.by(() => {
         // ⚡ KRITISCH: updateTrigger für Reaktivität!
