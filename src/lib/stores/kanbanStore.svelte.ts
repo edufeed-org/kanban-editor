@@ -46,7 +46,7 @@ export class BoardStore {
     private boardIds = $state<string[]>(BoardStorage.loadBoardIds());
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
     private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}>>([]); // Cache für geteilte Boards (inkl. author)
-    private isLoadingSharedBoards = $state(false); // Loading-Flag für geteilte Boards
+    private isLoadingSharedBoards = false; // Loading-Flag (non-reactive to prevent infinite loops in $effect)
     public updateTrigger = $state(0);
     
     // 🚀 NEW: NDK Ready Signal (prevents race conditions)
