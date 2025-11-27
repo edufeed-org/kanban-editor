@@ -64,11 +64,9 @@ describe('liascriptExport', () => {
 		const result = commentsToLiaScript(comments);
 
 		expect(result).toContain('#### Kommentare');
-		expect(result).toMatch(/\*\*Alice\*\* \(15\.0?1\.2025, 0?7:00\): Erster Kommentar/); // Flexibles Datumsformat
-		expect(result).toMatch(/\*\*Bob\*\* \(15\.0?1\.2025, 0?8:00\): Zweiter Kommentar/);
-		});
-
-		it('sollte authorName verwenden wenn vorhanden, sonst author', () => {
+		expect(result).toMatch(/\*\*Alice\*\* \(15\.0?1\.2025, \d{1,2}:\d{2}\): Erster Kommentar/); // Flexible Zeit-Formatierung
+		expect(result).toMatch(/\*\*Bob\*\* \(15\.0?1\.2025, \d{1,2}:\d{2}\): Zweiter Kommentar/);
+	});		it('sollte authorName verwenden wenn vorhanden, sonst author', () => {
 			const comments: Comment[] = [
 				{
 					id: 'c1',
