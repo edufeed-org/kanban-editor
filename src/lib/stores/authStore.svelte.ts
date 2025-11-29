@@ -93,6 +93,10 @@ export class AuthStore {
         const { boardStore } = await import('./kanbanStore.svelte.js');
         // Board-Author ggf. aktualisieren
         boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
         console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-07 login');
@@ -142,12 +146,27 @@ export class AuthStore {
       sessionStorage.setItem("nostr-nsec-temp", nsec);
       console.log("💾 nsec temporarily stored in sessionStorage (cleared on tab close)");
       
-      // �🔄 Update SyncManager with new signer
+      // 🔄 Update SyncManager with new signer
       try {
         getSyncManager().updateSigner(signer);
         console.log('✅ SyncManager signer updated after nsec login');
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+      
+      // 🔗 Nach erfolgreichem nsec-Login: Demo-Board Migration & Nostr Sync
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after nsec login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after nsec login:', error);
       }
 
       return user;
@@ -202,6 +221,10 @@ export class AuthStore {
       try {
         const { boardStore } = await import('./kanbanStore.svelte.js');
         boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        boardStore.onAuthChanged?.();
+        
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
         console.log('[AuthStore] ✅ Boards synced from Nostr after OIDC login');
@@ -219,10 +242,18 @@ export class AuthStore {
   }
 
   /**
-   * Logout
+   * Logout - Clear auth state but keep instance alive for reactive UI
+   * 
+   * 🔴 CRITICAL FIX (25.11.2025):
+   * Do NOT call AuthStoreWrapper.reset() here - that breaks reactive $derived values!
+   * Reactive components use $derived(authStore.isAuthenticated) which depends on getInstance()
+   * If instance is destroyed, components can't update to reflect logged-out state
+   * Solution: Only clear state (currentUser, signer, profileCache) and keep instance alive
+   * This allows $derived to reactively update and UI shows login state again
    */
   public async logout(): Promise<void> {
     this.currentUser = null;
+    this.userProfileCache.clear(); // Clear profile cache to prevent data leaks
     this.ndk.signer = undefined;
 
     this.sessionStore.set(null);
@@ -238,7 +269,12 @@ export class AuthStore {
       console.warn('⚠️ SyncManager signer clear warning:', error);
     }
 
-    console.log("🚪 User logged out");
+    // ✅ IMPORTANT: Do NOT call AuthStoreWrapper.reset() here!
+    // This would destroy the instance and break reactive $derived values
+    // State is already cleared above (currentUser = null)
+    // UI will reactively update because currentUser changed
+
+    console.log("🚪 User logged out - state cleared, instance preserved for reactive UI");
   }
 
   /**
@@ -802,6 +838,7 @@ export class AuthStore {
 class AuthStoreWrapper {
   private static instance: AuthStore | null = null;
   private static initialized = false;
+  private static lastNdk: NDK | null = null;
 
   static getInstance(): AuthStore {
     if (!this.instance) {
@@ -821,8 +858,12 @@ class AuthStoreWrapper {
   }
 
   static initialize(ndk: NDK): AuthStore {
-    if (!this.instance) {
+    // 🔴 BUG FIX: Create new instance if NDK changed or instance doesn't exist
+    // This prevents stale user data from previous sessions when switching users
+    if (!this.instance || this.lastNdk !== ndk) {
+      console.log('🔄 Creating new AuthStore instance (NDK changed or not initialized)');
       this.instance = new AuthStore(ndk);
+      this.lastNdk = ndk;
     }
     this.initialized = true;
     return this.instance;
@@ -830,6 +871,17 @@ class AuthStoreWrapper {
 
   static isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * 🆕 Reset method for testing/logout scenarios
+   * Clears the cached instance so next initialize() creates fresh AuthStore
+   */
+  static reset(): void {
+    this.instance = null;
+    this.lastNdk = null;
+    this.initialized = false;
+    console.log('🔄 AuthStoreWrapper reset for fresh initialization');
   }
 }
 

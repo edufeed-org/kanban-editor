@@ -126,63 +126,70 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   const dTag = tags.find(t => t[0] === 'd');
   const id = dTag ? dTag[1] : event.id || '';
 
-  // ⚡ NEU: Store event ID for deletion!
+  // Store event ID for potential deletion reference
   const eventId = event.id;
 
-  // Extract title
+  // Title / name
   const titleTag = tags.find(t => t[0] === 'title');
   const name = titleTag ? titleTag[1] : 'Unnamed Board';
 
-  // Extract description
+  // Description (fallback: event.content)
   const descTag = tags.find(t => t[0] === 'description');
   const description = descTag ? descTag[1] : event.content || '';
 
-  // Extract state
+  // Publish state
   const stateTag = tags.find(t => t[0] === 'state');
   const publishState = stateTag ? (stateTag[1] as any) : 'draft';
 
-  // Extract author
-  const author = event.pubkey;
+  // p-tags (NIP-51 compliant): First p-tag is always the canonical owner (author)
+  // Remaining p-tags are maintainers/editors
+  // 🔴 CRITICAL FIX: Do NOT use event.pubkey as author, because when an editor
+  // publishes an update, event.pubkey would be the editor, causing ownership to shift!
+  const pTags = tags.filter(t => t[0] === 'p').map(t => t[1]);
+  const author = pTags.length > 0 ? pTags[0] : event.pubkey; // First p-tag is canonical owner
+  
+  // Maintainers = all p-tags except the first one (which is the owner)
+  const maintainers = pTags.slice(1); // Skip first p-tag (author)
+  
+  // NOTE: Followers (viewers) come from separate Kind 30000 Follow Set events (NIP-51)
+  // They should NOT be in the Kind 30301 event p-tags
+  const followers: string[] = [];
 
-  // Extract columns from col-tags
+  // Columns
   const colTags = tags.filter(t => t[0] === 'col');
   const columns: ColumnProps[] = colTags.map(colTag => ({
     id: colTag[1],
     name: colTag[2] || 'Untitled',
     color: colTag[4] || undefined,
-    cards: [], // Will be loaded separately
+    cards: [],
   }));
 
-  // Extract maintainers (all p-tags except author)
-  const pTags = tags.filter(t => t[0] === 'p');
-  const maintainers = pTags.map(t => t[1]).filter(pk => pk !== author);
-
-  // Extract tags
+  // Board tags
   const tTag = tags.find(t => t[0] === 't');
   const boardTags = tTag ? tTag.slice(1) : [];
 
-  // Extract license
+  // License
   const licenseTag = tags.find(t => t[0] === 'license');
   const ccLicense = licenseTag ? licenseTag[1] : 'cc-by-4.0';
 
-  // ⚡ v4.0: Extract event timestamp for Last-Write-Wins
-  // Nostr created_at ist in Sekunden, wir brauchen ISO string
+  // Timestamp (Last-Write-Wins)
   const eventTimestamp = event.created_at || Math.floor(Date.now() / 1000);
   const updatedAt = new Date(eventTimestamp * 1000).toISOString();
 
   return {
     id,
-    eventId, // ← NEU: Event-ID zurückgeben!
+    eventId,
     name,
     description,
     columns,
     publishState,
     author,
     maintainers: maintainers.length > 0 ? maintainers : undefined,
+    followers: followers.length > 0 ? followers : undefined, // Populated from Kind 30000 Follow Set
     tags: boardTags,
     ccLicense,
-    createdAt: eventTimestamp, // ⚡ v4.0: Timestamp als number
-    updatedAt, // ⚡ v4.0: ISO string für Board-Klasse
+    createdAt: eventTimestamp,
+    updatedAt,
   };
 }
 

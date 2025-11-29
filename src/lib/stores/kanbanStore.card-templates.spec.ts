@@ -6,6 +6,7 @@ import { BoardStore } from './kanbanStore.svelte';
 import { userPreferencesStore, resetUserPreferencesStore } from './userPreferencesStore.svelte';
 import { authStore, initializeAuth } from './authStore.svelte';
 import { initializeLearningManager, resetLearningManagerForTesting } from './boardLearningManager.svelte';
+import { BoardRole } from '../types/sharing';
 import type NDK from '@nostr-dev-kit/ndk';
 
 describe('BoardStore - Card Template Learning', () => {
@@ -46,6 +47,10 @@ describe('BoardStore - Card Template Learning', () => {
 		
 		// Step 6: Create fresh BoardStore instance
 		store = new BoardStore();
+		
+		// Step 7: 🔐 PERMISSION FIX: Mock getCurrentUserRole to return OWNER for all permission checks
+		// This bypasses the permission system without modifying production code
+		vi.spyOn(store, 'getCurrentUserRole').mockReturnValue(BoardRole.OWNER);
 		
 		// Initialize LearningManager for the store
 		initializeLearningManager(store);

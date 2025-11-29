@@ -1,6 +1,7 @@
 // src/lib/classes/BoardModel.ts
 
 import { generateDTag, generateTimestamp } from '../utils/idGenerator.js';
+import { BoardRole } from '../types/sharing.js';
 
 // ============================================================================
 // INTERFACES UND TYPEN
@@ -67,6 +68,7 @@ export interface BoardProps {
     author?: string; // Nostr Public Key (hex pubkey)
     authorName?: string; // 🆕 Display Name (optional, für UI)
     maintainers?: string[]; // ← NEU: Nostr pubkeys mit Edit-Berechtigung
+    followers?: string[]; // ← NEU: Nostr pubkeys mit Viewer-Berechtigung (NIP-51)
     createdAt?: number;
     updatedAt?: string; // ⚡ v4.0: ISO string für Last-Write-Wins
     lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
@@ -291,6 +293,7 @@ export class Board {
     public author?: string; // Nostr Public Key (hex pubkey)
     public authorName?: string; // 🆕 Display Name (optional, für UI)
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
+    public followers: string[] = []; // ← NEU: Array von Pubkeys mit Viewer-Berechtigung
     public createdAt: string;
     public updatedAt: string;
     public lastAccessedAt?: string; // ✅ NEW (REFACTORING): Moved from metadata
@@ -308,6 +311,7 @@ export class Board {
         this.author = props.author;
         this.authorName = props.authorName; // 🆕 Display Name laden
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden
+        this.followers = props.followers || []; // ← NEU: Aus Props laden
         this.tags = props.tags || [];
         this.ccLicense = props.ccLicense || 'cc-by-4.0';
         
@@ -402,6 +406,74 @@ export class Board {
         }
         // author oder any maintainer
         return this.isMaintainer(pubkey);
+    }
+
+    /**
+     * Prüft ob Nutzer Editor ist (Owner oder Maintainer)
+     * @param pubkey - Nostr pubkey (hex format)
+     * @returns true wenn pubkey Editor-Rechte hat
+     */
+    isEditor(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        // Owner (author) ist automatisch Editor
+        if (pubkey === this.author) return true;
+        // Prüfe Maintainer-Liste
+        return this.maintainers.includes(pubkey);
+    }
+
+    /**
+     * Prüft ob Nutzer Viewer ist (in Follow Set)
+     * @param pubkey - Nostr pubkey (hex format)
+     * @returns true wenn pubkey Viewer-Rechte hat (inklusive Editor automatisch)
+     */
+    isViewer(pubkey?: string): boolean {
+        if (!pubkey) return false;
+        // Editor sind automatisch auch Viewer
+        if (this.isEditor(pubkey)) return true;
+        // Prüfe Follow-Liste
+        return this.followers.includes(pubkey);
+    }
+
+    /**
+     * Ermittelt die Rolle eines Nutzers
+     * @param pubkey - Nostr pubkey (hex format)
+     * @returns BoardRole oder null wenn kein Zugriff
+     */
+    getUserRole(pubkey?: string): BoardRole | null {
+        if (!pubkey) return null;
+        
+        // Owner
+        if (pubkey === this.author) {
+            return BoardRole.OWNER;
+        }
+        
+        // Editor (Maintainer)
+        if (this.isEditor(pubkey)) {
+            return BoardRole.EDITOR;
+        }
+        
+        // Viewer (Follower)
+        if (this.isViewer(pubkey)) {
+            return BoardRole.VIEWER;
+        }
+        
+        return null; // Kein Zugriff
+    }
+
+    /**
+     * Prüft ob Nutzer Board bearbeiten darf
+     * Mindestens EDITOR-Rolle erforderlich
+     */
+    canEditBoard(pubkey?: string): boolean {
+        return this.isEditor(pubkey);
+    }
+
+    /**
+     * Prüft ob Nutzer Board löschen darf
+     * Nur OWNER kann löschen
+     */
+    canDeleteBoard(pubkey?: string): boolean {
+        return pubkey === this.author;
     }
 
     addColumn(props: ColumnProps): Column {
@@ -549,6 +621,7 @@ export class Board {
         author?: string,
         authorName?: string, // ← NEU: Display name für Author!
         maintainers?: string[], // ← NEU: maintainers zur Return Type hinzugefügt!
+        followers?: string[], // ← NEU: followers zur Return Type hinzugefügt!
         columns: any[]
     } {
         return {
@@ -566,6 +639,7 @@ export class Board {
             author: this.author,
             authorName: this.authorName, // ← NEU: Display name serialisieren!
             maintainers: this.maintainers, // ← NEU: maintainers serialisieren!
+            followers: this.followers, // ← NEU: followers serialisieren!
             columns: this.columns.map(col => col.getContextData(full))
         };
     }

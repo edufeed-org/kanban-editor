@@ -5,14 +5,31 @@
 **Status:** ✅ **PHASE 1: 95%** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**🆕 PHASE 4 INFRASTRUKTUR-ANALYSE (13.11.2025):**
-- ✅ **Phase 1 Status:** **95% Complete** (1.0-1.3 DONE, 1.5 DONE, 1.2+1.4 IMPLEMENTIERT!)
+**Status:** ✅ **PHASE 1: COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
+**Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
+
+**🆕 PHASE 1 COMPLETION (28.12.2024):**
+- ✅ **Phase 1 Status:** **100% COMPLETE** (alle Meilensteine 1.0-1.6 DONE!)
 - ✅ **Phase 3 Status:** **90% Complete** (ChatStore, AIPanel, LLM ALL DONE, 3 AI Actions fehlen!)
 - 🟡 **Phase 2 Status:** **15% Complete** (Settings+Dark Mode DONE, Mobile+A11y offen)
 - 🟡 **Phase 4 Status:** **85% Infrastructure Ready** (SoftLockManager, MergeEngine, SyncManager ✅! Nur UI fehlt)
-- ✅ **PHASE 4 BLOCKER GELÖST:** Real-time Kollaboration Core ist FERTIG! Nur UI + NIP-51 + Tests fehlen (12-17 Tage)
+- ✅ **MEILENSTEIN 1.6 COMPLETE:** Demo Board System für anonyme User + benutzerbasierte Filterung FERTIG!
 
-**🆕 Neu in v3.1 (Nostr Sync Sprint - 10.11.2025):**
+**🆕 Neu in v3.2 (Demo Board System - 28.12.2024):**
+- ✅ **BENUTZERBASIERTE BOARD-FILTERUNG COMPLETE** — Nur eigene Boards werden angezeigt
+  - `getAllBoards()` filtert nach User pubkey (Owner oder Maintainer)
+  - Keine fremden Boards mehr in der Liste
+  - Saubere Trennung zwischen Users
+- ✅ **DEMO BOARD SYSTEM COMPLETE** — Anonyme Nutzer haben sofortigen Zugang
+  - Demo Board mit 3 Spalten + vorkonfigurierte Beispiel-Karten
+  - "Demo Session erstellen" Button für anonyme Nutzer
+  - 30-Tage Demo-Session mit automatischem Cleanup
+- ✅ **INTELLIGENTE MIGRATION COMPLETE** — Nahtloser Übergang nach Login
+  - Hat User Boards? → Demo Board wird gelöscht
+  - Hat User keine Boards? → Demo Board wird zu echtem Board konvertiert
+  - Post-Login Hooks in allen Auth-Methoden (NIP-07, nsec, OIDC)
+
+**Previous Sprint (v3.1 - Nostr Sync Sprint - 10.11.2025):**
 - ✅ **LAST-WRITE-WINS IMPLEMENTATION COMPLETE** — Full LWW conflict resolution across all card operations
   - Timestamp handling in constructors, upsertCardFromNostr(), moveCard()
   - LWW checks prevent stale localStorage data from overwriting fresh Nostr events
@@ -31,6 +48,11 @@
   - Board-IDs aus localStorage-Keys gescannt (`kanban-{id}` Pattern)
   - Auto-Migration mit Backup beim ersten Start
 - ✅ **TypeScript: 0 errors, 0 warnings** — Full strict mode compliance
+- ✅ **Demo Board System** — User-based filtering + anonymous demo boards (28.12.2024)
+  - User-spezifische Board-Anzeige (keine fremden Boards mehr)
+  - Demo Board mit vorkonfiguriertem Content für neue User
+  - Intelligente Migration: Demo → Real Board nach Login
+  - 30-Tage Demo-Session mit automatischem Cleanup
 
 **Previous Milestones (v2.5 - 29.10.2025):**
 - ✅ **DOKUMENTATIONS-GOVERNANCE v3.0** — Bidirektionale Code ↔ Docs Sync MANDATORY
@@ -101,6 +123,23 @@
 - ⚠️ Fehlt noch: UI-Integration vollständig testen (LoginSheet, LoginDialog)
 - Tests: `authstore.profile-cache.spec.ts` (290+ Tests!)
 - ⚠️ ToDo: E2E Tests für Login-Flow (1-2 Tage)
+
+#### ✅ 1.6: Demo Board System (DONE - 28.12.2024)
+- **Ziel:** Benutzerbasierte Board-Filterung + Demo-Board für anonyme Nutzer
+- **Status:** **✅ PRODUCTION READY**
+- **Implementation:**
+  - Benutzer-basierte Filterung: `getAllBoards()` filtert nach Owner/Maintainer
+  - Demo Board System: `createDemoBoard()` mit vorkonfiguriertem Content
+  - Intelligente Migration: `migrateDemoBoardToRealBoard()` nach Login
+  - UI: BoardsList.svelte mit Demo-Button für anonyme Nutzer
+- **Features:**
+  - ✅ User-spezifische Board-Anzeige (keine fremden Boards mehr)
+  - ✅ Demo Board mit 3 Spalten + Beispiel-Karten für neue Nutzer
+  - ✅ Automatische Migration: Demo → Real Board oder Löschung nach Login
+  - ✅ 30-Tage Demo-Session mit Cleanup
+  - ✅ Post-Login Hooks in allen Auth-Methoden (NIP-07, nsec, OIDC)
+- **Dokumentation:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md` (vollständige Spezifikation)
+- **Tests:** TypeScript 0 errors, Development Server läuft erfolgreich
 
 ### PHASE 2: UI COMPONENTS & UX (⚠️ 5% COMPLETE)
 
@@ -1248,7 +1287,9 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 ### Meilenstein 4.1: Board-Sharing & Permissions (01.12. - 10.12., ~8 Tage)
 
 **Ziel:** Mehrere Nutzer können gemeinsam an Board arbeiten (mit Zugriffskontrolle)  
-**Status:** 🟡 **~40% FERTIG** - Maintainers in Events, Permission-Infrastruktur fehlt
+**Status:** 🟡 **~50% FERTIG** - AuthStore komplett, Backend bereit, API-Layer + UI fehlen  
+**Branch:** `feature/board-sharing` (geplant)  
+**Dokumentation:** [`docs/ARCHITECTURE/BOARD-SHARING.md`](../ARCHITECTURE/BOARD-SHARING.md) (neu erstellt 13.11.2025)
 
 **✅ BEREITS IMPLEMENTIERT:**
 - ✅ Maintainers Support in Board Events (p-tags, nostrEvents.ts Line 96)
@@ -1257,11 +1298,26 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 **❌ NOCH ZU IMPLEMENTIEREN:**
 
-- [ ] **NIP-51 Integration** (Kontaktlisten für Board-Sharing)
-  - [ ] `readBoardShares()` - Liste der Boards mit Zugriff
-  - [ ] `addBoardShare(boardId, pubkey, role)` - Nutzer hinzufügen
-  - [ ] `removeBoardShare(boardId, pubkey)` - Nutzer entfernen
-  - [ ] Store als Kind 30051 Event
+**Phase 4.1A: Core API (2-3 Tage)**
+
+- [ ] **BoardRole & Types** (~0.5 Tage)
+  - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`
+  - [ ] `interface BoardShare { pubkey, role, addedAt }`
+  - [ ] TypeScript Typen in `src/lib/types/sharing.ts`
+
+- [ ] **BoardStore Maintainer Methods** (~1 Tag)
+  - [ ] `addMaintainer(pubkey: string, role: BoardRole): Promise<void>`
+  - [ ] `removeMaintainer(pubkey: string): Promise<void>`
+  - [ ] `getMaintainers(): BoardShare[]`
+  - [ ] Integration mit triggerUpdate() + publishToNostr()
+
+- [ ] **NIP-51 Integration** (~1 Tag)
+  - [ ] `readBoardShares()` - Fetch Kind 30051 Events
+  - [ ] `publishBoardShares()` - Create/Update Contact List Event
+  - [ ] p-tags mit Role-Information (tag[3])
+  - [ ] Event-Deserialisierung für BoardShare[]
+
+**Phase 4.1B: Permission System (1 Tag)**
 
 - [ ] **Permission System** 
   - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`

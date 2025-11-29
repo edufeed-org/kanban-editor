@@ -532,6 +532,8 @@ export class BoardOperations {
             tags?: string[];
             columns?: Array<{ id: string; name: string; color?: string }>;
             author?: string;
+            maintainers?: string[]; // ⚡ CRITICAL FIX: Add maintainers (editors)
+            followers?: string[]; // ⚡ CRITICAL FIX: Add followers (viewers)
             publishState?: string;
             updatedAt?: string;
         }
@@ -550,10 +552,31 @@ export class BoardOperations {
             currentBoard.description = boardProps.description || '';
             currentBoard.tags = boardProps.tags || [];
             
-            // ⚡ KRITISCH: Author MUSS synchronisiert werden!
-            // Sonst stimmt boardRef nicht (30301:author:id)
+            // ⚡ KRITISCH: Author MUSS synchronisiert werden, aber nicht ungeprüft überschrieben!
+            // Kanonischer Owner wird aus erstem p-tag (nostrEventToBoard) geliefert.
+            // Falls ein bestehender Author vorhanden ist und verschieden vom neuen → Warnung + Skip (drift prevention).
             if (boardProps.author) {
-                currentBoard.author = boardProps.author;
+                if (currentBoard.author && currentBoard.author !== boardProps.author) {
+                    console.warn(`⚠️ Ownership drift prevented: existing=${currentBoard.author} incoming=${boardProps.author}`);
+                } else if (!currentBoard.author) {
+                    currentBoard.author = boardProps.author;
+                } else {
+                    // Identisch → normaler Sync
+                    currentBoard.author = boardProps.author;
+                }
+            }
+            
+            // ⚡ CRITICAL FIX: Synchronize maintainers (editors) from Nostr!
+            // This is the missing piece that prevented editors from having permissions
+            if (boardProps.maintainers !== undefined) {
+                currentBoard.maintainers = boardProps.maintainers;
+                console.log(`👥 Synchronized ${boardProps.maintainers.length} maintainers from Nostr`);
+            }
+            
+            // ⚡ CRITICAL FIX: Synchronize followers (viewers) from Nostr!
+            if (boardProps.followers !== undefined) {
+                currentBoard.followers = boardProps.followers;
+                console.log(`👀 Synchronized ${boardProps.followers.length} followers from Nostr`);
             }
             
             // ⚡ v4.0: CRITICAL: updatedAt synchronisieren!
@@ -617,6 +640,8 @@ export class BoardOperations {
                 name: boardProps.name,
                 description: boardProps.description || '',
                 author: boardProps.author || '',
+                maintainers: boardProps.maintainers || [], // ⚡ CRITICAL FIX: Include maintainers
+                followers: boardProps.followers || [], // ⚡ CRITICAL FIX: Include followers
                 publishState: (boardProps.publishState as any) || 'draft',
                 tags: boardProps.tags || [],
                 columns: boardProps.columns || [],

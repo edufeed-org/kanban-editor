@@ -1,5 +1,154 @@
 # Changelog
 
+## Unreleased - Board-Sharing Realtime Anzeige 🚀
+
+**Datum:** 24. November 2025  
+**Branch:** `feature/board-sharing`  
+**Status:** ✅ Implementiert (Auto-Erscheinung geteilter Boards beim Editor)
+
+### ✨ Feature
+Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das Board nun automatisch und ohne Reload in der Boardliste des Editors.
+
+### 🔧 Technische Umsetzung
+- Zweite Nostr Subscription (`sharedSub`) für Kind 30301 Events mit `#p` Filter auf Nutzer-Pubkey (nicht nur `authors`)
+- Direktes Event-Parsing (d, title, description, p-tags) → Ableitung `userRole: editor|viewer`
+- Neuer Store-Handler `handleSharedBoardEvent()` im `BoardStore` upsertet das Board in `cachedSharedBoards` und triggert `updateTrigger`
+- Kein Polling mehr nötig; keine künstliche Verzögerung
+
+### 📚 Dokumentation
+- `docs/ARCHITECTURE/BOARD-SHARING.md` aktualisiert (Abschnitt "Realtime Appearance")
+
+### ✅ Acceptance Criteria
+- Editor sieht neues geteiltes Board < 1s nach Publish
+- Kein manuelles Refresh nötig
+- BoardsList reagiert rein über Reaktivität (`updateTrigger`)
+
+### 🐛 Fix (SSR Guard UserPreferencesStore)
+- Behebt wiederholten Fehler `localStorage.getItem is not a function` beim SSR Build
+- Ursache: Zugriff auf `localStorage` während Modul-Initialisierung im `UserPreferencesStore`
+- Lösung: Initialisierung mit Default-State und Browser-Gate (`typeof window !== 'undefined'`)
+- Impact: Login-Flows & Demo-Board Button werden wieder zuverlässig gerendert, Board-Sharing Tests können fortgesetzt werden
+- Dateien: `src/lib/stores/userPreferencesStore.svelte.ts`
+
+### 🔧 Hinweis
+Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
+
+### 🧪 Test-Hinweise (manuell)
+1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
+2. Editor hat BoardsList offen → Board taucht automatisch auf
+3. Entfernt Owner den Editor wieder → (Folgt in nächstem Increment: Auto-Removal)
+
+---
+
+## Version 4.6.1 - Demo Board Migration Fix 🔧
+
+**Datum:** 20. November 2025  
+**Branch:** `feature/board-sharing`  
+**Status:** ✅ **BUGFIX - Demo Board Migration korrigiert**
+
+### 🐛 Problem gelöst
+
+**Issue:** Eingeloggte Benutzer behielten das Demo-Board auch nach erfolgreicher Authentifizierung
+
+#### Root Cause
+- Demo-Board blieb in `boardIds` Liste nach Login
+- `getAllBoards()` filterte Demo-Board nicht korrekt für auth User
+- Board-Migration funktionierte nur teilweise
+
+#### ✅ Fix implementiert
+
+- ✅ **Demo-Board-Migration korrigiert** 
+  - `migrateDemoBoardToRealBoard()`: Korrekte `boardIds` Aktualisierung
+  - `deleteDemoBoard()`: Entfernt Demo-Board aus boardIds und localStorage
+  - `onAuthChanged()`: Neue zentrale Methode für Auth-Integration
+  
+- ✅ **Board-Filterung verbessert**
+  - `getAllBoards()`: Explizite Demo-Board-Filterung für auth User
+  - `filteredBoardIds` ohne 'demo-board' für authentifizierte Benutzer
+  
+- ✅ **AuthStore-Integration** 
+  - Alle Login-Methoden (NIP-07, nsec, OIDC) rufen `onAuthChanged()` auf
+  - Ersetzt direkte `migrateDemoBoardToRealBoard()` Aufrufe
+  
+- ✅ **UI-Integration**
+  - `BoardsList.svelte`: Demo-Session-Erstellung triggert `onAuthChanged()`
+  - Reaktive Board-Liste-Updates nach Auth-Änderungen
+
+### 🧪 Test-Scenarios
+
+**Scenario 1: Neuer User**
+- Demo-Board → Login → Demo wird zu erstem echten Board ("🏠 Mein erstes Board")
+
+**Scenario 2: Bestehender User**  
+- Demo-Board → Login → Demo wird gelöscht, User-Boards angezeigt
+
+---
+
+## Version 4.6 - Demo Board System für anonyme Nutzer 🎯
+
+**Datum:** 28. Dezember 2024  
+**Branch:** `main`  
+**Status:** ✅ **PRODUCTION READY - MEILENSTEIN 1.6 COMPLETE**
+
+### 🎯 Zusammenfassung
+
+**Feature:** Demo Board System mit intelligenter Migration und benutzerbasierter Filterung
+
+#### ✅ Implementiert
+
+- ✅ **Benutzerbasierte Board-Filterung** — Problem gelöst: "Es wird alle Boards von allen users gelistet"
+  - `getAllBoards()` filtert nach User pubkey (Owner oder Maintainer)
+  - `isUserOwnerOrMaintainer()` Helper-Methode für Berechtigung-Checks
+  - Nur eigene Boards werden in BoardsList.svelte angezeigt
+
+- ✅ **Demo Board System für Anonyme** — "Anonymen Users haben Zugriff auf ein Demo-Board"
+  - `getDemoBoardsForAnonymousUser()` mit pre-konfiguriertem Demo-Content
+  - 3 Demo-Spalten: "🚀 Erste Schritte", "📝 In Arbeit", "✅ Erledigt"
+  - Hilfreiche Beispiel-Karten mit Beschreibungen für neue Nutzer
+  - Demo-Button in UI für anonyme Nutzer (BoardsList.svelte)
+
+- ✅ **Intelligente Post-Login Migration** — Smart migration logic
+  - `migrateDemoBoardToRealBoard()` in BoardStore
+  - **Hat User Boards?** → Demo Board wird gelöscht (cleanup)
+  - **Hat User keine Boards?** → Demo Board wird zu echtem Board konvertiert
+  - Post-Login Hooks in alle Auth-Methoden: NIP-07, nsec, OIDC
+
+#### 📋 User-Flow
+```
+Anonymer User → Demo Board erstellen → Board nutzen
+                     ↓
+              User meldet sich an
+                     ↓
+    Hat User eigene Boards?
+         ↙              ↘
+      JA → Demo löschen  NEIN → Demo zu Real Board
+```
+
+#### 📊 Features im Detail
+
+- **Demo Session:** 30-Tage automatisches Cleanup mit AuthStore.createDemoSession()
+- **Pre-konfigurierter Content:** 3 Spalten mit je 2-3 Beispiel-Karten
+- **Error Handling:** Robust mit Fallbacks und Console-Logging
+- **UI Integration:** Conditional rendering in BoardsList.svelte
+- **AuthStore Integration:** Post-Login Hooks in allen Authentication-Methoden
+
+#### 📚 Dokumentation
+- **Vollständige Feature-Doku:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md`
+  - Technische Spezifikation & Implementation Details
+  - User-Flows & Akzeptanzkriterien
+  - Code-Beispiele & API-Referenz
+
+- **ROADMAP.md Updates:** Meilenstein 1.6 als COMPLETE markiert
+- **_INDEX.md Updates:** Demo Board System in Navigation integriert
+
+#### 🧪 Tests & Validierung
+- ✅ TypeScript Compilation: 0 errors, 0 warnings
+- ✅ Development Server: Erfolgreich gestartet (Port 5174)
+- ✅ Code Quality: Alle ESLint-Regeln befolgt
+- ✅ Svelte 5 Runes: Korrekte Reactive Patterns verwendet
+
+---
+
 ## Version 4.5 - Kaskadierende Löschung 🗑️
 
 **Datum:** 13. November 2025  

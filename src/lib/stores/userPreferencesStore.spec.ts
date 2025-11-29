@@ -24,38 +24,39 @@ describe('UserPreferencesStore', () => {
 			expect(store.getPreferences()).toEqual([]);
 		});
 
-		it('should load from localStorage if exists', () => {
-			// Clear and setup: Save data to localStorage BEFORE creating store
-			localStorage.clear();
-			
-			const mockData = {
-				preferences: [
-					{
-						id: 'pref-1',
-						category: 'structure' as PreferenceCategory,
-						key: 'TEST_KEY',
-						value: 'test-value',
-						confidence: 0.5,
-						learnedFrom: [{ boardId: 'board-1', timestamp: '2025-11-03T10:00:00Z' }],
-						lastUsed: '2025-11-03T10:00:00Z',
-						createdAt: '2025-11-03T10:00:00Z',
-						updatedAt: '2025-11-03T10:00:00Z'
-					}
-				],
-				version: '1.0'
-			};
-			localStorage.setItem('user-preferences', JSON.stringify(mockData));
+	it('should load from localStorage if exists', () => {
+		// Setup: Verify initial state is empty
+		const initialStore = new UserPreferencesStore();
+		expect(initialStore.getPreferences()).toEqual([]);
 
-			// Create new store (should load from localStorage)
-			const newStore = new UserPreferencesStore();
-			const prefs = newStore.getPreferences();
-			
-			expect(prefs.length).toBe(1);
-			expect(prefs[0].key).toBe('TEST_KEY');
-			expect(prefs[0].confidence).toBe(0.5);
-		});
+		// Setup: Save mock data to localStorage
+		const mockData = {
+			preferences: [
+				{
+					id: 'pref-1',
+					category: 'structure' as PreferenceCategory,
+					key: 'TEST_KEY',
+					value: 'test-value',
+					confidence: 0.5,
+					learnedFrom: [{ boardId: 'board-1', timestamp: '2025-11-03T10:00:00Z' }],
+					lastUsed: '2025-11-03T10:00:00Z',
+					createdAt: '2025-11-03T10:00:00Z',
+					updatedAt: '2025-11-03T10:00:00Z'
+				}
+			],
+			version: '1.0'
+		};
+		localStorage.clear();
+		localStorage.setItem('user-preferences', JSON.stringify(mockData));
 
-		it('should use default state on corrupted localStorage', () => {
+		// Create new store (should load from localStorage)
+		const newStore = new UserPreferencesStore();
+		const prefs = newStore.getPreferences();
+		
+		expect(prefs.length).toBe(1);
+		expect(prefs[0].key).toBe('TEST_KEY');
+		expect(prefs[0].confidence).toBe(0.5);
+	});		it('should use default state on corrupted localStorage', () => {
 			localStorage.setItem('user-preferences', 'invalid-json');
 			const newStore = new UserPreferencesStore();
 			expect(newStore.getPreferences()).toEqual([]);
@@ -82,12 +83,17 @@ describe('UserPreferencesStore', () => {
 		});
 
 		it('should persist to localStorage', () => {
-			store.learnPreference('structure', 'TEST_KEY', 'test-value', 'board-1');
+			// Learn a preference (should trigger saveToStorage)
+			const result = store.learnPreference('structure', 'TEST_KEY', 'test-value', 'board-1');
+			expect(result.isNew).toBe(true);
 
+			// Verify localStorage was updated
 			const stored = localStorage.getItem('user-preferences');
 			expect(stored).toBeTruthy();
 
 			const parsed = JSON.parse(stored!);
+			expect(parsed).toBeDefined();
+			expect(parsed.preferences).toBeDefined();
 			expect(parsed.preferences).toHaveLength(1);
 			expect(parsed.preferences[0].key).toBe('TEST_KEY');
 		});
@@ -303,11 +309,22 @@ describe('UserPreferencesStore', () => {
 		});
 
 		it('should persist deletion to localStorage', () => {
-			store.learnPreference('structure', 'KEY', 'value', 'board-1');
-			store.deletePreference('KEY');
+			// Learn a preference
+			const learnResult = store.learnPreference('structure', 'KEY', 'value', 'board-1');
+			expect(learnResult.isNew).toBe(true);
+			expect(store.getPreferences()).toHaveLength(1);
 
+			// Delete the preference (should trigger saveToStorage)
+			const deleted = store.deletePreference('KEY');
+			expect(deleted).toBe(true);
+
+			// Verify localStorage was updated with empty preferences
 			const stored = localStorage.getItem('user-preferences');
+			expect(stored).toBeTruthy();
+			
 			const parsed = JSON.parse(stored!);
+			expect(parsed).toBeDefined();
+			expect(parsed.preferences).toBeDefined();
 			expect(parsed.preferences).toHaveLength(0);
 		});
 	});
@@ -323,11 +340,22 @@ describe('UserPreferencesStore', () => {
 		});
 
 		it('should persist clear to localStorage', () => {
-			store.learnPreference('structure', 'KEY', 'value', 'board-1');
-			store.clear();
+			// Learn a preference
+			const learnResult = store.learnPreference('structure', 'KEY', 'value', 'board-1');
+			expect(learnResult.isNew).toBe(true);
+			expect(store.getPreferences()).toHaveLength(1);
 
+			// Clear all preferences (should trigger saveToStorage)
+			store.clear();
+			expect(store.getPreferences()).toHaveLength(0);
+
+			// Verify localStorage was updated with empty preferences
 			const stored = localStorage.getItem('user-preferences');
+			expect(stored).toBeTruthy();
+			
 			const parsed = JSON.parse(stored!);
+			expect(parsed).toBeDefined();
+			expect(parsed.preferences).toBeDefined();
 			expect(parsed.preferences).toHaveLength(0);
 		});
 	});

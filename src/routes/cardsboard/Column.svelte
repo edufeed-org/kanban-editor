@@ -405,7 +405,6 @@
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
 			>
-				{#if authStore.isAuthenticated }
 				<!-- Add Card Button -->
 				<Button 
 					variant="default" 
@@ -415,8 +414,8 @@
 					onclick={(e) => {
 						e.stopPropagation();
 						if (columnId) {
-							try {
-								const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							if (newCardId) {
 								const newCard: CardItem = {
 									id: newCardId,
 									name: 'Neue Karte',
@@ -429,20 +428,13 @@
 									onSelectCard?.(String(newCardId));
 									console.log('✨ Neue Karte selektiert:', newCardId);
 								}, 0);
-							} catch (error) {
-								console.error('❌ Fehler beim Erstellen der Karte:', error);
-								toast.error('Keine Berechtigung', {
-									description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Karten zu erstellen.'
-								});
 							}
 						}
 					}}
 				>
 					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
-				{/if}
 				<!-- Spalten-Aktionen Popover -->
-				{#if authStore.isAuthenticated }
 				<Popover.Root bind:open={popoverOpen} onOpenChange={(open) => {
 					console.log('🔍 Popover open state changed:', open);
 					popoverOpen = open;
@@ -511,7 +503,6 @@
 						</div>
 					</Popover.Content>
 				</Popover.Root>
-				{/if}
 			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>

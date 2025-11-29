@@ -2,11 +2,12 @@
 // REFACTORED: Hauptstore der alle Module zusammenführt
 
 import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
+import { BoardRole, type BoardShare } from '../types/sharing.js';
 import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
-import { nostrEventToCard } from '../utils/nostrEvents.js';
+import { generateDTag } from '../utils/idGenerator.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
 // Module imports
@@ -18,12 +19,17 @@ import {
     BoardLearning,
     PasteHandler,
     ChatIntegration,
+    BoardSharingOperations,
     type CardItem,
     type UIColumn
 } from './boardstore/index.js';
 
 // ✅ NEW (REFACTORING): Migration import
 import { MetadataMigration } from './boardstore/migration.js';
+
+// Permission checks import
+import { PermissionChecks } from '$lib/utils/permissionCheck.js';
+import { toast } from 'svelte-sonner';
 
 // Re-export types für Komponenten
 export type { CardItem, UIColumn };
@@ -39,6 +45,8 @@ export class BoardStore {
     private board = $state(this.loadFromStorage());
     private boardIds = $state<string[]>(BoardStorage.loadBoardIds());
     private _columnOrder = $state<string[]>(this.board.columns.map(c => c.id));
+    private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}>>([]); // Cache für geteilte Boards (inkl. author)
+    private isLoadingSharedBoards = false; // Loading-Flag (non-reactive to prevent infinite loops in $effect)
     public updateTrigger = $state(0);
     
     // 🚀 NEW: NDK Ready Signal (prevents race conditions)
@@ -59,7 +67,6 @@ export class BoardStore {
         
         if (typeof window !== 'undefined') {
             this.initializeBoard();
-            // ⚠️ REMOVED: scheduleAuthorFix() - wird später aufgerufen nachdem NDK ready ist
             this.exposeCurrentBoardIdToWindow();
             this.initializeLearningManagerIfEnabled();
         }
@@ -73,10 +80,6 @@ export class BoardStore {
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
         }
-    }
-    
-    private scheduleAuthorFix(): void {
-        this.fixAnonymousBoardAuthor();
     }
     
     private async initializeLearningManagerIfEnabled(): Promise<void> {
@@ -94,6 +97,30 @@ export class BoardStore {
         } catch (error) {
             console.warn('⚠️ Fehler beim Laden von config.json:', error);
         }
+    }
+    
+    /**
+     * ⚡ Öffentliche Methode: Wird nach Login/Logout aufgerufen
+     * 
+     * Behandelt Demo-Board-Migration und Board-Liste-Aktualisierung
+     */
+    public onAuthChanged(): void {
+        console.log('🔄 Auth status changed - handling board migration');
+        
+        // ⚡ NEW: Cache für geteilte Boards leeren bei Auth-Änderung
+        this.cachedSharedBoards = [];
+        this.isLoadingSharedBoards = false;
+        
+        // Migriere Demo-Board falls nötig
+        this.migrateDemoBoardToRealBoard();
+        
+        // Board-IDs neu laden (um Demo-Board zu entfernen bei auth)
+        this.refreshBoardIds();
+        
+        // Update trigger für Board-Liste Reaktivität
+        this.triggerUpdate({ publish: false });
+        
+        console.log('✅ Auth change handled - board migration complete');
     }
     
     /**
@@ -236,9 +263,6 @@ export class BoardStore {
         // NUR bei Primary Actions zu Nostr publishen (Default: true)
         if (options?.publish !== false) {
             this.publishToNostr();
-        } else {
-            // Debug: Log nur wenn explizit publish=false gesetzt wurde
-            // (verhindert Log-Spam bei comment loading, etc.)
         }
     }
 
@@ -261,22 +285,51 @@ export class BoardStore {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
-        // ⚡ WICHTIG: Metadata aus localStorage lesen
-        const boards = BoardStorage.getAllBoardsMetadata(this.boardIds);
+        // ⚡ BENUTZER-BASIERTE FILTERUNG
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        const isAnonymous = !currentUserPubkey;
+        
+        // Anonyme Benutzer: Nur Demo-Board anzeigen
+        if (isAnonymous) {
+            return this.getDemoBoardsForAnonymousUser();
+        }
+        
+        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board explizit ausschließen
+        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board');
+        const allBoards = BoardStorage.getAllBoardsMetadata(filteredBoardIds);
+        
+        // 🔍 DEBUG: Log all boards and their authors
+        console.log(`🔍 getAllBoards() - Checking ${allBoards.length} boards for user ${currentUserPubkey?.slice(0, 8)}...`);
+        allBoards.forEach(board => {
+            const fullBoard = BoardStorage.loadBoard(board.id);
+            console.log(`  📋 Board "${board.name}": author=${fullBoard?.author?.slice(0, 8)}... maintainers=${JSON.stringify(fullBoard?.maintainers?.map(m => m.slice(0, 8) + '...') || [])}`);
+        });
+        
+        const userBoards = allBoards.filter(board => {
+            // Board gehört dem aktuellen Benutzer wenn:
+            // 1. author === currentUserPubkey ODER
+            // 2. maintainers enthält currentUserPubkey
+            const isOwner = this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
+            if (!isOwner) {
+                console.log(`  ❌ Filtered out: "${board.name}" (not owner or maintainer)`);
+            }
+            return isOwner;
+        });
+        
+        console.log(`✅ getAllBoards() returning ${userBoards.length}/${allBoards.length} boards for user ${currentUserPubkey?.slice(0, 8)}...`);
         
         // ⚡ DEBUG: Duplikate-Check
-        const boardIdsInList = boards.map(b => b.id);
+        const boardIdsInList = userBoards.map(b => b.id);
         const duplicates = boardIdsInList.filter((id, index) => boardIdsInList.indexOf(id) !== index);
         if (duplicates.length > 0) {
             console.error(`🔴 DUPLIKATE in getAllBoards() gefunden:`, duplicates);
-            console.log('  boardIds:', this.boardIds);
-            console.log('  boards:', boards.map(b => ({ id: b.id, name: b.name })));
+            console.log('  userBoards:', userBoards.map(b => ({ id: b.id, name: b.name })));
         }
         
         // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
-        const currentBoardIndex = boards.findIndex(b => b.id === this.board.id);
+        const currentBoardIndex = userBoards.findIndex(b => b.id === this.board.id);
         if (currentBoardIndex !== -1) {
-            boards[currentBoardIndex] = {
+            userBoards[currentBoardIndex] = {
                 id: this.board.id,
                 name: this.board.name,
                 description: this.board.description,
@@ -291,17 +344,27 @@ export class BoardStore {
             };
         }
         
-        return boards;
+        return userBoards;
     }
 
     public createBoard(name: string, description?: string): string {
+        // Permission Check: Kann Benutzer Boards erstellen?
+        const userRole = this.getCurrentUserRole();
+        // Note: Für createBoard gibt es keine spezielle Board-ID, da das Board erst erstellt wird
+        if (!PermissionChecks.canCreateBoard(userRole)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, ein neues Board zu erstellen.'
+            });
+            return ''; // Silently fail - Permission denied message already shown
+        }
+        
         const { author, authorName } = this.getAuthorFields();
         const board = new Board({
             name,
             description,
             author,
             authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
-            maintainers: [author],
+            maintainers: [], // ← FIX: Author should NOT be in maintainers (they're already the owner)
             publishState: 'draft',
             columns: []
         });
@@ -344,10 +407,24 @@ export class BoardStore {
     }
 
     public loadBoard(boardId: string, options?: { skipLastAccessed?: boolean }): boolean {
-        const board = BoardStorage.loadBoard(boardId);
+        let board = BoardStorage.loadBoard(boardId);
         if (!board) {
-            console.error(`❌ Board ${boardId} nicht gefunden`);
-            return false;
+            // Versuch: Shared Board Rekonstruktion asynchronously (wenn über p-tag entdeckt, aber noch nicht lokal persistiert)
+            const isShared = this.cachedSharedBoards.some(b => b.id === boardId);
+            if (isShared) {
+                console.warn(`⚠️ Shared Board ${boardId} nicht lokal – starte Rekonstruktion...`);
+                this.reconstructSharedBoard(boardId).then(success => {
+                    if (success) {
+                        console.log(`🔁 Rekonstruktion abgeschlossen – lade Board ${boardId} erneut`);
+                        this.loadBoard(boardId, { skipLastAccessed: true });
+                    } else {
+                        console.error(`❌ Rekonstruktion für Shared Board ${boardId} fehlgeschlagen`);
+                    }
+                });
+            } else {
+                console.error(`❌ Board ${boardId} nicht gefunden`);
+            }
+            return false; // Aktueller synchroner Aufruf schlägt fehl; bei Erfolg wird später reload ausgeführt
         }
 
         this.board = board;
@@ -379,10 +456,78 @@ export class BoardStore {
         // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
         this.loadCardsFromNostr(board);
         
+        // 🔴 KRITISCH: Lade Followers (Viewer) aus NIP-51 Kind 30000 Follow Set Events
+        // Dies ist nötig um Viewer-Rollen korrekt zu rekonstruieren nach Reload
+        this.loadBoardFollowers().catch(err => {
+            console.warn('⚠️ Failed to load board followers:', err);
+            // Non-blocking error - board can still be used without followers loaded
+        });
+        
         return true;
     }
 
+    /**
+     * Rekonstruiert ein geteiltes Board aus einem Nostr Event falls es nur im Shared-Cache existiert.
+     * Persistiert das Board unter 'kanban-{id}' damit loadBoard() funktioniert und Karten nachgeladen werden können.
+     * Rückgabe: true wenn Rekonstruktion erfolgreich oder bereits vorhanden, sonst false.
+     */
+    private async reconstructSharedBoard(boardId: string): Promise<boolean> {
+        // Bereits vorhanden?
+        const existing = BoardStorage.loadBoard(boardId);
+        if (existing) return true;
+
+        const sharedMeta = this.cachedSharedBoards.find(b => b.id === boardId);
+        if (!sharedMeta) return false;
+
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.warn(`⚠️ NDK nicht initialisiert – Rekonstruktion von ${boardId} verschoben`);
+            return false;
+        }
+
+        const author = sharedMeta.author;
+        const filter: any = author
+            ? { kinds: [30301], authors: [author], '#d': [boardId] }
+            : { kinds: [30301], '#d': [boardId] };
+        try {
+            const event = await ndk.fetchEvent(filter);
+            if (!event) {
+                console.warn(`⚠️ Kein Remote-Event für Shared Board ${boardId} gefunden`);
+                return false;
+            }
+            const { nostrEventToBoard } = await import('../utils/nostrEvents.js');
+            const boardProps = nostrEventToBoard(event);
+            if (!boardProps.id) return false;
+            const reconstructed = new Board(boardProps);
+            BoardStorage.saveBoard(reconstructed);
+            this.refreshBoardIds();
+            console.log(`🛠️ Rekonstruiertes Shared Board gespeichert: ${reconstructed.name} (${reconstructed.id})`);
+            
+            // 🔴 KRITISCH: Lade Followers aus Kind 30000 nach Rekonstruktion
+            // Der Event hat nur Maintainers in p-tags, Followers kommen aus separatem Follow Set
+            this.board = reconstructed;
+            await this.loadBoardFollowers().catch(err => {
+                console.warn('⚠️ Failed to load followers after shared board reconstruction:', err);
+            });
+            
+            return true;
+        } catch (error) {
+            console.error(`❌ Fehler bei Rekonstruktion von Shared Board ${boardId}:`, error);
+            return false;
+        }
+    }
+
     public deleteBoard(boardId?: string): boolean {
+        // Permission Check: Kann Benutzer das Board löschen?
+        const userRole = this.getCurrentUserRole();
+        const currentBoardId = boardId || this.board.id;
+        if (!PermissionChecks.canDeleteBoard(userRole, currentBoardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, dieses Board zu löschen.'
+            })
+            return false; // Silently fail - Permission denied message already shown
+        }
+        
         const idToDelete = boardId || this.board.id;
         
         if (this.boardIds.length <= 1) {
@@ -633,10 +778,11 @@ export class BoardStore {
     }
 
     public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
-        const allBoards = this.getAllBoards();
+        // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
+        const userBoards = this.getAllBoards();
         
         // ✅ 1. SORT by lastAccessed DESC (newest first)
-        const sorted = allBoards.sort((a, b) => {
+        const sorted = userBoards.sort((a, b) => {
             const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
             const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
             
@@ -670,6 +816,170 @@ export class BoardStore {
     }
 
     /**
+     * ✅ NEUE METHODE: Geteilte Boards filtern (wo User Maintainer oder Follower ist)
+     * 
+     * Diese Methode lädt Boards aus Nostr Events, bei denen der aktuelle Nutzer
+     * als Maintainer (p-tag) oder Follower (NIP-51 Follow Set) hinzugefügt wurde.
+     */
+    public filterSharedBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}> {
+        // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
+        this.updateTrigger;
+        
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            return []; // Anonyme Nutzer haben keine geteilten Boards
+        }
+        
+        // Verwende gecachte geteilte Boards
+        const sharedBoards = this.cachedSharedBoards;
+        
+        // ⚠️ FIXED: Do NOT trigger async loading here!
+        // This causes state_unsafe_mutation when called from $derived
+        // Use triggerLoadSharedBoards() from component's $effect instead
+        
+        // ✅ FILTER by search query
+        const filtered = query 
+            ? sharedBoards.filter(board => {
+                const lowerQuery = query.toLowerCase();
+                return board.name.toLowerCase().includes(lowerQuery) ||
+                    (board.description && board.description.toLowerCase().includes(lowerQuery));
+            })
+            : sharedBoards;
+        
+        return filtered;
+    }
+
+    /**
+     * Trigger loading of shared boards (safe to call from $effect)
+     * This is a separate method to avoid state mutations in $derived context
+     */
+    public triggerLoadSharedBoards(): void {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            return;
+        }
+        // Fire-and-forget async loading
+        this.loadSharedBoardsAsync(currentUserPubkey);
+    }
+
+    /**
+     * ⭐ NEU (Board-Sharing v1): Direkter Handler für eingehende Shared Board Events
+     * Wird von NostrIntegration.subscribeToUpdates(sharedSub) aufgerufen, wenn ein Board-Event
+     * mit p-tag des aktuellen Nutzers eintrifft, dessen Author != aktueller Nutzer ist.
+     * Fügt das Board, falls noch nicht vorhanden, zu cachedSharedBoards hinzu und triggert ein UI-Update.
+     */
+    public handleSharedBoardEvent(eventData: { id: string; name: string; description?: string; createdAt: number; updatedAt?: number; isShared: boolean; userRole: string; author?: string }): void {
+        const exists = this.cachedSharedBoards.some(b => b.id === eventData.id);
+        if (!exists) {
+            this.cachedSharedBoards = [
+                ...this.cachedSharedBoards,
+                {
+                    id: eventData.id,
+                    name: eventData.name,
+                    description: eventData.description,
+                    createdAt: eventData.createdAt,
+                    updatedAt: eventData.updatedAt,
+                    lastAccessed: undefined,
+                    hasUnseenChanges: false,
+                    isShared: true,
+                    userRole: eventData.userRole,
+                    author: eventData.author
+                }
+            ];
+            // Nur UI Refresh, kein Publish nötig
+            this.triggerUpdate({ publish: false });
+            console.log(`✨ Shared Board hinzugefügt (auto): ${eventData.name} (${eventData.id})`);
+        }
+    }
+
+    /**
+     * ✅ HELPER: Lädt geteilte Boards asynchron aus Nostr und triggert Update
+     * 
+     * WICHTIG: Merged mit existierendem Cache statt zu ersetzen!
+     * Grund: Boards können via followerSub Events real-time hinzugefügt werden.
+     * Wenn wir den Cache ersetzen, verlieren wir diese real-time Boards!
+     */
+    private async loadSharedBoardsAsync(currentUserPubkey: string): Promise<void> {
+        try {
+            const ndk = this.nostrIntegration.getNDK();
+            if (!ndk) {
+                // console.warn('⚠️ NDK nicht verfügbar für Shared Boards Loading');
+                return;
+            }
+
+            // Verhindere mehrfaches gleichzeitiges Laden
+            if (this.isLoadingSharedBoards) {
+                return;
+            }
+            this.isLoadingSharedBoards = true;
+
+            // Lade geteilte Boards aus Nostr
+            const sharedBoards = await BoardSharingOperations.loadSharedBoardsFromNostr(
+                currentUserPubkey,
+                ndk
+            );
+
+            // ⚠️ KRITISCH: Merge mit existierendem Cache, nicht ersetzen!
+            // Sonst verlieren wir Boards, die via followerSub Events real-time hinzugefügt wurden
+            const boardMap = new Map<string, typeof sharedBoards[0]>();
+            
+            // Existierende Boards zuerst (prioritär, da sie real-time sind)
+            for (const board of this.cachedSharedBoards) {
+                boardMap.set(board.id, board);
+            }
+            
+            // Neue Boards aus Nostr hinzufügen (bei Duplikaten gewinnt Cache)
+            for (const board of sharedBoards) {
+                if (!boardMap.has(board.id)) {
+                    boardMap.set(board.id, board);
+                }
+            }
+            
+            this.cachedSharedBoards = Array.from(boardMap.values());
+            
+            if (sharedBoards.length > 0 || this.cachedSharedBoards.length > 0) {
+                console.log(`📥 ${sharedBoards.length} geteilte Boards von Nostr, ${this.cachedSharedBoards.length} total gecached (merged)`);
+                this.triggerUpdate({ publish: false }); // UI Update ohne Nostr Publishing
+            }
+
+        } catch (error) {
+            console.error('❌ Fehler beim Laden geteilter Boards:', error);
+        } finally {
+            this.isLoadingSharedBoards = false;
+        }
+    }
+
+    /**
+     * ✅ NEUE METHODE: Verlässt ein geteiltes Board
+     * 
+     * @param boardId - Board ID
+     */
+    public async leaveBoard(boardId: string): Promise<void> {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            throw new Error('Nutzer nicht authentifiziert');
+        }
+        
+        try {
+            const ndk = this.nostrIntegration.getNDK();
+            await BoardSharingOperations.leaveBoard(boardId, currentUserPubkey, ndk);
+            
+            // Entferne Board aus dem Cache der geteilten Boards
+            this.cachedSharedBoards = this.cachedSharedBoards.filter(b => b.id !== boardId);
+            
+            // Entferne auch aus localStorage falls vorhanden (sollte nicht der Fall sein für geteilte Boards)
+            this.boardIds = this.boardIds.filter(id => id !== boardId);
+            
+            this.triggerUpdate({ publish: false });
+            console.log(`✅ Board ${boardId} erfolgreich verlassen`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Verlassen des Boards:', error);
+            throw error;
+        }
+    }
+
+    /**
      * ⚡ REFRESH: Board IDs neu aus localStorage laden
      * 
      * Nützlich nach Filter-Fixes oder manuellen localStorage-Änderungen.
@@ -687,18 +997,47 @@ export class BoardStore {
     }
 
     public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {
+        // Permission Check: Kann Benutzer Board-Einstellungen ändern?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         BoardOperations.updateBoardMetadata(this.board, updates);
         this.triggerUpdate();
         this.publishBoardAsync();
     }
 
     public setPublishState(state: 'draft' | 'published' | 'archived'): void {
+        // Permission Check: Kann Benutzer Board-Einstellungen ändern?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         BoardOperations.setBoardPublishState(this.board, state);
         this.triggerUpdate();
         this.publishBoardAsync();
     }
 
     public moveCard(cardId: string, fromColumnId: string, toColumnId: string): void {
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+
         if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
             this.triggerUpdate();
             this.publishBoardAsync();
@@ -722,6 +1061,16 @@ export class BoardStore {
     // ============================================================================
     
     public createCard(columnId: string, name: string, description?: string): string {
+        // Permission Check: Kann Benutzer Karten erstellen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canCreateCard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Karten zu erstellen.'
+            });
+            return ''; // Silently fail - Permission denied message already shown
+        }
+        
         const { author, authorName } = this.getAuthorFields();
         const cardId = BoardOperations.createCard(
             this.board, 
@@ -741,6 +1090,16 @@ export class BoardStore {
     }
 
     public editCard(cardId: string, updates: Partial<CardProps>): void {
+        // Permission Check: Kann Benutzer Karten bearbeiten?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditCard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Karten zu bearbeiten.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         if (BoardOperations.updateCard(this.board, cardId, updates)) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
@@ -748,6 +1107,16 @@ export class BoardStore {
     }
 
     public async deleteCard(cardId: string): Promise<void> {
+        // Permission Check: Kann Benutzer Karten löschen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canDeleteCard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Karten zu löschen.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         // Lösche Card lokal UND auf Nostr (via BoardOperations)
         const success = await BoardOperations.deleteCard(
             this.board, 
@@ -762,6 +1131,16 @@ export class BoardStore {
     }
 
     public createColumn(name: string, color?: string): string {
+        // Permission Check: Kann Benutzer Spalten erstellen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canCreateColumn(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Spalten zu erstellen.'
+            });
+            return ''; // Silently fail - Permission denied message already shown
+        }
+        
         const columnId = BoardOperations.createColumn(this.board, name, color);
         
         if (columnId) {
@@ -774,6 +1153,16 @@ export class BoardStore {
     }
 
     public updateColumn(columnId: string, updates: Partial<ColumnProps>): void {
+        // Permission Check: Kann Benutzer Spalten bearbeiten?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditColumn(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Spalten zu bearbeiten.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         if (BoardOperations.updateColumn(this.board, columnId, updates)) {
             this.triggerUpdate();
             this.publishBoardAsync();
@@ -781,6 +1170,16 @@ export class BoardStore {
     }
 
     public deleteColumn(columnId: string): void {
+        // Permission Check: Kann Benutzer Spalten löschen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canDeleteColumn(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Spalten zu löschen.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         if (BoardOperations.deleteColumn(this.board, columnId)) {
             this._columnOrder = this._columnOrder.filter(id => id !== columnId);
             this.triggerUpdate();
@@ -789,6 +1188,16 @@ export class BoardStore {
     }
 
     public handleCardMove(cardId: string, fromColumnId: string, toColumnId: string): void {
+        // Permission Check: Kann Benutzer Karten verschieben?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canMoveCard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Karten zu verschieben.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
@@ -797,6 +1206,16 @@ export class BoardStore {
     }
 
     public reorderColumns(columnIds: string[]): void {
+        // Permission Check: Kann Benutzer Spalten-Reihenfolge ändern?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canEditColumn(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Spalten zu bearbeiten.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         this._columnOrder = columnIds;
         BoardOperations.reorderColumns(this.board, columnIds);
         this.triggerUpdate();
@@ -808,6 +1227,17 @@ export class BoardStore {
     private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
+        // Permission Check: Kann Benutzer Karten verschieben?
+        // (syncBoardState wird hauptsächlich für DnD verwendet)
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canMoveCard(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Karten zu verschieben.'
+            });
+            return false;
+        }
+        
         // Debounce: Sammle schnelle Änderungen
         this.pendingSyncData = uiColumns;
         
@@ -878,6 +1308,16 @@ export class BoardStore {
     }
 
     public async addComment(cardId: string, text: string, authorOverride?: string): Promise<void> {
+        // Permission Check: Kann Benutzer Kommentare hinzufügen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canAddComment(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Kommentare hinzuzufügen.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         // ⚡ NEW: Get both author fields
         const { author: defaultAuthor, authorName } = this.getAuthorFields();
         const author = authorOverride || defaultAuthor;
@@ -898,6 +1338,16 @@ export class BoardStore {
     }
 
     public deleteComment(cardId: string, commentId: string): void {
+        // Permission Check: Kann Benutzer Kommentare löschen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canDeleteComment(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Kommentare zu löschen.'
+            });
+            return; // Silently fail - Permission denied message already shown
+        }
+        
         if (BoardOperations.deleteComment(this.board, cardId, commentId)) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
@@ -1195,6 +1645,393 @@ export class BoardStore {
     }
 
     // ============================================================================
+    // BOARD SHARING & PERMISSIONS (2-Layer System)
+    // ============================================================================
+
+    /**
+     * Fügt einen Editor (Maintainer) zum Board hinzu
+     * @param pubkey - Nostr Public Key (Hex) des neuen Editors
+     */
+    public async addEditor(pubkey: string): Promise<void> {
+        // Permission Check: Kann Benutzer andere Benutzer einladen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Benutzer einzuladen.'
+            });
+            throw new Error('Berechtigung verweigert: Benutzer einladen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('❌ NDK Instanz nicht verfügbar – addEditor abgebrochen');
+            throw new Error('NDK nicht verfügbar für addEditor');
+        }
+        await BoardSharingOperations.addEditor(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Entfernt einen Editor vom Board
+     * @param pubkey - Nostr Public Key des zu entfernenden Editors
+     */
+    public async removeEditor(pubkey: string): Promise<void> {
+        // Permission Check: Kann Benutzer andere Benutzer verwalten?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.'
+            });
+            throw new Error('Berechtigung verweigert: Benutzer-Zugriff entfernen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('❌ NDK Instanz nicht verfügbar – removeEditor abgebrochen');
+            throw new Error('NDK nicht verfügbar für removeEditor');
+        }
+        await BoardSharingOperations.removeEditor(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Fügt einen Viewer (Follower) zum Board hinzu
+     * @param pubkey - Nostr Public Key des neuen Viewers
+     */
+    public async addViewer(pubkey: string): Promise<void> {
+        // Permission Check: Kann Benutzer andere Benutzer einladen?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Benutzer einzuladen.'
+            });
+            throw new Error('Berechtigung verweigert: Benutzer einladen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        await BoardSharingOperations.addViewer(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Entfernt einen Viewer vom Board
+     * @param pubkey - Nostr Public Key des zu entfernenden Viewers
+     */
+    public async removeViewer(pubkey: string): Promise<void> {
+        // Permission Check: Kann Benutzer andere Benutzer verwalten?
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
+            toast.error('Fehlende Berechtigung', {
+                description: 'Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.'
+            });
+            throw new Error('Berechtigung verweigert: Benutzer-Zugriff entfernen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        await BoardSharingOperations.removeViewer(
+            this.board,
+            pubkey,
+            ndk
+        );
+        this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Lädt alle Board-Teilnehmer (Editoren + Viewer)
+     */
+    public async getBoardParticipants(): Promise<BoardShare[]> {
+        return await BoardSharingOperations.getBoardParticipants(
+            this.board
+        );
+    }
+
+    /**
+     * Lädt Board Followers aus NIP-51 Follow Set Events
+     */
+    public async loadBoardFollowers(): Promise<void> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk || !this.board.author) return;
+        
+        const followers = await BoardSharingOperations.loadBoardFollowers(
+            this.board,
+            ndk
+        );
+        
+        this.board.followers = followers;
+        this.triggerUpdate();
+    }
+
+    /**
+     * Prüft die Berechtigung des aktuellen Nutzers
+     */
+    public getCurrentUserRole(): BoardRole | null {
+        const currentUser = authStore.getPubkey();
+        return this.board.getUserRole(currentUser || undefined);
+    }
+
+    /**
+     * Prüft ob der aktuelle Nutzer Editor-Rechte hat
+     */
+    public canCurrentUserEdit(): boolean {
+        const currentUser = authStore.getPubkey();
+        return this.board.canEditBoard(currentUser || undefined);
+    }
+
+    /**
+     * Prüft ob der aktuelle Nutzer das Board löschen darf
+     */
+    public canCurrentUserDelete(): boolean {
+        const currentUser = authStore.getPubkey();
+        return this.board.canDeleteBoard(currentUser || undefined);
+    }
+
+    // ============================================================================
+    // DEMO BOARD & USER MANAGEMENT
+    // ============================================================================
+    
+    /**
+     * Erstellt oder lädt Demo-Board für anonyme Benutzer
+     */
+    private getDemoBoardsForAnonymousUser(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
+        const demoBoardId = 'demo-board';
+        let demoBoard = BoardStorage.loadBoard(demoBoardId);
+        
+        if (!demoBoard) {
+            // Erstelle Demo-Board mit vorgefertigtem Inhalt
+            demoBoard = this.createDemoBoard();
+            BoardStorage.saveBoard(demoBoard);
+            console.log('✅ Demo-Board für anonymen Benutzer erstellt');
+        }
+        
+        return [{
+            id: demoBoard.id,
+            name: demoBoard.name,
+            description: demoBoard.description,
+            createdAt: new Date(demoBoard.createdAt).getTime(),
+            updatedAt: demoBoard.updatedAt 
+                ? new Date(demoBoard.updatedAt).getTime() 
+                : new Date(demoBoard.createdAt).getTime(),
+            lastAccessed: demoBoard.lastAccessedAt 
+                ? new Date(demoBoard.lastAccessedAt).getTime() 
+                : new Date(demoBoard.createdAt).getTime(),
+            hasUnseenChanges: false
+        }];
+    }
+    
+    /**
+     * Erstellt ein Demo-Board mit Beispieldaten
+     */
+    private createDemoBoard(): Board {
+        const board = new Board({
+            id: 'demo-board',
+            name: '🎯 Demo-Board - Testen Sie die App!',
+            description: 'Willkommen! Dies ist ein Demo-Board zum Ausprobieren. Erstellen Sie Karten, verschieben Sie sie zwischen Spalten und testen Sie alle Funktionen. Nach der Anmeldung können Sie echte Boards erstellen.',
+            author: 'demo',
+            authorName: 'Demo User',
+            publishState: 'draft',
+            columns: []
+        });
+        
+        // Standard-Spalten hinzufügen
+        const todoColumn = board.addColumn({ name: '📋 Zu erledigen', color: 'blue' });
+        const progressColumn = board.addColumn({ name: '🔄 In Arbeit', color: 'orange' });
+        const doneColumn = board.addColumn({ name: '✅ Erledigt', color: 'green' });
+        
+        // Beispiel-Karten hinzufügen
+        todoColumn.addCard({
+            heading: '👋 Willkommen im Demo-Board!',
+            content: 'Dies ist eine Beispielkarte. Klicken Sie darauf, um sie zu bearbeiten, oder ziehen Sie sie in eine andere Spalte.',
+            labels: ['demo', 'anleitung'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        todoColumn.addCard({
+            heading: '📝 Neue Karte erstellen',
+            content: 'Klicken Sie auf "Neue Karte" in einer Spalte, um eigene Inhalte hinzuzufügen.',
+            labels: ['tipp'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        progressColumn.addCard({
+            heading: '🚀 App erkunden',
+            content: 'Probieren Sie alle Funktionen aus: Karten bearbeiten, Kommentare hinzufügen, Labels verwenden.',
+            labels: ['in-progress'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        doneColumn.addCard({
+            heading: '🎉 Demo erfolgreich gestartet',
+            content: 'Sie haben das Demo-Board erfolgreich geladen! Melden Sie sich an, um echte Boards zu erstellen.',
+            labels: ['erfolg'],
+            author: 'demo',
+            authorName: 'Demo User'
+        });
+        
+        return board;
+    }
+    
+    /**
+     * Wandelt Demo-Board in echtes Board um nach dem Login
+     */
+    public migrateDemoBoardToRealBoard(): void {
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (!currentUserPubkey) {
+            console.warn('⚠️ Kann Demo-Board nicht migrieren: Kein authentifizierter Benutzer');
+            return;
+        }
+        
+        // Prüfe ob Benutzer bereits eigene Boards hat
+        const existingUserBoards = this.getUserBoardsForPubkey(currentUserPubkey);
+        
+        if (existingUserBoards.length > 0) {
+            // Benutzer hat bereits Boards → Demo-Board löschen
+            this.deleteDemoBoard();
+            
+            // ⚡ FIX: Demo-Board aus boardIds entfernen
+            this.boardIds = this.boardIds.filter(id => id !== 'demo-board');
+            
+            // ⚡ FIX: Zu erstem User-Board wechseln
+            if (existingUserBoards.length > 0) {
+                const firstUserBoardId = existingUserBoards[0].id;
+                this.loadBoard(firstUserBoardId);
+            }
+            
+            console.log(`✅ Demo-Board gelöscht - User hat ${existingUserBoards.length} eigene Boards, gewechselt zu: ${existingUserBoards[0]?.name}`);
+            return;
+        }
+        
+        // Benutzer hat noch keine Boards → Demo-Board in echtes Board umwandeln
+        const demoBoard = BoardStorage.loadBoard('demo-board');
+        if (demoBoard) {
+            // Aktualisiere Board-Metadaten
+            const { authorName } = this.getAuthorFields();
+            demoBoard.author = currentUserPubkey;
+            demoBoard.authorName = authorName || undefined;
+            demoBoard.maintainers = [currentUserPubkey];
+            
+            // Neuen Board-Namen und Beschreibung
+            demoBoard.name = '🏠 Mein erstes Board';
+            demoBoard.description = 'Willkommen bei Ihrem ersten echten Kanban-Board! Sie können den Namen und die Beschreibung jederzeit ändern.';
+            
+            // Neue Board-ID generieren
+            const newBoardId = generateDTag();
+            const oldId = demoBoard.id;
+            demoBoard.id = newBoardId;
+            
+            // Aktualisiere alle Karten-Autoren
+            demoBoard.columns.forEach(column => {
+                column.cards.forEach(card => {
+                    card.author = currentUserPubkey;
+                    card.authorName = authorName || undefined;
+                });
+            });
+            
+            // Speichere das neue Board
+            BoardStorage.saveBoard(demoBoard);
+            
+            // Lösche das alte Demo-Board
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('kanban-demo-board');
+            }
+            
+            // ⚡ FIX: Board-IDs korrekt aktualisieren
+            this.boardIds = [...this.boardIds.filter(id => id !== 'demo-board'), newBoardId];
+            this.board = demoBoard;
+            this._columnOrder = demoBoard.columns.map(c => c.id);
+            
+            // ⚡ FIX: Board-IDs neu laden um localStorage-Änderungen zu reflektieren
+            this.refreshBoardIds();
+            
+            this.triggerUpdate();
+            
+            console.log(`✅ Demo-Board zu echtem Board migriert: ${oldId} → ${newBoardId}`);
+            
+            // Optional: Toast-Benachrichtigung
+            if (typeof window !== 'undefined' && (window as any).toast) {
+                (window as any).toast.success('Demo-Board wurde zu Ihrem ersten echten Board!');
+            }
+        }
+    }
+    
+    /**
+     * Löscht das Demo-Board komplett
+     */
+    private deleteDemoBoard(): void {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('kanban-demo-board');
+            
+            // ⚡ FIX: Board-IDs neu laden nach Demo-Board Löschung
+            this.boardIds = this.boardIds.filter(id => id !== 'demo-board');
+            this.refreshBoardIds();
+            console.log('🗑️ Demo-Board gelöscht');
+        }
+    }
+    
+    /**
+     * Prüft ob ein Benutzer Owner oder Maintainer eines Boards ist
+     */
+    private isUserOwnerOrMaintainer(boardId: string, userPubkey: string): boolean {
+        const board = BoardStorage.loadBoard(boardId);
+        if (!board) return false;
+        
+        // Owner check
+        if (board.author === userPubkey) return true;
+        
+        // Maintainer check
+        if (board.maintainers && board.maintainers.includes(userPubkey)) return true;
+        
+        return false;
+    }
+    
+    /**
+     * Lädt alle Boards eines bestimmten Benutzers
+     */
+    private getUserBoardsForPubkey(pubkey: string): Array<{ id: string; name: string }> {
+        return this.boardIds
+            .map(id => BoardStorage.loadBoard(id))
+            .filter(board => board && (board.author === pubkey || (board.maintainers && board.maintainers.includes(pubkey))))
+            .map(board => ({ id: board!.id, name: board!.name }));
+    }
+    
+    /**
+     * Hilfsmethode: Aktueller Benutzer Pubkey
+     */
+    private getCurrentUserPubkey(): string | null {
+        try {
+            return authStore?.currentUser?.pubkey || null;
+        } catch (error) {
+            return null;
+        }
+    }
+    
+    // ============================================================================
     // UTILITY METHODS
     // ============================================================================
     
@@ -1403,6 +2240,8 @@ export class BoardStore {
             tags: boardProps.tags,
             columns, // ⚡ NEU: Spalten-Sync
             author: boardProps.author,
+            maintainers: boardProps.maintainers, // ⚡ CRITICAL FIX: Sync maintainers from Nostr!
+            followers: boardProps.followers, // ⚡ CRITICAL FIX: Sync followers from Nostr!
             publishState: boardProps.publishState,
             updatedAt: boardProps.updatedAt  // ⚡ v4.1: Timestamp MUSS weitergegeben werden!
         });
@@ -1433,6 +2272,8 @@ export class BoardStore {
                 description: boardProps.description,
                 tags: boardProps.tags,
                 author: boardProps.author,
+                maintainers: boardProps.maintainers || [], // ⚡ CRITICAL FIX: Include maintainers
+                followers: boardProps.followers || [], // ⚡ CRITICAL FIX: Include followers
                 publishState: boardProps.publishState,
                 updatedAt: boardProps.updatedAt,  // ⚡ v4.2: Timestamp vom Event!
                 columns: boardProps.columns

@@ -3,7 +3,40 @@ import { type Page, type BrowserContext, expect } from '@playwright/test';
 // Test constants
 export const TEST_NSEC = 'nsec1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85';
 export const TEST_PUBKEY = '79dff8f82963424e0bb02708a22e44b4980893e3a4be0fa3cb60a43b946764e3';
-export const TEST_NPUB = 'npub1ufns5j7mngv80w8rn2j0rd2elds6ltd6ev6d5j3ex7dw3wpq6qqsz2uqmfhpm0';
+export const TEST_NPUB = 'npub1ufns5j7mngv80w8rn2j0rd2elds6pwd6ev6d5j3ex7dw3wpq6qqsz2uqmfhpm0';
+
+// ============================================================================
+// SHARING-SPEZIFISCHE TEST-HELPERS
+// ============================================================================
+
+export interface TestUser {
+    name: string;
+    pubkey: string;
+    nsec?: string;
+}
+
+export const SHARING_TEST_USERS = {
+    owner: {
+        name: 'Board Owner',
+        pubkey: '0000000000000000000000000000000000000000000000000000000000000001',
+        nsec: 'nsec1owner123456789012345678901234567890123456789012345678901234567890'
+    },
+    editor: {
+        name: 'Board Editor',
+        pubkey: '0000000000000000000000000000000000000000000000000000000000000002', 
+        nsec: 'nsec1editor12345678901234567890123456789012345678901234567890123456789'
+    },
+    viewer: {
+        name: 'Board Viewer',
+        pubkey: '0000000000000000000000000000000000000000000000000000000000000003',
+        nsec: 'nsec1viewer12345678901234567890123456789012345678901234567890123456789'
+    },
+    unauthorized: {
+        name: 'Unauthorized User',
+        pubkey: '0000000000000000000000000000000000000000000000000000000000000004',
+        nsec: 'nsec1unauth12345678901234567890123456789012345678901234567890123456789'
+    }
+} as const;
 
 /**
  * Mock NIP-07 window.nostr extension for testing
@@ -58,13 +91,16 @@ export async function mockNip07Extension(page: Page, options: {
  * need to be at /cardsboard first!
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
+  // assure demo settings are loaded, otherwise it will interfere clicking login
+  await expect(page.getByTestId('demo-board-button')).toBeVisible({timeout: 10000});
+  
   await page.getByRole('button', { name: 'Anmelden' }).click();
   
   const nsecTab = page.getByRole('tab', { name: 'nsec' });
   await expect(nsecTab).toBeVisible();
   await nsecTab.click();
   
-  await page.getByPlaceholder('nsec1...').fill(TEST_NSEC);
+  await page.getByPlaceholder('nsec1...').fill(nsec);
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
   
   await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
@@ -78,7 +114,7 @@ export async function loginWithNip07(page: Page) {
     await mockNip07Extension(page);
     
     // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Mein KI Kanban' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
 
     page.getByRole('button', { name: 'Anmelden' }).click();
     
@@ -89,6 +125,7 @@ export async function loginWithNip07(page: Page) {
 
 /**
  * Clear all authentication-related storage and state
+ * TODO: Not working because browser is denying access to localStorage/sessionStorage
  */
 export async function clearAuthState(page: Page): Promise<void> {
   try {
@@ -114,6 +151,28 @@ export async function clearAuthState(page: Page): Promise<void> {
 }
 
 /**
+ * Clear all cached board-related state
+ * TODO: Not working because browser is denying access to localStorage
+ */
+export async function clearBoardState(page: Page): Promise<void> {
+  try {
+    await page.evaluate(() => {
+      try {
+        localStorage.removeItem('kanban-config');
+        localStorage.removeItem('kanban-settings');
+        // Maybe add more keys to
+        
+        console.log('🧹 Board state cleared');
+      } catch (error) {
+        console.log('⚠️ Error clearing board storage:', error);
+      }
+    });
+  } catch (error) {
+    console.log('⚠️ Error accessing storage in clearBoardState:', error);
+  }
+}
+
+/**
  * Get the current auth state from localStorage
  */
 export async function getAuthState(page: Page): Promise<any> {
@@ -129,18 +188,7 @@ export async function getAuthState(page: Page): Promise<any> {
   }
 }
 
-/**
- * Create a test board with sample data
- */
-export async function createTestBoard(page: Page, boardName: string = 'Test Board') {
-  // Assuming there's a create board button/functionality
-  const createBoardButton = page.getByRole('button', { name: /create board|new board/i });
-  if (await createBoardButton.isVisible()) {
-    await createBoardButton.click();
-    await page.getByPlaceholder(/board name|title/i).fill(boardName);
-    await page.getByRole('button', { name: /create|save/i }).click();
-  }
-}
+// Funktion entfernt - siehe erweiterte Version weiter unten in der Datei
 
 /**
  * Create a test card in the specified column
@@ -218,6 +266,341 @@ export async function mockExpiredSession(page: Page) {
     };
     return localStorage.setItem('nostr-user-session', JSON.stringify(expiredSession));
   });
+}
+
+// ============================================================================
+// SHARING-FUNKTIONALITÄT TEST-HELPERS
+// ============================================================================
+
+/**
+ * Login mit spezifischem Test-User für Sharing-Tests
+ */
+export async function loginWithTestUser(page: Page, user: TestUser) {
+    await page.goto('/cardsboard');
+    
+    // Prüfe ob bereits als dieser User angemeldet
+    const currentUserElement = page.locator('[data-testid="current-user"]');
+    if (await currentUserElement.isVisible()) {
+        const currentUser = await currentUserElement.textContent();
+        if (currentUser?.includes(user.name)) {
+            console.log(`Bereits als ${user.name} angemeldet`);
+            return;
+        }
+        
+        // Logout vom aktuellen User
+        await logout(page);
+    }
+    
+    // Development-Login (wenn verfügbar)
+    await page.evaluate((userData) => {
+        // @ts-ignore
+        if (window.authStore && window.authStore.loginWithDummy) {
+            // @ts-ignore
+            window.authStore.loginWithDummy(userData.name, userData.pubkey);
+        }
+    }, user);
+    
+    // Fallback: UI-basierter Login
+    try {
+        const loginButton = page.locator('button:has-text("Login")').first();
+        if (await loginButton.isVisible()) {
+            await loginButton.click();
+            
+            // Dummy/Development-Login verwenden
+            const dummyOption = page.locator('text="Demo Login"').or(
+                page.locator('text="Development"')
+            );
+            
+            if (await dummyOption.isVisible()) {
+                await dummyOption.click();
+                await page.fill('input[placeholder*="Name"]', user.name);
+                await page.fill('input[placeholder*="pubkey"]', user.pubkey);
+                await page.locator('button:has-text("Anmelden")').click();
+            } else if (user.nsec) {
+                // nsec-Login als Fallback
+                await page.locator('text="Private Key"').click();
+                await page.fill('input[placeholder*="nsec"]', user.nsec);
+                await page.locator('button:has-text("Anmelden")').click();
+            }
+        }
+    } catch (e) {
+        console.log('UI-Login fehlgeschlagen, nutze Development-API');
+    }
+    
+    // Verifiziere erfolgreichen Login
+    await expect(page.locator(`text="${user.name}"`)).toBeVisible({ timeout: 5000 });
+    console.log(`✅ Angemeldet als: ${user.name}`);
+}
+
+/**
+ * Erstellt ein neues Board mit gegebenem Namen
+ */
+export async function createTestBoard(page: Page, boardName: string): Promise<string> {
+    // Erstelle neues Board
+    await page.locator('button:has-text("Neues Board")').click();
+    await expect(page.locator('text="Neues Board"')).toBeVisible({ timeout: 5000 });
+    
+    // Benenne Board um
+    const titleElement = page.locator('h1').first();
+    await titleElement.dblclick();
+    
+    const titleInput = page.locator('input').first();
+    await titleInput.fill(boardName);
+    await page.keyboard.press('Enter');
+    
+    // Warte bis Board gespeichert
+    await expect(page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 3000 });
+    console.log(`✅ Board erstellt: ${boardName}`);
+    
+    return boardName;
+}
+
+/**
+ * Teilt Board mit einem anderen User (via Store-API)
+ */
+export async function shareTestBoard(
+    page: Page, 
+    targetUserPubkey: string, 
+    role: 'editor' | 'viewer'
+): Promise<void> {
+    console.log(`🔗 Teile Board mit ${targetUserPubkey} als ${role}`);
+    
+    // Verwende Store-API für programmatisches Teilen
+    const success = await page.evaluate(async (args) => {
+        const { pubkey, role } = args;
+        
+        try {
+            // @ts-ignore
+            if (window.boardStore) {
+                if (role === 'editor') {
+                    // @ts-ignore
+                    await window.boardStore.addEditor(pubkey);
+                } else {
+                    // @ts-ignore
+                    await window.boardStore.addViewer(pubkey);
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Share error:', error);
+            return false;
+        }
+    }, { pubkey: targetUserPubkey, role });
+    
+    if (!success) {
+        throw new Error(`Sharing fehlgeschlagen für ${targetUserPubkey}`);
+    }
+    
+    console.log(`✅ Board erfolgreich geteilt mit ${targetUserPubkey} als ${role}`);
+}
+
+/**
+ * Lädt ein spezifisches Board (aus der Board-Liste)
+ */
+export async function loadTestBoard(page: Page, boardName: string): Promise<void> {
+    // Finde Board in der Liste
+    const boardItem = page.locator(`text="${boardName}"`).first();
+    await expect(boardItem).toBeVisible({ timeout: 10000 });
+    
+    // Klicke auf Board um es zu laden
+    await boardItem.click();
+    
+    // Warte bis Board geladen
+    await expect(page.locator(`h1:has-text("${boardName}")`)).toBeVisible({ timeout: 5000 });
+    console.log(`✅ Board geladen: ${boardName}`);
+}
+
+/**
+ * Prüft ob ein User bestimmte UI-Elemente sehen kann
+ */
+export async function checkUIPermissions(page: Page, expectedPermissions: {
+    canCreateCard?: boolean;
+    canCreateColumn?: boolean;
+    canDeleteBoard?: boolean;
+    canEditBoard?: boolean;
+}): Promise<{ success: boolean; details: string[] }> {
+    const results: string[] = [];
+    let success = true;
+    
+    // Check: Neue Karte Button
+    if (expectedPermissions.canCreateCard !== undefined) {
+        const createCardButton = page.locator('button:has-text("Neue Karte")').or(
+            page.locator('button[title*="Karte"]')
+        ).first();
+        
+        const isVisible = await createCardButton.isVisible();
+        if (isVisible !== expectedPermissions.canCreateCard) {
+            success = false;
+            results.push(`createCard: Expected ${expectedPermissions.canCreateCard}, got ${isVisible}`);
+        } else {
+            results.push(`createCard: ✅ ${isVisible}`);
+        }
+    }
+    
+    // Check: Neue Spalte Button
+    if (expectedPermissions.canCreateColumn !== undefined) {
+        const createColumnButton = page.locator('button:has-text("Neue Spalte")').or(
+            page.locator('button[title*="Spalte"]')
+        ).first();
+        
+        const isVisible = await createColumnButton.isVisible();
+        if (isVisible !== expectedPermissions.canCreateColumn) {
+            success = false;
+            results.push(`createColumn: Expected ${expectedPermissions.canCreateColumn}, got ${isVisible}`);
+        } else {
+            results.push(`createColumn: ✅ ${isVisible}`);
+        }
+    }
+    
+    // Check: Board löschen
+    if (expectedPermissions.canDeleteBoard !== undefined) {
+        const deleteButton = page.locator('button:has-text("Board löschen")').or(
+            page.locator('button[title*="löschen"]')
+        ).first();
+        
+        const isVisible = await deleteButton.isVisible();
+        if (isVisible !== expectedPermissions.canDeleteBoard) {
+            success = false;
+            results.push(`deleteBoard: Expected ${expectedPermissions.canDeleteBoard}, got ${isVisible}`);
+        } else {
+            results.push(`deleteBoard: ✅ ${isVisible}`);
+        }
+    }
+    
+    return { success, details: results };
+}
+
+/**
+ * Attempt-Helper: Versucht eine Aktion und returned ob sie erfolgreich war
+ */
+export async function attemptBoardAction(
+    page: Page, 
+    action: 'createCard' | 'createColumn' | 'deleteBoard' | 'editCard',
+    options?: any
+): Promise<{ success: boolean; error?: string; data?: any }> {
+    try {
+        switch (action) {
+            case 'createCard':
+                const addButton = page.locator('button:has-text("Neue Karte")').first();
+                if (!(await addButton.isVisible())) {
+                    return { success: false, error: 'Add Card button not visible' };
+                }
+                
+                await addButton.click();
+                await page.fill('input[placeholder*="Titel"]', options?.title || 'Test Karte');
+                await page.locator('button:has-text("Speichern")').click();
+                
+                await expect(page.locator(`text="${options?.title || 'Test Karte'}"`)).toBeVisible({ timeout: 3000 });
+                return { success: true, data: { title: options?.title || 'Test Karte' } };
+                
+            case 'createColumn':
+                const columnButton = page.locator('button:has-text("Neue Spalte")').first();
+                if (!(await columnButton.isVisible())) {
+                    return { success: false, error: 'Add Column button not visible' };
+                }
+                
+                await columnButton.click();
+                await page.fill('input[placeholder*="Name"]', options?.name || 'Test Spalte');
+                await page.locator('button:has-text("Erstellen")').click();
+                
+                await expect(page.locator(`text="${options?.name || 'Test Spalte'}"`)).toBeVisible({ timeout: 3000 });
+                return { success: true, data: { name: options?.name || 'Test Spalte' } };
+                
+            case 'deleteBoard':
+                const settingsButton = page.locator('button:has-text("Einstellungen")').first();
+                if (!(await settingsButton.isVisible())) {
+                    return { success: false, error: 'Settings button not visible' };
+                }
+                
+                await settingsButton.click();
+                const deleteButton = page.locator('button:has-text("Board löschen")');
+                if (!(await deleteButton.isVisible())) {
+                    return { success: false, error: 'Delete button not visible' };
+                }
+                
+                await deleteButton.click();
+                await page.locator('button:has-text("Löschen bestätigen")').click();
+                
+                // Prüfe ob zur Board-Liste umgeleitet
+                await expect(page.locator('text="Boards"')).toBeVisible({ timeout: 5000 });
+                return { success: true };
+                
+            case 'editCard':
+                const card = page.locator('[data-testid="card"]').or(
+                    page.locator('text="Test Karte"')
+                ).first();
+                
+                if (!(await card.isVisible())) {
+                    return { success: false, error: 'No card found to edit' };
+                }
+                
+                await card.click();
+                const titleInput = page.locator('input[value*="Test"]').first();
+                await titleInput.fill(options?.newTitle || 'Edited Card');
+                await page.locator('button:has-text("Speichern")').click();
+                
+                await expect(page.locator(`text="${options?.newTitle || 'Edited Card'}"`)).toBeVisible({ timeout: 3000 });
+                return { success: true, data: { newTitle: options?.newTitle || 'Edited Card' } };
+                
+            default:
+                return { success: false, error: `Unknown action: ${action}` };
+        }
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Multi-User Test Setup: Erstellt mehrere Browser-Contexts für parallele Tests
+ */
+export async function setupMultiUserTest(browser: any, users: TestUser[]): Promise<{
+    contexts: BrowserContext[];
+    pages: Page[];
+    cleanup: () => Promise<void>;
+}> {
+    const contexts: BrowserContext[] = [];
+    const pages: Page[] = [];
+    
+    // Erstelle für jeden User einen eigenen Context
+    for (const user of users) {
+        const context = await browser.newContext({
+            // Separate Session für jeden User
+            storageState: undefined
+        });
+        
+        const page = await context.newPage();
+        
+        // Login as User
+        await loginWithTestUser(page, user);
+        
+        contexts.push(context);
+        pages.push(page);
+    }
+    
+    const cleanup = async () => {
+        for (const page of pages) {
+            await page.close();
+        }
+        for (const context of contexts) {
+            await context.close();
+        }
+    };
+    
+    return { contexts, pages, cleanup };
+}
+
+/**
+ * Wartet bis alle geöffneten Browser-Contexts bereit sind
+ */
+export async function waitForAllPagesReady(pages: Page[]): Promise<void> {
+    await Promise.all(
+        pages.map(page => 
+            page.waitForLoadState('networkidle').catch(() => 
+                console.log('Network idle timeout für eine Page')
+            )
+        )
+    );
 }
 
 /**

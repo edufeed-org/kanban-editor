@@ -1,24 +1,17 @@
 ﻿<script lang="ts">
     import { Button } from '$lib/components/ui/button/index.js';
-    import * as Sheet from '$lib/components/ui/sheet/index.js';
     import * as Drawer from '$lib/components/ui/drawer/index.js';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
-    import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar/index.js';
-    import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
-    import { Checkbox } from "$lib/components/ui/checkbox/index.js";
     import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
-    import { Badge } from '$lib/components/ui/badge/index.js';
     import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
     import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
-    import UserRoundIcon from "@lucide/svelte/icons/user-round";
     import MoonIcon from "@lucide/svelte/icons/moon";
     import SunIcon from "@lucide/svelte/icons/sun";
-    import BotIcon from "@lucide/svelte/icons/bot";
     import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
     import TrashIcon from "@lucide/svelte/icons/trash";
     import WifiOffIcon from "@lucide/svelte/icons/wifi-off";
@@ -32,6 +25,7 @@
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import { toast } from 'svelte-sonner';
+    import { ShareButton } from '$lib/components/board';
 	
     
 
@@ -596,6 +590,8 @@
                 <DownloadIcon class="h-4 w-4" />
             </Button>
 
+            <!-- Board Sharing -->
+            <ShareButton boardId={boardStore.data?.id || ''} />
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">

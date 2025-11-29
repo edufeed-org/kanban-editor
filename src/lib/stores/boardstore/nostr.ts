@@ -2,6 +2,7 @@
 // Nostr-Integration und Event-Publishing
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
+import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
 import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
@@ -150,6 +151,13 @@ export class NostrIntegration {
         } catch (error) {
             console.warn('[BoardStore] ⚠️ Error during initial Nostr loading:', error);
         }
+    }
+
+    /**
+     * Gibt die NDK-Instanz zurück
+     */
+    public getNDK(): NDK | undefined {
+        return this.ndk;
     }
 
     /**
@@ -523,6 +531,265 @@ export class NostrIntegration {
         });
 
         this.boardSubscription = sub;
+
+        // =============================================================
+        // ⭐ NEU (Board-Sharing v1): Separate subscription für geteilte Boards
+        //    Holt Board-Events (Kind 30301), bei denen der aktuelle Nutzer
+        //    als p-tag (Maintainer/Viewer) eingetragen ist, aber NICHT Author ist.
+        //    Dadurch taucht ein neu geteiltes Board unmittelbar in der Liste auf,
+        //    ohne Polling oder manuelles Reload.
+        // =============================================================
+        const sharedSub = this.ndk.subscribe(
+            {
+                kinds: [30301] as number[],
+                '#p': [pubkey], // Nutzer muss als p-tag gelistet sein
+                since: sevenDaysAgo
+            } as any,
+            { closeOnEose: false }
+        );
+
+        sharedSub.on('event', async (event: any) => {
+            try {
+                // Dedup + Guards
+                if (event.kind !== 30301) return;
+                if (event.pubkey === pubkey) return; // eigene Events ignorieren
+                if (this.processedEvents.has(event.id)) return;
+
+                // Extrahiere Basisdaten
+                const dTag = event.tags.find((t: any) => t[0] === 'd')?.[1];
+                const title = event.tags.find((t: any) => t[0] === 'title')?.[1];
+                const description = event.tags.find((t: any) => t[0] === 'description')?.[1];
+                if (!dTag || !title) return; // Ungültiges Event
+
+                // Teilnehmer (p-tags) extrahieren
+                const pTagsAll = event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
+                // Kanonischer Owner = erster p-tag falls vorhanden, sonst Publisher
+                const canonicalOwner = pTagsAll.length > 0 ? pTagsAll[0] : event.pubkey;
+                // Rolle relativ zum kanonischen Owner bestimmen
+                let userRole = 'viewer';
+                if (canonicalOwner === pubkey) {
+                    userRole = 'owner';
+                } else if (pTagsAll.includes(pubkey)) {
+                    userRole = 'editor';
+                }
+
+                // Spalten (optional) aus Tags extrahieren
+                const columnTags = event.tags.filter((t: any) => t[0] === 'col');
+                const columns: ColumnProps[] = columnTags.map((t: any) => ({
+                    id: t[1],
+                    name: t[2] || 'Column',
+                    color: t[4] || undefined,
+                    cards: []
+                }));
+
+                // BoardProps aus Event ableiten und in Store upserten (persistiert + ID-Liste aktualisierbar)
+                const boardProps: BoardProps = {
+                    id: dTag,
+                    eventId: event.id,
+                    name: title,
+                    description: description || undefined,
+                    columns: columns,
+                    author: canonicalOwner,
+                    maintainers: pTagsAll.filter((p: string) => p !== canonicalOwner),
+                    createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                    updatedAt: undefined
+                };
+
+                if (typeof boardStore?.upsertBoardFromNostr === 'function') {
+                    boardStore.upsertBoardFromNostr(boardProps); // publish: false (secondary)
+                }
+
+                // Sofort in Shared-Cache eintragen für UI (BoardsList)
+                if (typeof boardStore?.handleSharedBoardEvent === 'function') {
+                    boardStore.handleSharedBoardEvent({
+                        id: dTag,
+                        name: title,
+                        description: description || undefined,
+                        createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                        updatedAt: event.created_at ? event.created_at * 1000 : undefined,
+                        isShared: true,
+                        userRole,
+                        author: canonicalOwner
+                    });
+                }
+
+                // Optional: Board-Liste neu laden, falls UI von IDs scannt
+                if (typeof boardStore?.refreshBoardIds === 'function') {
+                    boardStore.refreshBoardIds();
+                }
+
+                // Toast nur anzeigen, wenn Board neu ist (nicht bereits in Liste)
+                try {
+                    const existingShared = typeof boardStore?.filterSharedBoards === 'function'
+                        ? boardStore.filterSharedBoards('')
+                        : [];
+                    const alreadyThere = Array.isArray(existingShared) && existingShared.some((b: any) => b.id === dTag);
+                    if (!alreadyThere) {
+                        const { toast } = await import('svelte-sonner');
+                        const ownerShort = `${event.pubkey.slice(0, 8)}...${event.pubkey.slice(-4)}`;
+                        toast.success('Neues Board geteilt', {
+                            description: `${ownerShort} hat "${title}" mit dir geteilt`,
+                        });
+                    }
+                } catch (toastErr) {
+                    // Toast ist best-effort; Fehler still schlucken
+                }
+
+                this.processedEvents.add(event.id);
+            } catch (error) {
+                console.warn('⚠️ Fehler beim Verarbeiten eines Shared Board Events:', error);
+            }
+        });
+
+        // =============================================================
+        // 🆕 Subscription für Kind 30000 Follow Set Events (NIP-51)
+        // Benachrichtigt Viewer sofort wenn sie zu einem Board hinzugefügt werden
+        // 
+        // Pattern: board-followers-{board-id}
+        // Enthält alle Viewer dieses Boards in p-tags
+        // 
+        // ⚠️ WICHTIG: NO `since` filter here!
+        // Grund: Wenn ein Viewer zu einem Board hinzugefügt wird, wird Kind 30000 
+        // gerade JETZT publiziert. Der `since` filter würde es möglicherweise als
+        // "zu alt" klassifizieren, je nach Relay-Timing. Wir brauchen echte
+        // Echtzeit-Updates, nicht historische Events.
+        // =============================================================
+        const followerSub = this.ndk.subscribe(
+            {
+                kinds: [30000] as number[],
+                '#p': [pubkey] // Nutzer muss als p-tag im Follow Set sein
+            } as any,
+            { closeOnEose: false }
+        );
+
+        followerSub.on('event', async (event: any) => {
+            try {
+                if (event.kind !== 30000) return;
+                if (this.processedEvents.has(event.id)) return;
+
+                // Extrahiere Board-ID aus d-tag (Format: "board-followers-{board-id}")
+                const dTag = event.tags.find((t: any) => t[0] === 'd')?.[1];
+                if (!dTag || !dTag.startsWith('board-followers-')) return;
+
+                const boardId = dTag.replace('board-followers-', '');
+                const boardAuthor = event.pubkey;
+
+                console.log(`🔔 Kind 30000 Follow Set Event erhalten: Board ${boardId} vom Author ${boardAuthor}`);
+                console.log(`📋 Viewer Liste im Event:`, event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]));
+
+                this.processedEvents.add(event.id);
+
+                // Lade das Board aus Nostr mit Retry-Logik
+                // Das Board-Update wird via Kind 30301 separat empfangen,
+                // aber das Follow Set Event signalisiert dass der User jetzt dabei ist
+                try {
+                    if (!this.ndk) {
+                        console.warn('⚠️ NDK nicht verfügbar für Board-Fetch');
+                        return;
+                    }
+
+                    // Retry-Logik: Falls Event nicht auf allen Relays angekommen ist
+                    let boardEvent = null;
+                    for (let attempt = 0; attempt < 3; attempt++) {
+                        try {
+                            boardEvent = await Promise.race([
+                                this.ndk.fetchEvent({
+                                    kinds: [30301],
+                                    authors: [boardAuthor],
+                                    '#d': [boardId]
+                                } as any),
+                                new Promise((_, reject) =>
+                                    setTimeout(() => reject(new Error('Timeout')), 3000)
+                                )
+                            ]) as any;
+
+                            if (boardEvent) {
+                                console.log(`✅ Board ${boardId} gefetcht nach Follow Set (Versuch ${attempt + 1})`);
+                                break;
+                            }
+                        } catch (err) {
+                            console.warn(`⚠️ Versuch ${attempt + 1} fehlgeschlagen:`, (err as Error).message);
+                            if (attempt < 2) {
+                                // Kurze Verzögerung vor nächstem Versuch
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                        }
+                    }
+
+                    if (boardEvent) {
+                        // Verarbeite das Board als Shared Board
+                        const eventDTag = boardEvent.tags.find((t: any) => t[0] === 'd')?.[1];
+                        const title = boardEvent.tags.find((t: any) => t[0] === 'title')?.[1];
+                        const description = boardEvent.tags.find((t: any) => t[0] === 'description')?.[1];
+                        
+                        console.log(`📦 Board Event Details: id=${eventDTag}, title=${title}`);
+
+                        if (eventDTag && title) {
+                            // Bestimme Role basierend auf p-tags
+                            const pTags = boardEvent.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
+                            let userRole = 'viewer';
+                            
+                            // Import authStore für aktuelle User-Info
+                            const { authStore } = await import('$lib/stores/authStore.svelte.js');
+                            const currentUserPubkey = typeof authStore?.getPubkey === 'function'
+                                ? authStore.getPubkey()
+                                : null;
+
+                            if (currentUserPubkey && pTags.includes(currentUserPubkey)) {
+                                userRole = 'editor';
+                            }
+
+                            console.log(`👤 Bestimmte Role: ${userRole} (p-tags: ${pTags.length})`);
+
+                            if (typeof boardStore?.handleSharedBoardEvent === 'function') {
+                                boardStore.handleSharedBoardEvent({
+                                    id: eventDTag,
+                                    name: title,
+                                    description: description || undefined,
+                                    createdAt: boardEvent.created_at ? boardEvent.created_at * 1000 : Date.now(),
+                                    updatedAt: boardEvent.created_at ? boardEvent.created_at * 1000 : undefined,
+                                    isShared: true,
+                                    userRole: userRole,
+                                    author: boardAuthor
+                                });
+                                console.log(`✅ Board zu Shared Cache hinzugefügt: ${title} (${userRole})`);
+                            }
+
+                            // Toast nur anzeigen, wenn Board neu ist
+                            try {
+                                const existingShared = typeof boardStore?.filterSharedBoards === 'function'
+                                    ? boardStore.filterSharedBoards('')
+                                    : [];
+                                const alreadyThere = Array.isArray(existingShared) && existingShared.some((b: any) => b.id === eventDTag);
+                                if (!alreadyThere) {
+                                    const { toast } = await import('svelte-sonner');
+                                    const ownerShort = `${boardAuthor.slice(0, 8)}...${boardAuthor.slice(-4)}`;
+                                    toast.success('Neues Board geteilt', {
+                                        description: `${ownerShort} hat "${title}" mit dir als ${userRole} geteilt`,
+                                    });
+                                    console.log(`🎉 Toast angezeigt: Board ${title} (${userRole})`);
+                                } else {
+                                    console.log(`ℹ️ Board ${title} existiert bereits in Liste`);
+                                }
+                            } catch (toastErr) {
+                                // Toast ist best-effort
+                                console.warn('ℹ️ Toast konnte nicht angezeigt werden (best-effort)');
+                            }
+                        } else {
+                            console.warn(`⚠️ Board Event fehlen kritische Tags: dTag=${eventDTag}, title=${title}`);
+                        }
+                    } else {
+                        console.warn(`❌ Board Event konnte nach 3 Versuchen nicht geholt werden`);
+                    }
+                } catch (fetchErr) {
+                    console.warn(`⚠️ Fehler beim Verarbeiten des Follow Set Events für Board ${boardId}:`, fetchErr);
+                }
+            } catch (error) {
+                console.warn('⚠️ Unerwarteter Fehler beim Verarbeiten eines Follow Set Events:', error);
+            }
+        });
+
+        // Keine Speicherung der Subscription nötig (fire-and-forget) – optional könnte man cleanup hinzufügen.
     }
 
     /**
