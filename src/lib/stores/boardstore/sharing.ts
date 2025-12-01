@@ -1,6 +1,7 @@
 // src/lib/stores/boardstore/sharing.ts
 // Board-Sharing & Maintainer-System API
 
+import { toast } from 'svelte-sonner';
 import { Board } from '../../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../../types/sharing.js';
 import { authStore } from '../authStore.svelte.js';
@@ -168,7 +169,6 @@ export class BoardSharingOperations {
             console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
         } catch (error) {
             console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
-            // Rollback
             board.followers = board.followers.filter(p => p !== normalizedPubkey);
             throw new Error('Fehler beim Publizieren des Follow Set Updates');
         }
@@ -277,8 +277,14 @@ export class BoardSharingOperations {
         });
         
         followEvent.content = '';
-        await followEvent.publish();
-        console.log('📤 NIP-51 Follow Set Event aktualisiert');
+        const relays = await followEvent.publish();
+        
+        // Prüfe ob mindestens ein Relay geantwortet hat
+        if (!relays || relays.size === 0) {
+            throw new Error('⚠️ Keine Relays haben geantwortet. Bitte überprüfen Sie Ihre Relay-Verbindungen in den Einstellungen.');
+        }
+        
+        console.log(`📤 NIP-51 Follow Set Event aktualisiert (${relays.size} Relay(s))`);
     }
 
     /**
@@ -398,8 +404,14 @@ export class BoardSharingOperations {
         try {
             const tagSummary = event.tags.filter(t => t[0] === 'p').map(t => t[1].substring(0, 12));
             console.log(`🔑 Publish Board Update: id=${board.id} p-tags(count=${tagSummary.length})=${JSON.stringify(tagSummary)}`);
-            await event.publish();
-            console.log('✅ Board Event publiziert (including maintainers + followers)');
+            const relays = await event.publish();
+            
+            // Prüfe ob mindestens ein Relay geantwortet hat
+            if (!relays || relays.size === 0) {
+                throw new Error('⚠️ Keine Relays haben geantwortet. Bitte überprüfen Sie Ihre Relay-Verbindungen in den Einstellungen.');
+            }
+            
+            console.log(`✅ Board Event publiziert (${relays.size} Relay(s), including maintainers + followers)`);
         } catch (error) {
             console.error('❌ Fehler beim Publizieren des Board Events:', error);
             throw error;
