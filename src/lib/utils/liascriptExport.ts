@@ -1,6 +1,8 @@
 // src/lib/utils/liascriptExport.ts
 
 import type { Board, Column, Card, Comment } from '$lib/classes/BoardModel';
+import { settingsStore } from '$lib/stores/settingsStore.svelte';
+import { nip19 } from '@nostr-dev-kit/ndk';
 
 /**
  * Konvertiert ein Board zu LiaScript Markdown
@@ -156,4 +158,60 @@ export function generateLiaScriptFilename(boardName: string): string {
 
 	const date = new Date().toISOString().split('T')[0];
 	return `${sanitized}-${date}.md`;
+}
+
+/**
+ * Publiziert ein Board als Nostr Event und gibt einen LiaScript Viewer Link zurück
+ * 
+ * Nutzt die bestehende publishBoard() Funktion aus NostrIntegration
+ * und generiert einen nevent-basierten Link für den LiaScript Viewer
+ * 
+ * @param board - Das zu publizierende Board
+ * @param boardStore - BoardStore Instanz
+ * @returns LiaScript Viewer Link oder null bei Fehler
+ */
+export async function publishBoardAsLiaScriptToNostr(
+	board: Board,
+	boardStore: any
+): Promise<string | null> {
+	try {
+		// Board als Standard Nostr Event (Kind 30301) publizieren
+		const eventId = await boardStore.publishBoardAndGetEventId();
+
+		if (!eventId) {
+			console.error('❌ Board Publishing fehlgeschlagen - keine Event-ID erhalten');
+			return null;
+		}
+
+		console.log('✅ Board als Nostr Event publiziert:', eventId);
+
+		// LiaScript Viewer Link mit nevent generieren
+		const link = generateLiaScriptViewerLink(eventId);
+
+		return link;
+	} catch (error) {
+		console.error('❌ LiaScript Nostr Publishing fehlgeschlagen:', error);
+		return null;
+	}
+}
+
+/**
+ * Generiert LiaScript Viewer Link aus Event-ID
+ * 
+ * @param eventId - Nostr Event-ID (hex format)
+ * @returns LiaScript Viewer URL mit nevent encoding
+ */
+export function generateLiaScriptViewerLink(eventId: string): string {
+	// Encode Event-ID als nevent (NIP-19)
+	const relays = [
+		...settingsStore.settings.relaysPublic,
+		...settingsStore.settings.relaysPrivate
+	];
+
+	const nevent = nip19.neventEncode({
+		id: eventId,
+		relays: relays.slice(0, 3) // Max 3 Relays für kürzere Encodierung
+	});
+
+	return `https://liascript.github.io/course/?nostr:${nevent}`;
 }

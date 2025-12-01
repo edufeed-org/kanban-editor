@@ -847,9 +847,10 @@ export class NostrIntegration {
 
     /**
      * Publiziert Board zu Nostr
+     * @returns Event-ID des publizierten Events oder null bei Fehler
      */
-    public async publishBoard(board: Board): Promise<void> {
-        if (!this.ndk) return;
+    public async publishBoard(board: Board): Promise<string | null> {
+        if (!this.ndk) return null;
 
         try {
             const event = boardToNostrEvent(board, this.ndk);
@@ -894,9 +895,15 @@ export class NostrIntegration {
                 // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
                 const { BoardStorage } = await import('./storage.js');
                 await BoardStorage.saveBoard(board);
+                
+                // ⚡ RÜCKGABE: Event-ID für LiaScript-Link-Generierung
+                return publishedEvent.id;
             }
+            
+            return null;
         } catch (error) {
             console.error(`❌ Error publishing board:`, error);
+            return null;
         }
     }
 
