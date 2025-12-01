@@ -100,8 +100,7 @@
                 try {
                     const syncManager = getSyncManager();
                     
-                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
-                    syncStatus = {
+                    const newStatus = {
                         isOnline: syncManager.status.isOnline,
                         isSyncing: syncManager.status.isSyncing,
                         queuedEvents: syncManager.status.queuedEvents,
@@ -109,6 +108,18 @@
                         totalRelays: syncManager.lastTotalCount,
                         hasRelaySigner: syncManager.status.hasRelaySigner
                     };
+                    
+                    // Log if status changed
+                    if (newStatus.connectedRelays !== syncStatus.connectedRelays || 
+                        newStatus.totalRelays !== syncStatus.totalRelays) {
+                        console.log('[Topbar] 🔄 Status updated:', {
+                            old: `${syncStatus.connectedRelays}/${syncStatus.totalRelays}`,
+                            new: `${newStatus.connectedRelays}/${newStatus.totalRelays}`
+                        });
+                    }
+                    
+                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+                    syncStatus = newStatus;
                 } catch (error) {
                     // SyncManager not initialized yet
                 }

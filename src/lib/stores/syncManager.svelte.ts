@@ -376,11 +376,14 @@ export class SyncManager {
   private startRelayStatusMonitoring(): void {
     if (typeof window === 'undefined') return;
     
+    let logCounter = 0; // Log every 10 checks (10 seconds) if no change
+    
     // Check every 1 second for relay status changes (faster UI updates!)
     this.relayMonitoringIntervalId = setInterval(() => {
       // 🔥 METHOD 1: Try using NDK pool.stats() (most reliable!)
       let currentConnected = 0;
       let currentTotal = 0;
+      let usingFallback = false;
       
       try {
         // NDK's pool.stats() gibt die echten Connected/Total counts zurück
@@ -392,33 +395,43 @@ export class SyncManager {
           throw new Error('pool.stats() not available, using fallback');
         }
       } catch (error) {
+        usingFallback = true;
         // 🔥 FALLBACK: Manual relay iteration (wenn pool.stats() nicht existiert)
         const allRelays = Array.from(this.ndk.pool?.relays?.values() || []);
         
         // Count relays with ACTIVE WebSocket connection
-        // ✅ IMPORTANT: This includes BOTH public AND private relays from NDK pool!
         const connectedRelays = allRelays.filter(r => {
-          // Check if relay has an active WebSocket connection
-          // NDK sets status to 1 (CONNECTED) when ws.readyState === WebSocket.OPEN
           return r.status === 1; // NDKRelayStatus.CONNECTED
-        }).length;
+        });
         
-        currentConnected = connectedRelays;
+        currentConnected = connectedRelays.length;
         currentTotal = allRelays.length;
+        
+        // Log detailed relay status only on first check or when changed
+        if (this.lastConnectedCount === -1 || this.lastConnectedCount !== currentConnected) {
+          allRelays.forEach(r => {
+            const isConnected = r.status === 1;
+          });
+        }
       }
       
+      const hasChanged = this.lastConnectedCount !== currentConnected || this.lastTotalCount !== currentTotal;
       
-      if (this.lastConnectedCount !== currentConnected || this.lastTotalCount !== currentTotal) {
-        
+      // Log periodically (every 10s) or when changed
+      if (hasChanged || logCounter % 10 === 0) {
+        const method = usingFallback ? 'fallback' : 'pool.stats()';
+      }
+      logCounter++;
+      
+      if (hasChanged) {
         // ✅ CRITICAL: Update $state to trigger reactivity chain!
         this.lastConnectedCount = currentConnected;
         this.lastTotalCount = currentTotal;
         
         // 🔥 NEW: Increment counter to force Svelte to see the change
-        // This ensures $derived and $effect are triggered even if values are the same
         this.statusChangeCounter++;
         
-        console.log(`[SyncManager] 🔔 Status change counter: ${this.statusChangeCounter}`);
+        console.log(`[SyncManager] 🔔 STATUS CHANGED! Counter: ${this.statusChangeCounter}, Relays: ${currentConnected}/${currentTotal}`);
       }
     }, 1000); // Check every 1 second (faster UI updates!)
   }
