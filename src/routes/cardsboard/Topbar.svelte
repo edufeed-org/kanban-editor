@@ -17,6 +17,7 @@
     import WifiOffIcon from "@lucide/svelte/icons/wifi-off";
     import WifiIcon from "@lucide/svelte/icons/wifi";
     import Loader2Icon from "@lucide/svelte/icons/loader-2";
+    import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
     import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
@@ -94,31 +95,49 @@
                 console.warn('[Topbar] SyncManager not ready on mount');
             }
         
-            // // Poll every 2 seconds
-            // pollIntervalId = setInterval(() => {
-            //     try {
-            //         const syncManager = getSyncManager();
+            // ✅ Poll every 1 second for reactive status updates
+            pollIntervalId = setInterval(() => {
+                try {
+                    const syncManager = getSyncManager();
                     
-            //         // ✅ CRITICAL: Reassign entire object to trigger reactivity!
-            //         syncStatus = {
-            //             isOnline: syncManager.status.isOnline,
-            //             isSyncing: syncManager.status.isSyncing,
-            //             queuedEvents: syncManager.status.queuedEvents,
-            //             connectedRelays: syncManager.lastConnectedCount,
-            //             totalRelays: syncManager.lastTotalCount,
-            //             hasRelaySigner: syncManager.status.hasRelaySigner
-            //         };
-            //     } catch (error) {
-            //         // SyncManager not initialized yet
-            //     }
-            // }, 5000);
-            
-            // // Cleanup on unmount
-            // return () => {
-            //     if (pollIntervalId) clearInterval(pollIntervalId);
-            // };
+                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+                    syncStatus = {
+                        isOnline: syncManager.status.isOnline,
+                        isSyncing: syncManager.status.isSyncing,
+                        queuedEvents: syncManager.status.queuedEvents,
+                        connectedRelays: syncManager.lastConnectedCount,
+                        totalRelays: syncManager.lastTotalCount,
+                        hasRelaySigner: syncManager.status.hasRelaySigner
+                    };
+                } catch (error) {
+                    // SyncManager not initialized yet
+                }
+            }, 1000); // ← Poll every 1 second for faster UI updates
          }, 5000); // Delay to allow SyncManager initialization
+         
+         // ✅ Cleanup on unmount
+         return () => {
+             if (pollIntervalId) clearInterval(pollIntervalId);
+         };
     });
+    
+    // 🔄 Manual reconnect handler
+    async function handleReconnect() {
+        try {
+            const syncManager = getSyncManager();
+            toast.info('🔄 Verbindung wird wiederhergestellt...', {
+                description: 'Versuche Verbindung zu Relays herzustellen.',
+                duration: 2000
+            });
+            await syncManager.forceReconnect();
+        } catch (error) {
+            console.error('[Topbar] Reconnect failed:', error);
+            toast.error('❌ Reconnect fehlgeschlagen', {
+                description: 'Konnte keine Verbindung zu Relays herstellen.',
+                duration: 3000
+            });
+        }
+    }
     
     
     // 🔔 Toast-Benachrichtigungen für Relay-Verbindung
@@ -407,13 +426,25 @@
             
             <!-- 🟢 Sync Status Indicator -->
             <div 
-                class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 cursor-pointer hover:bg-secondary"
+                class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 hover:bg-secondary"
+                class:cursor-pointer={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing}
                 title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
+                role="button"
+                tabindex={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing ? 0 : -1}
+                onclick={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing ? handleReconnect : undefined}
+                onkeydown={(e) => {
+                    if (syncStatus.connectedRelays === 0 && !syncStatus.isSyncing && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        handleReconnect();
+                    }
+                }}
             >
                 {#if syncStatus.connectedRelays === 0 && syncStatus.isSyncing === false}
-                    <!-- No relays connected: Show error -->
+                    <!-- No relays connected: Show error + clickable reconnect -->
                     <WifiOffIcon class="h-3 w-3 text-red-500" />
                     <span class="text-red-600 font-semibold">Offline</span>
+                    <RefreshCwIcon class="h-3 w-3 text-red-500 ml-1" />
+                    <span class="text-red-500 text-[10px]">Reconnect</span>
                 {:else if syncStatus.isSyncing}
                     <!-- Syncing: Show spinner -->
                     <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />

@@ -376,7 +376,7 @@ export class SyncManager {
   private startRelayStatusMonitoring(): void {
     if (typeof window === 'undefined') return;
     
-    // Check every 2 seconds for relay status changes
+    // Check every 1 second for relay status changes (faster UI updates!)
     this.relayMonitoringIntervalId = setInterval(() => {
       // 🔥 METHOD 1: Try using NDK pool.stats() (most reliable!)
       let currentConnected = 0;
@@ -420,7 +420,49 @@ export class SyncManager {
         
         console.log(`[SyncManager] 🔔 Status change counter: ${this.statusChangeCounter}`);
       }
-    }, 2000); // Check every 2 seconds
+    }, 1000); // Check every 1 second (faster UI updates!)
+  }
+
+  /**
+   * 🔄 Force reconnect to all relays
+   * Useful when user manually wants to retry after connection loss
+   */
+  public async forceReconnect(): Promise<void> {
+    console.log('[SyncManager] 🔄 Force reconnect requested...');
+    
+    try {
+      // Disconnect all relays first
+      const allRelays = Array.from(this.ndk.pool?.relays?.values() || []);
+      console.log(`[SyncManager] Disconnecting ${allRelays.length} relay(s)...`);
+      
+      for (const relay of allRelays) {
+        try {
+          await relay.disconnect();
+        } catch (err) {
+          console.warn(`[SyncManager] Failed to disconnect relay ${relay.url}:`, err);
+        }
+      }
+      
+      // Wait a bit before reconnecting
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Reconnect all relays
+      console.log(`[SyncManager] Reconnecting to ${allRelays.length} relay(s)...`);
+      await this.ndk.connect();
+      
+      // Force status update
+      this.statusChangeCounter++;
+      
+      console.log('[SyncManager] ✅ Force reconnect completed');
+      
+      // Try to sync queue if we have events
+      if (this.eventQueue.length > 0) {
+        console.log(`[SyncManager] Syncing ${this.eventQueue.length} queued events after reconnect...`);
+        this.syncQueue();
+      }
+    } catch (error) {
+      console.error('[SyncManager] ❌ Force reconnect failed:', error);
+    }
   }
 
   public dispose(): void {
