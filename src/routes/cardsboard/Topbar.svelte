@@ -24,6 +24,7 @@
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
+    import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
     import { ShareButton } from '$lib/components/board';
 	
@@ -517,6 +518,7 @@
                                     <TrashIcon class="h-4 w-4" />
                                 </Button>
                                 <ExportButton />
+                                <LiaScriptExportButton />
                                 <!-- ShareLink Button -->
                                 <Button 
                                     variant="outline" 

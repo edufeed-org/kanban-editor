@@ -1048,6 +1048,14 @@ export class BoardStore {
         await this.nostrIntegration.publishBoard(this.board);
     }
 
+    /**
+     * Publiziert das aktuelle Board zu Nostr und gibt die Event-ID zurück
+     * @returns Event-ID des publizierten Events oder null bei Fehler
+     */
+    public async publishBoardAndGetEventId(): Promise<string | null> {
+        return await this.nostrIntegration.publishBoard(this.board);
+    }
+
     private async publishCardAsync(cardId: string): Promise<void> {
         await this.nostrIntegration.publishCard(this.board, cardId);
     }
