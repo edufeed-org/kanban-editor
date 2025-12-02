@@ -8,24 +8,52 @@
     import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardRole, type BoardShare } from "$lib/types/sharing";
     import TrashIcon from "@lucide/svelte/icons/trash";
+    import CopyIcon from "@lucide/svelte/icons/copy";
+    import CheckIcon from "@lucide/svelte/icons/check";
+    import { toast } from "svelte-sonner";
     
     // Props
     let { open = $bindable(false) } = $props();
     
     // State
-    let newUserPubkey = $state('');
-    let selectedRoleValue = $state<string>(BoardRole.VIEWER);
+    let newEditorPubkey = $state('');
     let participants = $state<BoardShare[]>([]);
     let isLoading = $state(false);
     let errorMessage = $state('');
-    let activeTab = $state('editors'); // 'editors' | 'viewers'
-    
-    // Convert string to BoardRole enum
-    let selectedRole = $derived(selectedRoleValue as BoardRole);
-    
+    let activeTab = $state('share-link'); // 'share-link' | 'editors'
+    let shareLink = $state('');
+    let linkCopied = $state(false);
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
+    
+    // Share-Link generieren
+    function generateShareLink(): string {
+        const boardId = boardStore.data?.id;
+        const boardAuthor = boardStore.data?.author;
+        
+        if (!boardId || !boardAuthor) return '';
+        
+        const baseUrl = window.location.origin;
+        // Format: /board?id=xxx&author=yyy
+        return `${baseUrl}/cardsboard?share=${boardId}&author=${boardAuthor}`;
+    }
+    
+    // Link kopieren
+    async function copyShareLink() {
+        try {
+            await navigator.clipboard.writeText(shareLink);
+            linkCopied = true;
+            toast.success('Link kopiert!', {
+                description: 'Der Share-Link wurde in die Zwischenablage kopiert'
+            });
+            setTimeout(() => linkCopied = false, 2000);
+        } catch (error) {
+            toast.error('Fehler beim Kopieren', {
+                description: 'Link konnte nicht kopiert werden'
+            });
+        }
+    }
     
     // Aktuelle Rolle des Nutzers laden
     async function loadUserRole() {
@@ -49,46 +77,42 @@
         }
     }
     
-    // Nutzer einladen
-    async function handleInviteUser() {
-        if (!newUserPubkey.trim()) return;
+    // Editor einladen
+    async function handleInviteEditor() {
+        if (!newEditorPubkey.trim()) return;
         
         isLoading = true;
         errorMessage = '';
         
         try {
-            if (selectedRole === BoardRole.EDITOR) {
-                await boardStore.addEditor(newUserPubkey);
-            } else {
-                await boardStore.addViewer(newUserPubkey);
-            }
-            
-            newUserPubkey = '';
+            await boardStore.addEditor(newEditorPubkey);
+            newEditorPubkey = '';
             await loadParticipants();
+            toast.success('Editor hinzugefügt', {
+                description: 'Der Nutzer kann jetzt das Board bearbeiten'
+            });
         } catch (error: any) {
             errorMessage = error.message || 'Fehler beim Einladen';
+            toast.error('Fehler', { description: errorMessage });
         } finally {
             isLoading = false;
         }
     }
     
-    // Nutzer entfernen
-    async function handleRemoveUser(pubkey: string, role: BoardRole) {
-        if (!confirm('Nutzer wirklich entfernen?')) return;
+    // Editor entfernen
+    async function handleRemoveEditor(pubkey: string) {
+        if (!confirm('Editor wirklich entfernen?')) return;
         
         isLoading = true;
         errorMessage = '';
         
         try {
-            if (role === BoardRole.EDITOR) {
-                await boardStore.removeEditor(pubkey);
-            } else {
-                await boardStore.removeViewer(pubkey);
-            }
-            
+            await boardStore.removeEditor(pubkey);
             await loadParticipants();
+            toast.success('Editor entfernt');
         } catch (error: any) {
             errorMessage = error.message || 'Fehler beim Entfernen';
+            toast.error('Fehler', { description: errorMessage });
         } finally {
             isLoading = false;
         }
@@ -102,13 +126,13 @@
     
     // Filtered participants
     let editorsAndOwners = $derived(participants.filter(p => p.role === 'editor' || p.role === 'owner'));
-    let viewers = $derived(participants.filter(p => p.role === 'viewer'));
     
     // Bei Dialog-Öffnung laden
     $effect(() => {
         if (open) {
             loadParticipants();
             loadUserRole();
+            shareLink = generateShareLink();
         }
     });
 </script>
@@ -118,53 +142,86 @@
         <Dialog.Header>
             <Dialog.Title>Board teilen</Dialog.Title>
             <Dialog.Description>
-                Verwalte Editoren und Viewer für dieses Board.
+                Teile dieses Board mit anderen über einen Link oder verwalte Editoren.
             </Dialog.Description>
         </Dialog.Header>
         
-        <!-- Einladung -->
-        <div class="space-y-4">
-            <div class="flex gap-2">
-                <Input 
-                    bind:value={newUserPubkey}
-                    placeholder="Nostr Public Key (npub oder hex)"
-                    disabled={isLoading}
-                    class="flex-1"
-                />
-                <select 
-                    bind:value={selectedRoleValue}
-                    class="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                {#if canInviteEditors}
-                    <option value={BoardRole.EDITOR}>{BoardRole.EDITOR}</option>
-                {/if}
-                    <option value={BoardRole.VIEWER}>{BoardRole.VIEWER}</option>
-                </select>
-                <Button 
-                    onclick={handleInviteUser}
-                    disabled={isLoading || !newUserPubkey.trim()}
-                >
-                    Einladen
-                </Button>
-            </div>
-            
-            {#if errorMessage}
-                <p class="text-sm text-destructive">{errorMessage}</p>
-            {/if}
-        </div>
-        
-        <!-- Teilnehmer-Liste -->
-        <Tabs.Root bind:value={activeTab} class="mt-6">
+        <Tabs.Root bind:value={activeTab} class="mt-4">
             <Tabs.List class="grid w-full grid-cols-2">
+                <Tabs.Trigger value="share-link">
+                    Share-Link
+                </Tabs.Trigger>
                 <Tabs.Trigger value="editors">
                     Editoren ({editorsAndOwners.length})
                 </Tabs.Trigger>
-                <Tabs.Trigger value="viewers">
-                    Viewer ({viewers.length})
-                </Tabs.Trigger>
             </Tabs.List>
             
+            <!-- Share-Link Tab -->
+            <Tabs.Content value="share-link" class="mt-4 space-y-4">
+                <div class="space-y-2">
+                    <p class="text-sm text-muted-foreground">
+                        Teile diesen Link mit anderen Nutzern. Sie können dann selbst entscheiden, 
+                        ob sie das Board abonnieren möchten.
+                    </p>
+                    
+                    <div class="flex gap-2">
+                        <Input 
+                            value={shareLink}
+                            readonly
+                            class="flex-1 font-mono text-xs"
+                        />
+                        <Button 
+                            onclick={copyShareLink}
+                            variant="outline"
+                            class="gap-2"
+                        >
+                            {#if linkCopied}
+                                <CheckIcon class="h-4 w-4" />
+                                Kopiert
+                            {:else}
+                                <CopyIcon class="h-4 w-4" />
+                                Kopieren
+                            {/if}
+                        </Button>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-muted rounded-md">
+                        <p class="text-sm font-medium mb-2">ℹ️ Wie funktioniert das Teilen?</p>
+                        <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                            <li>Nutzer öffnet den Link und sieht eine Vorschau des Boards</li>
+                            <li>Mit einem Klick auf "Board folgen" wird es zu ihrer Liste hinzugefügt</li>
+                            <li>Sie können das Board jederzeit wieder deabonnieren</li>
+                            <li>Nur Editoren (siehe nächster Tab) können das Board bearbeiten</li>
+                        </ul>
+                    </div>
+                </div>
+            </Tabs.Content>
+            
+            <!-- Editoren Tab -->
             <Tabs.Content value="editors" class="mt-4">
+                {#if canInviteEditors}
+                    <div class="space-y-4 mb-4">
+                        <div class="flex gap-2">
+                            <Input 
+                                bind:value={newEditorPubkey}
+                                placeholder="Nostr Public Key (npub oder hex)"
+                                disabled={isLoading}
+                                class="flex-1"
+                            />
+                            <Button 
+                                onclick={handleInviteEditor}
+                                disabled={isLoading || !newEditorPubkey.trim()}
+                            >
+                                Hinzufügen
+                            </Button>
+                        </div>
+                        
+                        {#if errorMessage}
+                            <p class="text-sm text-destructive text-red-600">{errorMessage}</p>
+                        {/if}
+                    </div>
+                {/if}
+                
                 <div class="space-y-2 max-h-60 overflow-y-auto">
                     {#each editorsAndOwners as participant}
                         <div class="flex items-center justify-between p-2 rounded-md border">
@@ -177,11 +234,11 @@
                                 </Badge>
                             </div>
                             
-                            {#if participant.role !== 'owner'}
+                            {#if participant.role !== 'owner' && canInviteEditors}
                                 <Button 
                                     variant="ghost" 
                                     size="sm"
-                                    onclick={() => handleRemoveUser(participant.pubkey, participant.role)}
+                                    onclick={() => handleRemoveEditor(participant.pubkey)}
                                     disabled={isLoading}
                                 >
                                     <TrashIcon class="h-4 w-4" />
@@ -193,38 +250,6 @@
                     {#if editorsAndOwners.length === 0}
                         <p class="text-sm text-muted-foreground text-center py-4">
                             Keine Editoren gefunden
-                        </p>
-                    {/if}
-                </div>
-            </Tabs.Content>
-            
-            <Tabs.Content value="viewers" class="mt-4">
-                <div class="space-y-2 max-h-60 overflow-y-auto">
-                    {#each viewers as participant}
-                        <div class="flex items-center justify-between p-2 rounded-md border">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-medium">
-                                    {getDisplayName(participant.pubkey)}
-                                </span>
-                                <Badge variant="outline">
-                                    Viewer
-                                </Badge>
-                            </div>
-                            
-                            <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onclick={() => handleRemoveUser(participant.pubkey, participant.role)}
-                                disabled={isLoading}
-                            >
-                                <TrashIcon class="h-4 w-4" />
-                            </Button>
-                        </div>
-                    {/each}
-                    
-                    {#if viewers.length === 0}
-                        <p class="text-sm text-muted-foreground text-center py-4">
-                            Keine Viewer gefunden
                         </p>
                     {/if}
                 </div>

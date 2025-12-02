@@ -1,7 +1,7 @@
 // src/lib/stores/boardstore/sharing.ts
 // Board-Sharing & Maintainer-System API
 
-import { Board } from '../../classes/BoardModel.js';
+import { Board, type BoardProps } from '../../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../../types/sharing.js';
 import { authStore } from '../authStore.svelte.js';
 import type NDK from '@nostr-dev-kit/ndk';
@@ -121,12 +121,29 @@ export class BoardSharingOperations {
     /**
      * Fügt einen Viewer (Follower) zum Board hinzu
      * Nutzt NIP-51 Follow Sets (Kind 30000)
+     * 
+     * @deprecated SECURITY VIOLATION! Diese Methode erstellt Follow-Set Events für andere Nutzer!
+     * In Nostr kann nur der User selbst sein Follow-Set ändern (events sind signiert).
+     * 
+     * NEUE ARCHITEKTUR (Option 1):
+     * - Owner teilt nur einen Share-Link
+     * - User öffnet Link → sieht Board-Vorschau
+     * - User klickt "Board folgen" → BoardStore.followBoard() wird aufgerufen
+     * - followBoard() erstellt NIP-51 Event signiert vom USER selbst
+     * - User kann jederzeit unfollowBoard() aufrufen (eigenes Follow-Set!)
+     * 
+     * DO NOT USE THIS METHOD! Use share link system instead.
      */
     public static async addViewer(
         board: Board,
         pubkey: string,
         ndk: NDK
     ): Promise<void> {
+        console.warn('⚠️ DEPRECATED: addViewer() sollte nicht mehr verwendet werden! Nutze Share-Link System stattdessen.');
+        throw new Error('addViewer() ist deprecated. Verwende Share-Link System für Viewer-Management.');
+        
+        // OLD IMPLEMENTATION BELOW - DO NOT USE
+        /*
         if (!ndk) {
             throw new Error('NDK Instanz erforderlich für addViewer');
         }
@@ -168,7 +185,6 @@ export class BoardSharingOperations {
             console.log(`🛰️ NIP-51 Follow Set Event aktualisiert`);
         } catch (error) {
             console.error('❌ Fehler beim Publizieren des Follow Set Events:', error);
-            // Rollback
             board.followers = board.followers.filter(p => p !== normalizedPubkey);
             throw new Error('Fehler beim Publizieren des Follow Set Updates');
         }
@@ -185,6 +201,7 @@ export class BoardSharingOperations {
         }
         
         console.log(`✅ Viewer hinzugefügt: ${normalizedPubkey}`);
+        */
     }
 
     /**
@@ -277,8 +294,14 @@ export class BoardSharingOperations {
         });
         
         followEvent.content = '';
-        await followEvent.publish();
-        console.log('📤 NIP-51 Follow Set Event aktualisiert');
+        const relays = await followEvent.publish();
+        
+        // Prüfe ob mindestens ein Relay geantwortet hat
+        if (!relays || relays.size === 0) {
+            throw new Error('⚠️ Keine Relays haben geantwortet. Bitte überprüfen Sie Ihre Relay-Verbindungen in den Einstellungen.');
+        }
+        
+        console.log(`📤 NIP-51 Follow Set Event aktualisiert (${relays.size} Relay(s))`);
     }
 
     /**
@@ -398,8 +421,14 @@ export class BoardSharingOperations {
         try {
             const tagSummary = event.tags.filter(t => t[0] === 'p').map(t => t[1].substring(0, 12));
             console.log(`🔑 Publish Board Update: id=${board.id} p-tags(count=${tagSummary.length})=${JSON.stringify(tagSummary)}`);
-            await event.publish();
-            console.log('✅ Board Event publiziert (including maintainers + followers)');
+            const relays = await event.publish();
+            
+            // Prüfe ob mindestens ein Relay geantwortet hat
+            if (!relays || relays.size === 0) {
+                throw new Error('⚠️ Keine Relays haben geantwortet. Bitte überprüfen Sie Ihre Relay-Verbindungen in den Einstellungen.');
+            }
+            
+            console.log(`✅ Board Event publiziert (${relays.size} Relay(s), including maintainers + followers)`);
         } catch (error) {
             console.error('❌ Fehler beim Publizieren des Board Events:', error);
             throw error;
@@ -533,6 +562,150 @@ export class BoardSharingOperations {
     }
 
     /**
+     * USER-CONTROLLED FOLLOW: Fügt Board zu EIGENER NIP-51 Follow-Set hinzu
+     * Dies ist die RICHTIGE Methode für User, einem Board zu folgen!
+     * Event wird vom User selbst signiert (nicht vom Board-Owner).
+     * 
+     * @param boardId - Board d-tag
+     * @param boardAuthor - Board author pubkey (hex)
+     * @param ndk - NDK instance
+     */
+    public static async followBoard(
+        boardId: string,
+        boardAuthor: string,
+        ndk: NDK
+    ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK erforderlich');
+        }
+        
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Nutzer nicht eingeloggt');
+        }
+        
+        console.log(`📥 Folge Board: ${boardId} von ${boardAuthor}`);
+        
+        try {
+            // 1. Aktuelles Follow-Set des Users laden (NIP-51 Kind 30000)
+            const followSetFilter = {
+                kinds: [30000],
+                authors: [currentUser],
+                '#d': ['kanban-boards']
+            };
+            
+            const existingFollowSet = await ndk.fetchEvent(followSetFilter);
+            
+            // 2. Board-Referenz erstellen (NIP-01 a-tag Format)
+            const boardRef = `30301:${boardAuthor}:${boardId}`;
+            
+            // 3. Neues Follow-Set Event erstellen
+            const followSetEvent = new NDKEvent(ndk);
+            followSetEvent.kind = 30000;
+            followSetEvent.tags = [
+                ['d', 'kanban-boards'] // Follow-Set identifier
+            ];
+            
+            // Bestehende a-tags übernehmen (wenn vorhanden)
+            if (existingFollowSet) {
+                const existingATags = existingFollowSet.tags
+                    .filter(tag => tag[0] === 'a')
+                    .map(tag => tag[1]);
+                
+                // Nur hinzufügen wenn noch nicht vorhanden
+                if (!existingATags.includes(boardRef)) {
+                    existingATags.forEach(ref => {
+                        followSetEvent.tags.push(['a', ref]);
+                    });
+                    followSetEvent.tags.push(['a', boardRef]);
+                } else {
+                    console.log('ℹ️ Board bereits im Follow-Set');
+                    return;
+                }
+            } else {
+                // Erstes Board im Follow-Set
+                followSetEvent.tags.push(['a', boardRef]);
+            }
+            
+            // 4. Event signieren und publizieren
+            await followSetEvent.publish();
+            console.log(`✅ Board zu Follow-Set hinzugefügt: ${boardRef}`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Folgen des Boards:', error);
+            throw new Error('Fehler beim Hinzufügen zum Follow-Set');
+        }
+    }
+
+    /**
+     * USER-CONTROLLED UNFOLLOW: Entfernt Board aus EIGENER NIP-51 Follow-Set
+     * User kann jederzeit sein eigenes Follow-Set ändern!
+     * 
+     * @param boardId - Board d-tag
+     * @param boardAuthor - Board author pubkey (hex)
+     * @param ndk - NDK instance
+     */
+    public static async unfollowBoard(
+        boardId: string,
+        boardAuthor: string,
+        ndk: NDK
+    ): Promise<void> {
+        if (!ndk) {
+            throw new Error('NDK erforderlich');
+        }
+        
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Nutzer nicht eingeloggt');
+        }
+        
+        console.log(`📤 Entfolge Board: ${boardId}`);
+        
+        try {
+            // 1. Aktuelles Follow-Set des Users laden
+            const followSetFilter = {
+                kinds: [30000],
+                authors: [currentUser],
+                '#d': ['kanban-boards']
+            };
+            
+            const existingFollowSet = await ndk.fetchEvent(followSetFilter);
+            
+            if (!existingFollowSet) {
+                console.log('ℹ️ Kein Follow-Set vorhanden');
+                return;
+            }
+            
+            // 2. Board-Referenz
+            const boardRef = `30301:${boardAuthor}:${boardId}`;
+            
+            // 3. Neues Follow-Set ohne das Board erstellen
+            const followSetEvent = new NDKEvent(ndk);
+            followSetEvent.kind = 30000;
+            followSetEvent.tags = [
+                ['d', 'kanban-boards']
+            ];
+            
+            // Alle a-tags AUSSER das zu entfernende Board
+            const remainingATags = existingFollowSet.tags
+                .filter(tag => tag[0] === 'a' && tag[1] !== boardRef)
+                .map(tag => tag[1]);
+            
+            remainingATags.forEach(ref => {
+                followSetEvent.tags.push(['a', ref]);
+            });
+            
+            // 4. Event signieren und publizieren
+            await followSetEvent.publish();
+            console.log(`✅ Board aus Follow-Set entfernt: ${boardRef}`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Entfolgen des Boards:', error);
+            throw new Error('Fehler beim Entfernen aus Follow-Set');
+        }
+    }
+
+    /**
      * Verlässt ein geteiltes Board (entfernt den aktuellen Nutzer aus den Maintainern/Followern)
      * 
      * @param boardId - Board ID
@@ -564,6 +737,166 @@ export class BoardSharingOperations {
         } catch (error) {
             console.error('❌ Fehler beim Verlassen des Boards:', error);
             throw error;
+        }
+    }
+    
+    /**
+     * Lädt Boards aus dem User's eigenen NIP-51 Follow-Set (Kind 30000)
+     * Dies sind Boards, denen der User via "Folgen" folgt (Viewer-Rolle)
+     * 
+     * @param currentUserPubkey - Aktueller Nutzer Pubkey
+     * @param ndk - NDK instance
+     * @returns Array von Board-Metadaten
+     */
+    public static async loadFollowedBoardsFromNostr(
+        currentUserPubkey: string,
+        ndk: NDK
+    ): Promise<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; isShared: boolean; userRole: string; author?: string}>> {
+        console.log(`🔍 loadFollowedBoardsFromNostr called with pubkey: ${currentUserPubkey.slice(0, 8)}...`);
+        
+        if (!ndk || !currentUserPubkey) {
+            console.log('⚠️ NDK oder currentUserPubkey nicht verfügbar für Follow-Set Loading');
+            return [];
+        }
+        
+        try {
+            console.log('📡 Starte Nostr Abfrage für Follow-Set (Kind 30000)...');
+            
+            // Lade User's eigenes Follow-Set (NIP-51 Kind 30000)
+            const followSetFilter = {
+                kinds: [30000],
+                authors: [currentUserPubkey],
+                '#d': ['kanban-boards']
+            };
+            
+            const followSetEvent = await ndk.fetchEvent(followSetFilter);
+            
+            if (!followSetEvent) {
+                console.log('ℹ️ Kein Follow-Set Event gefunden (NIP-51 Kind 30000)');
+                return [];
+            }
+            
+            console.log(`✅ Follow-Set Event gefunden:`, followSetEvent.id);
+            
+            // Extrahiere Board-Referenzen aus a-tags
+            // Format: 30301:boardAuthor:boardId
+            const aTags = followSetEvent.tags
+                .filter(tag => tag[0] === 'a')
+                .map(tag => tag[1]);
+            
+            console.log(`📥 ${aTags.length} Board-Referenzen in Follow-Set a-tags gefunden`);
+            
+            const followedBoards: Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; isShared: boolean; userRole: string; author?: string}> = [];
+            
+            // Für jede Board-Referenz: Board-Event von Nostr laden
+            for (const aTag of aTags) {
+                try {
+                    const parts = aTag.split(':');
+                    if (parts.length !== 3 || parts[0] !== '30301') {
+                        console.warn('⚠️ Ungültiger a-tag:', aTag);
+                        continue;
+                    }
+                    
+                    const [_, boardAuthor, boardId] = parts;
+                    console.log(`🔄 Lade Board ${boardId.slice(0, 8)}... von Author ${boardAuthor.slice(0, 8)}...`);
+                    
+                    // Board Event laden
+                    const boardEvent = await ndk.fetchEvent({
+                        kinds: [30301 as any],
+                        authors: [boardAuthor],
+                        '#d': [boardId]
+                    });
+                    
+                    if (!boardEvent) {
+                        console.warn(`⚠️ Board Event nicht gefunden für: ${boardId.slice(0, 8)}...`);
+                        continue;
+                    }
+                    
+                    console.log(`✅ Board Event gefunden: ${boardEvent.id?.slice(0, 8)}...`);
+                    
+                    // Board-Metadaten extrahieren
+                    const title = boardEvent.tags.find(tag => tag[0] === 'title')?.[1];
+                    const description = boardEvent.tags.find(tag => tag[0] === 'description')?.[1];
+                    
+                    if (!title) {
+                        console.warn('⚠️ Board Event ohne Titel:', boardEvent.id);
+                        continue;
+                    }
+                    
+                    console.log(`✅ Board geladen: "${title}"`);
+                    
+                    followedBoards.push({
+                        id: boardId,
+                        name: title,
+                        description: description || undefined,
+                        createdAt: boardEvent.created_at ? boardEvent.created_at * 1000 : Date.now(),
+                        updatedAt: boardEvent.created_at ? boardEvent.created_at * 1000 : undefined,
+                        isShared: true,
+                        userRole: 'viewer', // Immer Viewer weil aus Follow-Set
+                        author: boardAuthor
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Fehler beim Laden eines followed Boards:', error);
+                    continue;
+                }
+            }
+            
+            console.log(`✅ ${followedBoards.length} Boards aus Follow-Set geladen`);
+            return followedBoards;
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Laden des Follow-Sets:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Lädt ein Board-Event von Nostr (für Board-Vorschau bei Share-Links)
+     * 
+     * @param boardId - Board D-Tag
+     * @param boardAuthor - Board-Ersteller Pubkey
+     * @param ndk - NDK instance
+     * @returns Board-Props Objekt oder null wenn nicht gefunden
+     */
+    public static async fetchBoardFromNostr(
+        boardId: string,
+        boardAuthor: string,
+        ndk: NDK
+    ): Promise<BoardProps | null> {
+        if (!ndk || !boardId || !boardAuthor) {
+            throw new Error('NDK, Board-ID und Autor erforderlich');
+        }
+        
+        console.log(`🔍 Lade Board-Vorschau: ${boardId} von ${boardAuthor}`);
+        
+        try {
+            // Board Event von Nostr laden (NIP-01 Kind 30301)
+            const filter = {
+                kinds: [30301],
+                authors: [boardAuthor],
+                '#d': [boardId]
+            };
+            
+            const event = await ndk.fetchEvent(filter);
+            
+            if (!event) {
+                console.warn(`⚠️ Board nicht gefunden: ${boardId}`);
+                return null;
+            }
+            
+            console.log(`✅ Board Event geladen:`, event);
+            
+            // Event zu Board Props konvertieren
+            const { nostrEventToBoard } = await import('$lib/utils/nostrEvents.js');
+            const boardProps = nostrEventToBoard(event);
+            
+            console.log(`✅ Board-Vorschau erstellt:`, boardProps);
+            return boardProps;
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Laden des Board-Events:', error);
+            throw new Error('Board konnte nicht von Nostr geladen werden');
         }
     }
 }

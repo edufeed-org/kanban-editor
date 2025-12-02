@@ -95,7 +95,7 @@ export class AuthStore {
         boardStore.updateBoardAuthor?.();
         
         // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
-        boardStore.onAuthChanged?.();
+        await boardStore.onAuthChanged?.();
         
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
@@ -160,7 +160,7 @@ export class AuthStore {
         boardStore.updateBoardAuthor?.();
         
         // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
-        boardStore.onAuthChanged?.();
+        await boardStore.onAuthChanged?.();
         
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
@@ -223,7 +223,7 @@ export class AuthStore {
         boardStore.updateBoardAuthor?.();
         
         // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
-        boardStore.onAuthChanged?.();
+        await boardStore.onAuthChanged?.();
         
         await boardStore.loadBoardsFromNostrForCurrentUser?.();
         boardStore.subscribeToBoardUpdatesForCurrentUser?.();
@@ -419,6 +419,18 @@ export class AuthStore {
         );
 
         // ✅ Signer wurde bereits oben rekonstruiert!
+        
+        // 🔗 KRITISCH: Boards nach Session-Restore laden
+        // Ohne dies verliert der User nach Refresh alle gefolgten Boards!
+        try {
+          const { boardStore } = await import('./kanbanStore.svelte.js');
+          console.log('🔄 Triggering board reload after session restore...');
+          await boardStore.onAuthChanged?.();
+          console.log('✅ Boards reloaded after session restore');
+        } catch (error) {
+          console.warn('⚠️ Failed to reload boards after session restore:', error);
+        }
+        
         return;
       }
 

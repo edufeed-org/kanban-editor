@@ -47,22 +47,23 @@
       console.warn('⚠️ SyncManager init failed:', error);
     }
 
-    // 🔐 THIRD: Restore AuthStore session
-    // At this point, SyncManager is ready to receive updateSigner() calls
-    try {
-      await authStore.restoreSession();
-      console.log('✅ AuthStore session restored');
-    } catch (error) {
-      console.warn('⚠️ AuthStore session restore failed:', error);
-    }
-
-    // ✅ FOURTH: Initialize BoardStore with NDK for Nostr publishing
-    // At this point: NDK is connected, authStore has session, SyncManager has signer
+    // ✅ THIRD: Initialize BoardStore with NDK for Nostr publishing
+    // MUST be BEFORE restoreSession() because onAuthChanged() needs NDK!
     try {
       boardStore.initializeNostr(ndk);
       console.log('✅ BoardStore initialized with NDK - publishing ready');
     } catch (error) {
       console.error('⚠️ Failed to initialize BoardStore:', error);
+    }
+
+    // 🔐 FOURTH: Restore AuthStore session
+    // At this point: NDK connected, SyncManager ready, BoardStore has NDK
+    // restoreSession() will call onAuthChanged() which loads shared boards
+    try {
+      await authStore.restoreSession();
+      console.log('✅ AuthStore session restored');
+    } catch (error) {
+      console.warn('⚠️ AuthStore session restore failed:', error);
     }
 
     const oidcUserManager = await initializeOidcUserManager(window.location.href)
