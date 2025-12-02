@@ -104,7 +104,7 @@ export class BoardStore {
      * 
      * Behandelt Demo-Board-Migration und Board-Liste-Aktualisierung
      */
-    public onAuthChanged(): void {
+    public async onAuthChanged(): Promise<void> {
         console.log('🔄 Auth status changed - handling board migration');
         
         // ⚡ NEW: Cache für geteilte Boards leeren bei Auth-Änderung
@@ -116,6 +116,19 @@ export class BoardStore {
         
         // Board-IDs neu laden (um Demo-Board zu entfernen bei auth)
         this.refreshBoardIds();
+        
+        // 📋 KRITISCH: Geteilte Boards neu laden nach Auth-Änderung
+        // Ohne dies verliert der User nach Refresh alle gefolgten Boards!
+        const currentUser = authStore.getPubkey();
+        if (currentUser && this.nostrIntegration?.getNDK()) {
+            try {
+                console.log('📥 Loading shared boards after auth change...');
+                await this.loadSharedBoardsAsync(currentUser);
+                console.log('✅ Shared boards reloaded');
+            } catch (error) {
+                console.warn('⚠️ Failed to reload shared boards:', error);
+            }
+        }
         
         // Update trigger für Board-Liste Reaktivität
         this.triggerUpdate({ publish: false });
@@ -424,6 +437,17 @@ export class BoardStore {
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
         
+        // ✅ KRITISCH: Wenn User Viewer ist (aus Follow-Set), zur followers Liste hinzufügen
+        // Dies ermöglicht korrekte Viewer-Rolle in getCurrentUserRole()
+        const currentUser = authStore.getPubkey();
+        if (currentUser) {
+            const boardMeta = this.cachedSharedBoards.find(b => b.id === boardId);
+            if (boardMeta?.userRole === 'viewer' && !board.followers.includes(currentUser)) {
+                console.log(`✅ Adding current user to followers (Follow-Set board)`);
+                board.followers.push(currentUser);
+            }
+        }
+        
         // ⚡ NEW (13.11.2025): Update lastAccessed NUR bei manuellem Board-Switch
         // Bei Nostr-Load: skipLastAccessed = true (Race Condition vermeiden!)
         if (!options?.skipLastAccessed) {
@@ -496,6 +520,20 @@ export class BoardStore {
             BoardStorage.saveBoard(reconstructed);
             this.refreshBoardIds();
             console.log(`🛠️ Rekonstruiertes Shared Board gespeichert: ${reconstructed.name} (${reconstructed.id})`);
+            
+            // 🔴 UPDATE: Aktualisiere Board-Metadaten in cachedSharedBoards mit echten Daten
+            const cachedIndex = this.cachedSharedBoards.findIndex(b => b.id === boardId);
+            if (cachedIndex !== -1) {
+                this.cachedSharedBoards[cachedIndex] = {
+                    ...this.cachedSharedBoards[cachedIndex],
+                    name: reconstructed.name,
+                    description: reconstructed.description,
+                    updatedAt: reconstructed.updatedAt ? new Date(reconstructed.updatedAt).getTime() : undefined,
+                    createdAt: reconstructed.createdAt ? new Date(reconstructed.createdAt).getTime() : Date.now()
+                };
+                this.triggerUpdate({ publish: false }); // UI aktualisieren
+                console.log(`✅ Board-Metadaten in Cache aktualisiert: ${reconstructed.name}`);
+            }
             
             // 🔴 KRITISCH: Lade Followers aus Kind 30000 nach Rekonstruktion
             // Der Event hat nur Maintainers in p-tags, Followers kommen aus separatem Follow Set
@@ -893,25 +931,38 @@ export class BoardStore {
      * Grund: Boards können via followerSub Events real-time hinzugefügt werden.
      * Wenn wir den Cache ersetzen, verlieren wir diese real-time Boards!
      */
-    private async loadSharedBoardsAsync(currentUserPubkey: string): Promise<void> {
+    public async loadSharedBoardsAsync(currentUserPubkey: string): Promise<void> {
         try {
+            console.log(`🔍 loadSharedBoardsAsync called with pubkey: ${currentUserPubkey.slice(0, 8)}...`);
+            
             const ndk = this.nostrIntegration.getNDK();
             if (!ndk) {
-                // console.warn('⚠️ NDK nicht verfügbar für Shared Boards Loading');
+                console.warn('⚠️ NDK nicht verfügbar für Shared Boards Loading');
                 return;
             }
 
             // Verhindere mehrfaches gleichzeitiges Laden
             if (this.isLoadingSharedBoards) {
+                console.log('⏸️ Bereits am Laden - überspringe');
                 return;
             }
             this.isLoadingSharedBoards = true;
 
-            // Lade geteilte Boards aus Nostr
+            console.log('📡 Starte Nostr Abfrage für geteilte Boards...');
+            
+            // 1️⃣ Lade Boards wo User in p-tags ist (OWNER/EDITOR)
             const sharedBoards = await BoardSharingOperations.loadSharedBoardsFromNostr(
                 currentUserPubkey,
                 ndk
             );
+            console.log(`✅ p-tags Boards: ${sharedBoards.length}`);
+            
+            // 2️⃣ Lade Boards aus User's eigenem Follow-Set (VIEWER)
+            const followedBoards = await BoardSharingOperations.loadFollowedBoardsFromNostr(
+                currentUserPubkey,
+                ndk
+            );
+            console.log(`✅ Follow-Set Boards: ${followedBoards.length}`);
 
             // ⚠️ KRITISCH: Merge mit existierendem Cache, nicht ersetzen!
             // Sonst verlieren wir Boards, die via followerSub Events real-time hinzugefügt wurden
@@ -923,7 +974,7 @@ export class BoardStore {
             }
             
             // Neue Boards aus Nostr hinzufügen (bei Duplikaten gewinnt Cache)
-            for (const board of sharedBoards) {
+            for (const board of [...sharedBoards, ...followedBoards]) {
                 if (!boardMap.has(board.id)) {
                     boardMap.set(board.id, board);
                 }
@@ -931,8 +982,8 @@ export class BoardStore {
             
             this.cachedSharedBoards = Array.from(boardMap.values());
             
-            if (sharedBoards.length > 0 || this.cachedSharedBoards.length > 0) {
-                console.log(`📥 ${sharedBoards.length} geteilte Boards von Nostr, ${this.cachedSharedBoards.length} total gecached (merged)`);
+            if (sharedBoards.length > 0 || followedBoards.length > 0 || this.cachedSharedBoards.length > 0) {
+                console.log(`📥 Geteilte Boards geladen: ${sharedBoards.length} (p-tags) + ${followedBoards.length} (Follow-Set) = ${this.cachedSharedBoards.length} total`);
                 this.triggerUpdate({ publish: false }); // UI Update ohne Nostr Publishing
             }
 
@@ -1785,6 +1836,144 @@ export class BoardStore {
         
         this.board.followers = followers;
         this.triggerUpdate();
+    }
+
+    /**
+     * USER-CONTROLLED FOLLOW: Fügt Board zu EIGENER Follow-Set hinzu
+     * Dies ist die RICHTIGE Art für Nutzer, einem Board zu folgen!
+     * 
+     * @param boardId - Board d-tag
+     * @param boardAuthor - Board author pubkey (hex)
+     */
+    public async followBoard(boardId: string, boardAuthor: string): Promise<void> {
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Nicht eingeloggt - Login erforderlich um Board zu folgen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        // NIP-51 Follow-Set Event erstellen (signiert vom User selbst!)
+        await BoardSharingOperations.followBoard(boardId, boardAuthor, ndk);
+        
+        console.log(`✅ Board gefolgt: ${boardId}`);
+        toast.success('Board gefolgt!', {
+            description: 'Das Board wurde zu deiner Liste hinzugefügt'
+        });
+        
+        // Board-Liste neu laden
+        if (currentUser) {
+            await this.loadSharedBoardsAsync(currentUser);
+        }
+    }
+    
+    /**
+     * USER-CONTROLLED FOLLOW + LOAD: Folgt dem Board UND lädt es direkt
+     * Kombination für Share-Link-Workflow: Follow → Rekonstruieren → Laden
+     * 
+     * @param boardId - Board d-tag
+     * @param boardAuthor - Board author pubkey (hex)
+     * @returns true wenn erfolgreich geladen, false sonst
+     */
+    public async followAndLoadBoard(boardId: string, boardAuthor: string): Promise<boolean> {
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Nicht eingeloggt - Login erforderlich um Board zu folgen');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        try {
+            // 1. Board zu Follow-Set hinzufügen
+            await BoardSharingOperations.followBoard(boardId, boardAuthor, ndk);
+            console.log(`✅ Board gefolgt: ${boardId}`);
+            
+            // 1.5. 🔴 KRITISCH: Board-Metadaten SOFORT zu cachedSharedBoards hinzufügen
+            // Dies ist nötig weil reconstructSharedBoard() nach diesem Board im Cache sucht!
+            // loadSharedBoardsAsync() würde es nicht finden (nur p-tags, nicht Follow-Sets)
+            console.log(`🔄 Füge Board zu cachedSharedBoards hinzu...`);
+            const existingBoard = this.cachedSharedBoards.find(b => b.id === boardId);
+            if (!existingBoard) {
+                // Temporäres Board-Metadaten-Objekt (wird später von Nostr überschrieben)
+                this.cachedSharedBoards.push({
+                    id: boardId,
+                    name: 'Wird geladen...', // Platzhalter
+                    createdAt: Date.now(),
+                    isShared: true,
+                    userRole: 'viewer', // Viewer weil via Follow-Set
+                    author: boardAuthor
+                });
+                // 🔴 WICHTIG: triggerUpdate() für UI-Aktualisierung!
+                this.triggerUpdate({ publish: false }); // Nur UI, kein Nostr
+                console.log(`✅ Board temporär zu Cache hinzugefügt`);
+            } else {
+                console.log(`ℹ️ Board bereits im Cache`);
+            }
+            
+            // 2. Board-Liste neu laden (optional, für zukünftige Reloads)
+            await this.loadSharedBoardsAsync(currentUser);
+            console.log(`✅ Board-Liste aktualisiert`);
+            
+            // 3. Board rekonstruieren von Nostr (falls nicht lokal vorhanden)
+            const reconstructed = await this.reconstructSharedBoard(boardId);
+            if (!reconstructed) {
+                console.error(`❌ Board-Rekonstruktion fehlgeschlagen: ${boardId}`);
+                return false;
+            }
+            console.log(`✅ Board rekonstruiert: ${boardId}`);
+            
+            // 4. Board laden und als aktiv setzen
+            const loaded = this.loadBoard(boardId, { skipLastAccessed: false });
+            if (!loaded) {
+                console.error(`❌ Board-Laden fehlgeschlagen: ${boardId}`);
+                return false;
+            }
+            console.log(`✅ Board geladen und aktiv: ${boardId}`);
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Fehler bei followAndLoadBoard:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * USER-CONTROLLED UNFOLLOW: Entfernt Board aus EIGENER Follow-Set
+     * User kann jederzeit sein eigenes Follow-Set ändern!
+     * 
+     * @param boardId - Board d-tag
+     * @param boardAuthor - Board author pubkey (hex)
+     */
+    public async unfollowBoard(boardId: string, boardAuthor: string): Promise<void> {
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Nicht eingeloggt');
+        }
+        
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+        
+        // NIP-51 Follow-Set Event aktualisieren (signiert vom User selbst!)
+        await BoardSharingOperations.unfollowBoard(boardId, boardAuthor, ndk);
+        
+        console.log(`✅ Board entfolgt: ${boardId}`);
+        toast.success('Board entfolgt', {
+            description: 'Das Board wurde aus deiner Liste entfernt'
+        });
+        
+        // Board-Liste neu laden
+        if (currentUser) {
+            await this.loadSharedBoardsAsync(currentUser);
+        }
     }
 
     /**

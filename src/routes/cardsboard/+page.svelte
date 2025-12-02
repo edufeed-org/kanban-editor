@@ -6,6 +6,7 @@ import BoardsList from "./BoardsList.svelte";
 import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
 import Topbar from "./Topbar.svelte";
 import ImportPopover from "$lib/components/ImportPopover.svelte";
+import FollowBoardDialog from "$lib/components/board/FollowBoardDialog.svelte";
 import AIPanel from "./AIPanel.svelte";
 import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
@@ -16,6 +17,11 @@ import { toast } from "svelte-sonner";
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
+	
+	// Share-Link Dialog State
+	let showFollowDialog = $state(false);
+	let shareLinkBoardId = $state<string>('');
+	let shareLinkBoardAuthor = $state<string>('');
 
 	// ============================================================================
 	// LIFECYCLE: ONMOUNT HOOKS (Browser API calls - only once per component mount)
@@ -46,6 +52,20 @@ import { toast } from "svelte-sonner";
 		try {
 			const params = new URL(window.location.href).searchParams;
 			const token = params.get('import');
+			const shareBoardId = params.get('share');
+			const shareAuthor = params.get('author');
+			
+			// Share-Link Detection: ?share={boardId}&author={authorPubkey}
+			if (shareBoardId && shareAuthor) {
+				console.log('🔗 Board Share-Link erkannt:', shareBoardId);
+				shareLinkBoardId = shareBoardId;
+				shareLinkBoardAuthor = shareAuthor;
+				showFollowDialog = true;
+				
+				// Clean up URL parameters
+				replaceState(window.location.pathname + window.location.hash, {});
+				return;
+			}
 			
 			if (token) {
 				// ⏳ Wait for ImportPopover component to mount (race condition fix)
@@ -294,3 +314,10 @@ import { toast } from "svelte-sonner";
 
 <!-- ImportPopover Component (hidden, used for share-link preview) -->
 <ImportPopover bind:this={importPopoverComponent} />
+
+<!-- FollowBoardDialog Component (shown when user opens share link) -->
+<FollowBoardDialog 
+	bind:open={showFollowDialog}
+	boardId={shareLinkBoardId}
+	boardAuthor={shareLinkBoardAuthor}
+/>
