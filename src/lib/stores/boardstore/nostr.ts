@@ -648,16 +648,16 @@ export class NostrIntegration {
         // Pattern: board-followers-{board-id}
         // Enthält alle Viewer dieses Boards in p-tags
         // 
-        // ⚠️ WICHTIG: NO `since` filter here!
-        // Grund: Wenn ein Viewer zu einem Board hinzugefügt wird, wird Kind 30000 
-        // gerade JETZT publiziert. Der `since` filter würde es möglicherweise als
-        // "zu alt" klassifizieren, je nach Relay-Timing. Wir brauchen echte
-        // Echtzeit-Updates, nicht historische Events.
+        // ⚡ OPTIMIZATION: `since` filter hinzugefügt für neue Events (letzte 24h)
+        // Verhindert, dass hunderte alte Follow Set Events bei jedem Start geladen werden
+        // Echtzeit-Updates funktionieren trotzdem, da neue Events die Zeitgrenze erfüllen
         // =============================================================
+        const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
         const followerSub = this.ndk.subscribe(
             {
                 kinds: [30000] as number[],
-                '#p': [pubkey] // Nutzer muss als p-tag im Follow Set sein
+                '#p': [pubkey], // Nutzer muss als p-tag im Follow Set sein
+                since: oneDayAgo // ⚡ OPTIMIZATION: Nur Events der letzten 24h
             } as any,
             { closeOnEose: false }
         );
@@ -679,41 +679,37 @@ export class NostrIntegration {
 
                 this.processedEvents.add(event.id);
 
-                // Lade das Board aus Nostr mit Retry-Logik
-                // Das Board-Update wird via Kind 30301 separat empfangen,
-                // aber das Follow Set Event signalisiert dass der User jetzt dabei ist
+                // ⚡ OPTIMIZATION: Board wird sowieso via Kind 30301 Subscription empfangen
+                // Follow Set Event ist nur ein Signal - kein aggressives Fetching nötig
+                // Reduziert Relay-Last erheblich!
                 try {
                     if (!this.ndk) {
                         console.warn('⚠️ NDK nicht verfügbar für Board-Fetch');
                         return;
                     }
 
-                    // Retry-Logik: Falls Event nicht auf allen Relays angekommen ist
+                    // ⚡ OPTIMIZATION: NUR 1 Versuch mit kürzerem Timeout (1s statt 3s)
+                    // Board-Event kommt normalerweise über die normale Kind 30301 Subscription
                     let boardEvent = null;
-                    for (let attempt = 0; attempt < 3; attempt++) {
-                        try {
-                            boardEvent = await Promise.race([
-                                this.ndk.fetchEvent({
-                                    kinds: [30301],
-                                    authors: [boardAuthor],
-                                    '#d': [boardId]
-                                } as any),
-                                new Promise((_, reject) =>
-                                    setTimeout(() => reject(new Error('Timeout')), 3000)
-                                )
-                            ]) as any;
+                    try {
+                        boardEvent = await Promise.race([
+                            this.ndk.fetchEvent({
+                                kinds: [30301],
+                                authors: [boardAuthor],
+                                '#d': [boardId]
+                            } as any),
+                            new Promise((_, reject) =>
+                                setTimeout(() => reject(new Error('Timeout')), 1000) // ⚡ 1s statt 3s
+                            )
+                        ]) as any;
 
-                            if (boardEvent) {
-                                console.log(`✅ Board ${boardId} gefetcht nach Follow Set (Versuch ${attempt + 1})`);
-                                break;
-                            }
-                        } catch (err) {
-                            console.warn(`⚠️ Versuch ${attempt + 1} fehlgeschlagen:`, (err as Error).message);
-                            if (attempt < 2) {
-                                // Kurze Verzögerung vor nächstem Versuch
-                                await new Promise(resolve => setTimeout(resolve, 500));
-                            }
+                        if (boardEvent) {
+                            console.log(`✅ Board ${boardId} gefetcht nach Follow Set`);
+                        } else {
+                            console.log(`ℹ️ Board ${boardId} nicht sofort verfügbar - kommt via normale Subscription`);
                         }
+                    } catch (err) {
+                        console.log(`ℹ️ Board ${boardId} Fetch Timeout - kommt via normale Subscription`);
                     }
 
                     if (boardEvent) {
