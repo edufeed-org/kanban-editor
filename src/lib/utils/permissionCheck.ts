@@ -125,8 +125,12 @@ export const PermissionChecks = {
     canDeleteComment: (userRole: BoardRole | null, boardId?: string) => 
         requirePermission('canEdit', userRole, 'Kommentare löschen', boardId),
     
-    canCreateBoard: (userRole: BoardRole | null, boardId?: string) => 
-        requirePermission('canEdit', userRole, 'ein neues Board erstellen', boardId),
+    canCreateBoard: (userRole: BoardRole | null, boardId?: string) => {
+        // WICHTIG: Jeder Benutzer kann eigene Boards erstellen!
+        // Die Rolle auf einem anderen Board ist irrelevant für die Erstellung neuer Boards.
+        // Nur die Bearbeitung BESTEHENDER Boards erfordert Berechtigungen.
+        return true;
+    },
     
     canDeleteBoard: (userRole: BoardRole | null, boardId?: string) => 
         requirePermission('canDelete', userRole, 'das Board löschen', boardId),

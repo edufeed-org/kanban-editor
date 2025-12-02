@@ -348,15 +348,9 @@ export class BoardStore {
     }
 
     public createBoard(name: string, description?: string): string {
-        // Permission Check: Kann Benutzer Boards erstellen?
-        const userRole = this.getCurrentUserRole();
-        // Note: Für createBoard gibt es keine spezielle Board-ID, da das Board erst erstellt wird
-        if (!PermissionChecks.canCreateBoard(userRole)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, ein neues Board zu erstellen.'
-            });
-            return ''; // Silently fail - Permission denied message already shown
-        }
+        // WICHTIG: Keine Permission-Check für createBoard!
+        // Jeder Benutzer kann eigene Boards erstellen, unabhängig von Rollen auf anderen Boards.
+        // Ein Viewer auf Board A kann trotzdem sein eigenes Board B erstellen.
         
         const { author, authorName } = this.getAuthorFields();
         const board = new Board({
