@@ -1,7 +1,6 @@
 // src/lib/stores/boardstore/sharing.ts
 // Board-Sharing & Maintainer-System API
 
-import { toast } from 'svelte-sonner';
 import { Board } from '../../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../../types/sharing.js';
 import { authStore } from '../authStore.svelte.js';
