@@ -27,6 +27,7 @@ import type { BoardProps, CardProps, ColumnProps } from '../classes/BoardModel.j
 export const EVENT_KINDS = {
   BOARD: 30301, // Board definition (replaceable)
   CARD: 30302, // Card definition (replaceable)
+  SNAPSHOT: 30303, // Board snapshot/version (non-replaceable) - Phase 1.5
   COMMENT: 1, // Text note (regular)
   DELETION: 5, // Event deletion (NIP-09)
   SOFT_LOCK: 20001, // "Now editing" soft lock (ephemeral)

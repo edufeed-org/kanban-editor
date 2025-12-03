@@ -426,6 +426,7 @@ docs/
 | [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | Phase 1.5 - Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
 | [`SHARELINK.md`](./FEATURE/SHARELINK.md) | Phase 1.5 - URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |
 | [`IMPORT-EXPORT.md`](./FEATURE/IMPORT-EXPORT.md) | Phase 1.5 - JSON-Export/Import mit 3 Modi (merge/new/overwrite) | ✅ Neu (31.10.) |
+| [`BOARD-SNAPSHOTS.md`](./FEATURE/BOARD-SNAPSHOTS.md) | 🆕 **NEU (28.12.)**: Phase 1.5 - Board Versioning mit Kind 30303 Snapshots | ✅ Neu (28.12.) |
 | [`CARD-DESIGN.md`](./FEATURE/CARD-DESIGN.md) | 🆕 **NEU (06.11.)**: UI/UX Design für Card-Komponente mit Badges & Popover | ✅ Neu (06.11.) |
 | [`RELAY-SELECTION-IMPLEMENTATION.md`](./FEATURE/RELAY-SELECTION-IMPLEMENTATION.md) | ✅ Relay Selection Implementation Summary (referenziert von Test Guide) | ✅ |
 

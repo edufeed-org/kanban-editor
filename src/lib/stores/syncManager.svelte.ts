@@ -221,8 +221,34 @@ export class SyncManager {
           if (targetRelays && targetRelays.length > 0) {
             const plainRelays = Array.isArray(targetRelays) ? [...targetRelays] : targetRelays;
             console.log(`[SyncManager] Publishing to ${plainRelays.length} target relay(s):`, plainRelays);
-            const ndkRelays = new Set(plainRelays.map(url => this.ndk.pool.getRelay(url)));
-            const ndkRelaySet = new NDKRelaySet(ndkRelays, this.ndk);
+            
+            // 🔧 FIX: Ensure relays are connected before publishing
+            const connectedRelays = new Set<any>();
+            for (const url of plainRelays) {
+              try {
+                // Get relay from pool - it should already be there (added in +layout.svelte)
+                const relay = this.ndk.pool.getRelay(url);
+                if (relay) {
+                  // Wait for connection if not connected
+                  if (relay.status !== 1) { // 1 = CONNECTED
+                    console.log(`[SyncManager] Waiting for relay connection: ${url}`);
+                    await relay.connect();
+                  }
+                  connectedRelays.add(relay);
+                } else {
+                  console.warn(`[SyncManager] Relay not in pool: ${url} - was it added in +layout.svelte?`);
+                }
+              } catch (relayError) {
+                console.warn(`[SyncManager] Failed to connect relay ${url}:`, relayError);
+              }
+            }
+            
+            if (connectedRelays.size === 0) {
+              throw new Error(`No relays connected from: ${plainRelays.join(', ')}`);
+            }
+            
+            console.log(`[SyncManager] ${connectedRelays.size}/${plainRelays.length} relays connected`);
+            const ndkRelaySet = new NDKRelaySet(connectedRelays, this.ndk);
             return await event.publish(ndkRelaySet);
           }
           console.log('[SyncManager] Publishing to NDK default relays');

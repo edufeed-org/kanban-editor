@@ -2483,6 +2483,206 @@ export class BoardStore {
             this.updateTrigger++;
         }
     }
+
+    // ============================================================================
+    // BOARD SNAPSHOTS / VERSION HISTORY (Phase 1.5)
+    // ============================================================================
+
+    /**
+     * 🔖 Creates a manual snapshot of the current board state
+     * 
+     * Publishes a Kind 30303 event to Nostr containing the complete board data.
+     * Snapshots are non-replaceable, so each snapshot is a permanent record.
+     * 
+     * @param label - User-provided label/description for this version
+     * @returns True if snapshot was created successfully
+     * 
+     * @example
+     * ```typescript
+     * await boardStore.createManualSnapshot('Before big refactor');
+     * await boardStore.createManualSnapshot('Version 1.0 release');
+     * ```
+     */
+    public async createManualSnapshot(label: string): Promise<boolean> {
+        if (!this.nostrIntegration) {
+            console.error('[BoardStore] ❌ Nostr not initialized - cannot create snapshot');
+            return false;
+        }
+
+        if (!this.board) {
+            console.error('[BoardStore] ❌ No board loaded - cannot create snapshot');
+            return false;
+        }
+
+        try {
+            const snapshotId = await this.nostrIntegration.publishSnapshot(
+                this.board,
+                label,
+                'manual'
+            );
+
+            if (snapshotId) {
+                console.log(`✅ [BoardStore] Snapshot "${label}" created: ${snapshotId}`);
+                return true;
+            } else {
+                console.error('[BoardStore] ❌ Snapshot creation failed - no ID returned');
+                return false;
+            }
+        } catch (error) {
+            console.error('[BoardStore] ❌ Failed to create snapshot:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔍 Loads all snapshots for the current board from Nostr
+     * 
+     * @returns Array of snapshots sorted by timestamp (newest first)
+     */
+    public async loadSnapshots(): Promise<Array<{
+        id: string;
+        label: string;
+        timestamp: number;
+        reason: string;
+        cardCount: number;
+        columnCount: number;
+        createdBy: string;
+        boardData: any;
+    }>> {
+        if (!this.nostrIntegration) {
+            console.error('[BoardStore] ❌ Nostr not initialized - cannot load snapshots');
+            return [];
+        }
+
+        if (!this.board) {
+            console.error('[BoardStore] ❌ No board loaded - cannot load snapshots');
+            return [];
+        }
+
+        const boardAuthor = this.board.author || authStore.getPubkey() || '';
+        
+        if (!boardAuthor) {
+            console.error('[BoardStore] ❌ No board author - cannot load snapshots');
+            return [];
+        }
+
+        try {
+            const snapshots = await this.nostrIntegration.loadSnapshots(
+                this.board.id,
+                boardAuthor
+            );
+            
+            console.log(`✅ [BoardStore] Loaded ${snapshots.length} snapshot(s)`);
+            return snapshots;
+        } catch (error) {
+            console.error('[BoardStore] ❌ Failed to load snapshots:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 🔄 Restores the board to a previous snapshot
+     * 
+     * This will:
+     * 1. Create a backup snapshot of current state (before_restore)
+     * 2. Replace current board data with snapshot data
+     * 3. Save to localStorage
+     * 4. Publish updated board to Nostr
+     * 
+     * @param snapshotId - The event ID of the snapshot to restore
+     * @returns True if restore was successful
+     */
+    public async rollbackToSnapshot(snapshotId: string): Promise<boolean> {
+        if (!this.nostrIntegration) {
+            console.error('[BoardStore] ❌ Nostr not initialized - cannot rollback');
+            return false;
+        }
+
+        if (!this.board) {
+            console.error('[BoardStore] ❌ No board loaded - cannot rollback');
+            return false;
+        }
+
+        try {
+            // 1. Fetch the snapshot
+            const snapshot = await this.nostrIntegration.fetchSnapshotById(snapshotId);
+            
+            if (!snapshot || !snapshot.boardData) {
+                console.error(`[BoardStore] ❌ Snapshot ${snapshotId} not found or invalid`);
+                return false;
+            }
+
+            console.log(`🔄 [BoardStore] Restoring to snapshot "${snapshot.label}"...`);
+
+            // 2. Create backup of current state (before_restore)
+            await this.nostrIntegration.publishSnapshot(
+                this.board,
+                `Backup vor Wiederherstellung: ${snapshot.label}`,
+                'before_restore'
+            );
+            console.log(`💾 [BoardStore] Backup snapshot created`);
+
+            // 3. Reconstruct board from snapshot data
+            const { Board } = await import('../classes/BoardModel.js');
+            const restoredBoard = new Board(snapshot.boardData);
+            
+            // Preserve the original board ID (don't use snapshot's ID)
+            const originalId = this.board.id;
+            restoredBoard.id = originalId;
+
+            // 4. Replace current board
+            this.board = restoredBoard;
+            
+            // 5. Save to localStorage
+            BoardStorage.saveBoard(this.board);
+            
+            // 6. Update UI
+            this.triggerUpdate({ publish: true });
+
+            console.log(`✅ [BoardStore] Board restored to snapshot "${snapshot.label}"`);
+            console.log(`   📊 Cards: ${snapshot.boardData.columns?.reduce((sum: number, col: any) => sum + (col.cards?.length || 0), 0) || 0}`);
+            console.log(`   📁 Columns: ${snapshot.boardData.columns?.length || 0}`);
+
+            return true;
+        } catch (error) {
+            console.error('[BoardStore] ❌ Failed to rollback to snapshot:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔖 Creates an automatic snapshot before a destructive operation
+     * 
+     * Called automatically before:
+     * - Import operations (importBoardFromJson)
+     * - Major board restructuring
+     * 
+     * @param reason - The reason for the snapshot
+     * @returns True if snapshot was created successfully
+     */
+    public async createAutoSnapshot(reason: 'before_import' | 'auto_save'): Promise<boolean> {
+        if (!this.nostrIntegration || !this.board) {
+            return false;
+        }
+
+        const labelMap = {
+            'before_import': 'Automatisches Backup vor Import',
+            'auto_save': 'Automatisches Backup',
+        };
+
+        try {
+            const snapshotId = await this.nostrIntegration.publishSnapshot(
+                this.board,
+                labelMap[reason],
+                reason
+            );
+
+            return !!snapshotId;
+        } catch (error) {
+            console.error('[BoardStore] ⚠️ Auto-snapshot failed:', error);
+            return false;
+        }
+    }
     
     /**
      * ⚠️ DEPRECATED & REMOVED: deleteBoardFromNostr()
