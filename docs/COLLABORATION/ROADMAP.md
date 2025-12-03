@@ -1,18 +1,16 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.3 (PHASE 4 INFRASTRUCTURE ANALYSIS - 13. November 2025)  
-**Aktualisiert:** 13. November 2025 (Phase 4 Infrastruktur-Analyse)  
-**Status:** ✅ **PHASE 1: 95%** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
+**Version:** 3.4 (PHASE 1.5C COMPLETE - 3. Dezember 2025)  
+**Aktualisiert:** 3. Dezember 2025 (Board Snapshots Feature fertig)  
+**Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**Status:** ✅ **PHASE 1: COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
-**Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
-
-**🆕 PHASE 1 COMPLETION (28.12.2024):**
-- ✅ **Phase 1 Status:** **100% COMPLETE** (alle Meilensteine 1.0-1.6 DONE!)
+**🆕 PHASE 1 COMPLETE (3.12.2025):**
+- ✅ **Phase 1 Status:** **100% COMPLETE** (alle Meilensteine 1.0-1.6 + 1.5C DONE!)
 - ✅ **Phase 3 Status:** **90% Complete** (ChatStore, AIPanel, LLM ALL DONE, 3 AI Actions fehlen!)
 - 🟡 **Phase 2 Status:** **15% Complete** (Settings+Dark Mode DONE, Mobile+A11y offen)
 - 🟡 **Phase 4 Status:** **85% Infrastructure Ready** (SoftLockManager, MergeEngine, SyncManager ✅! Nur UI fehlt)
+- ✅ **MEILENSTEIN 1.5C COMPLETE:** Board Snapshots / Versionshistorie Feature FERTIG!
 - ✅ **MEILENSTEIN 1.6 COMPLETE:** Demo Board System für anonyme User + benutzerbasierte Filterung FERTIG!
 
 **🆕 Neu in v3.2 (Demo Board System - 28.12.2024):**

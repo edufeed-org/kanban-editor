@@ -1,7 +1,8 @@
 # Board Versioning / Snapshots Feature
 
-**Status:** ✅ Implementiert (Phase 1.5)  
+**Status:** ✅ Vollständig Implementiert (Phase 1.5C)  
 **Erstellt:** 28. Dezember 2024  
+**Aktualisiert:** 3. Dezember 2025  
 **Basiert auf:** `docs/PROPOSALS/BOARD-VERSIONING.md`
 
 ---
