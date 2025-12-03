@@ -543,10 +543,15 @@ export class NostrIntegration {
         });
         
         // 3️⃣ Subscription für Deletion-Events (Kind 5)
+        // 🎯 COLLABORATION: Empfange Deletions von ALLEN Nutzern für dieses Board
+        // Filter: Kind 5 Events die auf dieses Board referenzieren (via 'a' tags)
+        const boardATag = `30301:${currentBoard.author || pubkey}:${currentBoard.id}`;
         const deletionsSub = this.ndk.subscribe(
             {
                 kinds: [5] as number[], // Deletion
-                authors: [pubkey], // Nur eigene Deletions
+                // ⚠️ Wichtig: Nicht auf '#a' einschränken!
+                // Viele Card-Deletions referenzieren NUR die Card ('30302:...')
+                // Wir filtern präzise in handleDeletionEvent() anhand der 'a' tags
                 since: sevenDaysAgo
             } as any,
             { closeOnEose: false }
@@ -554,6 +559,9 @@ export class NostrIntegration {
         
         deletionsSub.on('event', async (event: any) => {
             if (event.kind === 5) {
+                // Filter: Nur Deletion-Events die zu diesem Board gehören
+                // (entweder Card-Deletions mit Referenz auf Cards dieses Boards,
+                //  oder Board-Deletion für dieses Board)
                 await this.handleDeletionEvent(event, boardStore);
             }
         });
@@ -1158,12 +1166,27 @@ export class NostrIntegration {
                             continue;
                         }
                         
+                        // 🔍 FILTER: Only process deletions for cards from current board
+                        const currentBoard = boardStore.data;
+                        if (!currentBoard) {
+                            // No board loaded, skip
+                            continue;
+                        }
+                        
+                        // Check if card belongs to current board
+                        const result = currentBoard.findCardAndColumn(cardId);
+                        if (!result) {
+                            // Card not in current board, skip
+                            continue;
+                        }
+                        
                         // Track deletion timestamp (für Ordering)
                         this.cardDeletionTimestamps.set(cardId, deleteTime);
                         
+                        console.log(`🗑️ Deleting card ${cardId.substring(0, 16)}... from board (deletion event)`);
+                        
                         // ⚡ v2.0: Direkte Store-API (SECONDARY action)
                         boardStore.deleteCardFromNostr(cardId);
-                        // Silent - kein Log bei Card-Deletion
                     }
                 }
             }
