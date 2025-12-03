@@ -2,6 +2,84 @@
 
 export type PublishState = 'draft' | 'published' | 'archived';
 
+// ============================================================================
+// SNAPSHOT TYPES (Phase 1.5 - Board Versioning)
+// ============================================================================
+
+/**
+ * Snapshot Reason - Warum wurde der Snapshot erstellt?
+ */
+export type SnapshotReason = 'manual' | 'auto_save' | 'before_import' | 'before_restore';
+
+/**
+ * Board Snapshot - Eine gespeicherte Version eines Boards
+ * 
+ * Wird als Kind 30303 Nostr Event gespeichert (non-replaceable)
+ */
+export interface BoardSnapshot {
+	/** Unique identifier (Nostr event ID) */
+	id: string;
+	/** User-provided label/description */
+	label: string;
+	/** When the snapshot was created (Unix timestamp) */
+	timestamp: number;
+	/** Why this snapshot was created */
+	reason: SnapshotReason;
+	/** The complete board data at time of snapshot */
+	boardData: BoardSnapshotData;
+	/** Nostr pubkey of snapshot creator */
+	createdBy?: string;
+	/** Number of cards in this snapshot */
+	cardCount: number;
+	/** Number of columns in this snapshot */
+	columnCount: number;
+}
+
+/**
+ * Serialized board data stored in snapshot content
+ */
+export interface BoardSnapshotData {
+	id: string;
+	name: string;
+	description?: string;
+	columns: SnapshotColumn[];
+	publishState?: PublishState;
+	author?: string;
+	maintainers?: string[];
+	tags?: string[];
+	ccLicense?: string;
+}
+
+/**
+ * Column data within a snapshot
+ */
+export interface SnapshotColumn {
+	id: string;
+	name: string;
+	color?: string;
+	cards: SnapshotCard[];
+}
+
+/**
+ * Card data within a snapshot
+ */
+export interface SnapshotCard {
+	id: string;
+	heading: string;
+	content?: string;
+	color?: string;
+	labels?: string[];
+	comments?: Comment[];
+	author?: string;
+	image?: string;
+	link?: string;
+	publishState?: PublishState;
+}
+
+// ============================================================================
+// EXISTING TYPES
+// ============================================================================
+
 export interface Comment {
 	id: string;
 	text: string;

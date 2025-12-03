@@ -21,5 +21,7 @@ level = "info"
 # Limits
 [limits]
 # Explicitly allow these event kinds
-event_kind_allowlist = [0, 1, 5, 30000, 30301, 30302, 20001]
+# 0: Metadata, 1: Text Note, 5: Event Deletion, 30000: Categorized People List
+# 30301: Kanban Board, 30302: Kanban Card, 30303: Kanban Snapshot, 20001: Ephemeral Soft Lock
+event_kind_allowlist = [0, 1, 5, 30000, 30301, 30302, 30303, 20001]
 

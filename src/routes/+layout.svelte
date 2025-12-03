@@ -15,9 +15,14 @@
 
   const { children } = $props();
 
-  // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden statt hardcoded
+  // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden (public + private für vollständige Konnektivität)
+  const allRelays = [
+    ...settingsStore.settings.relaysPublic,
+    ...settingsStore.settings.relaysPrivate
+  ].filter((url, index, arr) => arr.indexOf(url) === index); // Deduplizieren
+  
   const ndk = new NDKSvelte({
-    explicitRelayUrls: settingsStore.settings.relaysPublic,
+    explicitRelayUrls: allRelays,
     enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
   });
 

@@ -1,5 +1,47 @@
 # Changelog
 
+## Version 4.7.0 - Board Snapshots / Versionshistorie 📸
+
+**Datum:** 3. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Vollständig implementiert
+
+### ✨ Neues Feature: Board Versioning
+
+Benutzer können jetzt **manuelle Snapshots** ihrer Kanban-Boards erstellen und bei Bedarf zu früheren Versionen zurückkehren.
+
+#### Features
+- **Manuelles Speichern von Versionen** - Button "Versionen" in der Topbar
+- **Versionshistorie anzeigen** - Liste aller Snapshots mit Metadaten
+- **Wiederherstellen** - Zurückkehren zu einem früheren Board-Zustand
+- **Automatisches Backup** vor jeder Wiederherstellung
+
+#### Technische Details
+- Snapshots werden als **Kind 30303 Nostr Events** gespeichert (non-replaceable)
+- Speicherung auf privaten Relays (für Draft-Boards) oder öffentlichen Relays
+- Event-Tags: `a` (Board-Referenz), `v` (Label), `r` (Grund), `t` (Timestamp)
+- Vollständiges Board-JSON im Event-Content
+
+#### Komponenten
+- `VersionHistory.svelte` - Dialog-Komponente für Versionshistorie
+- `NostrIntegration.publishSnapshot()` - Event-Publishing
+- `NostrIntegration.loadSnapshots()` - Laden von Snapshots von Relays
+- `BoardStore.createManualSnapshot()` / `rollbackToSnapshot()` - Store-API
+
+#### Relay-Konfiguration
+- Kind 30303 zur Relay-Allowlist hinzugefügt (`docker-relay-config.toml`)
+- Explizites Laden von privaten Relays für Snapshots
+
+### 📚 Dokumentation
+- `docs/FEATURE/BOARD-SNAPSHOTS.md` - Vollständige Feature-Dokumentation
+- ROADMAP.md aktualisiert (Meilenstein 1.5C: DONE)
+
+### 🔧 Technische Fixes
+- TypeScript-Fehler in `nostr.ts` und `syncManager.svelte.ts` behoben
+- Relay-Pool-Handling verbessert (keine `addRelay(url)` mehr, da Relays bereits im Pool)
+
+---
+
 ## Unreleased - Board-Sharing Realtime Anzeige 🚀
 
 **Datum:** 24. November 2025  

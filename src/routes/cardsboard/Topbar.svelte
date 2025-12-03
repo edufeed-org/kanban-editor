@@ -27,7 +27,7 @@
     import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
-    import { ShareButton } from '$lib/components/board';
+    import { ShareButton, VersionHistory } from '$lib/components/board';
 	
     
 
@@ -636,6 +636,9 @@
 
             <!-- Board Sharing -->
             <ShareButton boardId={boardStore.data?.id || ''} />
+            
+            <!-- Version History -->
+            <VersionHistory />
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">

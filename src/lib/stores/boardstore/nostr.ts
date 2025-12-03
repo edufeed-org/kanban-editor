@@ -3,7 +3,7 @@
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
-import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent } from '../../utils/nostrEvents.js';
+import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent, EVENT_KINDS } from '../../utils/nostrEvents.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
@@ -11,6 +11,7 @@ import { settingsStore } from '../settingsStore.svelte.js';
 import { authStore } from '../authStore.svelte.js';
 import { BoardStorage } from './storage.js';
 import type NDK from '@nostr-dev-kit/ndk';
+import { NDKRelaySet } from '@nostr-dev-kit/ndk';
 import { toast } from 'svelte-sonner';
 
 export class NostrIntegration {
@@ -1892,6 +1893,346 @@ export class NostrIntegration {
             console.log(`✅ Card deletion event queued for ${targetRelays.length} relay(s)`);
         } catch (error) {
             console.error(`❌ Error deleting card on Nostr:`, error);
+        }
+    }
+
+    // ============================================================================
+    // BOARD SNAPSHOTS (Kind 30303) - Phase 1.5 Board Versioning
+    // ============================================================================
+
+    /**
+     * 🔖 Creates and publishes a manual snapshot of the current board state
+     * 
+     * Snapshot events (Kind 30303) are NON-REPLACEABLE, meaning each snapshot
+     * is a permanent record that can be referenced later for rollback.
+     * 
+     * @param board - The current board instance to snapshot
+     * @param label - User-provided label/description for this version
+     * @param reason - Why this snapshot was created (default: 'manual')
+     * @returns The event ID of the published snapshot, or null if failed
+     * 
+     * Event Structure:
+     * ```
+     * {
+     *   kind: 30303,
+     *   tags: [
+     *     ["a", "30301:pubkey:board-id"],  // Reference to board
+     *     ["v", "label"],                   // User label
+     *     ["r", "manual"],                  // Reason
+     *     ["t", "1699123456"]               // Timestamp
+     *   ],
+     *   content: "{...board JSON...}"
+     * }
+     * ```
+     */
+    public async publishSnapshot(
+        board: Board,
+        label: string,
+        reason: 'manual' | 'auto_save' | 'before_import' | 'before_restore' = 'manual'
+    ): Promise<string | null> {
+        if (!this.ndk) {
+            console.error('[NostrIntegration] ❌ NDK not initialized for snapshot');
+            return null;
+        }
+
+        try {
+            const { NDKEvent } = await import('@nostr-dev-kit/ndk');
+            const snapshotEvent = new NDKEvent(this.ndk);
+            
+            // Kind 30303 is non-replaceable - each snapshot is a unique record
+            snapshotEvent.kind = 30303;
+            
+            // Get board author (canonical owner)
+            const boardAuthor = board.author || authStore.getPubkey() || '';
+            const timestamp = Math.floor(Date.now() / 1000);
+            
+            // Build tags according to BOARD-VERSIONING.md spec
+            snapshotEvent.tags = [
+                ['a', `30301:${boardAuthor}:${board.id}`],  // Reference to board
+                ['v', label],                                 // User label/description
+                ['r', reason],                                // Snapshot reason
+                ['t', timestamp.toString()],                  // Unix timestamp
+            ];
+            
+            // Content is the complete board JSON
+            const boardData = board.getContextData(true); // full = true for all details
+            snapshotEvent.content = JSON.stringify(boardData);
+            
+            // 📌 SNAPSHOTS always go to private relay (they are personal backups)
+            // This ensures snapshots are stored even for draft/unpublished boards
+            const privateRelays = settingsStore.settings.relaysPrivate || [];
+            
+            // Fallback: If no private relays configured, use default local relay (matching config.json)
+            const targetRelays = privateRelays.length > 0 
+                ? privateRelays 
+                : ['ws://localhost:7000'];
+            
+            console.log(`[NostrIntegration] 📡 Snapshot target relays:`, targetRelays);
+
+            // Publish via SyncManager
+            const syncManager = getSyncManager();
+            await syncManager.publishOrQueue(
+                snapshotEvent,
+                'board', // Use board type for sync priority
+                'normal',
+                'private', // Always use 'private' for snapshots
+                targetRelays
+            );
+
+            console.log(`✅ [NostrIntegration] Snapshot "${label}" published for board ${board.id}`);
+            console.log(`   📊 Cards: ${boardData.columns?.reduce((sum: number, col: any) => sum + (col.cards?.length || 0), 0) || 0}`);
+            console.log(`   📁 Columns: ${boardData.columns?.length || 0}`);
+            
+            // Return a pseudo-ID (actual ID is assigned by relay after signing)
+            // We use timestamp + board.id as temporary identifier
+            return `snapshot-${board.id}-${timestamp}`;
+            
+        } catch (error) {
+            console.error('[NostrIntegration] ❌ Failed to publish snapshot:', error);
+            toast.error('Snapshot konnte nicht gespeichert werden');
+            return null;
+        }
+    }
+
+    /**
+     * 🔍 Loads all snapshots for a specific board from Nostr relays
+     * 
+     * @param boardId - The board's d-tag ID
+     * @param boardAuthor - The board owner's pubkey
+     * @returns Array of BoardSnapshot objects sorted by timestamp (newest first)
+     */
+    public async loadSnapshots(
+        boardId: string,
+        boardAuthor: string
+    ): Promise<Array<{
+        id: string;
+        label: string;
+        timestamp: number;
+        reason: string;
+        cardCount: number;
+        columnCount: number;
+        createdBy: string;
+        boardData: any;
+    }>> {
+        if (!this.ndk) {
+            console.error('[NostrIntegration] ❌ NDK not initialized for loading snapshots');
+            return [];
+        }
+
+        try {
+            // Build filter for Kind 30303 events referencing this board
+            const aTagValue = `30301:${boardAuthor}:${boardId}`;
+            
+            const filter = {
+                kinds: [EVENT_KINDS.SNAPSHOT],
+                '#a': [aTagValue],
+            };
+
+            console.log(`🔍 [NostrIntegration] Loading snapshots for board ${boardId}...`);
+            console.log(`🔍 [NostrIntegration] Filter:`, filter);
+            
+            // Get private relays to query - snapshots are stored on private relays
+            const privateRelays = settingsStore.settings.relaysPrivate || [];
+            const targetRelays = privateRelays.length > 0 
+                ? privateRelays 
+                : ['ws://localhost:7000'];
+            
+            console.log(`🔍 [NostrIntegration] Querying relays:`, targetRelays);
+            
+            // Build relay set from connected relays
+            // Note: Private relays should already be in the NDK pool (added in +layout.svelte)
+            const connectedRelays = new Set<import('@nostr-dev-kit/ndk').NDKRelay>();
+            for (const url of targetRelays) {
+                try {
+                    const relay = this.ndk.pool.getRelay(url);
+                    if (relay) {
+                        // Wait for connection if not connected
+                        if (relay.status !== 1) { // 1 = CONNECTED
+                            console.log(`🔍 [NostrIntegration] Waiting for relay connection: ${url}`);
+                            await relay.connect();
+                        }
+                        connectedRelays.add(relay);
+                    } else {
+                        console.warn(`🔍 [NostrIntegration] Relay not in pool: ${url} - was it added in +layout.svelte?`);
+                    }
+                } catch (relayError) {
+                    console.warn(`🔍 [NostrIntegration] Failed to connect relay ${url}:`, relayError);
+                }
+            }
+            
+            if (connectedRelays.size === 0) {
+                console.warn('🔍 [NostrIntegration] No relays connected, trying default fetch');
+                const events = await this.ndk.fetchEvents(filter as any);
+                console.log(`🔍 [NostrIntegration] Found ${events.size} snapshot event(s) from default relays`);
+                return this.parseSnapshotEvents(events);
+            }
+            
+            console.log(`🔍 [NostrIntegration] ${connectedRelays.size}/${targetRelays.length} relays connected`);
+            const relaySet = new NDKRelaySet(connectedRelays, this.ndk);
+            
+            // Fetch events from private relays specifically
+            const events = await this.ndk.fetchEvents(filter as any, { relaySet });
+            
+            console.log(`🔍 [NostrIntegration] Found ${events.size} snapshot event(s)`);
+            
+            return this.parseSnapshotEvents(events);
+            
+        } catch (error) {
+            console.error('[NostrIntegration] ❌ Failed to load snapshots:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Helper to parse snapshot events into structured data
+     */
+    private parseSnapshotEvents(events: Set<import('@nostr-dev-kit/ndk').NDKEvent>): Array<{
+        id: string;
+        label: string;
+        timestamp: number;
+        reason: string;
+        cardCount: number;
+        columnCount: number;
+        createdBy: string;
+        boardData: any;
+    }> {
+        const snapshots: Array<{
+            id: string;
+            label: string;
+            timestamp: number;
+            reason: string;
+            cardCount: number;
+            columnCount: number;
+            createdBy: string;
+            boardData: any;
+        }> = [];
+
+        for (const event of events) {
+            try {
+                // Parse tags
+                const vTag = event.tags.find((t: string[]) => t[0] === 'v');
+                const rTag = event.tags.find((t: string[]) => t[0] === 'r');
+                const tTag = event.tags.find((t: string[]) => t[0] === 't');
+                
+                const label = vTag ? vTag[1] : 'Unnamed snapshot';
+                const reason = rTag ? rTag[1] : 'manual';
+                const timestamp = tTag ? parseInt(tTag[1], 10) : (event.created_at || 0);
+                
+                // Parse board data from content
+                let boardData: any = {};
+                let cardCount = 0;
+                let columnCount = 0;
+                
+                if (event.content) {
+                    try {
+                        boardData = JSON.parse(event.content);
+                        columnCount = boardData.columns?.length || 0;
+                        cardCount = boardData.columns?.reduce(
+                            (sum: number, col: any) => sum + (col.cards?.length || 0), 
+                            0
+                        ) || 0;
+                    } catch (parseError) {
+                        console.warn('[NostrIntegration] ⚠️ Failed to parse snapshot content:', parseError);
+                    }
+                }
+                
+                snapshots.push({
+                    id: event.id || `snapshot-${timestamp}`,
+                    label,
+                    timestamp,
+                    reason,
+                    cardCount,
+                    columnCount,
+                    createdBy: event.pubkey,
+                    boardData,
+                });
+            } catch (eventError) {
+                console.warn('[NostrIntegration] ⚠️ Failed to process snapshot event:', eventError);
+            }
+        }
+
+        // Sort by timestamp (newest first)
+        snapshots.sort((a, b) => b.timestamp - a.timestamp);
+        
+        console.log(`✅ [NostrIntegration] Parsed ${snapshots.length} snapshot(s)`);
+        
+        return snapshots;
+    }
+
+    /**
+     * 🔖 Fetches a specific snapshot by its label
+     * 
+     * @param boardId - The board's d-tag ID  
+     * @param boardAuthor - The board owner's pubkey
+     * @param label - The exact label to search for
+     * @returns The matching snapshot or null if not found
+     */
+    public async fetchSnapshotByLabel(
+        boardId: string,
+        boardAuthor: string,
+        label: string
+    ): Promise<{
+        id: string;
+        label: string;
+        timestamp: number;
+        boardData: any;
+    } | null> {
+        const snapshots = await this.loadSnapshots(boardId, boardAuthor);
+        return snapshots.find(s => s.label === label) || null;
+    }
+
+    /**
+     * 🔍 Fetches a specific snapshot by its event ID
+     * 
+     * @param snapshotId - The Nostr event ID of the snapshot
+     * @returns The snapshot data or null if not found
+     */
+    public async fetchSnapshotById(
+        snapshotId: string
+    ): Promise<{
+        id: string;
+        label: string;
+        timestamp: number;
+        reason: string;
+        boardData: any;
+    } | null> {
+        if (!this.ndk) {
+            console.error('[NostrIntegration] ❌ NDK not initialized');
+            return null;
+        }
+
+        try {
+            const event = await this.ndk.fetchEvent({ ids: [snapshotId] });
+            
+            if (!event) {
+                console.warn(`[NostrIntegration] ⚠️ Snapshot ${snapshotId} not found`);
+                return null;
+            }
+
+            const vTag = event.tags.find((t: string[]) => t[0] === 'v');
+            const rTag = event.tags.find((t: string[]) => t[0] === 'r');
+            const tTag = event.tags.find((t: string[]) => t[0] === 't');
+            
+            let boardData = {};
+            if (event.content) {
+                try {
+                    boardData = JSON.parse(event.content);
+                } catch {
+                    console.warn('[NostrIntegration] ⚠️ Failed to parse snapshot content');
+                }
+            }
+
+            return {
+                id: event.id || snapshotId,
+                label: vTag ? vTag[1] : 'Unnamed',
+                timestamp: tTag ? parseInt(tTag[1], 10) : (event.created_at || 0),
+                reason: rTag ? rTag[1] : 'manual',
+                boardData,
+            };
+            
+        } catch (error) {
+            console.error('[NostrIntegration] ❌ Failed to fetch snapshot by ID:', error);
+            return null;
         }
     }
 
