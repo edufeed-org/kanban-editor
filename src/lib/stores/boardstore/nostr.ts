@@ -500,35 +500,99 @@ export class NostrIntegration {
             }
         }
 
-        console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Event-Driven v2.0)');
+        console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Collaboration v3.0)');
 
         // ⚡ OPTIMIZATION: Filtere alte Deletion Events aus (nur letzte 7 Tage)
         // Verhindert, dass hunderte alte Deletion Events bei jedem Start verarbeitet werden
         const sevenDaysAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
         
-        // ⚠️ Filtere nach Boards/Cards die der User erstellt hat
-        // Für Collaboration: Später könnten wir auch nach #p-tags (maintainers) filtern
-        const sub = this.ndk.subscribe(
+        // 🔧 COLLABORATION FIX: Separate Subscriptions für bessere Filter-Kontrolle
+        
+        // 1️⃣ Subscription für eigene Board-Events (Kind 30301)
+        const ownBoardsSub = this.ndk.subscribe(
             {
-                kinds: [30301, 30302, 5] as number[], // Board, Card, Deletion
-                authors: [pubkey], // Boards und Cards die dieser User erstellt hat
-                since: sevenDaysAgo // ⚡ OPTIMIZATION: Nur Events der letzten 7 Tage
+                kinds: [30301] as number[], // Board
+                authors: [pubkey], // Nur eigene Boards
+                since: sevenDaysAgo
             } as any,
             { closeOnEose: false }
         );
-
-        sub.on('event', async (event: any) => {
+        
+        ownBoardsSub.on('event', async (event: any) => {
             if (event.kind === 30301) {
-                // ===== BOARD-EVENT HANDLER =====
                 await this.handleBoardEvent(event, currentBoard, boardStore);
-            } else if (event.kind === 30302) {
-                // ===== CARD-EVENT HANDLER =====
+            }
+        });
+        
+        // 2️⃣ Subscription für Card-Events des AKTUELLEN Boards (Kind 30302)
+        // 🎯 CRITICAL: Empfange Cards von ALLEN Nutzern für dieses Board!
+        const boardRef = `30301:${currentBoard.author || pubkey}:${currentBoard.id}`;
+        const cardsSub = this.ndk.subscribe(
+            {
+                kinds: [30302] as number[], // Card
+                '#a': [boardRef], // Alle Cards die zu diesem Board gehören
+                since: sevenDaysAgo
+            } as any,
+            { closeOnEose: false }
+        );
+        
+        cardsSub.on('event', async (event: any) => {
+            if (event.kind === 30302) {
                 await this.handleCardEvent(event, currentBoard, boardStore);
-            } else if (event.kind === 5) {
-                // ===== DELETION-EVENT HANDLER =====
+            }
+        });
+        
+        // 3️⃣ Subscription für Deletion-Events (Kind 5)
+        const deletionsSub = this.ndk.subscribe(
+            {
+                kinds: [5] as number[], // Deletion
+                authors: [pubkey], // Nur eigene Deletions
+                since: sevenDaysAgo
+            } as any,
+            { closeOnEose: false }
+        );
+        
+        deletionsSub.on('event', async (event: any) => {
+            if (event.kind === 5) {
                 await this.handleDeletionEvent(event, boardStore);
             }
         });
+        
+        // Legacy subscription variable - speichere alle Subscriptions für Cleanup
+        const subscriptions = [ownBoardsSub, cardsSub, deletionsSub];
+        
+        // 4️⃣ COLLABORATION: Wenn aktuelles Board geteilt ist, empfange auch Updates vom Owner
+        // Dies ermöglicht dass Viewer/Editors sehen wenn der Owner das Board ändert
+        if (currentBoard.author && currentBoard.author !== pubkey) {
+            console.log('[BoardStore] 🤝 Subscribing to shared board updates from owner:', currentBoard.author);
+            
+            const sharedBoardSub = this.ndk.subscribe(
+                {
+                    kinds: [30301] as number[], // Board-Updates vom Owner
+                    authors: [currentBoard.author],
+                    '#d': [currentBoard.id], // Nur dieses Board
+                    since: sevenDaysAgo
+                } as any,
+                { closeOnEose: false }
+            );
+            
+            sharedBoardSub.on('event', async (event: any) => {
+                if (event.kind === 30301) {
+                    await this.handleBoardEvent(event, currentBoard, boardStore);
+                }
+            });
+            
+            subscriptions.push(sharedBoardSub);
+        }
+        
+        // Cleanup-Wrapper für alle Subscriptions
+        const sub = {
+            stop: () => {
+                subscriptions.forEach(s => {
+                    try { s.stop(); } catch {}
+                });
+            }
+        };
 
         this.boardSubscription = sub;
 
