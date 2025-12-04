@@ -481,6 +481,10 @@ export class BoardStore {
             // Non-blocking error - board can still be used without followers loaded
         });
         
+        // 🎯 COLLABORATION FIX: Subscription für neues Board neu starten
+        // Dies ist wichtig, damit Card-Events für das NEUE Board empfangen werden!
+        this.subscribeToNostrUpdates();
+        
         return true;
     }
 
