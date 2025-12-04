@@ -2,20 +2,16 @@
 	import { flip } from 'svelte/animate';
     import { dndzone } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
- 	import * as CardUI from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
-	import { Label } from "$lib/components/ui/label/index.js";
-	import * as RadioGroup from "$lib/components/ui/radio-group/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import { authStore } from "$lib/index.js";
 	import { toast } from "svelte-sonner";
 	import TrashIcon from '@lucide/svelte/icons/trash';
-	
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';	
 
  	const flipDurationMs = 150;
 
@@ -67,15 +63,10 @@
 		maxCardsBeforeScroll?: number;
 	} = $props();
 
-	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-
 	// Local state for column editing
-	let isEditing = $state(false);
 	let editName = $state(name);
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
-	let popoverKey = $state(0); // Force re-mount key
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -171,21 +162,6 @@
      // Für jetzt: einfach an den Parent callback übergeben
      // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
      onDrop(newItems);
-   }
-
-   function handleCardAction(event: CustomEvent) {
-   		const { cardId, action } = event.detail;
-   		onCardAction?.(cardId, action);
-   }
-
-   function handlePublishStateChange(event: CustomEvent) {
-   		const { cardId, newState } = event.detail;
-   		onPublishStateChange?.(cardId, newState);
-   }
-
-   function handleSidebarAction(event: CustomEvent) {
-   		const { cardId, action } = event.detail;
-   		onSidebarAction?.(cardId, action);
    }
 
    function getCardColor(colorName: string | undefined): string {

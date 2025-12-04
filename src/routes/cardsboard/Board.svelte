@@ -87,8 +87,9 @@
      isDragging = true;
      isLocalDnD = true;  // ← NEU: Markiere lokale DnD-Operation
      columns = e.detail.items;
-   }
-   function handleDndFinalizeColumns(e: any) {
+  	}
+
+   	function handleDndFinalizeColumns(e: any) {
      isDragging = false;
      const finalItems = e.detail.items;
      
@@ -123,7 +124,8 @@
        console.log('🔓 Board.svelte: isLocalDnD = false (allow parent sync again)');
      }, 2000);  // ← Erhöht auf 2 Sekunden für sicheren Roundtrip
    }
-	function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
+	
+   function handleItemFinalize(columnIdx: number, newItems: CardItem[]) {
 		// Immutable update: Erstelle neues columns Array
 		const updatedColumns = columns.map((col, idx) => 
 			idx === columnIdx 
@@ -132,7 +134,9 @@
 		);
 		columns = updatedColumns;
 		onFinalUpdate(updatedColumns);
-	}  	function handleCardAction(cardId: string, action: string) {
+	}
+	
+	function handleCardAction(cardId: string, action: string) {
   		console.log('Card action:', cardId, action);
   		// Handle card actions like complete, edit, etc.
   	}
