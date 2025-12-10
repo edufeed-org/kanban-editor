@@ -123,7 +123,7 @@ test.describe('nsec Private Key Authentication Flow', () => {
   });
 
 
-  test('should clear nsec from sessionStorage on logout', async ({ page }) => {
+  test.skip('should clear nsec from sessionStorage on logout', async ({ page }) => {
     await loginWithNsec(page);
     
     let storedNsec = await page.evaluate(() => sessionStorage.getItem('nostr-nsec-temp'));

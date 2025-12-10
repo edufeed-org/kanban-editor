@@ -168,7 +168,7 @@ export class AuthStore {
       } catch (error) {
         console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after nsec login:', error);
       }
-
+      
       return user;
     } catch (error) {
       const { message = 'Nsec login fehlgeschlagen' } = error as Error;

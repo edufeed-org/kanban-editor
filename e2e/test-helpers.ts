@@ -207,7 +207,7 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
 }
 
 export async function logout(page: Page) {
-  const userDropdown = page.getByTestId('user-dropdown');
+  const userDropdown = page.getByTestId('auth-user-avatar');
   await userDropdown.click();
   
   const logoutButton = page.getByText('Abmelden');
