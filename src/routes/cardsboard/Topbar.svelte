@@ -78,12 +78,28 @@
     let pollIntervalId: NodeJS.Timeout | undefined;
     
     onMount(() => {
-        // Initial status read
-        setTimeout(() => {
-
+        // ✅ Initial status read - sofort starten ohne Delay!
+        try {
+            const syncManager = getSyncManager();
+            syncStatus = {
+                isOnline: syncManager.status.isOnline,
+                isSyncing: syncManager.status.isSyncing,
+                queuedEvents: syncManager.status.queuedEvents,
+                connectedRelays: syncManager.lastConnectedCount,
+                totalRelays: syncManager.lastTotalCount,
+                hasRelaySigner: syncManager.status.hasRelaySigner
+            };
+            console.log('[Topbar] Initial sync status:', syncStatus);
+        } catch (error) {
+            console.warn('[Topbar] SyncManager not ready on mount (will retry)');
+        }
+    
+        // ✅ Poll every 1 second for reactive status updates
+        pollIntervalId = setInterval(() => {
             try {
                 const syncManager = getSyncManager();
-                syncStatus = {
+                
+                const newStatus = {
                     isOnline: syncManager.status.isOnline,
                     isSyncing: syncManager.status.isSyncing,
                     queuedEvents: syncManager.status.queuedEvents,
@@ -91,45 +107,27 @@
                     totalRelays: syncManager.lastTotalCount,
                     hasRelaySigner: syncManager.status.hasRelaySigner
                 };
-            } catch (error) {
-                console.warn('[Topbar] SyncManager not ready on mount');
-            }
-        
-            // ✅ Poll every 1 second for reactive status updates
-            pollIntervalId = setInterval(() => {
-                try {
-                    const syncManager = getSyncManager();
-                    
-                    const newStatus = {
-                        isOnline: syncManager.status.isOnline,
-                        isSyncing: syncManager.status.isSyncing,
-                        queuedEvents: syncManager.status.queuedEvents,
-                        connectedRelays: syncManager.lastConnectedCount,
-                        totalRelays: syncManager.lastTotalCount,
-                        hasRelaySigner: syncManager.status.hasRelaySigner
-                    };
-                    
-                    // Log if status changed
-                    if (newStatus.connectedRelays !== syncStatus.connectedRelays || 
-                        newStatus.totalRelays !== syncStatus.totalRelays) {
-                        console.log('[Topbar] 🔄 Status updated:', {
-                            old: `${syncStatus.connectedRelays}/${syncStatus.totalRelays}`,
-                            new: `${newStatus.connectedRelays}/${newStatus.totalRelays}`
-                        });
-                    }
-                    
-                    // ✅ CRITICAL: Reassign entire object to trigger reactivity!
-                    syncStatus = newStatus;
-                } catch (error) {
-                    // SyncManager not initialized yet
+                
+                // Log if status changed
+                if (newStatus.connectedRelays !== syncStatus.connectedRelays || 
+                    newStatus.totalRelays !== syncStatus.totalRelays) {
+                    console.log('[Topbar] 🔄 Status updated:', {
+                        old: `${syncStatus.connectedRelays}/${syncStatus.totalRelays}`,
+                        new: `${newStatus.connectedRelays}/${newStatus.totalRelays}`
+                    });
                 }
-            }, 1000); // ← Poll every 1 second for faster UI updates
-         }, 5000); // Delay to allow SyncManager initialization
+                
+                // ✅ CRITICAL: Reassign entire object to trigger reactivity!
+                syncStatus = newStatus;
+            } catch (error) {
+                // SyncManager not initialized yet
+            }
+        }, 1000); // ← Poll every 1 second for faster UI updates
          
-         // ✅ Cleanup on unmount
-         return () => {
-             if (pollIntervalId) clearInterval(pollIntervalId);
-         };
+        // ✅ Cleanup on unmount
+        return () => {
+            if (pollIntervalId) clearInterval(pollIntervalId);
+        };
     });
     
     // 🔄 Manual reconnect handler
