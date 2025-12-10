@@ -1,42 +1,14 @@
 import { type Page, type BrowserContext, expect } from '@playwright/test';
 
-// Test constants
 export const TEST_NSEC = 'nsec1ufnus6pju578ste3v90xd5m2decpuzpql2295m3sknqcjzyys9ls0qlc85';
 export const TEST_PUBKEY = '79dff8f82963424e0bb02708a22e44b4980893e3a4be0fa3cb60a43b946764e3';
 export const TEST_NPUB = 'npub1ufns5j7mngv80w8rn2j0rd2elds6pwd6ev6d5j3ex7dw3wpq6qqsz2uqmfhpm0';
-
-// ============================================================================
-// SHARING-SPEZIFISCHE TEST-HELPERS
-// ============================================================================
 
 export interface TestUser {
     name: string;
     pubkey: string;
     nsec?: string;
 }
-
-export const SHARING_TEST_USERS = {
-    owner: {
-        name: 'Board Owner',
-        pubkey: '0000000000000000000000000000000000000000000000000000000000000001',
-        nsec: 'nsec1owner123456789012345678901234567890123456789012345678901234567890'
-    },
-    editor: {
-        name: 'Board Editor',
-        pubkey: '0000000000000000000000000000000000000000000000000000000000000002', 
-        nsec: 'nsec1editor12345678901234567890123456789012345678901234567890123456789'
-    },
-    viewer: {
-        name: 'Board Viewer',
-        pubkey: '0000000000000000000000000000000000000000000000000000000000000003',
-        nsec: 'nsec1viewer12345678901234567890123456789012345678901234567890123456789'
-    },
-    unauthorized: {
-        name: 'Unauthorized User',
-        pubkey: '0000000000000000000000000000000000000000000000000000000000000004',
-        nsec: 'nsec1unauth12345678901234567890123456789012345678901234567890123456789'
-    }
-} as const;
 
 /**
  * Mock NIP-07 window.nostr extension for testing
@@ -102,8 +74,8 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
   
   await page.getByPlaceholder('nsec1...').fill(nsec);
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
-  
-  await expect(page.locator('button.bg-secondary.rounded-md').filter({has: page.locator('p.text-sm.font-semibold')})).toBeVisible({ timeout: 10000 });
+
+  await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 3000 });
 }
 
 /**
@@ -116,11 +88,13 @@ export async function loginWithNip07(page: Page) {
     // assure demo settings are loaded, otherwise it will interfere clicking login
     await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
 
-    page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByRole('button', { name: 'Anmelden' }).click();
     
     const nip07Button = page.getByText('Mit NIP-07 anmelden');
     await expect(nip07Button).toBeVisible();
     await nip07Button.click();
+
+    await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 3000 });
 }
 
 /**
@@ -224,19 +198,12 @@ export async function waitForBoardLoaded(page: Page) {
 }
 
 export async function isAuthenticated(page: Page): Promise<boolean> {
-  try {
-    // Check for the authenticated user dropdown in the sidebar
-    return await page.locator('button.bg-secondary.rounded-md').isVisible({ timeout: 1000 });
-  } catch {
-    // If that fails, check localStorage as backup
-    try {
-      return await page.evaluate(() => {
-        return localStorage.getItem('nostr-user-session') !== null;
-      });
-    } catch {
-      return false;
-    }
+  getAuthState(page);
+  const authState = await getAuthState(page);
+  if (authState) {
+    return true;
   }
+  return false;
 }
 
 export async function logout(page: Page) {
@@ -248,7 +215,7 @@ export async function logout(page: Page) {
     await logoutButton.click();
   }
   
-  await page.waitForSelector('button:has-text("Anmelden")', { timeout: 5000 });
+  await expect(page.getByText('Anmelden')).toBeVisible({ timeout: 3000 });
 }
 
 /**
