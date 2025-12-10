@@ -185,15 +185,22 @@ export class NostrIntegration {
         }
 
         try {
+            const startTime = Date.now();
             console.log('[BoardStore] 🛰️ Fetching boards from Nostr for pubkey:', pubkey);
 
             // 1. Fetch Board Events (Kind 30301)
+            // ⚡ OPTIMIZATION: Limit to recent boards (last 90 days) für schnelleren Load
+            const ninetyDaysAgo = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
+            
             const boardFilter = {
                 kinds: [30301],
-                authors: [pubkey]
+                authors: [pubkey],
+                since: ninetyDaysAgo // Nur Boards der letzten 90 Tage
             };
 
             const boardEvents = await this.ndk.fetchEvents(boardFilter as any);
+            
+            console.log(`[BoardStore] ⏱️ Fetched ${boardEvents.size} board event(s) in ${Date.now() - startTime}ms`);
 
             if (!boardEvents || boardEvents.size === 0) {
                 console.log('[BoardStore] ℹ️ No boards found on Nostr for current user');
@@ -210,24 +217,26 @@ export class NostrIntegration {
             const loadedBoardIds: string[] = [];
         
             // 4. Sammle Board-IDs die auf dem Relay existieren
-            const relayBoardIds = new Set<string>();            for (const event of boardEvents) {
-                if (event.kind !== 30301) continue;
+            const relayBoardIds = new Set<string>();
+            
+            // ⚡ OPTIMIZATION: Import dependencies einmalig vor der Loop
+            const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
+            const { Board: BoardClass } = await import('../../classes/BoardModel.js');
+            
+            // ⚡ OPTIMIZATION: Parallele Verarbeitung aller Board-Events
+            const boardProcessingPromises = Array.from(boardEvents).map(async (event) => {
+                if (event.kind !== 30301) return null;
 
                 try {
                     // Check ob Board mit deleted=true Tag markiert ist
                     const deletedTag = event.tags.find((t: any) => t[0] === 'deleted' && t[1] === 'true');
                     if (deletedTag) {
-                        console.log('[BoardStore] ⏩ Skipping board marked as deleted (deleted tag)');
-                        continue;
+                        return null;
                     }
 
-                    const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
                     const boardProps = nostrEventToBoard(event);
-                    const board = new (await import('../../classes/BoardModel.js')).Board(boardProps);
+                    const board = new BoardClass(boardProps);
 
-                    // ⚡ SIMPLIFIED: Relay gibt nur nicht-gelöschte Boards zurück!
-                    //    Keine lokale Deletion-Prüfung mehr nötig
-                    
                     // Merke dass dieses Board auf dem Relay existiert
                     relayBoardIds.add(board.id);
 
@@ -242,7 +251,6 @@ export class NostrIntegration {
                             const existing = JSON.parse(existingRaw);
                             
                             // 🔥 FIX: Berücksichtige AUCH lastAccessedAt beim Timestamp-Vergleich!
-                            // Verhindert dass Nostr-Load neuere lokale lastAccessedAt überschreibt
                             const localTs = existing.lastAccessedAt
                                 ? (typeof existing.lastAccessedAt === 'string' 
                                     ? new Date(existing.lastAccessedAt).getTime()
@@ -256,7 +264,6 @@ export class NostrIntegration {
                             const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
                             if (localTs && localTs > remoteTs) {
                                 acceptRemote = false;
-                                console.log(`[BoardStore] ↩️ Keep newer local board (lastAccessedAt: ${new Date(localTs).toISOString()}) - skip remote (createdAt: ${new Date(remoteTs).toISOString()})`);
                             }
                         } catch {
                             acceptRemote = true;
@@ -264,79 +271,91 @@ export class NostrIntegration {
                     }
 
                     if (!acceptRemote) {
-                        // console.log(`[BoardStore] ↩️ Keep newer local board for ${board.id}, skip remote version`);
-                        // Relay gibt nur nicht-gelöschte Boards zurück - keine Deletion-Checks nötig
-                        if (!loadedBoardIds.includes(board.id)) {
-                            loadedBoardIds.push(board.id);
-                            // console.log('[BoardStore] ✅ Added local board to loadedBoardIds:', board.id);
-                        }
-                        continue;
+                        return { boardId: board.id, needsStorage: false };
                     }
 
-                    if (typeof window !== 'undefined') {
-                        const context = board.getContextData(true) as any;
-                        const remoteCreated = event.created_at
-                            ? new Date(event.created_at * 1000).toISOString()
-                            : context.createdAt || new Date().toISOString();
-                        context.createdAt = context.createdAt || remoteCreated;
-                        context.updatedAt = context.updatedAt || remoteCreated;
+                    // Prepare storage data
+                    const context = board.getContextData(true) as any;
+                    const remoteCreated = event.created_at
+                        ? new Date(event.created_at * 1000).toISOString()
+                        : context.createdAt || new Date().toISOString();
+                    context.createdAt = context.createdAt || remoteCreated;
+                    context.updatedAt = context.updatedAt || remoteCreated;
 
-                        window.localStorage.setItem(storageKey, JSON.stringify(context));
-                        // console.log('[BoardStore] 💾 Stored Nostr board from remote:', storageKey);
-                    }
-
-                    // Relay gibt nur nicht-gelöschte Boards zurück - keine Deletion-Checks nötig
-                    if (!loadedBoardIds.includes(board.id)) {
-                        loadedBoardIds.push(board.id);
-                        console.log('[BoardStore] ✅ Added remote board to loadedBoardIds:', board.id);
-                    }
+                    return { 
+                        boardId: board.id, 
+                        needsStorage: true, 
+                        storageKey, 
+                        context 
+                    };
                 } catch (err) {
                     console.error('[BoardStore] ❌ Failed to import Nostr board event:', err);
+                    return null;
+                }
+            });
+            
+            // ⚡ Wait for all boards to be processed in parallel
+            const processedBoards = await Promise.all(boardProcessingPromises);
+            
+            // ⚡ Batch localStorage operations
+            if (typeof window !== 'undefined') {
+                for (const result of processedBoards) {
+                    if (!result) continue;
+                    
+                    loadedBoardIds.push(result.boardId);
+                    
+                    if (result.needsStorage && result.storageKey && result.context) {
+                        window.localStorage.setItem(result.storageKey, JSON.stringify(result.context));
+                    }
+                }
+            } else {
+                for (const result of processedBoards) {
+                    if (result) {
+                        loadedBoardIds.push(result.boardId);
+                    }
                 }
             }
+            
+            console.log(`[BoardStore] ✅ Processed ${loadedBoardIds.length} board(s) in parallel`);
 
             // MRU-Heuristik: Neuestes Board wählen wenn aktuelles Board anonym ist
-            if (typeof window !== 'undefined') {
-                const currentIsAnonymous =
-                    !currentBoard.author ||
-                    currentBoard.author === 'anonymous';
-
-                if (currentIsAnonymous && loadedBoardIds.length > 0) {
-                    let bestId: string | null = null;
-                    let bestTs = 0;
-
-                    for (const id of loadedBoardIds) {
-                        const raw = window.localStorage.getItem(`kanban-${id}`);
-                        if (!raw) continue;
-                        try {
-                            const data = JSON.parse(raw);
-                            const ts = data.updatedAt
-                                ? new Date(data.updatedAt).getTime()
-                                : data.createdAt
-                                    ? new Date(data.createdAt).getTime()
-                                    : 0;
-                            if (ts > bestTs) {
-                                bestTs = ts;
-                                bestId = id;
-                            }
-                        } catch {
-                            // ignore
-                        }
+            // ⚡ OPTIMIZATION: Early exit wenn nicht nötig
+            const currentIsAnonymous = !currentBoard.author || currentBoard.author === 'anonymous';
+            
+            if (currentIsAnonymous && loadedBoardIds.length > 0 && typeof window !== 'undefined') {
+                // ⚡ OPTIMIZATION: Parallele Verarbeitung für Timestamp-Vergleich
+                const boardDataPromises = loadedBoardIds.map(async (id) => {
+                    const raw = window.localStorage.getItem(`kanban-${id}`);
+                    if (!raw) return null;
+                    
+                    try {
+                        const data = JSON.parse(raw);
+                        const ts = data.updatedAt
+                            ? new Date(data.updatedAt).getTime()
+                            : data.createdAt
+                                ? new Date(data.createdAt).getTime()
+                                : 0;
+                        return { id, ts, data };
+                    } catch {
+                        return null;
                     }
-
-                    if (bestId) {
-                        const raw = window.localStorage.getItem(`kanban-${bestId}`);
-                        if (raw) {
-                            try {
-                                const data = JSON.parse(raw);
-                                const newBoard = BoardStorage.reconstructBoard(data);
-                                onBoardsLoaded(loadedBoardIds, true, newBoard);
-                                console.log('[BoardStore] ✅ Switched active board to newest Nostr board:', bestId);
-                                return;
-                            } catch (err) {
-                                console.warn('[BoardStore] ⚠️ Failed to switch active board to Nostr board:', err);
-                            }
-                        }
+                });
+                
+                const boardData = (await Promise.all(boardDataPromises)).filter(b => b !== null);
+                
+                if (boardData.length > 0) {
+                    // Find board with highest timestamp
+                    const best = boardData.reduce((prev, curr) => 
+                        curr.ts > prev.ts ? curr : prev
+                    );
+                    
+                    try {
+                        const newBoard = BoardStorage.reconstructBoard(best.data);
+                        onBoardsLoaded(loadedBoardIds, true, newBoard);
+                        console.log('[BoardStore] ✅ Switched active board to newest Nostr board:', best.id);
+                        return;
+                    } catch (err) {
+                        console.warn('[BoardStore] ⚠️ Failed to switch active board to Nostr board:', err);
                     }
                 }
             }
@@ -437,28 +456,36 @@ export class NostrIntegration {
             // Deserialisiere alle Card-Events
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
             
-            let loadedCount = 0;
-            
-            for (const cardEvent of cardEvents) {
+            // ⚡ OPTIMIZATION: Parallele Verarbeitung aller Card-Events
+            const cardProcessingPromises = Array.from(cardEvents).map(async (cardEvent) => {
                 try {
                     const cardProps = nostrEventToCard(cardEvent);
                     
                     // Validiere dass Card zum richtigen Board gehört
                     if (cardProps.boardRef !== boardRef) {
                         console.warn('[BoardStore] ⚠️ Card boardRef mismatch:', cardProps.boardRef, 'expected:', boardRef);
-                        continue;
+                        return null;
                     }
                     
-                    // Callback mit den Card-Props aufrufen
-                    onCardLoaded(cardProps);
-                    loadedCount++;
-                    
+                    return cardProps;
                 } catch (err) {
                     console.error('[BoardStore] ❌ Failed to deserialize card event:', err);
+                    return null;
+                }
+            });
+            
+            const processedCards = await Promise.all(cardProcessingPromises);
+            
+            // Batch-Verarbeitung aller Cards
+            let loadedCount = 0;
+            for (const cardProps of processedCards) {
+                if (cardProps) {
+                    onCardLoaded(cardProps);
+                    loadedCount++;
                 }
             }
 
-            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded)`);
+            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded in parallel)`);
         } catch (error) {
             console.error('[BoardStore] ❌ Error while loading cards from Nostr:', error);
         }

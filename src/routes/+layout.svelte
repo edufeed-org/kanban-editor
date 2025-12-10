@@ -34,12 +34,20 @@
   onMount(async () => {
     // 🔌 FIRST: Wait for NDK to connect before proceeding
     // This prevents "NDK not initialized" race conditions
+    // ⚡ OPTIMIZATION: Connection timeout nach 3 Sekunden
     try {
       console.log('⏳ Waiting for NDK connection...');
-      await ndk.connect();
+      
+      const connectPromise = ndk.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 3000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
       console.log('✅ NDK connected to relays');
     } catch (error) {
-      console.warn('⚠️ NDK connection failed (continuing anyway):', error);
+      console.warn('⚠️ NDK connection timeout or failed (continuing anyway):', error);
+      // Continue anyway - NDK will retry in background
     }
 
     // 🔑 SECOND: Initialize SyncManager (before AuthStore restores session)
