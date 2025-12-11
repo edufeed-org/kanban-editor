@@ -260,9 +260,9 @@ export async function loginWithTestUser(page: Page, user: TestUser) {
     
     // Development-Login (wenn verfügbar)
     await page.evaluate((userData) => {
-        // @ts-ignore
+        // @ts-expect-error
         if (window.authStore && window.authStore.loginWithDummy) {
-            // @ts-ignore
+            // @ts-expect-error
             window.authStore.loginWithDummy(userData.name, userData.pubkey);
         }
     }, user);
@@ -290,7 +290,7 @@ export async function loginWithTestUser(page: Page, user: TestUser) {
                 await page.locator('button:has-text("Anmelden")').click();
             }
         }
-    } catch (e) {
+    } catch {
         console.log('UI-Login fehlgeschlagen, nutze Development-API');
     }
     
@@ -337,13 +337,12 @@ export async function shareTestBoard(
         const { pubkey, role } = args;
         
         try {
-            // @ts-ignore
             if (window.boardStore) {
                 if (role === 'editor') {
-                    // @ts-ignore
+                    // @ts-expect-error
                     await window.boardStore.addEditor(pubkey);
                 } else {
-                    // @ts-ignore
+                    // @ts-expect-error
                     await window.boardStore.addViewer(pubkey);
                 }
                 return true;
@@ -448,7 +447,7 @@ export async function attemptBoardAction(
 ): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
         switch (action) {
-            case 'createCard':
+            case 'createCard': {
                 const addButton = page.locator('button:has-text("Neue Karte")').first();
                 if (!(await addButton.isVisible())) {
                     return { success: false, error: 'Add Card button not visible' };
@@ -460,8 +459,8 @@ export async function attemptBoardAction(
                 
                 await expect(page.locator(`text="${options?.title || 'Test Karte'}"`)).toBeVisible({ timeout: 3000 });
                 return { success: true, data: { title: options?.title || 'Test Karte' } };
-                
-            case 'createColumn':
+            }
+            case 'createColumn': {
                 const columnButton = page.locator('button:has-text("Neue Spalte")').first();
                 if (!(await columnButton.isVisible())) {
                     return { success: false, error: 'Add Column button not visible' };
@@ -473,8 +472,8 @@ export async function attemptBoardAction(
                 
                 await expect(page.locator(`text="${options?.name || 'Test Spalte'}"`)).toBeVisible({ timeout: 3000 });
                 return { success: true, data: { name: options?.name || 'Test Spalte' } };
-                
-            case 'deleteBoard':
+            }
+            case 'deleteBoard': {
                 const settingsButton = page.locator('button:has-text("Einstellungen")').first();
                 if (!(await settingsButton.isVisible())) {
                     return { success: false, error: 'Settings button not visible' };
@@ -492,8 +491,8 @@ export async function attemptBoardAction(
                 // Prüfe ob zur Board-Liste umgeleitet
                 await expect(page.locator('text="Boards"')).toBeVisible({ timeout: 5000 });
                 return { success: true };
-                
-            case 'editCard':
+            }
+            case 'editCard': {
                 const card = page.locator('[data-testid="card"]').or(
                     page.locator('text="Test Karte"')
                 ).first();
@@ -509,7 +508,7 @@ export async function attemptBoardAction(
                 
                 await expect(page.locator(`text="${options?.newTitle || 'Edited Card'}"`)).toBeVisible({ timeout: 3000 });
                 return { success: true, data: { newTitle: options?.newTitle || 'Edited Card' } };
-                
+            }
             default:
                 return { success: false, error: `Unknown action: ${action}` };
         }
