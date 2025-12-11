@@ -33,7 +33,7 @@
     let filteredBoards = $derived.by(() => {
         // ⚡ KRITISCH: updateTrigger für Reaktivität!
         // Ohne dies wird die Liste nicht aktualisiert bei neuen Boards von Nostr
-        const trigger = boardStore.updateTrigger;
+        boardStore.updateTrigger;
         
         // Eigene Boards + Boards bei denen User Maintainer/Follower ist
         const ownBoards = boardStore.filterBoards(searchQuery);
