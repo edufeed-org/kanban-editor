@@ -81,43 +81,9 @@
 	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
 	let isDraggingCards = $state(false);
 
-	// WICHTIG: Überwache BoardStore Updates für Spalten-Eigenschaften (Name, Farbe)
+	// WICHTIG: Konsolidierter Effect für ALLE BoardStore Updates (Name, Farbe, Items)
 	// Synchronisiert automatisch wenn die Spalte im Store geändert wird
-	$effect(() => {
-		// Zugriff auf boardStore.uiData triggert Reaktivität
-		const uiColumns = boardStore.uiData;
-		
-		// Suche unsere Column in den neuen UI-Daten
-		const updatedColumn = uiColumns.find(c => c.id === columnId);
-		if (updatedColumn) {
-			// Aktualisiere Name wenn sich geändert hat
-			if (updatedColumn.name !== name) {
-				console.log('🔄 Column.svelte: Name vom BoardStore aktualisiert', {
-					columnId,
-					oldName: name,
-					newName: updatedColumn.name
-				});
-				name = updatedColumn.name;
-				editName = name; // Auch editName aktualisieren für Consistency
-			}
-			
-			// Aktualisiere Farbe wenn sich geändert hat
-			if (updatedColumn.color !== color) {
-				console.log('🔄 Column.svelte: Farbe vom BoardStore aktualisiert', {
-					columnId,
-					oldColor: color,
-					newColor: updatedColumn.color
-				});
-				color = updatedColumn.color;
-				selectedColor = color || 'slate'; // Auch selectedColor aktualisieren
-			}
-		}
-	});
-
-	// WICHTIG: Überwache BoardStore Updates und aktualisiere Items automatisch
-	// Das ist notwendig, weil Card-Bearbeitungen (CardDialog) nicht sofort in der UI
-	// sichtbar sind, bis Column.svelte die neuen Items vom BoardStore lädt
-	// ABER: Pausiere während DnD um zu verhindern, dass Items während des Drags überschrieben werden
+	// Pausiere während DnD um Race Conditions zu verhindern
 	$effect(() => {
 		// Wenn gerade Drag stattfindet, update NICHT
 		if (isDraggingCards) {
@@ -129,20 +95,53 @@
 		
 		// Suche unsere Column in den neuen UI-Daten
 		const updatedColumn = uiColumns.find(c => c.id === columnId);
-		if (updatedColumn) {
-			// Vergleiche Items - wenn sie unterschiedlich sind, aktualisiere
-			const itemsChanged = updatedColumn.items.length !== items.length ||
-				updatedColumn.items.some((newItem, idx) => {
-					const oldItem = items[idx];
-					return !oldItem || newItem.id !== oldItem.id || 
-						newItem.name !== oldItem.name ||
-						newItem.description !== oldItem.description;
-				});
-			
-			if (itemsChanged) {
-				// Silent sync - items updated
-				items = updatedColumn.items;
-			}
+		
+		// ⚠️ CRITICAL: Wenn Column nicht gefunden → NICHTS tun!
+		// Das verhindert, dass Items gelöscht werden bei Store-Updates
+		if (!updatedColumn) {
+			console.warn('⚠️ Column.svelte: Column not found in uiData', { columnId });
+			return;
+		}
+		
+		// 1. Aktualisiere Name wenn sich geändert hat
+		if (updatedColumn.name !== name) {
+			console.log('🔄 Column.svelte: Name vom BoardStore aktualisiert', {
+				columnId,
+				oldName: name,
+				newName: updatedColumn.name
+			});
+			name = updatedColumn.name;
+			editName = name; // Auch editName aktualisieren für Consistency
+		}
+		
+		// 2. Aktualisiere Farbe wenn sich geändert hat
+		if (updatedColumn.color !== color) {
+			console.log('🔄 Column.svelte: Farbe vom BoardStore aktualisiert', {
+				columnId,
+				oldColor: color,
+				newColor: updatedColumn.color
+			});
+			color = updatedColumn.color;
+			selectedColor = color || 'slate'; // Auch selectedColor aktualisieren
+		}
+		
+		// 3. Aktualisiere Items wenn sich geändert haben
+		// ⚠️ CRITICAL: Nur wenn wirklich unterschiedlich (verhindert unnötige Re-Renders)
+		const itemsChanged = updatedColumn.items.length !== items.length ||
+			updatedColumn.items.some((newItem, idx) => {
+				const oldItem = items[idx];
+				return !oldItem || newItem.id !== oldItem.id || 
+					newItem.name !== oldItem.name ||
+					newItem.description !== oldItem.description;
+			});
+		
+		if (itemsChanged) {
+			console.log('🔄 Column.svelte: Items vom BoardStore aktualisiert', {
+				columnId,
+				oldCount: items.length,
+				newCount: updatedColumn.items.length
+			});
+			items = updatedColumn.items;
 		}
 	});
 
@@ -392,18 +391,16 @@
 						if (columnId) {
 							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
 							if (newCardId) {
-								const newCard: CardItem = {
-									id: newCardId,
-									name: 'Neue Karte',
-									description: 'Bitte bearbeiten...',
-								};
-								// Neue Karte AM ANFANG einfügen
-								onDrop([newCard, ...items]);
+								// ✅ FIX: NICHT onDrop() aufrufen!
+								// boardStore.createCard() hat bereits den Store aktualisiert
+								// Der $effect wird automatisch getriggert und items wird aktualisiert
+								// Doppel-Update (createCard + onDrop) verursacht Race Condition!
+								
 								// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
 								setTimeout(() => {
 									onSelectCard?.(String(newCardId));
 									console.log('✨ Neue Karte selektiert:', newCardId);
-								}, 0);
+								}, 100);  // Erhöhte Verzögerung für sicheres Store-Update
 							}
 						}
 					}}
