@@ -243,21 +243,38 @@ export class BoardStore {
     
     private loadFromStorage(): Board {
         const boardIds = BoardStorage.loadBoardIds();
-        const mostRecentBoardId = BoardStorage.loadMostRecentBoard(boardIds);
         
-        if (mostRecentBoardId) {
+        if (boardIds.length === 0) {
+            console.log('📝 Keine Boards gefunden, erstelle Default-Board');
+            return BoardStorage.createDefaultBoard();
+        }
+        
+        const boards = BoardStorage.getAllBoardsMetadata(boardIds);
+        
+        // This is the SINGLE SOURCE OF TRUTH for board ordering
+        console.log('🔍 loadFromStorage() - Available boards sorted by lastAccessed:');
+        boards.slice(0, 5).forEach((board, index) => {
+            const date = new Date(board.lastAccessed || board.updatedAt || board.createdAt || 0);
+            console.log(`  ${index + 1}. ${board.name} - ${date.toLocaleString()} (${board.id.slice(0, 8)}...)`);
+        });
+        
+        if (boards.length > 0) {
+            const mostRecentBoardId = boards[0].id;
             const board = BoardStorage.loadBoard(mostRecentBoardId);
+            
             if (board) {
-                console.log(`✅ Letztes Board geladen: ${board.name} (${mostRecentBoardId})`);
+                console.log(`✅ Loading first board from sorted list: ${board.name}`);
                 return board;
             }
         }
         
+        console.log('⚠️ Keine Boards gefunden, erstelle Default-Board');
         return BoardStorage.createDefaultBoard();
     }
 
     private saveToStorage(): void {
         BoardStorage.saveBoard(this.board);
+        console.log(`💾 Saved board "${this.board.name}" with lastAccessedAt:`, this.board.lastAccessedAt);
     }
 
     /**
@@ -270,6 +287,10 @@ export class BoardStore {
      *   - publish: false → Nostr-Event → NUR lokaler Update (SECONDARY)
      */
     private triggerUpdate(options?: { publish?: boolean }): void {
+        // ⚡ FIX: Update board's lastAccessedAt on every modification
+        // This ensures the board moves to the top of the list after any change
+        this.board.updateLastAccessed();
+        
         this.updateTrigger++;
         this.saveToStorage();
         
@@ -458,14 +479,15 @@ export class BoardStore {
         }
         
         board.clearChanges();
-        BoardStorage.saveBoard(board); // Persist changes
         
-        // ⚡ v4.1: KEIN saveToStorage beim Laden!
-        // Grund: Board kommt aus localStorage, kein Grund es sofort wieder zu speichern
-        // Das würde neuere Nostr-Daten überschreiben!
+        // ⚡ FIX: Save board to persist lastAccessedAt timestamp
+        // This is critical for board ordering after page refresh
+        BoardStorage.saveBoard(board);
+        
+        // ⚡ v4.1: KEIN triggerUpdate() beim Laden!
+        // Grund: Wir wollen NICHT zu Nostr publishen beim reinen Laden
         // Aber: updateTrigger++ damit $derived neu berechnet wird
-        // 🔴 WICHTIG: Kein triggerUpdate() hier - nur updateTrigger++
-        // → Verhindert unnötiges Nostr-Publishing beim reinen Laden!
+        // UND: saveToStorage() wurde bereits oben aufgerufen via BoardStorage.saveBoard()
         this.updateTrigger++;
         
         ChatIntegration.reset();
@@ -817,31 +839,16 @@ export class BoardStore {
         // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
         const userBoards = this.getAllBoards();
         
-        // ✅ 1. SORT by lastAccessed DESC (newest first)
-        const sorted = userBoards.sort((a, b) => {
-            const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
-            const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
-            
-            // Primary sort: by timestamp DESC (newest first)
-            if (timeB !== timeA) {
-                return timeB - timeA;
-            }
-            
-            // 🔥 FIX: Bei gleichen Timestamps → sortiere nach Board-ID (deterministisch!)
-            // Verhindert unstable sort wenn alle Boards gleichen Timestamp haben
-            return a.id.localeCompare(b.id);
-        });
-        
-        // ✅ 2. FILTER by search query
+        // ✅ 1. FILTER by search query
         const filtered = query 
-            ? sorted.filter(board => {
+            ? userBoards.filter(board => {
                 const lowerQuery = query.toLowerCase();
                 return board.name.toLowerCase().includes(lowerQuery) ||
                     (board.description && board.description.toLowerCase().includes(lowerQuery));
             })
-            : sorted;
+            : userBoards;
         
-        // ✅ 3. LIMIT to maxBoardsInSidebar (unless searching)
+        // ✅ 2. LIMIT to maxBoardsInSidebar (unless searching)
         // User said: "alle durchsuchbar" - so no limit when query exists
         if (!query) {
             const maxBoards = settingsStore.settings.maxBoardsInSidebar || 10;
@@ -1088,6 +1095,9 @@ export class BoardStore {
         }
 
         if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
+            // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
+            this.board.updateLastAccessed();
+            
             this.triggerUpdate();
             this.publishBoardAsync();
         }
@@ -1139,6 +1149,9 @@ export class BoardStore {
         );
         
         if (cardId) {
+            // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
+            this.board.updateLastAccessed();
+            
             this.triggerUpdate();
             this.publishCardAsync(cardId);
         }
@@ -1158,6 +1171,9 @@ export class BoardStore {
         }
         
         if (BoardOperations.updateCard(this.board, cardId, updates)) {
+            // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
+            this.board.updateLastAccessed();
+            
             this.triggerUpdate();
             this.publishCardAsync(cardId);
         }
@@ -1176,12 +1192,15 @@ export class BoardStore {
         
         // Lösche Card lokal UND auf Nostr (via BoardOperations)
         const success = await BoardOperations.deleteCard(
-            this.board, 
-            cardId, 
+            this.board,
+            cardId,
             this.nostrIntegration
         );
-        
+
         if (success) {
+            // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
+            this.board.updateLastAccessed();
+            
             this.triggerUpdate();
             this.publishBoardAsync();
         }
@@ -1389,6 +1408,9 @@ export class BoardStore {
         );
         
         if (commentId) {
+            // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
+            this.board.updateLastAccessed();
+            
             this.triggerUpdate();
             await this.publishCommentAsync(cardId, commentId);
         }
@@ -2102,23 +2124,28 @@ export class BoardStore {
             return;
         }
         
-        // Prüfe ob Benutzer bereits eigene Boards hat
-        const existingUserBoards = this.getUserBoardsForPubkey(currentUserPubkey);
+        // ✅ FIX: Verwende SORTIERTE Board-Liste von getAllBoards() statt unsortierter getUserBoardsForPubkey()
+        const existingUserBoards = this.getAllBoards();
         
         if (existingUserBoards.length > 0) {
             // Benutzer hat bereits Boards → Demo-Board löschen
+            const wasOnDemoBoard = (this.board.id === 'demo-board');
+            
             this.deleteDemoBoard();
             
             // ⚡ FIX: Demo-Board aus boardIds entfernen
             this.boardIds = this.boardIds.filter(id => id !== 'demo-board');
             
-            // ⚡ FIX: Zu erstem User-Board wechseln
-            if (existingUserBoards.length > 0) {
+            // ✅ FIX: NUR zu anderem Board wechseln wenn User GERADE auf Demo-Board war!
+            // Sonst bleibt User auf seinem aktuellen Board (bessere UX)
+            if (wasOnDemoBoard && existingUserBoards.length > 0) {
                 const firstUserBoardId = existingUserBoards[0].id;
+                console.log(`🔄 User war auf Demo-Board - wechsle zum letzten Board: ${existingUserBoards[0].name}`);
                 this.loadBoard(firstUserBoardId);
+            } else if (!wasOnDemoBoard) {
+                console.log(`✅ Demo-Board gelöscht - User bleibt auf aktuellem Board: ${this.board.name}`);
             }
             
-            console.log(`✅ Demo-Board gelöscht - User hat ${existingUserBoards.length} eigene Boards, gewechselt zu: ${existingUserBoards[0]?.name}`);
             return;
         }
         

@@ -82,47 +82,14 @@ export class BoardStorage {
     }
 
     /**
-     * Lädt zuletzt zugegriffenes Board aus localStorage
-     * @returns Die Board-ID des zuletzt verwendeten Boards oder null
+     * ⚠️ DEPRECATED (11.12.2025): loadMostRecentBoard() removed
+     * 
+     * Reason: Duplicate logic with getAllBoardsMetadata() which already sorts
+     * boards by lastAccessed. Using getAllBoardsMetadata()[0] is the single
+     * source of truth for board ordering.
+     * 
+     * Migration: Use getAllBoardsMetadata(boardIds)[0].id instead
      */
-    public static loadMostRecentBoard(boardIds: string[]): string | null {
-        if (typeof window === 'undefined' || boardIds.length === 0) return null;
-        
-        try {
-            let mostRecentBoardId = boardIds[0];
-            let mostRecentTime = 0;
-            
-            console.log('🔍 Suche zuletzt aufgerufenes Board...');
-            
-            for (const boardId of boardIds) {
-                const stored = localStorage.getItem(`kanban-${boardId}`);
-                if (stored) {
-                    try {
-                        const data = JSON.parse(stored);
-                        const lastAccessed = data.lastAccessedAt || data.updatedAt || data.createdAt;
-                        
-                        const timestamp = lastAccessed 
-                            ? (typeof lastAccessed === 'string' 
-                                ? new Date(lastAccessed).getTime() 
-                                : lastAccessed)
-                            : 0;
-                        
-                        if (timestamp > mostRecentTime) {
-                            mostRecentTime = timestamp;
-                            mostRecentBoardId = boardId;
-                        }
-                    } catch (e) {
-                        console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, e);
-                    }
-                }
-            }
-            
-            return mostRecentBoardId;
-        } catch (error) {
-            console.error('❌ Fehler beim Laden des letzten Boards:', error);
-            return boardIds[0] || null;
-        }
-    }
 
     /**
      * Rekonstruiert ein Board-Objekt aus JSON-Daten
@@ -250,7 +217,7 @@ export class BoardStorage {
             const data = board.getContextData(true);
             const storageKey = `kanban-${board.id}`;
             localStorage.setItem(storageKey, JSON.stringify(data));
-            // console.log('💾 Board in localStorage gespeichert:', storageKey);
+            console.log('💾 Board in localStorage gespeichert:', storageKey);
         } catch (error) {
             console.warn('⚠️ Fehler beim Speichern in localStorage:', error);
         }

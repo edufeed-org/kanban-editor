@@ -64,12 +64,12 @@
 </script>
 
 <!-- User Section - sticky unten in der Sidebar -->
-<div class="mt-auto pt-4 border-t border-border/40" data-testid="user-dropdown">
+<div class="mt-auto pt-4 border-t border-border/40">
 	{#if isAuthenticated && currentUser}
 		<!-- User ist angemeldet -->
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger class="bg-secondary rounded-md">
-				<div class="px-3 py-3 flex items-center gap-2">
+				<div class="px-3 py-3 flex items-center gap-2" data-testid="auth-user-avatar">
 					<Avatar.Root class="h-8 w-8 flex-shrink-0">
 						<Avatar.Image src="" alt={authStore.getDisplayName()} />
 						<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>

@@ -166,6 +166,9 @@ export function generateLiaScriptFilename(boardName: string): string {
  * Nutzt die bestehende publishBoard() Funktion aus NostrIntegration
  * und generiert einen nevent-basierten Link für den LiaScript Viewer
  * 
+ * ⚡ AUTOMATISCH: Publiziert das Board zu Nostr, falls noch nicht geschehen
+ * 🔓 ÖFFENTLICH: Setzt publishState auf 'published' für öffentliche Relays
+ * 
  * @param board - Das zu publizierende Board
  * @param boardStore - BoardStore Instanz
  * @returns LiaScript Viewer Link oder null bei Fehler
@@ -175,20 +178,46 @@ export async function publishBoardAsLiaScriptToNostr(
 	boardStore: any
 ): Promise<string | null> {
 	try {
-		// Board als Standard Nostr Event (Kind 30301) publizieren
-		const eventId = await boardStore.publishBoardAndGetEventId();
+		// ⚡ KRITISCH: Board muss als 'published' markiert werden
+		// um zu öffentlichen Relays publiziert zu werden!
+		const needsPublishing = !board.eventId || board.publishState === 'draft' || board.publishState === 'archived';
+		
+		if (needsPublishing) {
+			console.log('📤 Board wird für öffentliche Veröffentlichung vorbereitet...');
+			
+			// 1. PublishState auf 'published' setzen
+			if (board.publishState !== 'published') {
+				console.log(`🔄 Ändere publishState: ${board.publishState} → published`);
+				boardStore.setPublishState('published');
+			}
+			
+			// 2. Board zu Nostr publizieren (jetzt zu öffentlichen Relays)
+			console.log('📤 Publiziere Board zu öffentlichen Nostr Relays...');
+			const eventId = await boardStore.publishBoardAndGetEventId();
 
-		if (!eventId) {
-			console.error('❌ Board Publishing fehlgeschlagen - keine Event-ID erhalten');
-			return null;
+			if (!eventId) {
+				console.error('❌ Board Publishing fehlgeschlagen - keine Event-ID erhalten');
+				return null;
+			}
+
+			console.log('✅ Board erfolgreich als öffentliches Nostr Event publiziert:', eventId);
+			
+			// LiaScript Viewer Link mit nevent generieren
+			const link = generateLiaScriptViewerLink(eventId);
+			return link;
+		} else {
+			// Board ist bereits publiziert, verwende existierende Event-ID
+			console.log('✅ Board bereits publiziert, verwende existierende Event-ID:', board.eventId);
+			
+			// TypeScript Guard: eventId sollte hier definiert sein
+			if (!board.eventId) {
+				console.error('❌ Board hat keine Event-ID trotz needsPublishing=false');
+				return null;
+			}
+			
+			const link = generateLiaScriptViewerLink(board.eventId);
+			return link;
 		}
-
-		console.log('✅ Board als Nostr Event publiziert:', eventId);
-
-		// LiaScript Viewer Link mit nevent generieren
-		const link = generateLiaScriptViewerLink(eventId);
-
-		return link;
 	} catch (error) {
 		console.error('❌ LiaScript Nostr Publishing fehlgeschlagen:', error);
 		return null;
