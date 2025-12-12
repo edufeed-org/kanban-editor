@@ -1331,19 +1331,6 @@ export class NostrIntegration {
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
 
-            // ⚠️ SICHERHEITS-CHECK: Warne wenn Draft nicht publiziert werden kann
-            if (normalizedState === 'draft' && targetRelays.length === 0) {
-                const mode = settingsStore.settings.draftPublishingMode;
-                
-                if (mode === 'private-relays') {
-                    toast.warning('🔒 Keine privaten Relays konfiguriert', {
-                        description: 'Karten-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
-                        duration: 6000
-                    });
-                    console.warn('[NostrIntegration] 🔒 Draft card cannot be published - no private relays configured');
-                }
-            }
-
             const syncManager = getSyncManager();
             const publishedEvent = await syncManager.publishOrQueue(
                 event, 
