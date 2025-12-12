@@ -13,9 +13,9 @@
  * Für Integration Tests mit echtem Relay siehe: BoardModel.card-integration.spec.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Board, Column, Card } from './BoardModel';
-import type { BoardProps, CardProps } from './BoardModel';
+import { describe, it, expect, vi } from 'vitest';
+import { Board, Card } from './BoardModel';
+import type { CardProps } from './BoardModel';
 
 // ============================================================================
 // TEST HELPERS

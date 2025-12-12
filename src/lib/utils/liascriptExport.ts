@@ -161,13 +161,12 @@ export function generateLiaScriptFilename(boardName: string): string {
 }
 
 /**
- * Publiziert ein Board als Nostr Event und gibt einen LiaScript Viewer Link zurück
+ * Publiziert ein Board als LiaScript-Nostr-Event und gibt einen LiaScript Viewer Link zurück
  * 
- * Nutzt die bestehende publishBoard() Funktion aus NostrIntegration
- * und generiert einen nevent-basierten Link für den LiaScript Viewer
+ * 📝 FORMAT: Publiziert das Board als Long-form Content (Kind 30023) mit LiaScript-Markdown
+ * 🔓 ÖFFENTLICH: Wird immer zu öffentlichen Relays publiziert (unabhängig vom Board publishState)
  * 
- * ⚡ AUTOMATISCH: Publiziert das Board zu Nostr, falls noch nicht geschehen
- * 🔓 ÖFFENTLICH: Setzt publishState auf 'published' für öffentliche Relays
+ * Optional: Kann das normale Board-Event (Kind 30301) vorher publizieren, falls gewünscht
  * 
  * @param board - Das zu publizierende Board
  * @param boardStore - BoardStore Instanz
@@ -178,46 +177,82 @@ export async function publishBoardAsLiaScriptToNostr(
 	boardStore: any
 ): Promise<string | null> {
 	try {
-		// ⚡ KRITISCH: Board muss als 'published' markiert werden
-		// um zu öffentlichen Relays publiziert zu werden!
-		const needsPublishing = !board.eventId || board.publishState === 'draft' || board.publishState === 'archived';
-		
-		if (needsPublishing) {
-			console.log('📤 Board wird für öffentliche Veröffentlichung vorbereitet...');
-			
-			// 1. PublishState auf 'published' setzen
-			if (board.publishState !== 'published') {
-				console.log(`🔄 Ändere publishState: ${board.publishState} → published`);
-				boardStore.setPublishState('published');
-			}
-			
-			// 2. Board zu Nostr publizieren (jetzt zu öffentlichen Relays)
-			console.log('📤 Publiziere Board zu öffentlichen Nostr Relays...');
-			const eventId = await boardStore.publishBoardAndGetEventId();
-
-			if (!eventId) {
-				console.error('❌ Board Publishing fehlgeschlagen - keine Event-ID erhalten');
-				return null;
-			}
-
-			console.log('✅ Board erfolgreich als öffentliches Nostr Event publiziert:', eventId);
-			
-			// LiaScript Viewer Link mit nevent generieren
-			const link = generateLiaScriptViewerLink(eventId);
-			return link;
-		} else {
-			// Board ist bereits publiziert, verwende existierende Event-ID
-			console.log('✅ Board bereits publiziert, verwende existierende Event-ID:', board.eventId);
-			
-			// TypeScript Guard: eventId sollte hier definiert sein
-			if (!board.eventId) {
-				console.error('❌ Board hat keine Event-ID trotz needsPublishing=false');
-				return null;
-			}
-			
-			const link = generateLiaScriptViewerLink(board.eventId);
-			return link;
+		// 1. NDK instanz holen
+		const ndk = boardStore.nostrIntegration?.getNDK();
+		if (!ndk) {
+			console.error('❌ NDK nicht verfügbar');
+			return null;
 		}
+
+		// 2. Optional: Normales Board-Event publizieren (falls noch nicht geschehen)
+		if (!board.eventId && board.publishState !== 'published') {
+			console.log('📤 Publiziere zuerst normales Board-Event...');
+			boardStore.setPublishState('published');
+			await boardStore.publishBoardAndGetEventId();
+		}
+
+		// 3. LiaScript-Markdown generieren
+		console.log('📝 Generiere LiaScript-Markdown...');
+		const markdown = boardToLiaScript(board, true);
+
+		// 4. LiaScript-Event erstellen (Kind 30023: Long-form Content)
+		console.log('📤 Erstelle LiaScript-Event...');
+		const { NDKEvent } = await import('@nostr-dev-kit/ndk');
+		const event = new NDKEvent(ndk);
+		
+		event.kind = 30023; // Long-form Content (NIP-23)
+		event.content = markdown; // LiaScript-Markdown als Content
+		
+
+		// Tags für LiaScript-Event
+		event.tags = [
+			['d', `liascript-${board.id}`], // Eindeutige ID für replaceability
+			['title', board.name || 'Kanban Board'],
+			['published_at', Math.floor(Date.now() / 1000).toString()],
+			['t', 'liascript'], // Tag für LiaScript-Content
+		];
+
+		// Optional: Board-Tags hinzufügen
+		if (board.tags && board.tags.length > 0) {
+			for (const tag of board.tags) {
+				event.tags.push(['t', tag]);
+			}
+		}
+
+		// Optional: Lizenz-Tag
+		if (board.ccLicense) {
+			event.tags.push(['license', board.ccLicense]);
+		}
+
+		// Optional: Referenz zum Original-Board-Event
+		if (board.eventId) {
+			event.tags.push(['e', board.eventId, '', 'root']); // Referenz zum Board-Event
+		}
+
+		// 5. Event zu öffentlichen Relays publizieren
+		console.log('📤 Publiziere LiaScript-Event zu öffentlichen Relays...');
+		const relays = [...settingsStore.settings.relaysPublic];
+		
+		if (relays.length === 0) {
+			console.error('❌ Keine öffentlichen Relays konfiguriert');
+			return null;
+		}
+
+		// Event signieren und publizieren
+		const publishedRelays = await event.publish();
+		
+		if (!publishedRelays || publishedRelays.size === 0) {
+			console.error('❌ Event konnte nicht publiziert werden');
+			return null;
+		}
+
+		console.log(`✅ LiaScript-Event publiziert zu ${publishedRelays.size} Relay(s)`);
+		console.log('📝 Event-ID:', event.id);
+
+		// 6. LiaScript Viewer Link generieren
+		const link = generateLiaScriptViewerLink(event.id!);
+		return link;
+
 	} catch (error) {
 		console.error('❌ LiaScript Nostr Publishing fehlgeschlagen:', error);
 		return null;

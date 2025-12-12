@@ -143,7 +143,7 @@ export async function llmRequest<T = any>(
 		try {
 			return JSON.parse(content) as T;
 		} catch (err) {
-			console.error('❌ JSON Parse Error:', content);
+			console.error('❌ JSON Parse Error:', (err as Error).message);
 			throw new Error(`LLM returned invalid JSON: ${content.substring(0, 100)}`);
 		}
 	}

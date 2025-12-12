@@ -48,7 +48,7 @@
                 description: 'Der Share-Link wurde in die Zwischenablage kopiert'
             });
             setTimeout(() => linkCopied = false, 2000);
-        } catch (error) {
+        } catch {
             toast.error('Fehler beim Kopieren', {
                 description: 'Link konnte nicht kopiert werden'
             });

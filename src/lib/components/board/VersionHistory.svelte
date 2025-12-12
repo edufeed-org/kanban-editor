@@ -2,7 +2,6 @@
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
-    import { Label } from '$lib/components/ui/label/index.js';
     import { Badge } from '$lib/components/ui/badge/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import { Spinner } from '$lib/components/ui/spinner/index.js';

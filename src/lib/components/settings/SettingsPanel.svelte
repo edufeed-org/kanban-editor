@@ -261,7 +261,7 @@
               </div>
               <Switch 
                 checked={settings.showLeftSidebar}
-                onCheckedChange={(checked) => settingsStore.toggleLeftSidebar()}
+                onCheckedChange={() => settingsStore.toggleLeftSidebar()}
               />
             </div>
             
@@ -271,7 +271,7 @@
               </div>
               <Switch 
                 checked={settings.showRightSidebar}
-                onCheckedChange={(checked) => settingsStore.toggleRightSidebar()}
+                onCheckedChange={() => settingsStore.toggleRightSidebar()}
               />
             </div>
             
