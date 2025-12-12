@@ -2,15 +2,11 @@
     import { Button } from "$lib/components/ui/button";
     import ShareDialog from "./ShareDialog.svelte";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
-    import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardRole } from "$lib/types/sharing";
     import { toast } from "svelte-sonner";
     import ShareIcon from "@lucide/svelte/icons/share";
     import HeartIcon from "@lucide/svelte/icons/heart";
     import HeartOffIcon from "@lucide/svelte/icons/heart-off";
-    
-    // Props
-    let { boardId } = $props<{ boardId: string }>();
     
     // State
     let showShareDialog = $state(false);

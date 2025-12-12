@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
     import type { CardProps } from '../classes/BoardModel.js';
 
     interface Props {
@@ -215,9 +216,9 @@
 
                                         {#if (formData.links || []).length > 0}
                                             <div class="links-list">
-                                                {#each formData.links as link}
+                                                {#each formData.links as link (link.id)}
                                                     <div class="link-item">
-                                                        <a href={link.url} target="_blank" rel="noopener noreferrer" class="link-title">{link.title}</a>
+                                                        <a href={resolve(link.url, {})} target="_blank" rel="noopener noreferrer" class="link-title">{link.title}</a>
                                                         <span class="link-url">({link.url})</span>
                                                         <button
                                                             type="button"

@@ -633,7 +633,7 @@
             </Button>
 
             <!-- Board Sharing -->
-            <ShareButton boardId={boardStore.data?.id || ''} />
+            <ShareButton />
             
             <!-- Version History -->
             <VersionHistory />

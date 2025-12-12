@@ -6,7 +6,7 @@
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardSharingOperations } from "$lib/stores/boardstore/sharing";
-    import { Board, type BoardProps } from "$lib/classes/BoardModel";
+    import { Board } from "$lib/classes/BoardModel";
     import { goto } from "$app/navigation";
     import { toast } from "svelte-sonner";
     import { getContext } from "svelte";
@@ -14,6 +14,7 @@
     import EyeIcon from "@lucide/svelte/icons/eye";
     import CalendarIcon from "@lucide/svelte/icons/calendar";
     import UserIcon from "@lucide/svelte/icons/user";
+    import { resolve } from "$app/paths";
     
     // Get NDK from context (set in +layout.svelte)
     const ndk = getContext<NDK>('ndk');
@@ -110,7 +111,7 @@
             
             // Zum Board navigieren (Board ist bereits geladen!)
             open = false;
-            goto('/cardsboard');
+            goto(resolve('/cardsboard', {}));
             
         } catch (error: any) {
             errorMessage = error.message || 'Fehler beim Folgen des Boards';

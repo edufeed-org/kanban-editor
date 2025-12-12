@@ -271,7 +271,6 @@ describe('ImportPopover Component - Business Logic', () => {
 		it('zeigt Loading-Text während Import', () => {
 			// Arrange
 			const isLoading = true;
-			const isBackupFile = false;
 
 			// Act
 			const buttonText = isLoading
