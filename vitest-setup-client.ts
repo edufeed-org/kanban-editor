@@ -1,8 +1,6 @@
-/// <reference types="@vitest/browser/matchers" />
-/// <reference types="@vitest/browser/providers/playwright" />
-
-// Mock localStorage for tests that run in server environment (Node.js)
-// This is needed for stores that use localStorage but run in Node tests
+// Client test setup (jsdom)
+// - Provides small browser API polyfills that jsdom doesn't implement by default
+// - Keeps localStorage available for stores during tests
 if (typeof localStorage === 'undefined') {
   const localStorageMock: Storage = (() => {
     let store: Record<string, string> = {};
@@ -32,4 +30,30 @@ if (typeof localStorage === 'undefined') {
   
   // @ts-ignore - global polyfill for Node environment
   global.localStorage = localStorageMock;
+}
+
+// jsdom does not implement matchMedia by default.
+// Our SettingsStore uses it for prefers-color-scheme detection.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query: string): MediaQueryList => {
+    const mql: MediaQueryList = {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {
+        // deprecated
+      },
+      removeListener: () => {
+        // deprecated
+      },
+      addEventListener: () => {
+        // no-op
+      },
+      removeEventListener: () => {
+        // no-op
+      },
+      dispatchEvent: () => false
+    };
+    return mql;
+  };
 }

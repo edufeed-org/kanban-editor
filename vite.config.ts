@@ -16,12 +16,10 @@ export default defineConfig({
 				extends: './vite.config.ts',
 				test: {
 					name: 'client',
-					environment: 'browser',
-					browser: {
-						enabled: true,
-						provider: 'playwright',
-						instances: [{ browser: 'chromium' }]
-					},
+					// NOTE: We intentionally use jsdom here (not Playwright browser mode)
+					// to keep unit tests fast and to avoid open Playwright handles causing
+					// "close timed out" / hanging Vitest processes.
+					environment: 'jsdom',
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 					exclude: ['src/lib/server/**'],
 					setupFiles: ['./vitest-setup-client.ts']
