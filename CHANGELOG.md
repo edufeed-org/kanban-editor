@@ -75,6 +75,10 @@ Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das 
 ### 🔧 Hinweis
 Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
 
+### 🔧 Wartung (intern)
+- `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.
+- A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknüpft (Svelte-Check ohne Warnings).
+
 ### 🧪 Test-Hinweise (manuell)
 1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
 2. Editor hat BoardsList offen → Board taucht automatisch auf
