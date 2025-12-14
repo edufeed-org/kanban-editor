@@ -79,6 +79,12 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 - `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.
 - A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknüpft (Svelte-Check ohne Warnings).
 
+### 🐛 Fix: Geteilte Boards verschwinden nicht mehr nach Reload
+- Board-Load (Kind 30301) überschreibt lokale Cards nicht mehr (Board-Events enthalten keine Cards) → verhindert “Cards verschwinden” durch localStorage-Overwrite.
+- Unsicheres Post-Cleanup entfernt (hatte Shared Boards fälschlich als „orphaned“ gelöscht, weil `authors:[pubkey]` keine fremd-owned Boards zurückliefert).
+- Session-Restore startet jetzt deterministisch Owned-Board Load + Live-Subscriptions (verhindert einmaliges Skippen, wenn Pubkey beim Initialisieren noch fehlt).
+- Dateien: `src/lib/stores/boardstore/nostr.ts`, `src/lib/stores/authStore.svelte.ts`
+
 ### 🧪 Test-Hinweise (manuell)
 1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
 2. Editor hat BoardsList offen → Board taucht automatisch auf

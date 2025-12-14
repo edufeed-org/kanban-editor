@@ -192,6 +192,45 @@ export class NostrIntegration {
                     context.createdAt = context.createdAt || remoteCreated;
                     context.updatedAt = context.updatedAt || remoteCreated;
 
+                    // 🔴 CRITICAL: Board-Events (30301) enthalten KEINE Cards.
+                    // Beim Schreiben des Board-Kontexts darf der lokale Card-State NICHT überschrieben werden.
+                    // → Wir übernehmen deshalb vorhandene Cards pro Column-ID aus dem lokalen Storage.
+                    if (existingRaw) {
+                        try {
+                            const existing = JSON.parse(existingRaw);
+                            const existingColumns = Array.isArray(existing?.columns) ? existing.columns : [];
+
+                            const cardsByColumnId = new Map<string, any[]>();
+                            for (const col of existingColumns) {
+                                if (col?.id && Array.isArray(col.cards)) {
+                                    cardsByColumnId.set(col.id, col.cards);
+                                }
+                            }
+
+                            if (Array.isArray(context.columns)) {
+                                context.columns = context.columns.map((col: any) => {
+                                    const existingCards = cardsByColumnId.get(col?.id) ?? [];
+                                    const hasIncomingCards = Array.isArray(col?.cards) && col.cards.length > 0;
+
+                                    return {
+                                        ...col,
+                                        cards: hasIncomingCards ? col.cards : existingCards,
+                                    };
+                                });
+                            }
+
+                            // Best-effort: Preserve lastAccessedAt/flags if present locally
+                            if (context.lastAccessedAt === undefined && existing?.lastAccessedAt !== undefined) {
+                                context.lastAccessedAt = existing.lastAccessedAt;
+                            }
+                            if (context.hasUnseenChanges === undefined && existing?.hasUnseenChanges !== undefined) {
+                                context.hasUnseenChanges = existing.hasUnseenChanges;
+                            }
+                        } catch {
+                            // ignore merge errors; we prefer keeping remote metadata over failing the whole load
+                        }
+                    }
+
                     return { 
                         boardId: board.id, 
                         needsStorage: true, 
@@ -271,45 +310,6 @@ export class NostrIntegration {
             }
 
             onBoardsLoaded(loadedBoardIds, false);
-
-            // 7. POST-CLEANUP: Lösche lokale Boards die nicht mehr auf dem Relay existieren
-            //    (Boards die auf Relay gelöscht wurden, sind durch Pre-Cleanup & Filter schon weg)
-            if (typeof window !== 'undefined') {
-                // Nur Board-Daten Keys (nicht config, board-ids, etc.)
-                const boardDataKeys = Object.keys(localStorage).filter(k => {
-                    // Skip non-board keys
-                    if (k === 'kanban-config') return false;
-                    if (k === 'kanban-board-ids') return false;
-                    
-                    // Nur Keys die wie "kanban-board-xxx" aussehen
-                    return k.startsWith('kanban-') && k.includes('board-');
-                });
-                
-                let cleanedCount = 0;
-                
-                for (const key of boardDataKeys) {
-                    const boardId = key.replace('kanban-', '');
-                    
-                    // Skip wenn:
-                    // - Board ist auf dem Relay (relayBoardIds)
-                    // - Board ist aktuell aktiv (currentBoard.id)
-                    // - Board ist in der boardIds Liste (wurde gerade geladen)
-                    if (relayBoardIds.has(boardId) || 
-                        boardId === currentBoard.id ||
-                        loadedBoardIds.includes(boardId)) {
-                        continue;
-                    }
-                    
-                    // Board existiert nicht mehr auf Relay → löschen
-                    localStorage.removeItem(key);
-                    cleanedCount++;
-                    console.log('[BoardStore] 🧹 Post-cleanup: Removed orphaned board:', boardId);
-                }
-                
-                if (cleanedCount > 0) {
-                    console.log(`[BoardStore] ✅ Post-cleanup: Removed ${cleanedCount} orphaned local board(s)`);
-                }
-            }
         } catch (error) {
             console.error('[BoardStore] ❌ Error while loading boards from Nostr:', error);
         }

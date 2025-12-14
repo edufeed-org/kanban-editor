@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.4 (PHASE 1.5C COMPLETE - 3. Dezember 2025)  
-**Aktualisiert:** 3. Dezember 2025 (Board Snapshots Feature fertig)  
+**Version:** 3.5 (Hotfix: Shared-Board Sync Stabilität - 14. Dezember 2025)  
+**Aktualisiert:** 14. Dezember 2025 (Shared Boards bleiben nach Reload erhalten)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1586,6 +1586,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.5 | 14.12.2025 | 🧩 **Hotfix Shared-Board Sync:** Board-Load überschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
 | 3.1 | 10.11.2025 | 🚀 **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollständig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER für Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |
 | 3.0 | 06.11.2025 | 🤖 **PHASE 3.0 COMPLETE:** AI Agent Infrastructure (10 Module, ChatStore, AIPanel, 150+ Tests). 0 Breaking Changes, 52/52 Docs verlinkt. Phase 1 mostly complete. |
 | 2.8 | 31.10.2025 | 📦 **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). Förder-Anforderung erfüllt! |

@@ -426,6 +426,12 @@ export class AuthStore {
           const { boardStore } = await import('./kanbanStore.svelte.js');
           console.log('🔄 Triggering board reload after session restore...');
           await boardStore.onAuthChanged?.();
+
+          // 🧠 Zusätzlich: Owned-Boards aus Nostr laden + Live-Subscriptions starten.
+          // initializeNostr() kann vor restoreSession laufen und dann wegen fehlendem Pubkey einmalig skippen.
+          await boardStore.loadBoardsFromNostrForCurrentUser?.();
+          boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+
           console.log('✅ Boards reloaded after session restore');
         } catch (error) {
           console.warn('⚠️ Failed to reload boards after session restore:', error);
