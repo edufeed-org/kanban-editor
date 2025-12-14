@@ -15,6 +15,19 @@ Die Synchronisation des Kanban-Boards über mehrere Browser/Tabs hinweg mittels 
 2.  **Echo-Prävention:** Eigene, von einem Client publizierte Events, die vom Relay zurückgesendet werden (Echos), werden erkannt und ignoriert, um doppelte Aktionen und UI-Flickern zu vermeiden.
 3.  **Snapshot-basierte DnD-Synchronisation:** Bei Drag-and-Drop-Operationen wird vor der Zustandsänderung ein unveränderlicher "Snapshot" aller Kartenpositionen erstellt. Dies verhindert Race Conditions und das "Verschwinden" von Karten, insbesondere bei schnellen Links-nach-Rechts-Verschiebungen.
 
+### Code-Struktur (Facade + Helper)
+
+Damit die öffentliche API stabil bleibt, ist die Implementierung als **Facade** organisiert:
+
+- **Facade:** `src/lib/stores/boardstore/nostr.ts` exportiert weiterhin `NostrIntegration` (alle öffentlichen Methoden bleiben unverändert).
+- **Helper-Module:** `src/lib/stores/boardstore/nostr/*` kapseln Querschnittslogik:
+    - `auth.ts` – Pubkey/Session-Abfragen
+    - `time.ts` – Timestamp-Normalisierung (z.B. ISO ↔ Unix)
+    - `commentCache.ts` – lokaler Kommentar-Cache (localStorage)
+    - `deletionEventsCache.ts` – Persistenz verarbeiteter Deletion-Events (Size-Cap)
+
+Die Code-Beispiele unten zeigen teils vereinfachte Logik. In der realen Implementierung werden Zeitstempel-Vergleiche zentral über `time.ts` normalisiert, um String-Vergleiche/Format-Mixups zu vermeiden.
+
 ---
 
 ## 🐛 Gelöste Probleme & Implementierungen
@@ -34,9 +47,12 @@ Bevor ein eingehendes Board-Event angewendet wird, vergleichen wir dessen Zeitst
 const { BoardStorage } = await import('./storage.js');
 const localBoard = BoardStorage.loadBoard(boardProps.id);
 
+// Zeitstempel immer normalisieren (ISO-String | number | undefined → number)
+import { unixSecondsToMs, unknownTimestampToMs } from './nostr/time.js';
+
 if (localBoard && localBoard.updatedAt) {
-    const localTime = new Date(localBoard.updatedAt).getTime();
-    const eventTime = boardEvent.created_at * 1000;
+    const localTime = unknownTimestampToMs(localBoard.updatedAt);
+    const eventTime = unixSecondsToMs(boardEvent.created_at);
 
     if (eventTime <= localTime) {
         console.log(`⏭️ LWW: Skip older/equal event`);

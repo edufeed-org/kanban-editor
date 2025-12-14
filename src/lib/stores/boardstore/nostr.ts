@@ -10,6 +10,10 @@ import { getSyncManager } from '../syncManager.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
 import { authStore } from '../authStore.svelte.js';
 import { BoardStorage } from './storage.js';
+import { getCurrentPubkeyOrNull, hasCurrentPubkey } from './nostr/auth.js';
+import { loadCommentsFromStorage, saveCommentsToStorage, clearCommentsCache } from './nostr/commentCache.js';
+import { loadProcessedDeletions, saveProcessedDeletions } from './nostr/deletionEventsCache.js';
+import { unixSecondsToMs, unknownTimestampToMs } from './nostr/time.js';
 import type NDK from '@nostr-dev-kit/ndk';
 import { NDKRelaySet } from '@nostr-dev-kit/ndk';
 import { toast } from 'svelte-sonner';
@@ -25,104 +29,8 @@ export class NostrIntegration {
     // ⚡ NEU (v2.0): Deletion-Timestamp-Tracking für Out-of-Order Events
     private cardDeletionTimestamps = new Map<string, number>();
     private boardDeletionTimestamps = new Map<string, number>();
-    
-    // ⚡ OPTIMIZATION (Nov 2025): Persistent Deletion Event Tracking
-    // Stores processed deletion event IDs to prevent re-processing after app restart
-    private static DELETION_EVENTS_STORAGE_KEY = 'nostr-processed-deletions';
+
     private processedDeletionEvents = new Set<string>();
-
-    // 🚀 NEW (Phase 3): IndexedDB Cache für Comments
-    private static COMMENTS_STORAGE_PREFIX = 'nostr-comments-';
-
-    /**
-     * 🚀 Phase 3: Save comments to localStorage cache
-     * Provides instant access to comments without network delay
-     */
-    private saveCommentsToStorage(cardId: string, comments: Comment[]): void {
-        try {
-            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
-            const data = JSON.stringify(comments);
-            localStorage.setItem(key, data);
-            console.debug(`💾 Saved ${comments.length} comment(s) to cache`);
-        } catch (error) {
-            console.warn('[NostrIntegration] ⚠️ Failed to save comments to cache:', error);
-        }
-    }
-
-    /**
-     * 🚀 Phase 3: Load comments from localStorage cache
-     * Returns cached comments instantly, no network delay
-     */
-    private loadCommentsFromStorage(cardId: string): Comment[] {
-        try {
-            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
-            const data = localStorage.getItem(key);
-            
-            if (!data) {
-                return [];
-            }
-            
-            const comments = JSON.parse(data) as Comment[];
-            console.debug(`💿 Loaded ${comments.length} comment(s) from cache`);
-            return comments;
-        } catch (error) {
-            console.warn('[NostrIntegration] ⚠️ Failed to load comments from cache:', error);
-            return [];
-        }
-    }
-
-    /**
-     * 🚀 Phase 3: Clear comments cache for a card
-     */
-    private clearCommentsCache(cardId: string): void {
-        try {
-            const key = `${NostrIntegration.COMMENTS_STORAGE_PREFIX}${cardId}`;
-            localStorage.removeItem(key);
-            console.log(`🗑️ Cleared comment cache for card ${cardId}`);
-        } catch (error) {
-            console.warn('[NostrIntegration] ⚠️ Failed to clear cache:', error);
-        }
-    }
-    
-    /**
-     * ⚡ OPTIMIZATION: Load processed deletion events from localStorage
-     * Prevents re-processing deletion events after app restart
-     */
-    private loadProcessedDeletions(): void {
-        try {
-            const stored = localStorage.getItem(NostrIntegration.DELETION_EVENTS_STORAGE_KEY);
-            if (stored) {
-                const deletions = JSON.parse(stored) as string[];
-                this.processedDeletionEvents = new Set(deletions);
-                console.log(`💿 Loaded ${deletions.length} processed deletion event(s) from cache`);
-            }
-        } catch (error) {
-            console.warn('[NostrIntegration] ⚠️ Failed to load processed deletions:', error);
-            this.processedDeletionEvents = new Set();
-        }
-    }
-    
-    /**
-     * ⚡ OPTIMIZATION: Save processed deletion events to localStorage
-     * Limits to last 1000 events to prevent unbounded growth
-     */
-    private saveProcessedDeletions(): void {
-        try {
-            // Limit to last 1000 deletion events (FIFO)
-            const deletions = Array.from(this.processedDeletionEvents);
-            const limited = deletions.slice(-1000); // Keep only last 1000
-            
-            localStorage.setItem(
-                NostrIntegration.DELETION_EVENTS_STORAGE_KEY,
-                JSON.stringify(limited)
-            );
-            
-            // Update Set with limited data
-            this.processedDeletionEvents = new Set(limited);
-        } catch (error) {
-            console.warn('[NostrIntegration] ⚠️ Failed to save processed deletions:', error);
-        }
-    }
 
     /**
      * Initialisiert Nostr Integration
@@ -130,20 +38,13 @@ export class NostrIntegration {
     public async initialize(ndk: NDK, onBoardLoad?: () => Promise<void>): Promise<void> {
         this.ndk = ndk;
         console.log('[BoardStore] ✅ Nostr initialized - SyncManager ready');
-        
+
         // ⚡ Load processed deletions from localStorage
-        this.loadProcessedDeletions();
+        this.processedDeletionEvents = loadProcessedDeletions();
 
         // Wenn bereits ein User authentifiziert ist, sofort Boards laden
         try {
-            const hasPubkey =
-                typeof authStore?.getPubkeySafe === 'function'
-                    ? !!authStore.getPubkeySafe()
-                    : typeof authStore?.getPubkey === 'function'
-                        ? !!authStore.getPubkey()
-                        : false;
-
-            if (hasPubkey && onBoardLoad) {
+            if (hasCurrentPubkey() && onBoardLoad) {
                 console.log('[BoardStore] 🛰️ User detected on Nostr init - loading boards from Nostr...');
                 await onBoardLoad();
             } else {
@@ -174,10 +75,7 @@ export class NostrIntegration {
             return;
         }
 
-        const pubkey =
-            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
-            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
-            null;
+        const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey) {
             console.log('[BoardStore] ℹ️ No pubkey available, skipping Nostr board loading');
@@ -252,16 +150,14 @@ export class NostrIntegration {
                             
                             // 🔥 FIX: Berücksichtige AUCH lastAccessedAt beim Timestamp-Vergleich!
                             const localTs = existing.lastAccessedAt
-                                ? (typeof existing.lastAccessedAt === 'string' 
-                                    ? new Date(existing.lastAccessedAt).getTime()
-                                    : existing.lastAccessedAt)
+                                ? unknownTimestampToMs(existing.lastAccessedAt)
                                 : existing.updatedAt
-                                    ? new Date(existing.updatedAt).getTime()
+                                    ? unknownTimestampToMs(existing.updatedAt)
                                     : existing.createdAt
-                                        ? new Date(existing.createdAt).getTime()
+                                        ? unknownTimestampToMs(existing.createdAt)
                                         : 0;
                             
-                            const remoteTs = event.created_at ? event.created_at * 1000 : Date.now();
+                            const remoteTs = event.created_at ? unixSecondsToMs(event.created_at) : Date.now();
                             if (localTs && localTs > remoteTs) {
                                 acceptRemote = false;
                             }
@@ -331,9 +227,9 @@ export class NostrIntegration {
                     try {
                         const data = JSON.parse(raw);
                         const ts = data.updatedAt
-                            ? new Date(data.updatedAt).getTime()
+                            ? unknownTimestampToMs(data.updatedAt)
                             : data.createdAt
-                                ? new Date(data.createdAt).getTime()
+                                ? unknownTimestampToMs(data.createdAt)
                                 : 0;
                         return { id, ts, data };
                     } catch {
@@ -419,10 +315,7 @@ export class NostrIntegration {
             return;
         }
 
-        const pubkey =
-            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
-            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
-            null;
+        const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey || !board.author) {
             console.log('[BoardStore] ℹ️ No pubkey or board author, skip loadCardsForBoard');
@@ -510,10 +403,7 @@ export class NostrIntegration {
             return;
         }
 
-        const pubkey =
-            (typeof authStore?.getPubkeySafe === 'function' && authStore.getPubkeySafe()) ||
-            (typeof authStore?.getPubkey === 'function' && authStore.getPubkey()) ||
-            null;
+        const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey) {
             console.log('[BoardStore] ℹ️ No pubkey available, skip board subscription');
@@ -1135,7 +1025,7 @@ export class NostrIntegration {
         
         // ⚡ Track this deletion event persistently
         this.processedDeletionEvents.add(deletionEvent.id);
-        this.saveProcessedDeletions(); // Persist to localStorage
+        this.processedDeletionEvents = saveProcessedDeletions(this.processedDeletionEvents); // Persist to localStorage
         
         try {
             // NIP-09: Parse 'a' tags für replaceable events
@@ -1598,7 +1488,7 @@ export class NostrIntegration {
             const { card } = result;
 
             // 🚀 2. Load from cache FIRST (instant access)
-            const cachedComments = this.loadCommentsFromStorage(cardId);
+            const cachedComments = loadCommentsFromStorage(cardId);
             if (cachedComments.length > 0) {
                 // Silent cache load - only log in debug
                 console.debug(`💿 Using ${cachedComments.length} cached comment(s) for instant display`);
@@ -1623,7 +1513,7 @@ export class NostrIntegration {
             if (!events || events.size === 0) {
                 console.debug('[NostrIntegration] 📭 No remote comments found');
                 // Save current state to cache (might be empty or local-only)
-                this.saveCommentsToStorage(cardId, card.comments || []);
+                saveCommentsToStorage(cardId, card.comments || []);
                 return;
             }
 
@@ -1653,7 +1543,7 @@ export class NostrIntegration {
                 card.comments = merged;
 
                 // 🚀 8. Save to cache for next time
-                this.saveCommentsToStorage(cardId, merged);
+                saveCommentsToStorage(cardId, merged);
 
                 // 9. Persist to localStorage (WITHOUT triggering Nostr publish)
                 BoardStorage.saveBoard(board);
@@ -1661,7 +1551,7 @@ export class NostrIntegration {
                 console.log(`✅ ${remoteComments.length} new comment(s) merged`);
             } else {
                 // ⏭️ No changes - still update cache but DON'T save board
-                this.saveCommentsToStorage(cardId, merged);
+                saveCommentsToStorage(cardId, merged);
             }
         } catch (error) {
             console.error('[NostrIntegration] ❌ Error loading comments:', error);
@@ -1797,7 +1687,7 @@ export class NostrIntegration {
                 BoardStorage.saveBoard(board);
 
                 // 🚀 Save to cache for instant access next time
-                this.saveCommentsToStorage(cardId, merged);
+                saveCommentsToStorage(cardId, merged);
 
                 // Trigger UI update callback
                 if (onUpdate) {
