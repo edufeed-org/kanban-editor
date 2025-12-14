@@ -787,6 +787,77 @@ export class BoardStore {
         return this.board.id;
     }
 
+    /**
+     * Erzwingt ein Neuladen des aktuell aktiven Boards aus Nostr.
+     *
+     * Verhalten:
+     * - Guard: NDK muss initialisiert sein (`ndkReady`), und es muss mindestens ein Relay verbunden sein.
+     * - Löscht optional den lokalen Cache-Eintrag (`kanban-{boardId}`), damit kein stale localStorage-Stand geladen wird.
+     * - Lädt anschließend Boards/Board erneut aus Nostr.
+     *
+     * Hinweis: Diese Methode ist bewusst Store-zentriert (kein localStorage-Hack in der UI).
+     */
+    public async forceReloadCurrentBoardFromNostr(options?: {
+        clearLocalCache?: boolean;
+        syncManager?: { lastConnectedCount: number };
+    }): Promise<void> {
+        if (!this.ndkReady) {
+            throw new Error('Nostr ist noch nicht initialisiert');
+        }
+
+        const boardId = this.board.id;
+        const clearLocalCache = options?.clearLocalCache ?? true;
+
+        // Guard: NostrIntegration muss NDK haben
+        if (!this.nostrIntegration?.getNDK()) {
+            throw new Error('NDK ist nicht verfügbar');
+        }
+
+        // Guard: Mindestens ein Relay verbunden
+        let connectedRelays = 0;
+        try {
+            if (options?.syncManager) {
+                connectedRelays = options.syncManager.lastConnectedCount;
+            } else {
+                const mod = await import('./syncManager.svelte.js');
+                const sm = mod.getSyncManager();
+                connectedRelays = sm.lastConnectedCount;
+            }
+        } catch {
+            // Wenn SyncManager nicht ready ist, behandeln wir das wie "offline"
+            connectedRelays = 0;
+        }
+
+        if (connectedRelays <= 0) {
+            throw new Error('Keine Relay-Verbindung verfügbar');
+        }
+
+        const storageKey = `kanban-${boardId}`;
+        const backupJson = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+
+        if (clearLocalCache && typeof window !== 'undefined') {
+            BoardStorage.deleteBoard(boardId);
+        }
+
+        try {
+            // Boards/Board aus Nostr (re-)laden
+            await this.loadBoardsFromNostr();
+
+            // Sicherstellen, dass das aktuelle Board erneut geladen wird
+            const ok = this.loadBoard(boardId, { skipLastAccessed: true });
+            if (!ok) {
+                throw new Error('Board konnte nicht aus Nostr geladen werden');
+            }
+        } catch (error) {
+            // Fallback: lokalen Cache wiederherstellen, um Datenverlust zu vermeiden
+            if (backupJson && typeof window !== 'undefined') {
+                localStorage.setItem(storageKey, backupJson);
+                this.loadBoard(boardId, { skipLastAccessed: true });
+            }
+            throw error;
+        }
+    }
+
     public findColumn(columnId: string) {
         return this.board.findColumn(columnId);
     }
