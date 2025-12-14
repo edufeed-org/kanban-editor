@@ -90,6 +90,12 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 - Session-Restore startet jetzt deterministisch Owned-Board Load + Live-Subscriptions (verhindert einmaliges Skippen, wenn Pubkey beim Initialisieren noch fehlt).
 - Dateien: `src/lib/stores/boardstore/nostr.ts`, `src/lib/stores/authStore.svelte.ts`
 
+### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
+- Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
+- `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.
+- Board startet Background-Subscriptions für alle Karten (Kommentare syncen auch ohne geöffneten Dialog).
+- Dateien: `src/lib/stores/boardstore/nostr/comments.ts`, `src/lib/stores/boardstore/nostr/publish.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/+page.svelte`
+
 ### 🧪 Test-Hinweise (manuell)
 1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
 2. Editor hat BoardsList offen → Board taucht automatisch auf

@@ -1500,6 +1500,39 @@ export class BoardStore {
     }
 
     /**
+     * Subscribes to live comment updates for ALL cards in the current board.
+     *
+     * This matches the common expectation that comments sync in the background,
+     * not only when a card dialog is opened.
+     *
+     * Returns a cleanup function that stops all per-card subscriptions created by this call.
+     */
+    public subscribeToAllComments(): () => void {
+        const board = this.board;
+        if (!board) {
+            console.warn('[BoardStore] subscribeToAllComments: No board loaded');
+            return () => {};
+        }
+
+        const unsubscribers: Array<() => void> = [];
+        for (const column of board.columns || []) {
+            for (const card of column.cards || []) {
+                unsubscribers.push(this.subscribeToComments(card.id));
+            }
+        }
+
+        return () => {
+            for (const unsub of unsubscribers) {
+                try {
+                    unsub();
+                } catch {
+                    // ignore
+                }
+            }
+        };
+    }
+
+    /**
      * 🚀 Phase 4B: Load comments for ALL cards in the current board
      * 
      * Batch-loads comments from Nostr relays for all cards in parallel.

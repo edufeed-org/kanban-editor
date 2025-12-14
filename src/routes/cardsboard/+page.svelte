@@ -134,6 +134,21 @@ import { toast } from "svelte-sonner";
 	// Damit Svelte erkennt, dass sich der Titel geändert hat
 	let boardTitle = $derived(boardStore.getCurrentBoardMeta().name);
 
+	// Background subscriptions for comment live updates across the whole board
+	let unsubscribeAllComments: (() => void) | null = null;
+	$effect(() => {
+		const boardId = currentBoardId;
+		if (!boardId) return;
+
+		unsubscribeAllComments?.();
+		unsubscribeAllComments = boardStore.subscribeToAllComments();
+
+		return () => {
+			unsubscribeAllComments?.();
+			unsubscribeAllComments = null;
+		};
+	});
+
 	// Debounce-State für Toast-Benachrichtigungen
 	let lastToastTime = 0;
 	const TOAST_DEBOUNCE_MS = 1000; // 1 Sekunde

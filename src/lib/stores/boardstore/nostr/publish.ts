@@ -15,6 +15,7 @@ import {
 	createDeletionEvent
 } from '$lib/utils/nostrEvents.js';
 import { getTargetRelays } from '$lib/utils/relaySelection.js';
+import { buildCardRef } from './comments.js';
 
 export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<string | null> {
 	if (!ndk) return null;
@@ -179,8 +180,9 @@ export async function publishComment(
 		// Set status to 'syncing' before publishing
 		comment.syncStatus = 'syncing';
 
-		const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
-		const event = createCommentEvent(comment.text, cardRef, card.id || '', ndk);
+		const cardRef = buildCardRef(board, cardId, card.author);
+		// IMPORTANT: `e`-tag should reference the actual Nostr event id of the card (not the d-tag)
+		const event = createCommentEvent(comment.text, cardRef, card.eventId || '', ndk);
 		const publishState = card.publishState || 'draft';
 		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
 			| 'published'

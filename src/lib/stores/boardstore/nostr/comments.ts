@@ -81,6 +81,17 @@ export function stopAllCommentSubscriptions(commentSubscriptions: Map<string, ND
 }
 
 /**
+	* Builds the addressable card reference used for Kind 1 comment filtering.
+	*
+	* IMPORTANT: The exact string must match between publisher and subscriber.
+	* Format: "30302:<card-author-pubkey>:<card-d-tag>"
+	*/
+export function buildCardRef(board: Board, cardId: string, cardAuthor?: string): string {
+	const author = cardAuthor || board.author || 'unknown';
+	return `30302:${author}:${cardId}`;
+}
+
+/**
  * Loads comments for a specific card from Nostr relays and merges with cached/local comments.
  *
  * Retry behavior is preserved: if the card is not yet present in the board,
@@ -126,7 +137,7 @@ export async function loadComments(
 		}
 
 		// 3. Build card reference for Nostr filter
-		const cardRef = `30302:${card.author || board.author || 'unknown'}:${cardId}`;
+		const cardRef = buildCardRef(board, cardId, card.author);
 
 		console.debug(`[NostrIntegration] 📥 Loading comments for: ${card.heading}`);
 
@@ -252,8 +263,7 @@ export function subscribeToComments(
 	const { card } = result;
 
 	// 4. Build card reference für #a tag filter
-	const cardAuthor = card.author || board.author || 'unknown';
-	const cardRef = `30302:${cardAuthor}:${cardId}`;
+	const cardRef = buildCardRef(board, cardId, card.author);
 
 	console.debug(`[NostrIntegration] 📡 Subscribing to comments for: ${cardId.substring(5, 12)}...`);
 

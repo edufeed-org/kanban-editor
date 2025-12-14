@@ -1,7 +1,8 @@
 # 🎉 Kommentar-System: Feature Documentation
 
-**Status:** ✅ **PHASE A+B PRODUKTIV-READY**  
+**Status:** ✅ **PHASE A+B PRODUKTIV-READY** (inkl. Live-Sync)  
 **Datum:** 22. Oktober 2025  
+**Letztes Update:** 14. Dezember 2025 (Nostr Live-Subscription Fix)  
 **Branch:** `feature/comments`  
 **Meilenstein:** 1.3 (ROADMAP.md)
 
@@ -14,7 +15,7 @@
 | **Phase A** | ✅ DONE | UI-Formular mit Kommentar-Input |
 | **Phase B** | ✅ DONE | Bug-Fix: triggerUpdate() Integration |
 | **Phase C** | ⏳ PLANNED | AuthStore Integration (ersetze 'anonymous') |
-| **Phase D** | ⏳ PLANNED | Nostr Kind 1 Events Publishing |
+| **Phase D** | ✅ DONE | Nostr Kind 1 Events Publishing + Live-Subscriptions (Filter `#a`) |
 | **Phase E** | ⏳ PLANNED | Offline-First Sync (IndexedDB Queue) |
 | **Build** | ✅ OK | pnpm run check: 0 errors, 0 warnings |
 | **Compliance** | ✅ OK | 15/15 copilot-instructions Regeln erfüllt |
@@ -121,6 +122,27 @@ public deleteComment(cardId: string, commentId: string): void {
         this.triggerUpdate(); // ✅ WICHTIG!
     }
 }
+
+---
+
+## 🔄 Live-Updates (Nostr) ✅
+
+**Ziel:** Kommentare sollen auch dann in Echtzeit ankommen, wenn kein Card-Dialog geöffnet ist.
+
+### Board-weite Subscription
+
+- Die Board-Page startet eine Background-Subscription über alle Karten:
+  - Store-API: `boardStore.subscribeToAllComments()`
+  - Einstiegspunkt: `src/routes/cardsboard/+page.svelte`
+- Zusätzlich bleibt das per-Card Verhalten erhalten (CardViewDialog lädt + subscribed beim Öffnen).
+
+### Filter- und Tag-Schema
+
+- Kommentare sind **Kind 1** Events.
+- Live-Subscribe und Load nutzen den gleichen `#a` Filter-Wert (Card-Koordinate):
+  - Format: `30302:<card-author-pubkey>:<card-d-tag>`
+  - Wichtig: Publisher und Subscriber müssen exakt denselben String verwenden.
+- Beim Publish wird – falls vorhanden – der `e`-Tag auf die echte Card-Event-ID gesetzt (`card.eventId`), nicht auf das `d`-Tag.
 ```
 
 #### Reaktivitätskette jetzt korrekt:
