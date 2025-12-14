@@ -72,32 +72,25 @@ Die Code-Beispiele unten zeigen teils vereinfachte Logik. In der realen Implemen
 
 **Symptom:** Ein Nutzer öffnet ein Board in Browser A, das im `localStorage` veraltet ist. In Browser B wird eine Änderung vorgenommen (z.B. Spalte hinzufügen). Browser A publiziert beim Öffnen seinen alten Zustand und überschreibt damit die neuere Änderung von Browser B.
 
-**Lösung: Last-Write-Wins (LWW) Check in `handleBoardEvent`**
+**Lösung: Last-Write-Wins (LWW) Check im Board-Event-Handler**
 
 Bevor ein eingehendes Board-Event angewendet wird, vergleichen wir dessen Zeitstempel mit dem `updatedAt`-Zeitstempel des Boards im lokalen Speicher.
 
-**Datei:** `src/lib/stores/boardstore/nostr.ts`
+**Datei:** `src/lib/stores/boardstore/nostr/handlers/board.ts`
 
 ```typescript
-// in handleBoardEvent(...)
-const { BoardStorage } = await import('./storage.js');
+import { BoardStorage } from '../../storage.js';
+import { unixSecondsToMs, unknownTimestampToMs } from '../time.js';
+
+// ... in handleBoardEvent(...)
 const localBoard = BoardStorage.loadBoard(boardProps.id);
-
-// Zeitstempel immer normalisieren (ISO-String | number | undefined → number)
-import { unixSecondsToMs, unknownTimestampToMs } from './nostr/time.js';
-
-if (localBoard && localBoard.updatedAt) {
+if (localBoard?.updatedAt) {
     const localTime = unknownTimestampToMs(localBoard.updatedAt);
     const eventTime = unixSecondsToMs(boardEvent.created_at);
-
-    if (eventTime <= localTime) {
-        console.log(`⏭️ LWW: Skip older/equal event`);
-        return; // Überschreibe neuere lokale Daten nicht mit altem Event
-    }
+    if (eventTime <= localTime) return; // stale/equal: skip
 }
 
-// Nur wenn das Event neuer ist, wird es angewendet
-boardStore.upsertBoardFromNostr(boardProps);
+boardStore.upsertBoardFromNostr(boardProps); // nur wenn Event neuer ist
 ```
 
 **Damit dies funktioniert, müssen Timestamps korrekt durchgereicht werden:**
@@ -141,35 +134,25 @@ boardStore.upsertBoardFromNostr(boardProps);
 
 **Symptom:** Beim Verschieben einer Spalte springt diese kurz an die alte Position zurück und dann erst an die neue. Dies passiert, weil der Client sein eigenes publiziertes Event als fremdes Update interpretiert.
 
-**Lösung: Tracking eigener publizierter Events**
+**Lösung: Echo-Prevention via `SyncManager` (Tracking eigener publizierter Events)**
 
-Wir führen ein Set, das die IDs der selbst publizierten Events für eine kurze Zeit speichert. Eingehende Events, deren ID in diesem Set ist, werden als Echo erkannt und ignoriert.
+Wir tracken Event-IDs **direkt nach dem Signieren** im `SyncManager`. Eingehende Events, deren ID im Tracking-Set ist, werden in den Event-Handlern als Echo erkannt und ignoriert.
 
-**Datei:** `src/lib/stores/boardstore/nostr.ts`
+**Dateien:**
+- `src/lib/stores/syncManager.svelte.ts` (Tracking eigener Events)
+- `src/lib/stores/boardstore/nostr/handlers/board.ts` / `card.ts` (Echo-Skip beim Empfangen)
 
 ```typescript
-// Echo-Präventions-Logik
-export class NostrIntegration {
-    // ...
-    private myPublishedEvents = new Set<string>();
-
-    private isMyEvent(eventId: string): boolean {
-        return this.myPublishedEvents.has(eventId);
-    }
-
-    public addMyEvent(eventId: string): void {
-        this.myPublishedEvents.add(eventId);
-        // Event nach einer Verzögerung aus dem Set entfernen, um Speicherlecks zu vermeiden
-        setTimeout(() => {
-            this.myPublishedEvents.delete(eventId);
-        }, 5000); // 5 Sekunden Fenster
-    }
+// syncManager.svelte.ts (nach Signierung)
+if (event.id) {
+    this.myPublishedEvents.add(event.id);
 }
 
-// In handleBoardEvent(...)
-if (nostr.isMyEvent(boardEvent.id)) {
-    console.log('⏩ Echo-Event erkannt, wird ignoriert:', boardEvent.id);
-    return;
+// handlers/board.ts (analog auch in handlers/card.ts)
+const syncManager = getSyncManager();
+if (syncManager.isMyEvent(boardEvent.id)) {
+    setTimeout(() => syncManager.clearMyEvent(boardEvent.id), 5000);
+    return; // Echo-Event: skip
 }
 ```
 
