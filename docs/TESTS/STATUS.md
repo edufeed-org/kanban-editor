@@ -1,6 +1,6 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 14.12.2025 (Shared-Board Sync Fix ✅ + deterministische Card-LWW via `ts`)
+**Letzte Aktualisierung:** 14.12.2025 (Kommentar-Live-Sync: reaktives Update + Dedup gegen `each_key_duplicate` ✅)
 **Status:** 🟢 Vollständig funktional (Vitest: 445 ✅ | 3 ⏭️ = 448 Tests)
 
 ## 🎯 Test-Übersicht
@@ -11,7 +11,7 @@
 | **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run` → `Test Files 27 passed (27)`, `Tests 445 passed | 3 skipped (448)`
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr.mergeComments.spec.ts src/lib/stores/boardstore/nostr.subscribeToComments.spec.ts` → `Test Files 2 passed (2)`, `Tests 21 passed (21)`
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 

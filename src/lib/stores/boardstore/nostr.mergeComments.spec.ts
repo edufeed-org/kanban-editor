@@ -258,13 +258,11 @@ describe('mergeComments()', () => {
 
         const merged = mergeComments(local, remote);
 
-        // Should have 2 comments (local version + remote with eventId)
-        // In real implementation, we'd need to reconcile by ID, not just eventId
-        expect(merged).toHaveLength(2);
-        
-        // NOTE: This test shows limitation of current implementation
-        // For full production, we'd need to also deduplicate by comment.id
-        // when eventId is missing on one side
+        // The local pending comment is reconciled and upgraded to synced.
+        expect(merged).toHaveLength(1);
+        expect(merged[0].id).toBe('comment-123');
+        expect(merged[0].eventId).toBe('event-new-123');
+        expect(merged[0].syncStatus).toBe('synced');
     });
 
     it('should deduplicate pending local comment by text+timestamp proximity', () => {

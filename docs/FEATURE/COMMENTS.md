@@ -123,6 +123,8 @@ public deleteComment(cardId: string, commentId: string): void {
     }
 }
 
+```
+
 ---
 
 ## 🔄 Live-Updates (Nostr) ✅
@@ -135,6 +137,8 @@ public deleteComment(cardId: string, commentId: string): void {
   - Store-API: `boardStore.subscribeToAllComments()`
   - Einstiegspunkt: `src/routes/cardsboard/+page.svelte`
 - Zusätzlich bleibt das per-Card Verhalten erhalten (CardViewDialog lädt + subscribed beim Öffnen).
+  - Intern wird pro Karte nur **eine** NDK-Subscription gehalten.
+  - Mehrere Konsumenten (Background + Dialog) werden über Ref-Counting + Callback-Multiplexing unterstützt.
 
 ### Filter- und Tag-Schema
 
@@ -143,7 +147,7 @@ public deleteComment(cardId: string, commentId: string): void {
   - Format: `30302:<card-author-pubkey>:<card-d-tag>`
   - Wichtig: Publisher und Subscriber müssen exakt denselben String verwenden.
 - Beim Publish wird – falls vorhanden – der `e`-Tag auf die echte Card-Event-ID gesetzt (`card.eventId`), nicht auf das `d`-Tag.
-```
+
 
 #### Reaktivitätskette jetzt korrekt:
 
@@ -404,30 +408,31 @@ const author = authStore.currentUser?.pubkey || 'anonymous';
 
 ---
 
-### Phase D: Nostr Events ⏳
+### Phase D: Nostr Events ✅
 
 **Ziel:** Kommentare als Kind 1 Events publizieren  
 **Geschätzter Aufwand:** 2-3 Stunden  
 **Abhängig von:** NDK.md, Kanban-NIP.md
 
 ```typescript
-// In src/lib/utils/nostrEvents.ts (noch zu erstellen)
+// In src/lib/utils/nostrEvents.ts
 
 export function createCommentEvent(
-    text: string,
-    cardRef: string,        // "30302:pubkey:card-id"
-    cardEventId: string,    // Event-ID der Card
-    ndk: NDK
+  text: string,
+  cardRef: string,        // "30302:pubkey:card-id" (addressable ref)
+  cardEventId: string,    // Event-ID der Card (optional)
+  ndk: NDK
 ): NDKEvent {
-    const event = new NDKEvent(ndk);
-    event.kind = 1;         // Text Note
-    event.content = text;
-    event.tags = [
-        ["a", cardRef, ""],           // a-tag zu Card-Event
-        ["p", cardAuthor],            // Mention des Card-Autors
-        ["e", cardEventId, "", "reply"] // Reply zu Card-Event
-    ];
-    return event;
+  const event = new NDKEvent(ndk);
+  event.kind = 1;         // Text Note
+  event.content = text;
+  event.tags = [
+    ["a", cardRef, ""],             // Filter-Anchor für Subscriber (#a)
+    ["p", "<card-author-pubkey>"],  // Mention des Card-Autors (aus cardRef abgeleitet)
+    // optional, wenn cardEventId bekannt:
+    ["e", cardEventId, "", "reply"]
+  ];
+  return event;
 }
 ```
 
@@ -439,6 +444,8 @@ Tags:
 - ["e", "event-id", "", "reply"] → Reply-Marker
 - ["p", "author-pubkey"]       → Mention des Autors
 ```
+
+**Status:** Implementiert inkl. Live-Subscriptions (Board-weit) via `#a`.
 
 ---
 
@@ -575,16 +582,16 @@ Performance:
 
 **ROADMAP.md Meilenstein 1.3: Kommentar-System Grundlagen**
 
-- ✅ Kommentare werden als Nostr Kind 1 Events gespeichert (lokal: Phase A+B ✅, Nostr: Phase D ⏳)
+- ✅ Kommentare werden als Nostr Kind 1 Events gespeichert (lokal: Phase A+B ✅, Nostr: Phase D ✅)
 - ✅ Card-Klasse erweitert mit Comment-Methoden (BoardModel.ts)
 - ✅ BoardStore erweitert mit addComment() + deleteComment()
 - ✅ Tests durchgeführt und bestanden
 - ✅ UI-Formular implementiert und funktionsfähig
 - ✅ localStorage Persistierung aktiv
-- ⏳ Kommentar-Events publizieren (Phase D)
-- ⏳ Live-Updates abonnieren (Phase D)
+- ✅ Kommentar-Events publizieren (Phase D)
+- ✅ Live-Updates abonnieren (Phase D)
 
 ---
 
-**Zuletzt aktualisiert:** 22. Oktober 2025  
-**Status:** ✅ PHASE A+B PRODUCTION-READY, Phase C-E PLANNED
+**Zuletzt aktualisiert:** 14. Dezember 2025  
+**Status:** ✅ Phase A+B+D PRODUKTIV-READY, Phase C+E PLANNED

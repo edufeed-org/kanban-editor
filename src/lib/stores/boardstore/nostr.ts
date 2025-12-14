@@ -15,6 +15,7 @@ import { loadProcessedDeletions, saveProcessedDeletions } from './nostr/deletion
 import { unixSecondsToMs, unknownTimestampToMs } from './nostr/time.js';
 import {
     loadComments as loadCommentsImpl,
+    buildCardRef,
     stopAllCommentSubscriptions as stopAllCommentSubscriptionsImpl,
     subscribeToComments as subscribeToCommentsImpl
 } from './nostr/comments.js';
@@ -592,8 +593,11 @@ export class NostrIntegration {
             // Set status to 'syncing' before publishing
             comment.syncStatus = 'syncing';
 
-            const cardRef = `30302:${card.author || 'unknown'}:${cardId}`;
-            const event = createCommentEvent(comment.text, cardRef, card.id || '', this.ndk);
+            // IMPORTANT: publisher and subscriber must use the exact same cardRef string.
+            const cardRef = buildCardRef(board, cardId, card.author);
+
+            // IMPORTANT: `e`-tag must reference the actual Nostr event id of the card (not the d-tag)
+            const event = createCommentEvent(comment.text, cardRef, card.eventId || '', this.ndk);
             const publishState = card.publishState || 'draft';
             const normalizedState = (publishState === 'archived' ? 'private' : publishState) as 'published' | 'draft' | 'private';
             

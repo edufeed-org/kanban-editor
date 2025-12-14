@@ -93,8 +93,12 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 ### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
 - Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
 - `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.
+- Kommentar-Events enthalten jetzt zusätzlich einen `p`-Tag (Card-Autor), aus dem `cardRef` abgeleitet.
+- Subscriber-Boards aktualisieren Kommentare jetzt sofort reaktiv (kein Reload/Drag nötig) – eingehende Events werden immer auf die aktuelle Card-Instanz im Board gemerged.
+- Dedupe/Reconcile verhindert doppelte Kommentare nach Reload und behebt den Svelte-Fehler `each_key_duplicate` (duplicate keyed-IDs im `{#each}`).
 - Board startet Background-Subscriptions für alle Karten (Kommentare syncen auch ohne geöffneten Dialog).
-- Dateien: `src/lib/stores/boardstore/nostr/comments.ts`, `src/lib/stores/boardstore/nostr/publish.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/+page.svelte`
+- Mehrere Konsumenten (Background + Dialog) teilen sich pro Karte eine Subscription (Ref-Counting) — Dialog stoppt Background nicht mehr.
+- Dateien: `src/lib/stores/boardstore/nostr/comments.ts`, `src/lib/stores/boardstore/nostr/publish.ts`, `src/lib/stores/boardstore/nostr.mergeComments.spec.ts`, `src/lib/stores/boardstore/nostr.subscribeToComments.spec.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/+page.svelte`
 
 ### 🧪 Test-Hinweise (manuell)
 1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu

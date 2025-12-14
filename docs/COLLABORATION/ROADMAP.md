@@ -835,7 +835,7 @@ JANUAR 2026
 ### Meilenstein 1.3: Kommentar-System Grundlagen (Priorität: Hoch)
 
 **Ziel:** Kommentare werden als Nostr Kind 1 Events gespeichert  
-**Status:** ✅ PHASE A+B DONE | ⏳ Phase C-E PLANNED
+**Status:** ✅ PHASE A+B DONE | ✅ Phase D DONE | ⏳ Phase C+E PLANNED
 
 #### Phase A+B: Implementiert ✅
 
@@ -878,12 +878,13 @@ JANUAR 2026
   - [ ] Session-Management mit TTL
   - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** [`STORES/AUTHSTORE.md`](../ARCHITECTURE/STORES/AUTHSTORE.md), [`AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md)
 
-- [ ] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
-  - [ ] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
-  - [ ] Event-Tags: `a` (board-ref), `e` (card-event), `p` (author)
-  - [ ] Integration in `boardStore.publishToNostr()`
-  - [ ] Comment-Deletion mit NIP-09 Kind 5 Events
-  - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** NDK.md, Kanban-NIP.md
+- [x] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
+  - [x] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
+  - [x] Event-Tags: `a` (CardRef), `e` (Reply auf Card Event-ID), `p` (Mention Card-Autor)
+  - [x] Publishing via SyncManager (publishOrQueue)
+  - [x] Comment-Deletion via NIP-09 Kind 5 Events (für synced comments)
+  - [x] Live-Updates: Subscriptions über `#a` (Board-weit möglich)
+  **Dokumentation:** NDK.md, Kanban-NIP.md
 
 - [ ] **Phase E: Offline-First Sync** (Priorität: Mittel)
   - [ ] `syncManager.svelte.ts` mit IndexedDB Queue (Dexie)
@@ -901,11 +902,11 @@ JANUAR 2026
 - ✅ Keine TypeScript-Fehler
 - ✅ Kommentare werden mit Author & Timestamp gespeichert
 
-**Acceptance Criteria (Phase D - ausstehend):**
-- ⏳ Kommentare werden als Kind 1 Events publiziert
-- ⏳ Kommentare haben korrekte Tags (`a`, `p`, `e`)
-- ⏳ Kommentar-Löschung erzeugt Kind 5 Event
-- ⏳ Neue Kommentare erscheinen in Echtzeit über Relays
+**Acceptance Criteria (Phase D - ERFÜLLT):**
+- ✅ Kommentare werden als Kind 1 Events publiziert
+- ✅ Kommentare haben korrekte Tags (`a`, `p`, `e`)
+- ✅ Kommentar-Löschung erzeugt Kind 5 Event
+- ✅ Neue Kommentare erscheinen in Echtzeit über Relays
 
 ---
 

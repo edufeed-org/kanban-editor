@@ -460,8 +460,18 @@ export function createCommentEvent(
   event.kind = EVENT_KINDS.COMMENT;
 
   const tags: string[][] = [
-    ['a', cardRef], // Reference to replaceable card event
+    // Reference to replaceable card event
+    // NOTE: The 3rd element is optional and ignored by #a filtering.
+    ['a', cardRef, ''],
   ];
+
+  // Add p-tag (mention the card author) for compatibility with common clients.
+  // We derive the author from the addressable reference: "30302:<author>:<d-tag>".
+  const parts = cardRef.split(':');
+  const cardAuthor = parts.length >= 3 ? parts[1] : '';
+  if (cardAuthor && cardAuthor !== 'unknown') {
+    tags.push(['p', cardAuthor]);
+  }
 
   // If we have the event ID, add reply reference
   if (cardEventId) {

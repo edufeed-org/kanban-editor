@@ -12,6 +12,13 @@ type NDKSubscriptionLike = {
 	on?: (event: string, cb: (event: any) => void) => void;
 };
 
+type CommentSubscriptionEntry = {
+	sub: NDKSubscriptionLike;
+	refCount: number;
+	cardRef: string;
+	callbacks: Set<() => void>;
+};
+
 /**
  * Merges local comments with remote comments from Nostr.
  * - Deduplicates by eventId.
@@ -19,15 +26,42 @@ type NDKSubscriptionLike = {
  * - Also deduplicates pending local comments via text + timestamp proximity.
  */
 export function mergeComments(localComments: Comment[], remoteComments: Comment[]): Comment[] {
+    // Defensive copies (avoid accidental external mutation)
+    const locals = [...(localComments || [])];
+
 	// Step 1: Create Set of eventIds from local comments (for synced comments)
 	const localEventIds = new Set<string>(
-		localComments
+		locals
 			.filter(c => c.eventId)
 			.map(c => c.eventId!)
 	);
 
+	// Step 1b: Index locals by id for reconcile (local pending -> remote synced)
+	const localById = new Map<string, Comment>();
+	for (const c of locals) {
+		if (c?.id) localById.set(c.id, c);
+	}
+
 	// Step 2: Filter remote comments to exclude duplicates
-	const newRemoteComments = remoteComments.filter(remote => {
+	const newRemoteComments = (remoteComments || []).filter(remote => {
+		// 2a. Reconcile by comment.id: local pending comment becomes synced when remote arrives
+		const localSameId = remote?.id ? localById.get(remote.id) : undefined;
+		if (localSameId) {
+			// If local doesn't have eventId yet but remote does -> upgrade local comment
+			if (!localSameId.eventId && remote.eventId) {
+				localSameId.eventId = remote.eventId;
+				localSameId.syncStatus = 'synced' as const;
+				// Keep local text unless it's empty
+				if (!localSameId.text && remote.text) localSameId.text = remote.text;
+				// Keep local author unless it's empty
+				if (!localSameId.author && remote.author) localSameId.author = remote.author;
+				// Keep earliest createdAt (defensive)
+				if (!localSameId.createdAt && remote.createdAt) localSameId.createdAt = remote.createdAt;
+			}
+			// Remote is not added because it's the same logical comment
+			return false;
+		}
+
 		// 2a. Skip if eventId already exists in local comments
 		if (remote.eventId && localEventIds.has(remote.eventId)) {
 			return false;
@@ -36,7 +70,7 @@ export function mergeComments(localComments: Comment[], remoteComments: Comment[
 		// 2b. Also check for text+timestamp duplicates (for pending local comments)
 		// This handles the case where local comment was sent but hasn't received eventId yet.
 		// If text matches AND timestamp is within 5 seconds → it's the same comment.
-		const isDuplicate = localComments.some(local => {
+		const isDuplicate = locals.some(local => {
 			// Skip if local already has eventId (already synced)
 			if (local.eventId) return false;
 
@@ -55,7 +89,7 @@ export function mergeComments(localComments: Comment[], remoteComments: Comment[
 	});
 
 	// Step 3: Merge local + new remote comments
-	const merged = [...localComments, ...newRemoteComments];
+	const merged = [...locals, ...newRemoteComments];
 
 	// Step 4: Sort chronologically by createdAt (oldest first)
 	merged.sort((a, b) => {
@@ -64,11 +98,25 @@ export function mergeComments(localComments: Comment[], remoteComments: Comment[
 		return dateA - dateB;
 	});
 
-	return merged;
+	// Step 5: Final dedupe pass (prevents each_key_duplicate / duplicates from earlier bugs)
+	const seen = new Set<string>();
+	const deduped: Comment[] = [];
+	for (const c of merged) {
+		if (!c) continue;
+		const key = c.eventId ? `event:${c.eventId}` : `id:${c.id}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		deduped.push(c);
+	}
+
+	return deduped;
 }
 
-export function stopAllCommentSubscriptions(commentSubscriptions: Map<string, NDKSubscriptionLike>): void {
-	for (const [cardId, sub] of commentSubscriptions.entries()) {
+export function stopAllCommentSubscriptions(commentSubscriptions: Map<string, CommentSubscriptionEntry | NDKSubscriptionLike>): void {
+	for (const [cardId, entry] of commentSubscriptions.entries()) {
+		const sub: NDKSubscriptionLike | undefined =
+			(entry as CommentSubscriptionEntry)?.sub ?? (entry as NDKSubscriptionLike);
+
 		if (sub && typeof sub.stop === 'function') {
 			try {
 				sub.stop();
@@ -207,7 +255,7 @@ export async function loadComments(
 export function subscribeToComments(
 	ndk: NDK | undefined,
 	processedEvents: Set<string>,
-	commentSubscriptions: Map<string, NDKSubscriptionLike>,
+	commentSubscriptions: Map<string, CommentSubscriptionEntry | NDKSubscriptionLike>,
 	board: Board,
 	cardId: string,
 	onUpdate?: () => void,
@@ -267,18 +315,43 @@ export function subscribeToComments(
 
 	console.debug(`[NostrIntegration] 📡 Subscribing to comments for: ${cardId.substring(5, 12)}...`);
 
-	// 5. Cleanup existing subscription für diese Card (falls vorhanden)
-	const existingSub = commentSubscriptions.get(cardId);
-	if (existingSub && typeof existingSub.stop === 'function') {
-		try {
-			existingSub.stop();
-			console.debug(`[NostrIntegration] 🛑 Stopped duplicate subscription for ${cardId.substring(5, 12)}...`);
-		} catch (err) {
-			console.error('[NostrIntegration] Error stopping existing subscription:', err);
+	// 5. Reuse existing subscription if possible (supports multiple consumers)
+	const existingEntry = commentSubscriptions.get(cardId) as CommentSubscriptionEntry | undefined;
+	if (existingEntry?.sub && existingEntry.cardRef === cardRef) {
+		existingEntry.refCount++;
+		if (onUpdate) {
+			existingEntry.callbacks.add(onUpdate);
 		}
+
+		return () => {
+			if (onUpdate) {
+				existingEntry.callbacks.delete(onUpdate);
+			}
+
+			existingEntry.refCount = Math.max(0, existingEntry.refCount - 1);
+			if (existingEntry.refCount === 0) {
+				try {
+					existingEntry.sub.stop?.();
+				} catch (err) {
+					console.error('[NostrIntegration] Error stopping comment subscription:', err);
+				}
+				commentSubscriptions.delete(cardId);
+				console.log(`[NostrIntegration] 🛑 Comment subscription stopped for card ${cardId}`);
+			}
+		};
 	}
 
-	// 6. Create NDK subscription für Kind 1 events mit #a tag filter
+	// 6. If cardRef changed, stop stale subscription before re-creating
+	if (existingEntry?.sub && existingEntry.cardRef !== cardRef) {
+		try {
+			existingEntry.sub.stop?.();
+		} catch {
+			// ignore
+		}
+		commentSubscriptions.delete(cardId);
+	}
+
+	// 7. Create NDK subscription für Kind 1 events mit #a tag filter
 	const sub = ndk.subscribe(
 		{
 			kinds: [1],
@@ -295,8 +368,18 @@ export function subscribeToComments(
 
 			processedEvents.add(event.id);
 
+			// Always re-resolve the card from the CURRENT board state.
+			// (The board/card references can change after Nostr upserts or reloads.)
+			const currentResult = board.findCardAndColumn(cardId);
+			if (!currentResult) return;
+			const currentCard = currentResult.card;
+
+			// Hard-dedupe: don't insert the same remote event twice
+			const existing = (currentCard.comments || []).some(c => c?.eventId === event.id);
+			if (existing) return;
+
 			const newComment: Comment = {
-				id: generateDTag(),
+				id: generateDTag('comment'),
 				eventId: event.id!,
 				text: event.content,
 				author: event.pubkey,
@@ -306,23 +389,40 @@ export function subscribeToComments(
 				syncStatus: 'synced' as const
 			};
 
-			const currentComments = card.comments || [];
+			const currentComments = currentCard.comments || [];
 			const merged = mergeComments(currentComments, [newComment]);
-			card.comments = merged;
+			currentCard.comments = merged;
 
 			BoardStorage.saveBoard(board);
 			saveCommentsToStorage(cardId, merged);
 
-			if (onUpdate) {
-				onUpdate();
+			const currentEntry = commentSubscriptions.get(cardId) as CommentSubscriptionEntry | undefined;
+			if (currentEntry) {
+				for (const cb of currentEntry.callbacks) {
+					try {
+						cb();
+					} catch (err) {
+						console.error('[NostrIntegration] Error in onUpdate callback:', err);
+					}
+				}
 			}
 		} catch (error) {
 			console.error('[NostrIntegration] ❌ Error processing comment event:', error);
 		}
 	});
 
-	// 7. Store subscription in Map für späteren Cleanup
-	commentSubscriptions.set(cardId, sub);
+	// 8. Store subscription entry in Map for later reuse/cleanup
+	const callbacks = new Set<() => void>();
+	if (onUpdate) {
+		callbacks.add(onUpdate);
+	}
+	const entry: CommentSubscriptionEntry = {
+		sub,
+		refCount: 1,
+		cardRef,
+		callbacks
+	};
+	commentSubscriptions.set(cardId, entry);
 
 	if (retryCount > 0) {
 		console.log(
@@ -330,15 +430,25 @@ export function subscribeToComments(
 		);
 	}
 
-	// 8. Return cleanup function
+	// 9. Return cleanup function
 	return () => {
-		if (sub && typeof sub.stop === 'function') {
-			try {
-				sub.stop();
-				commentSubscriptions.delete(cardId);
-				console.log(`[NostrIntegration] 🛑 Comment subscription stopped for card ${cardId}`);
-			} catch (err) {
-				console.error('[NostrIntegration] Error stopping comment subscription:', err);
+		const current = commentSubscriptions.get(cardId) as CommentSubscriptionEntry | undefined;
+		if (!current) return;
+
+		if (onUpdate) {
+			current.callbacks.delete(onUpdate);
+		}
+
+		current.refCount = Math.max(0, current.refCount - 1);
+		if (current.refCount === 0) {
+			if (current.sub && typeof current.sub.stop === 'function') {
+				try {
+					current.sub.stop();
+					commentSubscriptions.delete(cardId);
+					console.log(`[NostrIntegration] 🛑 Comment subscription stopped for card ${cardId}`);
+				} catch (err) {
+					console.error('[NostrIntegration] Error stopping comment subscription:', err);
+				}
 			}
 		}
 	};
