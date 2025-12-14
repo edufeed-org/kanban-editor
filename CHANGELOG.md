@@ -83,6 +83,8 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 ### 🔧 Wartung (intern)
 - `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.
 - A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknüpft (Svelte-Check ohne Warnings).
+- Dev-Workflow: `pnpm run preview` baut die Site und servt den `build/`-Output via `sirv` (verhindert 404s auf `/_app/immutable/chunks/*`).
+- Test-Stabilität: `BoardStore.forceReloadCurrentBoardFromNostr()` löscht den lokalen Cache-Eintrag `kanban-{boardId}` auch in Test/Node-Umgebungen ohne `window` (Guard basiert auf verfügbarem `localStorage`).
 
 ### 🐛 Fix: Geteilte Boards verschwinden nicht mehr nach Reload
 - Board-Load (Kind 30301) überschreibt lokale Cards nicht mehr (Board-Events enthalten keine Cards) → verhindert “Cards verschwinden” durch localStorage-Overwrite.

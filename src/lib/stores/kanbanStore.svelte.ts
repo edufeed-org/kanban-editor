@@ -833,10 +833,18 @@ export class BoardStore {
         }
 
         const storageKey = `kanban-${boardId}`;
-        const backupJson = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+        const hasLocalStorage = (() => {
+            try {
+                return typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function';
+            } catch {
+                return false;
+            }
+        })();
 
-        if (clearLocalCache && typeof window !== 'undefined') {
-            BoardStorage.deleteBoard(boardId);
+        const backupJson = hasLocalStorage ? localStorage.getItem(storageKey) : null;
+
+        if (clearLocalCache && hasLocalStorage) {
+            localStorage.removeItem(storageKey);
         }
 
         try {
@@ -850,7 +858,7 @@ export class BoardStore {
             }
         } catch (error) {
             // Fallback: lokalen Cache wiederherstellen, um Datenverlust zu vermeiden
-            if (backupJson && typeof window !== 'undefined') {
+            if (backupJson && hasLocalStorage) {
                 localStorage.setItem(storageKey, backupJson);
                 this.loadBoard(boardId, { skipLastAccessed: true });
             }
