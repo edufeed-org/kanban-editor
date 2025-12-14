@@ -15,6 +15,15 @@ Die Synchronisation des Kanban-Boards über mehrere Browser/Tabs hinweg mittels 
 2.  **Echo-Prävention:** Eigene, von einem Client publizierte Events, die vom Relay zurückgesendet werden (Echos), werden erkannt und ignoriert, um doppelte Aktionen und UI-Flickern zu vermeiden.
 3.  **Snapshot-basierte DnD-Synchronisation:** Bei Drag-and-Drop-Operationen wird vor der Zustandsänderung ein unveränderlicher "Snapshot" aller Kartenpositionen erstellt. Dies verhindert Race Conditions und das "Verschwinden" von Karten, insbesondere bei schnellen Links-nach-Rechts-Verschiebungen.
 
+### Owned Boards vs. Shared Boards (WICHTIG)
+
+Im System existieren zwei Board-Typen, die **beide dauerhaft erhalten bleiben müssen** (Persistenz in `localStorage`, Reload-Rekonstruktion, Nostr Sync):
+
+- **Owned Boards:** Boards, bei denen der aktuelle Nutzer der Owner/Author ist (typisch: `event.pubkey === currentUserPubkey`).
+- **Shared Boards:** Boards, bei denen der aktuelle Nutzer als **Maintainer** eingetragen ist.
+    - Discovery erfolgt über Board-Events (Kind `30301`), die ein `p`-Tag für den Maintainer enthalten.
+    - Wichtig: Shared Boards dürfen niemals durch „Owned-Only“ Cleanup-Logik gelöscht werden.
+
 ### Code-Struktur (Facade + Helper)
 
 Damit die öffentliche API stabil bleibt, ist die Implementierung als **Facade** organisiert:
@@ -96,6 +105,20 @@ boardStore.upsertBoardFromNostr(boardProps);
 
 **Ergebnis:** Veraltete Events werden verworfen, Datenverlust wird verhindert.
 
+### 1b. Problem: Karten verschwinden nach Board-Metadata-Updates (30301 überschreibt lokale Cards)
+
+**Symptom:** Ein Board-Event (Kind `30301`) enthält primär Metadata/Spaltenstruktur. Wenn dieser Zustand direkt nach `localStorage` persistiert wird, kann es passieren, dass lokale Spalten zwar aktualisiert werden, aber **Cards verloren gehen** (z.B. weil aus dem Event keine Cards rekonstruiert werden und die Persistierung das lokale `cards[]` überschreibt).
+
+**Root Cause:** Persistierung eines „Board-Kontexts“ aus einem reinen Board-Event ohne Merge gegen den bereits lokal vorhandenen Board-State.
+
+**Lösung:** Beim Persistieren von Board-Daten, die aus einem `30301` Event abgeleitet sind, muss eine **Card-Preservation-Merge-Strategie** angewandt werden:
+
+- Spalten werden anhand `column.id` gemerged.
+- Wenn das Event keine Cards enthält, werden lokale Cards pro Spalte beibehalten.
+- Persistierung schreibt danach erst den gemergten Zustand in `localStorage`.
+
+**Ziel:** Board-Metadata kann aktualisiert werden (Titel, Spaltenname/-farbe, Reihenfolge), ohne dass Cards verschwinden.
+
 ### 2. Problem: UI-Flickern durch Event-Echos ("Double-Move")
 
 **Symptom:** Beim Verschieben einer Spalte springt diese kurz an die alte Position zurück und dann erst an die neue. Dies passiert, weil der Client sein eigenes publiziertes Event als fremdes Update interpretiert.
@@ -133,6 +156,17 @@ if (nostr.isMyEvent(boardEvent.id)) {
 ```
 
 **Ergebnis:** Kein UI-Flickern mehr, da Echos ignoriert werden. Die UI reagiert nur noch auf die initiale lokale Änderung und auf echte fremde Events.
+
+### 2b. Problem: Shared Boards verschwinden nach Reload durch unsicheren Cleanup
+
+**Symptom:** Shared Boards (Maintainer-Boards) sind zunächst sichtbar, verschwinden aber nach einem Reload oder nach einer Sync-Phase.
+
+**Root Cause:** Cleanup-Logik, die lokal gespeicherte Boards entfernt, wenn sie nicht in einer „Owned Boards“-Relay-Abfrage enthalten waren.
+
+**Lösung:** Es darf keinen Cleanup geben, der Boards ausschließlich anhand „Owned Boards“-Fetch-Ergebnissen entfernt.
+
+- Deletion von Boards erfolgt ausschließlich über **explizite Deletion-Events (Kind `5`)** oder eine bewusste User-Aktion.
+- Shared Boards bleiben persistent, auch wenn ein „owned boards“-Fetch sie naturgemäß nicht zurückliefert.
 
 ### 3. Problem: Verschwindende Karten bei Drag & Drop
 
