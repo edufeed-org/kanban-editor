@@ -1,7 +1,7 @@
 # Nostr Event Handling, Sync & Conflict Resolution
 
-**Version:** 5.0 (Consolidated)
-**Datum:** 10. November 2025
+**Version:** 5.1 (Consolidated)
+**Datum:** 14. Dezember 2025
 **Status:** ✅ **ACTIVE** - Single Source of Truth
 **Zweck:** Dieses Dokument konsolidiert alle Bug-Fixes und Architekturentscheidungen bezüglich Nostr-Event-Handling, Synchronisation und Konfliktlösung. Es ersetzt `BUG-FIX-ECHO-LOOP.md`, `BUG-FIX-LAST-WRITE-WINS.md` und `DND-ROBUSTNESS-FIX.md`.
 
@@ -27,6 +27,18 @@ Damit die öffentliche API stabil bleibt, ist die Implementierung als **Facade**
     - `deletionEventsCache.ts` – Persistenz verarbeiteter Deletion-Events (Size-Cap)
 
 Die Code-Beispiele unten zeigen teils vereinfachte Logik. In der realen Implementierung werden Zeitstempel-Vergleiche zentral über `time.ts` normalisiert, um String-Vergleiche/Format-Mixups zu vermeiden.
+
+### Subscription Lifecycle (Leak-/Duplikat-Vermeidung)
+
+**Problemklasse:** In einem Multi-Board-/Multi-Tab Setup wird `subscribeToUpdates()` mehrfach aufgerufen (z.B. beim Board-Wechsel oder nach Reconnect). Ohne deterministischen Cleanup entstehen doppelte Listener, veraltete Subscriptions und im Worst-Case „Ghost Updates“.
+
+**Strategie (verbindlich):**
+
+- `NostrIntegration.subscribeToUpdates()` ruft zu Beginn `dispose()` auf und stoppt damit *alle* zuvor gestarteten Board-/Card-/Deletion-/Sharing-Subscriptions.
+- Alle in `subscribeToUpdates()` erzeugten Subscriptions werden in einem gemeinsamen Cleanup-Wrapper getrackt (`boardSubscription.stop()`), damit ein einziger Stop alle Listener beendet.
+- Kommentar-Subscriptions werden separat pro Card in einer Map getrackt und ebenfalls im zentralen `dispose()` beendet (zusätzlich zur pro-Card Cleanup-Funktion, die `subscribeToComments()` zurückgibt).
+
+**Konsequenz:** Re-Subscribe ist idempotent (kein Memory Leak, keine doppelten Events), und „shared/follower/comment“ verhält sich im Cleanup genauso wie „boards/cards/deletions“.
 
 ---
 

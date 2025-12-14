@@ -32,6 +32,19 @@ export class NostrIntegration {
 
     private processedDeletionEvents = new Set<string>();
 
+    private stopAllCommentSubscriptions(): void {
+        for (const [cardId, sub] of this.commentSubscriptions.entries()) {
+            if (sub && typeof sub.stop === 'function') {
+                try {
+                    sub.stop();
+                } catch {
+                    // ignore
+                }
+            }
+            this.commentSubscriptions.delete(cardId);
+        }
+    }
+
     /**
      * Initialisiert Nostr Integration
      */
@@ -173,7 +186,7 @@ export class NostrIntegration {
                     // Prepare storage data
                     const context = board.getContextData(true) as any;
                     const remoteCreated = event.created_at
-                        ? new Date(event.created_at * 1000).toISOString()
+                        ? new Date(unixSecondsToMs(event.created_at)).toISOString()
                         : context.createdAt || new Date().toISOString();
                     context.createdAt = context.createdAt || remoteCreated;
                     context.updatedAt = context.updatedAt || remoteCreated;
@@ -410,13 +423,8 @@ export class NostrIntegration {
             return;
         }
 
-        if (this.boardSubscription && typeof this.boardSubscription.stop === 'function') {
-            try {
-                this.boardSubscription.stop();
-            } catch {
-                // ignore
-            }
-        }
+        // Stoppe ALLE existierenden Subscriptions (inkl. shared/follower/comment)
+        this.dispose();
 
         console.log('[BoardStore] 🛰️ Subscribing to board, card AND deletion events (Collaboration v3.0)');
 
@@ -511,17 +519,6 @@ export class NostrIntegration {
             subscriptions.push(sharedBoardSub);
         }
         
-        // Cleanup-Wrapper für alle Subscriptions
-        const sub = {
-            stop: () => {
-                subscriptions.forEach(s => {
-                    try { s.stop(); } catch {}
-                });
-            }
-        };
-
-        this.boardSubscription = sub;
-
         // =============================================================
         // ⭐ NEU (Board-Sharing v1): Separate subscription für geteilte Boards
         //    Holt Board-Events (Kind 30301), bei denen der aktuelle Nutzer
@@ -537,6 +534,8 @@ export class NostrIntegration {
             } as any,
             { closeOnEose: false }
         );
+
+        subscriptions.push(sharedSub);
 
         sharedSub.on('event', async (event: any) => {
             try {
@@ -581,7 +580,7 @@ export class NostrIntegration {
                     columns: columns,
                     author: canonicalOwner,
                     maintainers: pTagsAll.filter((p: string) => p !== canonicalOwner),
-                    createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
+                    createdAt: event.created_at ? unixSecondsToMs(event.created_at) : Date.now(),
                     updatedAt: undefined
                 };
 
@@ -595,8 +594,8 @@ export class NostrIntegration {
                         id: dTag,
                         name: title,
                         description: description || undefined,
-                        createdAt: event.created_at ? event.created_at * 1000 : Date.now(),
-                        updatedAt: event.created_at ? event.created_at * 1000 : undefined,
+                        createdAt: event.created_at ? unixSecondsToMs(event.created_at) : Date.now(),
+                        updatedAt: event.created_at ? unixSecondsToMs(event.created_at) : undefined,
                         isShared: true,
                         userRole,
                         author: canonicalOwner
@@ -651,6 +650,8 @@ export class NostrIntegration {
             } as any,
             { closeOnEose: false }
         );
+
+        subscriptions.push(followerSub);
 
         followerSub.on('event', async (event: any) => {
             try {
@@ -732,8 +733,8 @@ export class NostrIntegration {
                                     id: eventDTag,
                                     name: title,
                                     description: description || undefined,
-                                    createdAt: boardEvent.created_at ? boardEvent.created_at * 1000 : Date.now(),
-                                    updatedAt: boardEvent.created_at ? boardEvent.created_at * 1000 : undefined,
+                                    createdAt: boardEvent.created_at ? unixSecondsToMs(boardEvent.created_at) : Date.now(),
+                                    updatedAt: boardEvent.created_at ? unixSecondsToMs(boardEvent.created_at) : undefined,
                                     isShared: true,
                                     userRole: userRole,
                                     author: boardAuthor
@@ -775,7 +776,20 @@ export class NostrIntegration {
             }
         });
 
-        // Keine Speicherung der Subscription nötig (fire-and-forget) – optional könnte man cleanup hinzufügen.
+        // Cleanup-Wrapper für alle Subscriptions
+        const sub = {
+            stop: () => {
+                subscriptions.forEach(s => {
+                    try {
+                        s.stop();
+                    } catch {
+                        // ignore
+                    }
+                });
+            }
+        };
+
+        this.boardSubscription = sub;
     }
 
     /**
@@ -828,7 +842,7 @@ export class NostrIntegration {
             // Prüfe ob Board später gelöscht wurde
             const deleteTime = this.boardDeletionTimestamps.get(boardProps.id);
             if (deleteTime) {
-                const boardTime = boardEvent.created_at * 1000;
+                const boardTime = unixSecondsToMs(boardEvent.created_at);
                 if (boardTime < deleteTime) {
                     console.log(`⏭️ Board ${boardProps.id} was deleted after this update, skip`);
                     return;
@@ -842,8 +856,8 @@ export class NostrIntegration {
             
             if (localBoard && localBoard.updatedAt) {
                 // Parse ISO timestamp zu Number für Vergleich
-                const localTime = new Date(localBoard.updatedAt).getTime();
-                const eventTime = boardEvent.created_at * 1000; // Nostr timestamps sind in Sekunden
+                const localTime = unknownTimestampToMs(localBoard.updatedAt);
+                const eventTime = unixSecondsToMs(boardEvent.created_at); // Nostr timestamps sind in Sekunden
                 
                 if (eventTime <= localTime) {
                     // Silent skip - lokale Daten sind neuer oder gleich
@@ -935,7 +949,7 @@ export class NostrIntegration {
             const deleteTime = this.cardDeletionTimestamps.get(cardProps.id!);
             if (deleteTime) {
                 // ⚠️ Card-Event hat keine updatedAt - nutze Event created_at
-                const cardTime = cardEvent.created_at * 1000; // Millisekunden
+                const cardTime = unixSecondsToMs(cardEvent.created_at); // Millisekunden
                 
                 if (cardTime < deleteTime) {
                     console.log(`🗑️ Card ${cardProps.id} was deleted after this update (${new Date(deleteTime).toISOString()}), skip`);
@@ -947,8 +961,8 @@ export class NostrIntegration {
             // Compare event timestamp with local card updatedAt
             const result = currentBoard.findCardAndColumn(cardProps.id!);
             if (result && result.card.updatedAt) {
-                const localTime = new Date(result.card.updatedAt).getTime();
-                const eventTime = cardEvent.created_at * 1000;
+                const localTime = unknownTimestampToMs(result.card.updatedAt);
+                const eventTime = unixSecondsToMs(cardEvent.created_at);
                 
                 if (eventTime <= localTime) {
                     // Silent skip - lokale Daten sind neuer oder gleich
@@ -1031,7 +1045,7 @@ export class NostrIntegration {
             // NIP-09: Parse 'a' tags für replaceable events
             // Format: ['a', '30301:pubkey:board-id'] oder ['a', '30302:pubkey:card-id']
             const aTags = deletionEvent.tags.filter((t: any) => t[0] === 'a');
-            const deleteTime = deletionEvent.created_at * 1000; // Millisekunden
+            const deleteTime = unixSecondsToMs(deletionEvent.created_at); // Millisekunden
             
             for (const aTag of aTags) {
                 const eventRef = aTag[1]; // z.B. "30301:pubkey:board-xxx" oder "30302:pubkey:card-xxx"
@@ -1421,8 +1435,8 @@ export class NostrIntegration {
                 if (local.text !== remote.text) return false;
 
                 // Check timestamp proximity (within 5 seconds)
-                const localTime = new Date(local.createdAt).getTime();
-                const remoteTime = new Date(remote.createdAt).getTime();
+                const localTime = unknownTimestampToMs(local.createdAt);
+                const remoteTime = unknownTimestampToMs(remote.createdAt);
                 const timeDiff = Math.abs(localTime - remoteTime);
 
                 return timeDiff < 5000; // 5 seconds tolerance
@@ -1436,8 +1450,8 @@ export class NostrIntegration {
 
         // Step 4: Sort chronologically by createdAt (oldest first)
         merged.sort((a, b) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
+            const dateA = unknownTimestampToMs(a.createdAt);
+            const dateB = unknownTimestampToMs(b.createdAt);
             return dateA - dateB;
         });
 
@@ -1527,7 +1541,9 @@ export class NostrIntegration {
                     eventId: event.id!, // Nostr event ID for deduplication
                     text: event.content,
                     author: event.pubkey,
-                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    createdAt: event.created_at
+                        ? new Date(unixSecondsToMs(event.created_at)).toISOString()
+                        : new Date().toISOString(),
                     syncStatus: 'synced' as const // Remote comments are always synced
                 };
             });
@@ -1674,7 +1690,7 @@ export class NostrIntegration {
                     eventId: event.id!, // Nostr event ID for deduplication
                     text: event.content,
                     author: event.pubkey,
-                    createdAt: new Date(event.created_at! * 1000).toISOString(),
+                    createdAt: event.created_at ? new Date(unixSecondsToMs(event.created_at)).toISOString() : new Date().toISOString(),
                     syncStatus: 'synced' as const // Event kommt vom Relay = bereits synced
                 };
 
@@ -2238,5 +2254,7 @@ export class NostrIntegration {
                 // ignore
             }
         }
+
+        this.stopAllCommentSubscriptions();
     }
 }
