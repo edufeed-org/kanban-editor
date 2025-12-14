@@ -5,6 +5,11 @@ import { unixSecondsToMs, unknownTimestampToMs } from '../time.js';
 export type CardEventHandlerContext = {
 	processedEvents: Set<string>;
 	cardDeletionTimestamps: Map<string, number>;
+	/** Optional injection for tests; falls back to getSyncManager() at runtime */
+	syncManager?: {
+		isMyEvent: (eventId: string) => boolean;
+		clearMyEvent: (eventId: string) => void;
+	};
 };
 
 /**
@@ -27,8 +32,9 @@ export async function handleCardEvent(
 	ctx.processedEvents.add(cardEvent.id);
 
 	// ⚡ CRITICAL: Skip eigene Events (Echo-Loop Prevention!)
-	const { getSyncManager } = await import('../../../syncManager.svelte.js');
-	const syncManager = getSyncManager();
+	const syncManager =
+		ctx.syncManager
+		?? (await import('../../../syncManager.svelte.js')).getSyncManager();
 	if (syncManager.isMyEvent(cardEvent.id)) {
 		// ⏰ Delayed Cleanup: Handle multiple echoes within 5-second window
 		setTimeout(() => {
@@ -42,6 +48,14 @@ export async function handleCardEvent(
 		// Deserialisiere Card-Event
 		const { nostrEventToCard } = await import('../../../../utils/nostrEvents.js');
 		const cardProps = nostrEventToCard(cardEvent);
+
+		// Prefer ms timestamp from custom tag (ts) for deterministic LWW.
+		// Fallback to created_at (seconds) when not present.
+		const eventTimeMs = (() => {
+			const ms = (cardProps as any).updatedAtMs;
+			if (typeof ms === 'number' && Number.isFinite(ms) && ms > 0) return ms;
+			return unixSecondsToMs(cardEvent.created_at);
+		})();
 
 		// ⚡ v3.0: BACKGROUND BOARD SYNC FIX
 		// Parse boardRef to get target board ID
@@ -65,10 +79,7 @@ export async function handleCardEvent(
 		// Prüfe ob Card später gelöscht wurde
 		const deleteTime = ctx.cardDeletionTimestamps.get(cardProps.id!);
 		if (deleteTime) {
-			// ⚠️ Card-Event hat keine updatedAt - nutze Event created_at
-			const cardTime = unixSecondsToMs(cardEvent.created_at); // Millisekunden
-
-			if (cardTime < deleteTime) {
+			if (eventTimeMs < deleteTime) {
 				console.log(
 					`🗑️ Card ${cardProps.id} was deleted after this update (${new Date(deleteTime).toISOString()}), skip`
 				);
@@ -81,15 +92,28 @@ export async function handleCardEvent(
 		const result = currentBoard.findCardAndColumn(cardProps.id!);
 		if (result && result.card.updatedAt) {
 			const localTime = unknownTimestampToMs(result.card.updatedAt);
-			const eventTime = unixSecondsToMs(cardEvent.created_at);
 
-			if (eventTime <= localTime) {
-				// Silent skip - lokale Daten sind neuer oder gleich
+			if (eventTimeMs < localTime) {
+				// Silent skip - lokale Daten sind neuer
 				return;
 			}
 
+			if (eventTimeMs === localTime) {
+				// Deterministic tie-breaker: prefer lexicographically larger event id.
+				// This avoids random drops when created_at has second-level resolution.
+				const localEventId = result.card.eventId;
+				if (typeof localEventId === 'string' && localEventId.length > 0) {
+					const incomingId = typeof cardEvent.id === 'string' ? cardEvent.id : '';
+					if (incomingId && incomingId <= localEventId) {
+						return;
+					}
+				}
+			}
+
 			// Nur bei tatsächlichem Update loggen
-			console.log(`✅ Card LWW: Apply newer (${((eventTime - localTime) / 1000).toFixed(1)}s newer)`);
+			console.log(
+				`✅ Card LWW: Apply newer/tie-break (${((eventTimeMs - localTime) / 1000).toFixed(3)}s delta)`
+			);
 		}
 
 		// columnId ist KRITISCH - ohne geht nichts!

@@ -1,16 +1,19 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 14.12.2025 (Shared-Board Sync Fix ✅)
-**Status:** 🟢 Vollständig funktional (122 Tests - Shared-Board Sync Regression Test hinzugefügt)
+**Letzte Aktualisierung:** 14.12.2025 (Shared-Board Sync Fix ✅ + deterministische Card-LWW via `ts`)
+**Status:** 🟢 Vollständig funktional (Vitest: 445 ✅ | 3 ⏭️ = 448 Tests)
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Unit Tests** | ✅ Aktiv | 120 | Vitest |
-| **E2E Tests** | ✅ Aktiv | 1 | Playwright |
-| **Integration Tests** | ✅ Aktiv | ✓ | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 448 (445 passed, 3 skipped) | Vitest |
+| **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
+
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run` → `Test Files 27 passed (27)`, `Tests 445 passed | 3 skipped (448)`
+
+> Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 
 ---
 

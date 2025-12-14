@@ -2,7 +2,7 @@
 // Board-Operationen (CRUD für Columns/Cards)
 
 import { Board, Column, Card, type CardProps, type ColumnProps } from '../../classes/BoardModel.js';
-import { generateDTag } from '../../utils/idGenerator.js';
+import { generateDTag, generateTimestamp } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
 import type { NostrIntegration } from './nostr.js';
 import { BoardStorage } from './storage.js';
@@ -224,6 +224,10 @@ export class BoardOperations {
                     
                     if (columnChanged || positionChanged) {
                         movedCardIds.push(card.id);
+                        // ⚡ Wichtig für LWW + lokale Persistierung:
+                        // Eine Positionsänderung (Rank/Column) ist eine Card-Änderung und muss den Timestamp bumpen.
+                        // Sonst kann ein späteres Rehydrate/Sync die Reihenfolge wieder "zurückdrehen".
+                        card.updatedAt = generateTimestamp();
                         if (columnChanged) {
                             console.log(`  ↗️ Card "${card.heading}" verschoben: "${oldColumnId}" → "${col.id}"`);
                         } else {

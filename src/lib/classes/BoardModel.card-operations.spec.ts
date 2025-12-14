@@ -219,6 +219,27 @@ describe('Board-Wide Card Cleanup (v4.3 - STEP 3)', () => {
     expect(colB.cards.length).toBe(1); // Added to B
   });
 
+  it('Board.moveCard() bumps card.updatedAt (LWW move semantics)', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'));
+      const board = createTestBoard();
+      const colA = board.findColumn('col-a')!;
+
+      const card = new Card(createTestCard({ id: 'card-1' }));
+      colA.cards.push(card);
+
+      const before = card.updatedAt;
+      vi.setSystemTime(new Date('2025-01-02T00:00:00.000Z'));
+      board.moveCard('card-1', 'col-a', 'col-b');
+
+      expect(card.updatedAt).not.toBe(before);
+      expect(card.updatedAt).toBe('2025-01-02T00:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('Board-wide card search before add (cleanup pattern)', () => {
     const board = createTestBoard();
     const colA = board.findColumn('col-a')!;

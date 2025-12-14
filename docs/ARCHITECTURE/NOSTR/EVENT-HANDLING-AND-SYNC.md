@@ -1,6 +1,6 @@
 # Nostr Event Handling, Sync & Conflict Resolution
 
-**Version:** 5.1 (Consolidated)
+**Version:** 5.2 (Consolidated)
 **Datum:** 14. Dezember 2025
 **Status:** ✅ **ACTIVE** - Single Source of Truth
 **Zweck:** Dieses Dokument konsolidiert alle Bug-Fixes und Architekturentscheidungen bezüglich Nostr-Event-Handling, Synchronisation und Konfliktlösung. Es ersetzt `BUG-FIX-ECHO-LOOP.md`, `BUG-FIX-LAST-WRITE-WINS.md` und `DND-ROBUSTNESS-FIX.md`.
@@ -11,7 +11,10 @@
 
 Die Synchronisation des Kanban-Boards über mehrere Browser/Tabs hinweg mittels Nostr erfordert eine robuste Strategie, um Datenverlust und eine inkonsistente UI zu verhindern. Unsere Architektur basiert auf drei Kernprinzipien:
 
-1.  **Last-Write-Wins (LWW):** Das Event mit dem neuesten Zeitstempel (`created_at`) gewinnt immer. Ältere oder gleichzeitige Events werden ignoriert, um zu verhindern, dass veraltete Daten (stale state) aus dem `localStorage` neuere Zustände überschreiben.
+1.  **Last-Write-Wins (LWW):** Das Event mit dem neuesten Zeitstempel gewinnt.
+    - Boards (Kind `30301`): primär über `created_at` (Sekunden).
+    - Cards (Kind `30302`): primär über `ts`-Tag (Millisekunden) falls vorhanden; Fallback `created_at`.
+    - Bei Zeitgleichheit wird deterministisch per `event.id` getie-breakt, um „Same-Second“-Races zu vermeiden.
 2.  **Echo-Prävention:** Eigene, von einem Client publizierte Events, die vom Relay zurückgesendet werden (Echos), werden erkannt und ignoriert, um doppelte Aktionen und UI-Flickern zu vermeiden.
 3.  **Snapshot-basierte DnD-Synchronisation:** Bei Drag-and-Drop-Operationen wird vor der Zustandsänderung ein unveränderlicher "Snapshot" aller Kartenpositionen erstellt. Dies verhindert Race Conditions und das "Verschwinden" von Karten, insbesondere bei schnellen Links-nach-Rechts-Verschiebungen.
 
@@ -104,6 +107,21 @@ boardStore.upsertBoardFromNostr(boardProps);
 3.  **`BoardModel.ts`:** Der `Board`-Konstruktor und das `BoardProps`-Interface akzeptieren `updatedAt`.
 
 **Ergebnis:** Veraltete Events werden verworfen, Datenverlust wird verhindert.
+
+### 1a. Problem: Same-Second-Race bei Card-Events (30302) führt zu „verlorenen“ Moves
+
+**Symptom:** Bei schnellen, alternierenden Änderungen in zwei Clients (z.B. Card-Moves/Rank-Updates) können zwei Replaceable Card-Events im selben `created_at`-Sekundenfenster landen. Wenn LWW nur mit Sekundenauflösung vergleicht (`eventTime <= localTime`), wird ein legitimes Update sporadisch als „gleich/älter“ verworfen.
+
+**Root Cause:** `created_at` hat nur Sekundenauflösung, lokale `updatedAt`-Werte sind ISO/Millisekunden. Bei hoher Frequenz entstehen Gleichstände.
+
+**Lösung:** Millisekunden-Zeitstempel in Card-Events + deterministischer Tie-Break
+
+- **Serialization:** `src/lib/utils/nostrEvents.ts` schreibt bei Card-Events zusätzlich `['ts', '<ms>']` und setzt `created_at` konsistent auf `Math.floor(ts/1000)`.
+- **Deserialization:** `nostrEventToCard()` bevorzugt `ts` (ms) und reicht ihn als `updatedAt` (ISO) sowie intern als `updatedAtMs` durch.
+- **Handler-LWW:** `src/lib/stores/boardstore/nostr/handlers/card.ts` nutzt `eventTimeMs` aus `updatedAtMs` (Fallback `created_at`) und wendet bei Gleichstand einen Tie-Break an:
+    - Wenn `eventTimeMs === localTime`: akzeptiere nur, wenn `incomingEvent.id > localCard.eventId` (lexikographisch).
+
+**Ergebnis:** Card-Moves/Rank-Updates werden bei schnellen Multi-Client-Aktionen deterministisch angewendet und nicht mehr „zufällig“ verworfen.
 
 ### 1b. Problem: Karten verschwinden nach Board-Metadata-Updates (30301 überschreibt lokale Cards)
 

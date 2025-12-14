@@ -57,6 +57,11 @@ Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das 
 - Neuer Store-Handler `handleSharedBoardEvent()` im `BoardStore` upsertet das Board in `cachedSharedBoards` und triggert `updateTrigger`
 - Kein Polling mehr nötig; keine künstliche Verzögerung
 
+### 🐛 Fix (Deterministische Card LWW bei Same-Second Updates)
+- Behebt seltene Race-Conditions bei schnellen Card-Moves/Ranks über mehrere Clients (zwei Events im selben `created_at`-Sekundenfenster)
+- Card-Events (Kind 30302) enthalten jetzt zusätzlich `ts` (Millisekunden) und LWW nutzt `ts` + deterministischen Tie-Break über `event.id`
+- Dateien: `src/lib/utils/nostrEvents.ts`, `src/lib/stores/boardstore/nostr/handlers/card.ts`
+
 ### 📚 Dokumentation
 - `docs/ARCHITECTURE/BOARD-SHARING.md` aktualisiert (Abschnitt "Realtime Appearance")
 

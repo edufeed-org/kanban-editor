@@ -534,6 +534,10 @@ export class Board {
             throw new Error('Card not found in source column');
         }
 
+        // ⚡ Wichtig für LWW: Ein Move ändert semantisch den Card-State (column/rank).
+        // Ohne Timestamp-Update kann ein späteres Rehydrate (z.B. aus localStorage) die Move-Position verlieren.
+        card.updatedAt = generateTimestamp();
+
         // Karte aus der Quellspalte entfernen (aber nicht löschen - die Instanz behalten!)
         fromColumn.deleteCard(cardId);
 

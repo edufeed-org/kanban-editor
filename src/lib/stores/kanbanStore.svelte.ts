@@ -1099,6 +1099,9 @@ export class BoardStore {
             this.board.updateLastAccessed();
             
             this.triggerUpdate();
+            // ⚠️ CRITICAL: Position (column/rank) ist Teil des Card-Events (30302).
+            // Wenn wir hier nur das Board publizieren, kann Reload/Remote-Sync die Move-Position verlieren.
+            this.publishCardAsync(cardId);
             this.publishBoardAsync();
         }
     }
