@@ -26,6 +26,18 @@ Damit die öffentliche API stabil bleibt, ist die Implementierung als **Facade**
     - `commentCache.ts` – lokaler Kommentar-Cache (localStorage)
     - `deletionEventsCache.ts` – Persistenz verarbeiteter Deletion-Events (Size-Cap)
 
+- **Domain-Modul (Events senden):** `src/lib/stores/boardstore/nostr/publish.ts`
+    - Board/Card/Comment Publish
+    - Deletion-Events (Board/Card/Comment)
+    - Snapshot Publish
+
+- **Domain-Modul (Kommentare):** `src/lib/stores/boardstore/nostr/comments.ts`
+    - Kommentar-Merge-Strategie (Dedup + chronologische Sortierung)
+    - `loadComments()` (Cache-first + Remote-Fetch + Persist)
+    - `subscribeToComments()` (Live-Updates + deterministischer Cleanup)
+
+Die Facade `NostrIntegration` delegiert diese „sendet Events“-Wege direkt an `publish.ts` und die Kommentar-Logik an `comments.ts` (Signaturen bleiben stabil, Call-Sites ändern sich nicht).
+
 Die Code-Beispiele unten zeigen teils vereinfachte Logik. In der realen Implementierung werden Zeitstempel-Vergleiche zentral über `time.ts` normalisiert, um String-Vergleiche/Format-Mixups zu vermeiden.
 
 ### Subscription Lifecycle (Leak-/Duplikat-Vermeidung)
