@@ -92,6 +92,14 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 - Session-Restore startet jetzt deterministisch Owned-Board Load + Live-Subscriptions (verhindert einmaliges Skippen, wenn Pubkey beim Initialisieren noch fehlt).
 - Dateien: `src/lib/stores/boardstore/nostr.ts`, `src/lib/stores/authStore.svelte.ts`
 
+### 🐛 Fix: DnD-Sync droppt keine Cards mehr
+- Behebt einen intermittenten Fehler beim Verschieben von Cards: wenn `svelte-dnd-action`/UI temporär ein unvollständiges Payload liefert, wurden bisher fehlende Cards aus dem Board-State entfernt.
+- `syncBoardState()` merged jetzt defensiv: Cards/Columns, die im UI-Payload fehlen, werden erhalten (statt implizit gelöscht).
+- Zusätzliches Safety-Net: **Hard-Fail Gate** (optional/konfiguriert) bricht den Sync komplett ab, wenn das UI-Payload Cards/Columns vermisst (kein Persist/Publish auf korrupter Momentaufnahme).
+- Hard-Fail berücksichtigt DnD-Placeholder (`dnd-shadow-placeholder-*`) und blockiert nicht fälschlich durch „unknown IDs“.
+- UX: Bei Hard-Fail erscheint eine Toast („Drag & Drop abgebrochen“) mit Hinweis zum Wiederholen/Reload; die Board-UI resettet den lokalen DnD-State auf den Store-Stand, damit Moves direkt wieder möglich sind.
+- Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/Board.svelte`
+
 ### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
 - Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
 - `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.

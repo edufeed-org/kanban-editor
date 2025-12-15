@@ -385,41 +385,60 @@ private updateCard(cardId: string, updates: Partial<CardProps>): void {
 
 ```typescript
 public syncBoardState(uiColumns: UIColumn[]): boolean {
-    // 🔐 AUTORISIERUNG
-    const signerPubkey = authStore.getPubkey();
-    if (!this.board.canAddCard(signerPubkey ?? undefined)) {
-        console.warn('❌ Keine Berechtigung');
-        return false;  // ← Gibt false statt Error
-    }
-    
-    // SCHRITT 1: Spalten-Reihenfolge
-    this._columnOrder = uiColumns.map(c => c.id);
-    
-    // SCHRITT 2: Board.columns reordern
-    this.board.columns.sort((a, b) => {
-        return this._columnOrder.indexOf(a.id) - this._columnOrder.indexOf(b.id);
-    });
-    
-    // SCHRITT 3: Karten-Positionen synchronisieren
-    for (const uiColumn of uiColumns) {
-        const boardColumn = this.board.findColumn(uiColumn.id);
-        const reorderedCards = uiColumn.items.map(item => {
-            const result = this.board.findCardAndColumn(String(item.id));
-            return result?.card;
-        }).filter(Boolean);
-        
-        boardColumn.cards = reorderedCards;
-    }
-    
-    this.triggerUpdate();
-    this.publishBoardToNostr().catch(err => {
-        console.error("Fehler beim Publizieren des Board-Status:", err)
-    });
+    // 🔐 AUTORISIERUNG (DnD)
+    const userRole = this.getCurrentUserRole();
+    const boardId = this.board.id;
+    if (!PermissionChecks.canMoveCard(userRole, boardId)) return false;
+
+    // Debounce: schnelle DnD-Events sammeln
+    this.pendingSyncData = uiColumns;
+    if (this.syncDebounceTimer) clearTimeout(this.syncDebounceTimer);
+    this.syncDebounceTimer = setTimeout(() => {
+        this.executeSyncBoardState();
+    }, 150);
+
     return true;
+}
+
+private async executeSyncBoardState(): Promise<void> {
+    if (this.syncInProgress) return;
+    if (!this.pendingSyncData) return;
+
+    this.syncInProgress = true;
+    const uiColumns = this.pendingSyncData;
+    this.pendingSyncData = null;
+
+    try {
+        // ✅ Atomarer Sync via BoardOperations
+        // Hard-Fail: wenn UI-Payload Cards/Columns „verliert“, brechen wir ab
+        // (keine Persistierung / kein Publish auf Basis transienter DnD-Glitches).
+        const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
+            this.board,
+            this._columnOrder,
+            uiColumns,
+            { strategy: 'hard-fail' }
+        );
+
+        this._columnOrder = newColumnOrder;
+        this.triggerUpdate({ publish: false });
+
+        await this.publishBoardAsync();
+        for (const cardId of movedCardIds) {
+            await this.publishCardAsync(cardId);
+        }
+    } finally {
+        this.syncInProgress = false;
+    }
 }
 ```
 
 **REGEL 11:** `syncBoardState()` ist die **atomic 3-step sync** für DnD-Operationen.
+
+**Hinweis (Datenverlust-Schutz):** `strategy: 'hard-fail'` stoppt den Sync, wenn das UI-Payload unvollständig ist (kein Persist/Publish auf transienten DnD-Glitches).
+
+**Hinweis (DnD-Placeholder):** `svelte-dnd-action` kann temporäre Placeholder-IDs wie `dnd-shadow-placeholder-*` erzeugen. Diese werden beim Hard-Fail-Check ignoriert.
+
+**UX nach Hard-Fail:** Der Store zeigt eine Toast („Drag & Drop abgebrochen“). Zusätzlich setzt die Board-UI den lokalen DnD-State zurück (Reset auf Parent/Store-Stand), damit Drag & Drop direkt weiter nutzbar ist.
 
 ### Kommentar hinzufügen
 

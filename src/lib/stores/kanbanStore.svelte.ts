@@ -417,14 +417,14 @@ export class BoardStore {
 
         // ⚡ KRITISCH: Metadaten-Liste aktualisieren (für getAllBoardsMetadata)
         // Grund: createBoard() auf Browser A muss gleiche Struktur wie upsertBoardFromNostr() nutzen
-        this.addBoardToMetadataList({
-            id: board.id,
-            name: board.name,
-            description: board.description || '',
-            lastAccessed: new Date().toISOString(),
-            author: board.author || '',
-            publishState: board.publishState || 'draft'
-        });
+        // this.addBoardToMetadataList({
+        //     id: board.id,
+        //     name: board.name,
+        //     description: board.description || '',
+        //     lastAccessed: new Date().toISOString(),
+        //     author: board.author || '',
+        //     publishState: board.publishState || 'draft'
+        // });
 
         this.board = board;
         this._columnOrder = board.columns.map(c => c.id);
@@ -1383,6 +1383,8 @@ export class BoardStore {
     private syncInProgress = $state(false);
     private pendingSyncData: UIColumn[] | null = null;
     private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    private lastDnDSyncAbortToastAt = 0;
+    public dndSyncAbortToken = $state(0);
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
         // Permission Check: Kann Benutzer Karten verschieben?
@@ -1430,7 +1432,8 @@ export class BoardStore {
             const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
                 this.board,
                 this._columnOrder,
-                uiColumns
+                uiColumns,
+                { strategy: 'hard-fail' }
             );
             this._columnOrder = newColumnOrder;
             
@@ -1453,6 +1456,20 @@ export class BoardStore {
             console.log('✅ Sync complete');
         } catch (error) {
             console.error('❌ Sync failed:', error);
+
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('syncBoardState hard-fail')) {
+                this.dndSyncAbortToken++;
+
+                const now = Date.now();
+                if (now - this.lastDnDSyncAbortToastAt > 1200) {
+                    toast.error('Drag & Drop abgebrochen', {
+                        description:
+                            'Der Board-Zustand war während des Verschiebens kurz inkonsistent. Bitte versuche den Move erneut. Wenn es wiederholt passiert: Seite neu laden (F5).'
+                    });
+                    this.lastDnDSyncAbortToastAt = now;
+                }
+            }
         } finally {
             this.syncInProgress = false;
             console.groupEnd();

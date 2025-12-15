@@ -60,6 +60,21 @@
    let columns = $state([...columns_inner]);
    let isDragging = $state(false);
    let isLocalDnD = $state(false);  // ← NEU: Flag für lokale DnD-Operationen
+
+	 // Wenn der Store einen DnD-Sync hard-fail abbricht, ist der lokale DnD-State
+	 // potentiell inkonsistent (UI zeigt Move, Store hat ihn nicht übernommen).
+	 // Reset auf Parent/Store-Stand, damit Drag&Drop sofort wieder nutzbar ist.
+	 let lastDnDSyncAbortToken = $state(0);
+	 $effect(() => {
+		 const token = boardStore.dndSyncAbortToken;
+		 if (token !== lastDnDSyncAbortToken) {
+			 lastDnDSyncAbortToken = token;
+			 isDragging = false;
+			 isLocalDnD = false;
+			 columns = [...columns_inner];
+			 console.warn('↩️ Board.svelte: DnD reset after sync hard-fail');
+		 }
+	 });
    
    // WICHTIG: Synchronisiere columns mit columns_inner (vom Parent)
    // Das ist essentiell für die Reaktivität!
