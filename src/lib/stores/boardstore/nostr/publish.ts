@@ -295,6 +295,14 @@ export async function deleteBoard(ndk: NDK | undefined, board: Board): Promise<v
 	}
 
 	try {
+		const currentPubkey = authStore.getPubkey();
+		if (board.author && currentPubkey && board.author !== currentPubkey) {
+			console.warn(
+				`[NostrIntegration] ⏭️ Skip remote board deletion: author mismatch (board.author=${board.author.slice(0, 16)}..., me=${currentPubkey.slice(0, 16)}...)`
+			);
+			return;
+		}
+
 		// 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Cards (inkl. Comments)
 		console.log(
 			`[NostrIntegration] 🗑️ Cascading delete: Deleting ${board.getAllCards().length} card(s) in board "${board.name}"`
@@ -302,6 +310,15 @@ export async function deleteBoard(ndk: NDK | undefined, board: Board): Promise<v
 
 		const allCards = board.getAllCards();
 		for (const card of allCards) {
+			// NIP-09: Nur der ursprüngliche Autor kann sein Replaceable-Event löschen.
+			// Cards anderer Autoren zu löschen erzeugt nur Auth-Mismatch-Warnungen und wird am Relay abgelehnt.
+			if (card.author && currentPubkey && card.author !== currentPubkey) {
+				console.log(
+					`  ⏭️ Skip remote delete for card "${card.heading}" (author mismatch: ${card.author.slice(0, 16)}...)`
+				);
+				continue;
+			}
+
 			await deleteCard(ndk, card);
 			console.log(`  ✓ Deleted card: ${card.heading}`);
 		}
@@ -369,6 +386,14 @@ export async function deleteCard(ndk: NDK | undefined, card: Card): Promise<void
 	}
 
 	try {
+		const currentPubkey = authStore.getPubkey();
+		if (card.author && currentPubkey && card.author !== currentPubkey) {
+			console.warn(
+				`[NostrIntegration] ⏭️ Skip remote card deletion: author mismatch (card.author=${card.author.slice(0, 16)}..., me=${currentPubkey.slice(0, 16)}...)`
+			);
+			return;
+		}
+
 		// 0. ⚡ KASKADIERENDE LÖSCHUNG: Lösche zuerst alle Comments der Card
 		if (card.comments && card.comments.length > 0) {
 			console.log(

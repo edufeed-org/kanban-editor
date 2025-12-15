@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.8 (Hotfix: Board-Delete Loop Guard - 15. Dezember 2025)  
-**Aktualisiert:** 15. Dezember 2025 (Boardliste-Refresh ist read-only; `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion respektiert Tombstones; Nostr-Board-Load nutzt storage-derived IDs, verhindert Delete/Restore-Oszillation)  
+**Version:** 3.11 (Hotfix: Shared-Discovery nutzt event.pubkey, kein Ghost-Toast nach Leave - 15. Dezember 2025)  
+**Aktualisiert:** 15. Dezember 2025 (Zusätzlich zu 3.10: Shared-Board Discovery (Kind 30301 `#p`) nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide Registry und Toast-Guard zuverlässig matchen)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1587,6 +1587,9 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.11 | 15.12.2025 | 🧭 **Shared-Discovery Author Fix:** Shared-Board Discovery nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide & Toast-Guard zuverlässig matchen (kein „Neues Board geteilt“ Ghost-Toast nach Leave/Owner-Delete). |
+| 3.10 | 15.12.2025 | 👀 **Owner Leave-Request Badge:** Owner sieht Leave-Requests (Kind 30000, `d=kanban-leave-request:<boardRef>`) im ShareDialog als Marker bei Editoren (best-effort, Relay-abhängig). |
+| 3.9 | 15.12.2025 | 🧹 **NIP-09 Delete Guard:** `deleteBoard()`/`deleteCard()` publizieren Kind-5 Lösch-Events nur bei Autor-Übereinstimmung; kaskadierender Delete skippt Cards anderer Autoren (verhindert „DELETION AUTH MISMATCH“ / Relay-Rejects). |
 | 3.8 | 15.12.2025 | 🧯 **Board-Delete Loop Guard:** `refreshBoardIds()`/`refreshBoardList()` sind read-only (kein `triggerUpdate()` Side-Effects); `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion lädt tombstoned IDs nicht; Nostr-Board-Load aktualisiert `boardIds` storage-basiert (tombstone-aware) statt Merge/Dedup. |
 | 3.7 | 15.12.2025 | 🧭 **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschützt; async Card-Loads werden Board-spezifisch angewendet (verhindert „alle Boards zeigen gleiche Cards“ und „Reload lädt älter“). |
 | 3.6 | 15.12.2025 | 🧷 **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollständige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |

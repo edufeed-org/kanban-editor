@@ -33,7 +33,7 @@ import { PermissionChecks } from '$lib/utils/permissionCheck.js';
 import { toast } from 'svelte-sonner';
 
 // ✅ Anti-Resurrection: Prevent loading/reconstructing tombstoned boards
-import { clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
+import { clearAllBoardTombstones, clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
 
 // Re-export types für Komponenten
 export type { CardItem, UIColumn };
@@ -348,14 +348,23 @@ export class BoardStore {
         });
         
         const userBoards = allBoards.filter(board => {
+            const fullBoard = BoardStorage.loadBoard(board.id);
+
+            // ✅ Leave/Hide Guard: verlassene (oder explizit versteckte) Boards dürfen NICHT mehr angezeigt werden.
+            // Wichtig: author-scoped Prüfung, damit keine d-tag Kollisionen auftreten.
+            if (BoardSharingOperations.isBoardHidden(board.id, fullBoard?.author)) {
+                console.log(`  🚫 Hidden/left: "${board.name}" (filtered)`);
+                return false;
+            }
+
             // Board gehört dem aktuellen Benutzer wenn:
             // 1. author === currentUserPubkey ODER
             // 2. maintainers enthält currentUserPubkey
-            const isOwner = this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
-            if (!isOwner) {
+            const isOwnerOrMaintainer = this.isUserOwnerOrMaintainer(board.id, currentUserPubkey);
+            if (!isOwnerOrMaintainer) {
                 console.log(`  ❌ Filtered out: "${board.name}" (not owner or maintainer)`);
             }
-            return isOwner;
+            return isOwnerOrMaintainer;
         });
         
         console.log(`✅ getAllBoards() returning ${userBoards.length}/${allBoards.length} boards for user ${currentUserPubkey?.slice(0, 8)}...`);
@@ -1044,8 +1053,14 @@ export class BoardStore {
             return []; // Anonyme Nutzer haben keine geteilten Boards
         }
         
-        // Verwende gecachte geteilte Boards
-        const sharedBoards = this.cachedSharedBoards;
+        // Verwende gecachte geteilte Boards, aber filtere defensiv:
+        // - Tombstones (Owner-Delete) dürfen nie wieder sichtbar werden
+        // - Hidden Boards (Leave/Unfollow) dürfen nicht zurückkommen
+        // - Self-owned Boards dürfen nicht als "shared" in der Liste auftauchen
+        const sharedBoards = this.cachedSharedBoards
+            .filter(b => !isBoardTombstoned(b.id))
+            .filter(b => !BoardSharingOperations.isBoardHidden(b.id, b.author))
+            .filter(b => b.author !== currentUserPubkey);
         
         // ⚠️ FIXED: Do NOT trigger async loading here!
         // This causes state_unsafe_mutation when called from $derived
@@ -1083,6 +1098,21 @@ export class BoardStore {
      * Fügt das Board, falls noch nicht vorhanden, zu cachedSharedBoards hinzu und triggert ein UI-Update.
      */
     public handleSharedBoardEvent(eventData: { id: string; name: string; description?: string; createdAt: number; updatedAt?: number; isShared: boolean; userRole: string; author?: string }): void {
+        // 🔒 Hard guards: niemals Boards re-injecten, die der User gelöscht/verlassen hat
+        if (isBoardTombstoned(eventData.id)) {
+            return;
+        }
+
+        if (BoardSharingOperations.isBoardHidden(eventData.id, eventData.author)) {
+            return;
+        }
+
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        if (currentUserPubkey && eventData.author === currentUserPubkey) {
+            // Eigene Boards dürfen nicht in den Shared-Cache gelangen (sonst Duplikate)
+            return;
+        }
+
         const exists = this.cachedSharedBoards.some(b => b.id === eventData.id);
         if (!exists) {
             this.cachedSharedBoards = [
@@ -1131,6 +1161,10 @@ export class BoardStore {
             this.isLoadingSharedBoards = true;
 
             console.log('📡 Starte Nostr Abfrage für geteilte Boards...');
+
+            // 0️⃣ Cross-Device Leave: Sync Left-Boards Liste (NIP-51) → Hide Registry
+            // Damit werden verlassene Boards schon beim Discovery/Load konsequent gefiltert.
+            await BoardSharingOperations.syncLeftBoardsFromNostr(currentUserPubkey, ndk);
             
             // 1️⃣ Lade Boards wo User in p-tags ist (OWNER/EDITOR)
             const sharedBoards = await BoardSharingOperations.loadSharedBoardsFromNostr(
@@ -1189,7 +1223,8 @@ export class BoardStore {
         
         try {
             const ndk = this.nostrIntegration.getNDK();
-            await BoardSharingOperations.leaveBoard(boardId, currentUserPubkey, ndk);
+            const cached = this.cachedSharedBoards.find(b => b.id === boardId);
+            await BoardSharingOperations.leaveBoard(boardId, currentUserPubkey, ndk, cached?.author);
             
             // Entferne Board aus dem Cache der geteilten Boards
             this.cachedSharedBoards = this.cachedSharedBoards.filter(b => b.id !== boardId);
@@ -1224,6 +1259,21 @@ export class BoardStore {
         // NICHT triggerUpdate() aufrufen, weil das lastAccessedAt updated, speichert und ggf. publisht.
         // Das kann sonst Delete/Restore Feedback-Loops auslösen.
         this.updateTrigger++;
+    }
+
+    /**
+     * 🧯 Recovery: setzt lokale Sichtbarkeits-Guards zurück.
+     * - löscht Hidden/Leave Registry (Shared Boards)
+     * - löscht Tombstone Registry (Deleted Boards)
+     * - refreshed `boardIds` (aus localStorage-Keys)
+     *
+     * Hinweis: Das ist bewusst eine manuelle Recovery-Operation.
+     */
+    public resetBoardVisibilityGuards(): void {
+        BoardSharingOperations.clearAllHiddenBoards();
+        clearAllBoardTombstones();
+        this.refreshBoardIds();
+        this.triggerUpdate({ publish: false });
     }
 
     public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {
@@ -2076,6 +2126,22 @@ export class BoardStore {
     }
 
     /**
+     * Owner UX: Leave-Requests (Kind 30000) für das aktuelle Board laden.
+     * Wird im ShareDialog genutzt, um "Leave requested" zu markieren.
+     */
+    public async getLeaveRequestsForCurrentBoard(): Promise<Record<string, { eventId: string; createdAt?: number }>> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) return {};
+
+        const boardId = this.board?.id;
+        const boardAuthor = this.board?.author;
+        if (!boardId || !boardAuthor) return {};
+
+        const boardRef = `30301:${boardAuthor}:${boardId}`;
+        return await BoardSharingOperations.loadLeaveRequestsForBoard(boardRef, ndk);
+    }
+
+    /**
      * Lädt Board Followers aus NIP-51 Follow Set Events
      */
     public async loadBoardFollowers(): Promise<void> {
@@ -2667,6 +2733,19 @@ export class BoardStore {
     public upsertBoardFromNostr(boardProps: BoardProps): void {
         if (!boardProps.id) {
             console.warn('⚠️ upsertBoardFromNostr: Board has no ID, skip');
+            return;
+        }
+
+        // 🔒 Hard guard: Tombstoned Boards dürfen nie wieder durch Nostr-Events resurrected werden
+        if (isBoardTombstoned(boardProps.id)) {
+            return;
+        }
+
+        // 🔒 Hard guard: Hidden (Leave/Unfollow) Boards dürfen nicht re-inserted werden
+        // ⚠️ Aber: niemals eigene Boards blockieren (sonst "aktive Boards unsichtbar" Bug).
+        const currentUserPubkey = this.getCurrentUserPubkey();
+        const isForeignBoard = Boolean(currentUserPubkey && boardProps.author && boardProps.author !== currentUserPubkey);
+        if (isForeignBoard && BoardSharingOperations.isBoardHidden(boardProps.id, boardProps.author)) {
             return;
         }
         

@@ -1,8 +1,8 @@
 # Board-Sharing & Maintainer-System Architektur
 
-**Version:** 2.1 (Realtime Appearance)  
-**Datum:** 18. November 2025  
-**Status:** 📋 **SPEZIFIKATION** - Implementierung geplant  
+**Version:** 2.3 (Leave: NIP-51 + Leave Request + Owner Marker)  
+**Datum:** 15. Dezember 2025  
+**Status:** ✅ **TEILWEISE IMPLEMENTIERT** (Follow Sets + Leave Persistenz vorhanden; Owner sieht Leave-Requests im ShareDialog; Owner-Accept/Removal bleibt optional)  
 **Zielgruppe:** Entwickler, die Board-Sharing-Features implementieren  
 **Phase:** 4.1 Board-Sharing & Permissions
 
@@ -96,6 +96,50 @@ Das System basiert auf dem **Kanban-NIP Standard** für Editor-Rechte und **NIP-
 | **Export** | ✅ | ✅ | ✅ |
 | **Kommentare schreiben** | ✅ | ✅ | ❌ |
 | **Live-Updates erhalten** | ✅ | ✅ | ✅ |
+
+---
+
+## 🚪 Board verlassen (Cross-Device)
+
+### Problem
+- **Editor:** Kann sich nicht selbst aus den canonical Maintainers entfernen, weil die Mitgliedschaft über Kind `30301` **vom Owner signiert** wird.
+- **Viewer:** Kann in der Regel „unfollow“ (NIP-51) ausführen, aber „Leave“ soll trotzdem robust sein (offline, mehrere Geräte).
+
+### Lösung (2 Schritte)
+
+**1) „Leave für mich“ (cross-device, ohne Owner) – NIP-51 Left-Liste**
+- Nutzer publiziert eine eigene Liste als Kind `30000` mit `d=kanban-left-boards`.
+- Einträge werden als `a`-Tags gespeichert: `30301:<author>:<d>`.
+- Beim Laden geteilter Boards wird diese Liste in die lokale Hide-Registry gespiegelt und konsequent gefiltert.
+
+**2) „Bitte entferne mich“ (Owner-Koordination) – Leave-Request Event**
+- Nutzer publiziert (best-effort, signer required) ein Leave-Request Event als Kind `30000`:
+    - `d=kanban-leave-request:<boardRef>`
+    - `a=<boardRef>`
+    - `p=<ownerPubkey>`
+    - `content='leave'`
+- Der Owner kann dieses Event auswerten und das Board-Event (Kind `30301`) ohne den betreffenden `p`-Tag neu publizieren.
+
+### Owner Visibility (UI)
+
+- Der Owner kann Leave-Requests **best-effort** sehen: im ShareDialog (Tab „Editoren“) wird beim betreffenden Editor ein Badge angezeigt.
+- Quelle ist ein `kind=30000` Event mit `d=kanban-leave-request:<boardRef>`; die Anzeige ist ein Signal, kein „Hard State“ (Relay-Availability kann variieren).
+
+### Lokale Speicherung (Fallback)
+- Zusätzlich wird „Leave/Hide“ lokal in `nostr-kanban-hidden-boards-v1` persistiert.
+- Wichtig: author-scoped Keys (`30301:{author}:{d}`) vermeiden false positives bei gleichen `d`-Tags.
+
+### Debugging: Logs (NEU 15.12.2025)
+
+Für das Troubleshooting sind folgende Log-Marker relevant:
+
+- `🚪 Verlasse Board:` → Start des Leave-Flows (immer)
+- `🙈 leaveBoard: lokal versteckt + Cache entfernt` → Board ist **sofort** weg in der UI (lokale Hide-Registry + `kanban-{id}` Cache gelöscht)
+- `✅ NIP-51 Left-Boards publiziert` → Left-Liste (`kind=30000`, `d=kanban-left-boards`) wurde erfolgreich publiziert (cross-device)
+- `ℹ️ NIP-51 Left-Boards: Kein Signer – publish übersprungen (nur lokales Hide)` → erklärt, warum kein NIP-51 Event sichtbar ist (z.B. offline, nicht eingeloggt, Signer fehlt)
+- `✅ Leave-Request publiziert` / `ℹ️ Leave-Request: Kein Signer – publish übersprungen` → optionaler Request an Owner (Editor-Fall)
+- `📥 NIP-51 Left-Boards geladen (d=kanban-left-boards)` → Sync der Left-Liste beim Start/Load
+- `✅ Left-Boards → Hide-Registry sync` → Anzahl neu hinzugefügter/entfernter Einträge in der lokalen Hide-Registry
 
 ### Korrekte Implementierung in Board-Klasse
 

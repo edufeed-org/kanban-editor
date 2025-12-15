@@ -4,6 +4,8 @@ import { unixSecondsToMs } from './time.js';
 import { handleBoardEvent } from './handlers/board.js';
 import { handleCardEvent } from './handlers/card.js';
 import { handleDeletionEvent } from './handlers/deletion.js';
+import { BoardSharingOperations } from '../sharing.js';
+import { isBoardTombstoned } from '../deletedBoards.js';
 
 export type SubscriptionLike = {
 	stop: () => void;
@@ -36,6 +38,34 @@ export type SubscribeToUpdatesArgs = {
 	cardDeletionTimestamps: Map<string, number>;
 	boardDeletionTimestamps: Map<string, number>;
 };
+
+export function shouldToastNewSharedBoard(args: {
+	boardId: string;
+	boardAuthor?: string;
+	boardStore: any;
+}): boolean {
+	const { boardId, boardAuthor, boardStore } = args;
+
+	// Wenn das Board lokal als gelöscht markiert ist (tombstone), ist ein "Neues Board geteilt" Toast immer falsch.
+	// Das verhindert Ghost-Toasts auch dann, wenn Deletion-Events erst NACH dem 30301 Replay eintreffen.
+	if (isBoardTombstoned(boardId)) {
+		return false;
+	}
+
+	// Wenn der User dieses Board bereits verlassen/versteckt hat, ist ein "Neues Board geteilt" Toast irritierend.
+	// Wichtig: author-scoped check (byAddress) + Legacy-Fallback (byId).
+	if (
+		BoardSharingOperations.isBoardHidden(boardId, boardAuthor) ||
+		BoardSharingOperations.isBoardHidden(boardId)
+	) {
+		return false;
+	}
+
+	const existingShared =
+		typeof boardStore?.filterSharedBoards === 'function' ? boardStore.filterSharedBoards('') : [];
+	const alreadyThere = Array.isArray(existingShared) && existingShared.some((b: any) => b.id === boardId);
+	return !alreadyThere;
+}
 
 /**
  * Baut Board/Card/Deletion/Sharing/Follower Subscriptions auf.
@@ -175,7 +205,10 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 			if (!dTag || !title) return;
 
 			const pTagsAll = event.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1]);
-			const canonicalOwner = pTagsAll.length > 0 ? pTagsAll[0] : event.pubkey;
+			// Wichtig: Für parametrized replaceable events ist die kanonische Adresse immer
+			//   30301:<event.pubkey>:<d>
+			// Daher MUSS der Owner/Author hier event.pubkey sein (p-tag Reihenfolge ist nicht garantiert).
+			const canonicalOwner = event.pubkey;
 
 			let userRole = 'viewer';
 			if (canonicalOwner === pubkey) {
@@ -226,11 +259,7 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 			}
 
 			try {
-				const existingShared =
-					typeof boardStore?.filterSharedBoards === 'function' ? boardStore.filterSharedBoards('') : [];
-				const alreadyThere =
-					Array.isArray(existingShared) && existingShared.some((b: any) => b.id === dTag);
-				if (!alreadyThere) {
+				if (shouldToastNewSharedBoard({ boardId: dTag, boardAuthor: canonicalOwner, boardStore })) {
 					const { toast } = await import('svelte-sonner');
 					const ownerShort = `${event.pubkey.slice(0, 8)}...${event.pubkey.slice(-4)}`;
 					toast.success('Neues Board geteilt', {
@@ -346,14 +375,13 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 						}
 
 						try {
-							const existingShared =
-								typeof boardStore?.filterSharedBoards === 'function'
-									? boardStore.filterSharedBoards('')
-									: [];
-							const alreadyThere =
-								Array.isArray(existingShared) &&
-								existingShared.some((b: any) => b.id === eventDTag);
-							if (!alreadyThere) {
+							if (
+								shouldToastNewSharedBoard({
+									boardId: eventDTag,
+									boardAuthor,
+									boardStore,
+								})
+							) {
 								const { toast } = await import('svelte-sonner');
 								const ownerShort = `${boardAuthor.slice(0, 8)}...${boardAuthor.slice(-4)}`;
 								toast.success('Neues Board geteilt', {

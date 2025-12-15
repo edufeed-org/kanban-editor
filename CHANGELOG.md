@@ -1,5 +1,95 @@
 # Changelog
 
+## Version 4.7.7 - Hotfix: Shared-Discovery Author/Adresse konsistent (kein Ghost-Toast) 🧭
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: canonicalOwner = event.pubkey
+- Shared-Board Discovery (Kind 30301 `#p`) nutzt für `author`/Adresse jetzt konsequent `event.pubkey` (Nostr-Address: `30301:<pubkey>:<d>`), statt die Reihenfolge der `p`-Tags zu interpretieren.
+- Effekt: Leave/Hide Registry (byAddress) matcht zuverlässig → der Toast „Neues Board geteilt“ wird nach „Board verlassen“ auch in Edge-Cases (Owner republish/delete) nicht mehr fälschlich auf jedem Reload angezeigt.
+- Zusätzlich: Toast-Guard berücksichtigt Tombstones (`kanban-deleted-boards-v1`) und unterdrückt den Toast für lokal gelöschte Boards auch dann, wenn das 30301-Event beim Reload vor dem Kind-5 Delete-Replay eintrifft.
+
+## Version 4.7.6 - UX: Owner sieht Leave-Requests im Share-Dialog 👀
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ UX: Leave-Request Marker
+- Wenn ein Editor ein Leave-Request Event publiziert (Kind `30000`, `d=kanban-leave-request:<boardRef>`), zeigt der Owner im ShareDialog (Tab „Editoren“) ein Badge beim betreffenden Editor.
+- Best-effort: Anzeige hängt von Relay-Verfügbarkeit ab und ist ein Signal, kein kanonischer Zustand.
+
+### 🧼 UX: Kein „Neues Board geteilt“-Toast nach Leave
+- Der Toast „Neues Board geteilt“ wird unterdrückt, wenn der Nutzer das Board bereits verlassen/versteckt hat (lokale Hide/Leave Registry). Damit werden „Ghost“-Toasts vermieden.
+
+## Version 4.7.5 - Hotfix: NIP-09 Delete Guard (keine „Auth Mismatch“ Deletes mehr) 🧹
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Remote-Löschungen nur mit gültiger Autorisierung
+- `deleteBoard()` publiziert das NIP-09 Kind-5 Lösch-Event nur, wenn der aktuelle Signer auch dem `board.author` entspricht.
+- Kaskadierende Card-Löschungen publizieren nur noch für Cards, deren `card.author` dem aktuellen Pubkey entspricht (alle anderen werden remote übersprungen).
+
+### 🎯 Effekt
+- Keine „DELETION AUTH MISMATCH“ Warn-Spam durch doomed Deletes.
+- Weniger Relay-Rejections bei Board-Delete, ohne das lokale Löschen zu beeinflussen.
+
+## Version 4.7.4 - Hotfix: „Leave“ bleibt auch cross-device weg (NIP-51 + Leave Request) 🚪
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Feature: Cross-Device Leave Persistenz
+- „Board verlassen“ wird zusätzlich über eine NIP-51 Liste persistiert: Kind `30000` mit `d=kanban-left-boards` und `a`-Tags im Format `30301:<author>:<d>`.
+- Beim Laden geteilter Boards wird diese Liste vor der Discovery gesynct, damit verlassene Boards auf neuen Devices direkt gefiltert werden.
+
+### 📬 Feature: Leave-Request Event (Owner-Koordination)
+- Editors können (best-effort, signer required) ein Leave-Request Event publizieren: Kind `30000` mit `d=kanban-leave-request:<boardRef>`, `a=<boardRef>` und `p=<ownerPubkey>`.
+- Ziel: Owner kann die Editor-Permission (30301 p-tags) serverseitig entfernen und das Board republishen.
+
+### ✅ Tests
+- Leave/Hide Tests aktualisiert (author-scoped Registry via `byAddress`).
+
+## Version 4.7.3 - Hotfix: Kein sofortiges „Resurrect“ nach Delete 🛑
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Nostr Board-Events können gelöschte Boards nicht reaktivieren
+- `upsertBoardFromNostr()` ignoriert **tombstoned** Boards (`kanban-deleted-boards-v1`) vollständig.
+- Zusätzlich: Shared/Followed Boards, die lokal **hidden** sind (`nostr-kanban-hidden-boards-v1`), werden nicht erneut gespeichert.
+
+### 🧹 Fix: Keine Self-Duplikate in Shared-Board Liste
+- Shared-Cache/Filter ignoriert Boards, deren `author` der aktuelle Nutzer ist.
+- Shared-Cache/Filter ignoriert tombstoned/hidden Boards defensiv (auch bei Real-Time Events).
+
+### ✅ Tests
+- Neuer Unit-Test: `src/lib/stores/kanbanStore.upsertBoardFromNostr.tombstone.spec.ts`.
+
+## Version 4.7.2 - Hotfix: Shared Board „Verlassen“ (Delete = Leave) 🚪
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ UX: Delete ist rollenbasiert
+- **Owner:** „Löschen“ bleibt eine destructive Delete-Operation.
+- **Editor/Viewer:** „Löschen“ verhält sich wie **„Board verlassen“** (Board verschwindet für diesen Nutzer).
+
+### 🧠 Persistenz: Board bleibt wirklich weg
+- Verlassene Shared Boards werden lokal in einer Hide-Registry gespeichert (`nostr-kanban-hidden-boards-v1`).
+- Shared-/Followed-Board Loader filtern hidden Boards konsequent heraus.
+- Für Viewer-Boards wird zusätzlich **best-effort** „unfollow“ versucht; unabhängig davon bleibt das Board lokal versteckt.
+
+### ✅ Tests
+- Neue Unit-Tests für Leave/Hide/Unfollow-Logik: `src/lib/stores/boardstore/sharing.leaveBoard.spec.ts`.
+
 ## Version 4.7.1 - Hotfix: Board-Delete Tombstones 🧯
 
 **Datum:** 15. Dezember 2025  

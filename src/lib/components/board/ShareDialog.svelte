@@ -26,6 +26,8 @@
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
+
+    let leaveRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number }>>({});
     
     // Share-Link generieren
     function generateShareLink(): string {
@@ -74,6 +76,20 @@
         } catch (error) {
             console.error('Fehler beim Laden der Teilnehmer:', error);
             errorMessage = 'Teilnehmer konnten nicht geladen werden';
+        }
+    }
+
+    async function loadLeaveRequestsIfOwner() {
+        if (!canInviteEditors) {
+            leaveRequestsByPubkey = {};
+            return;
+        }
+
+        try {
+            leaveRequestsByPubkey = await boardStore.getLeaveRequestsForCurrentBoard();
+        } catch (error) {
+            console.warn('⚠️ Leave-Requests konnten nicht geladen werden (best-effort):', error);
+            leaveRequestsByPubkey = {};
         }
     }
     
@@ -133,6 +149,20 @@
             loadParticipants();
             loadUserRole();
             shareLink = generateShareLink();
+        }
+    });
+
+
+    $effect(() => {
+        if (!open) return;
+
+        // Wichtig: erst nach loadUserRole() (async) wissen wir, ob Owner.
+        // Dieser Effect läuft erneut, sobald userRole gesetzt wurde.
+        const role = userRole;
+        if (role === BoardRole.OWNER) {
+            void loadLeaveRequestsIfOwner();
+        } else {
+            leaveRequestsByPubkey = {};
         }
     });
 </script>
@@ -232,6 +262,12 @@
                                 <Badge variant={participant.role === 'owner' ? 'default' : 'secondary'}>
                                     {participant.role === 'owner' ? 'Owner' : 'Editor'}
                                 </Badge>
+
+                                {#if participant.role !== 'owner' && canInviteEditors && leaveRequestsByPubkey[participant.pubkey]}
+                                    <Badge variant="outline" title="Leave-Request" class="bg-red-400">
+                                        Hat das Board verlassen
+                                    </Badge>
+                                {/if}
                             </div>
                             
                             {#if participant.role !== 'owner' && canInviteEditors}

@@ -100,11 +100,50 @@ export class BoardStorage {
      * Rekonstruiert ein Board-Objekt aus JSON-Daten
      */
     public static reconstructBoard(data: any): Board {
-        // Migration: Wenn author kein Pubkey-Format hat, ignoriere es
-        let author = data.author;
-        if (author && !author.match(/^[0-9a-f]{64}$/)) {
-            console.warn(`⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze auf 'anonymous'`);
-            author = 'anonymous';
+        const isHexPubkey = (value: unknown): value is string =>
+            typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+
+        // Migration: author soll ein hex pubkey sein. Wenn legacy/Display-Name drinsteht,
+        // dann als authorName behalten und author heuristisch ableiten.
+        let author: string | undefined = data.author;
+        let authorName: string | undefined = data.authorName;
+
+        if (typeof author === 'string' && author.length > 0 && !isHexPubkey(author)) {
+            // 'anonymous' ist ein valider legacy Zustand (z.B. Demo/Offline) – nicht warnen.
+            if (author !== 'anonymous') {
+                // Preserve human-readable legacy author as display name
+                authorName = authorName || author;
+            }
+
+            // Try to infer a canonical pubkey.
+            const maintainers = Array.isArray(data.maintainers) ? data.maintainers : [];
+            const maintainerPubkeys = maintainers.filter(isHexPubkey);
+
+            let inferredAuthor: string | undefined;
+            if (maintainerPubkeys.length === 1) {
+                inferredAuthor = maintainerPubkeys[0];
+            } else {
+                const me = authStore?.getPubkeySafe?.();
+                if (isHexPubkey(me) && maintainerPubkeys.includes(me)) {
+                    inferredAuthor = me;
+                } else if (isHexPubkey(me) && maintainerPubkeys.length === 0) {
+                    inferredAuthor = me;
+                }
+            }
+
+            if (inferredAuthor) {
+                if (author !== 'anonymous') {
+                    console.warn(
+                        `⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze author auf inferred pubkey ${inferredAuthor.slice(0, 16)}...`
+                    );
+                }
+                author = inferredAuthor;
+            } else {
+                if (author !== 'anonymous') {
+                    console.warn(`⚠️ MIGRATION: Board author '${author}' ist kein Pubkey-Format, setze auf 'anonymous'`);
+                }
+                author = 'anonymous';
+            }
         }
         
         const boardProps = {
@@ -114,6 +153,7 @@ export class BoardStorage {
             description: data.description,
             publishState: data.publishState,
             author: author,
+            authorName: authorName,
             maintainers: data.maintainers || [],
             tags: data.tags || [],
             ccLicense: data.ccLicense || 'cc-by-4.0',

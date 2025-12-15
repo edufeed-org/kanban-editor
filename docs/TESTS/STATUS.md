@@ -1,17 +1,17 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅)
-**Status:** 🟢 Vollständig funktional (letzter Stand: 451 Tests) + 5 neue Unit-Tests (Kind-5 Authorization) ✅
+**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅, Shared-Board Leave/Hide Tests ✅, Tombstone-Guard für `upsertBoardFromNostr()` ✅, Leave-Request Loader Tests ✅, Toast-Guard Tests ✅)
+**Status:** 🟢 Vollständig funktional (letzter Stand: 451 Tests) + 14 neue Unit-Tests (Kind-5 Authorization + Leave/Hide + Tombstone Guard + Leave-Request Loader + Toast-Guard) ✅
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Vitest (Unit+Integration)** | ✅ Aktiv | 456 (451 vorher + 5 neu, zuletzt gezielt verifiziert) | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 465 (451 vorher + 14 neu, zuletzt gezielt verifiziert) | Vitest |
 | **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr/handlers/deletion.spec.ts` → `Test Files 1 passed (1)`, `Tests 5 passed (5)`
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr/subscriptions.toast.spec.ts` → `Test Files 1 passed (1)`, `Tests 3 passed (3)`
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 

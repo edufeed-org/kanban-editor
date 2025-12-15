@@ -97,3 +97,13 @@ export function clearBoardTombstone(boardId: string): void {
 	delete map[boardId];
 	saveDeletedBoards(map);
 }
+
+export function clearAllBoardTombstones(): void {
+	const storage = getLocalStorage();
+	if (!storage) return;
+	try {
+		storage.removeItem(DELETED_BOARDS_KEY);
+	} catch {
+		// Best-effort
+	}
+}

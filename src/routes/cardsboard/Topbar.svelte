@@ -21,6 +21,7 @@
     import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { BoardRole } from '$lib/types/sharing';
     import { authStore } from '$lib/index.js';
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
@@ -341,10 +342,23 @@
         console.log('🔄 currentBoardTitle wird neu berechnet:', currentBoardTitle);
     }
 
-    function handleDeleteBoard() {
-        if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
-            console.log('🗑️ Deleting entire board');
-            boardStore.deleteBoard();
+    async function handleDeleteBoard() {
+        const boardId = boardStore.getCurrentBoardId();
+        if (!boardId) return;
+
+        const role = await boardStore.getCurrentUserRole();
+
+        if (role === BoardRole.OWNER) {
+            if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
+                console.log('🗑️ Deleting entire board');
+                boardStore.deleteBoard(boardId);
+            }
+            return;
+        }
+
+        if (confirm('🚪 Willst du dieses geteilte Board verlassen? Es wird für dich ausgeblendet und kann später wieder durch Folgen/Einladung sichtbar werden.')) {
+            console.log('🚪 Leaving shared board');
+            await boardStore.leaveBoard(boardId);
         }
     }
 
