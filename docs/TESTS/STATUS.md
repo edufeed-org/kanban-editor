@@ -1,17 +1,17 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync: defensive merge gegen Datenverlust ✅)
-**Status:** 🟢 Vollständig funktional (Vitest: 447 ✅ | 3 ⏭️ = 450 Tests)
+**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅)
+**Status:** 🟢 Vollständig funktional (letzter Stand: 450 Tests) + 1 neuer Unit-Test (LWW-Guard) ✅
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Vitest (Unit+Integration)** | ✅ Aktiv | 450 (447 passed, 3 skipped) | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 451 (450 vorher + 1 neu, zuletzt gezielt verifiziert) | Vitest |
 | **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/operations.syncBoardState.preserve-missing.spec.ts src/lib/stores/boardstore/operations.syncBoardState.updatedAt.spec.ts` → `Test Files 2 passed (2)`, `Tests 5 passed (5)`
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- src/lib/stores/boardstore/operations.lww.spec.ts` → `Test Files 1 passed (1)`, `Tests 1 passed (1)`
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 

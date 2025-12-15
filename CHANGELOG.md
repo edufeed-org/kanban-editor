@@ -100,6 +100,12 @@ Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten i
 - UX: Bei Hard-Fail erscheint eine Toast („Drag & Drop abgebrochen“) mit Hinweis zum Wiederholen/Reload; die Board-UI resettet den lokalen DnD-State auf den Store-Stand, damit Moves direkt wieder möglich sind.
 - Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/Board.svelte`
 
+### 🐛 Fix: Force-Reload lädt nicht mehr „ältere“ Cards
+- Erzwingt **Last-Write-Wins** bereits beim initialen Card-Upsert: ältere Events können neuere lokale Daten nicht mehr überschreiben (unabhängig von Fetch-Reihenfolge).
+- Verhindert Cross-Board-„Leakage“ bei async Card-Loads: späte Card-Events werden nicht mehr fälschlich auf das aktuell geöffnete Board angewendet.
+- Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`
+- Test: `src/lib/stores/boardstore/operations.lww.spec.ts`
+
 ### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
 - Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
 - `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.

@@ -538,6 +538,19 @@ export class BoardOperations {
         cardProps: CardProps
     ): boolean {
         console.log(`📥 upsertCardFromNostr: ${cardProps.heading || cardProps.id}`);
+
+        const toTimestampMs = (value: unknown): number => {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                // Heuristik: < 1e12 = Sekunden (unix) → ms
+                return value < 1_000_000_000_000 ? value * 1000 : value;
+            }
+            if (typeof value === 'string') {
+                const parsed = new Date(value).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+            return 0;
+        };
         
         // 1. Find target column
         // cardProps sollte columnId haben (aus Event deserialisiert)
@@ -570,6 +583,51 @@ export class BoardOperations {
         const existingCard = column.findCard(cardProps.id!);
         
         if (existingCard) {
+            // ⚡ LWW (Last-Write-Wins): verhindere, dass ältere Events neuere lokale Daten überschreiben.
+            // Wichtig für:
+            // - Initiale Loads (loadCardsForBoard kann mehrere Versionen liefern)
+            // - Background-Board Updates (async race)
+            const incomingTimeMs = toTimestampMs((cardProps as any).updatedAtMs)
+                || toTimestampMs(cardProps.updatedAt)
+                || toTimestampMs((cardProps as any).createdAtMs)
+                || toTimestampMs(cardProps.createdAt);
+
+            const localTimeMs = toTimestampMs((existingCard as any).updatedAtMs)
+                || toTimestampMs((existingCard as any).updatedAt)
+                || toTimestampMs((existingCard as any).createdAt);
+
+            if (localTimeMs > 0 && incomingTimeMs > 0) {
+                if (incomingTimeMs < localTimeMs) {
+                    console.log(
+                        `⏭️ LWW: Skip older card update ${cardProps.id} (incoming ${incomingTimeMs} < local ${localTimeMs})`
+                    );
+                    return true;
+                }
+
+                if (incomingTimeMs === localTimeMs) {
+                    const localEventId = (existingCard as any).eventId as string | undefined;
+                    const incomingEventId = (cardProps as any).eventId as string | undefined;
+
+                    // Deterministischer Tie-Break: höhere eventId gewinnt (analog zu handler/card.ts)
+                    if (localEventId && incomingEventId && incomingEventId <= localEventId) {
+                        console.log(
+                            `⏭️ LWW: Skip tie-break update ${cardProps.id} (incoming eventId <= local eventId)`
+                        );
+                        return true;
+                    }
+                    if (localEventId && !incomingEventId) {
+                        console.log(
+                            `⏭️ LWW: Skip update ${cardProps.id} (local has eventId, incoming missing eventId at same timestamp)`
+                        );
+                        return true;
+                    }
+                }
+            } else if (localTimeMs > 0 && incomingTimeMs === 0) {
+                // Incoming hat keinen Timestamp → niemals einen validen lokalen Stand überschreiben.
+                console.log(`⏭️ LWW: Skip update ${cardProps.id} (incoming timestamp missing)`);
+                return true;
+            }
+
             // ⚡ PRESERVE COMMENTS: Behalte bestehende Kommentare beim Update
             // Kommentare werden als separate Kind-1 Events gespeichert und
             // sollten beim Card-Update nicht verloren gehen

@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.6 (Hotfix: DnD-Sync Datenverlust verhindert - 15. Dezember 2025)  
-**Aktualisiert:** 15. Dezember 2025 (DnD Sync verliert keine Cards mehr bei transienten UI-Payloads)  
+**Version:** 3.7 (Hotfix: LWW-Guard beim Reload + Board-scoped Card-Loads - 15. Dezember 2025)  
+**Aktualisiert:** 15. Dezember 2025 (Force-Reload bevorzugt neueste Card-Version; async Card-Loads leaken nicht mehr zwischen Boards)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1587,6 +1587,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.7 | 15.12.2025 | 🧭 **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschützt; async Card-Loads werden Board-spezifisch angewendet (verhindert „alle Boards zeigen gleiche Cards“ und „Reload lädt älter“). |
 | 3.6 | 15.12.2025 | 🧷 **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollständige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |
 | 3.5 | 14.12.2025 | 🧩 **Hotfix Shared-Board Sync:** Board-Load überschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
 | 3.1 | 10.11.2025 | 🚀 **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollständig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER für Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |

@@ -704,58 +704,60 @@ export class BoardStore {
     }
 
     private async loadCardsFromNostr(board: Board): Promise<void> {
-        await this.nostrIntegration.loadCardsForBoard(
-            board,
-            (cardProps: any) => {
-                console.log('🃏 Card vom Relay geladen:', cardProps.id, 'für Spalte:', cardProps.columnId);
-                
-                try {
-                    // Prüfe ob Card bereits existiert (Duplikate vermeiden!)
-                    const existing = this.board.findCardById(cardProps.id);
-                    if (existing) {
-                        console.log('✅ Card bereits vorhanden, skip:', cardProps.id);
-                        return;
-                    }
-                    
-                    // Finde Zielspalte
-                    let targetColumn = this.board.findColumn(cardProps.columnId);
-                    
-                    // Fallback: Name-basiertes Matching
-                    if (!targetColumn && (cardProps as any).columnName) {
-                        targetColumn = this.board.columns.find(col => 
-                            col.name.toLowerCase() === ((cardProps as any).columnName || '').toLowerCase()
-                        );
-                        if (targetColumn) {
-                            console.log(`✅ Column matched by name: "${(cardProps as any).columnName}"`);
-                            cardProps.columnId = targetColumn.id;
-                        }
-                    }
-                    
-                    // Letzter Fallback: Erste Spalte
-                    if (!targetColumn && this.board.columns.length > 0) {
-                        targetColumn = this.board.columns[0];
-                        console.log(`⚠️ Using first column as fallback: "${targetColumn.name}"`);
-                        cardProps.columnId = targetColumn.id;
-                    }
-                    
-                    if (!targetColumn) {
-                        console.error(`❌ No column found for card ${cardProps.id}`);
-                        return;
-                    }
-                    
-                    // Card via upsert hinzufügen (mit rank-Position)
-                    this.board.upsertCard(cardProps.columnId, cardProps, cardProps.rank);
-                    
-                } catch (error) {
-                    console.error(`❌ Error loading card from Nostr:`, error);
+        const targetBoardId = board.id;
+
+        await this.nostrIntegration.loadCardsForBoard(board, (cardProps: any) => {
+            console.log('🃏 Card vom Relay geladen:', cardProps.id, 'für Spalte:', cardProps.columnId);
+
+            try {
+                // ⚠️ Wichtig: Card-Loads können asynchron eintreffen.
+                // Wenn der User inzwischen das Board gewechselt hat, dürfen wir NICHT in this.board schreiben.
+                if (this.board.id !== targetBoardId) {
+                    this.upsertCardToBackgroundBoard(targetBoardId, cardProps);
+                    return;
                 }
+
+                // Finde Zielspalte im AKTUELLEN Board (das ist hier garantiert targetBoardId)
+                let targetColumn = this.board.findColumn((cardProps as any).columnId);
+
+                // Fallback: Name-basiertes Matching
+                if (!targetColumn && (cardProps as any).columnName) {
+                    targetColumn = this.board.columns.find(
+                        (col) => col.name.toLowerCase() === String((cardProps as any).columnName || '').toLowerCase()
+                    );
+                    if (targetColumn) {
+                        console.log(`✅ Column matched by name: "${(cardProps as any).columnName}"`);
+                        (cardProps as any).columnId = targetColumn.id;
+                    }
+                }
+
+                // Letzter Fallback: Erste Spalte
+                if (!targetColumn && this.board.columns.length > 0) {
+                    targetColumn = this.board.columns[0];
+                    console.log(`⚠️ Using first column as fallback: "${targetColumn.name}"`);
+                    (cardProps as any).columnId = targetColumn.id;
+                }
+
+                if (!targetColumn) {
+                    console.error(`❌ No column found for card ${cardProps.id}`);
+                    return;
+                }
+
+                // Card via Secondary Action upserten (inkl. Preserve-Comments + Rank + LWW in BoardOperations)
+                BoardOperations.upsertCardFromNostr(this.board, cardProps);
+            } catch (error) {
+                console.error(`❌ Error loading card from Nostr:`, error);
             }
-        );
-        
+        });
+
         // Nach dem Laden aller Cards: UI aktualisieren (OHNE Nostr-Publishing!)
-        // 🔴 WICHTIG: publish: false - wir laden nur vom Relay, keine Änderungen!
-        this.triggerUpdate({ publish: false });
-        console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
+        // 🔴 Wichtig: Nur wenn wir noch auf dem selben Board sind.
+        if (this.board.id === targetBoardId) {
+            this.triggerUpdate({ publish: false });
+            console.log('✅ Alle Cards vom Relay geladen und synchronisiert');
+        } else {
+            console.log('ℹ️ Cards geladen, aber Board wurde gewechselt - kein UI-Update für altes Board');
+        }
     }
 
     /**
