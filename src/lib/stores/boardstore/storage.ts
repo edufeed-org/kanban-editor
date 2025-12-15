@@ -5,6 +5,7 @@ import { Board, Column, Card, type CardProps, type ColumnProps } from '../../cla
 import { generateTimestamp, generateDTag } from '../../utils/idGenerator.js';
 import { authStore } from '../authStore.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
+import { isBoardTombstoned, tombstoneBoard } from './deletedBoards.js';
 
 export class BoardStorage {
     /**
@@ -41,6 +42,9 @@ export class BoardStorage {
                 if (id === 'config') return false;
                 if (id === 'settings') return false;
                 if (id === 'boards-list') return false;
+                // ✅ Anti-Resurrection: Tombstone registry is NOT a board
+                if (id === 'deleted-boards-v1') return false;
+                if (id.startsWith('deleted-boards-')) return false;
                 if (id.includes('-metadata')) return false;
                 if (id.includes('-backup')) return false;
                 if (id.includes('-migrated')) return false;
@@ -55,7 +59,8 @@ export class BoardStorage {
             // Extract board IDs from keys (remove "kanban-" prefix)
             const boardIds = boardKeys
                 .map(key => key.replace('kanban-', ''))
-                .filter(id => id && id.length > 0); // ✅ Extra safety: filter empty strings
+                .filter(id => id && id.length > 0) // ✅ Extra safety: filter empty strings
+                .filter(id => !isBoardTombstoned(id)); // ✅ Anti-Resurrection: Deleted boards stay deleted
             
                         
             return boardIds;
@@ -214,6 +219,10 @@ export class BoardStorage {
         if (typeof window === 'undefined') return;
         
         try {
+            if (isBoardTombstoned(board.id)) {
+                console.warn(`⛔ BoardStorage.saveBoard: Board ${board.id} ist als gelöscht markiert (tombstone) – skip persist`);
+                return;
+            }
             const data = board.getContextData(true);
             const storageKey = `kanban-${board.id}`;
             localStorage.setItem(storageKey, JSON.stringify(data));
@@ -228,6 +237,7 @@ export class BoardStorage {
      */
     public static loadBoard(boardId: string): Board | null {
         if (typeof window === 'undefined') return null;
+        if (isBoardTombstoned(boardId)) return null;
         
         try {
             const storageKey = `kanban-${boardId}`;
@@ -250,6 +260,7 @@ export class BoardStorage {
      */
     public static updateLastAccessed(boardId: string): void {
         if (typeof window === 'undefined') return;
+        if (isBoardTombstoned(boardId)) return;
         
         try {
             const storageKey = `kanban-${boardId}`;
@@ -271,6 +282,8 @@ export class BoardStorage {
         if (typeof window === 'undefined') return false;
         
         try {
+            // ✅ Anti-Resurrection: Persistente Tombstone setzen, bevor async Prozesse re-schreiben können
+            tombstoneBoard(boardId);
             localStorage.removeItem(`kanban-${boardId}`);
             console.log('🗑️ Board gelöscht:', boardId);
             return true;
@@ -303,7 +316,10 @@ export class BoardStorage {
         if (typeof window === 'undefined') return [];
         
         // ✅ Filter out invalid IDs (undefined, null, empty strings)
-        const validIds = boardIds.filter(id => id && typeof id === 'string' && id.length > 0);
+        // ✅ Filter out tombstoned IDs as defensive guard (even if caller passed them)
+        const validIds = boardIds
+            .filter(id => id && typeof id === 'string' && id.length > 0)
+            .filter(id => !isBoardTombstoned(id));
         
         const boards = validIds.map(id => {
             try {
@@ -316,6 +332,10 @@ export class BoardStorage {
                 }
                 
                 const boardData = JSON.parse(stored);
+                if (!boardData || typeof boardData !== 'object') {
+                    console.warn(`⚠️ Board ${id} hat ungültiges JSON-Objekt in localStorage`);
+                    return null;
+                }
                 
                 // ✅ Parse timestamps correctly
                 const parseTimestamp = (value: any): number => {
@@ -330,7 +350,8 @@ export class BoardStorage {
                 
                 // Return LIGHTWEIGHT metadata (no columns/cards!)
                 return {
-                    id: boardData.id,
+                    // ✅ Source of truth: localStorage-Key. Stored JSON can be partial/corrupted.
+                    id,
                     name: boardData.name || 'Unbenanntes Board',
                     description: boardData.description || '',
                     createdAt: parseTimestamp(boardData.createdAt) || Date.now(),

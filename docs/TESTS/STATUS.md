@@ -1,17 +1,17 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅)
-**Status:** 🟢 Vollständig funktional (letzter Stand: 450 Tests) + 1 neuer Unit-Test (LWW-Guard) ✅
+**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅)
+**Status:** 🟢 Vollständig funktional (letzter Stand: 451 Tests) + 5 neue Unit-Tests (Kind-5 Authorization) ✅
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Vitest (Unit+Integration)** | ✅ Aktiv | 451 (450 vorher + 1 neu, zuletzt gezielt verifiziert) | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 456 (451 vorher + 5 neu, zuletzt gezielt verifiziert) | Vitest |
 | **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `pnpm run test:unit -- src/lib/stores/boardstore/operations.lww.spec.ts` → `Test Files 1 passed (1)`, `Tests 1 passed (1)`
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr/handlers/deletion.spec.ts` → `Test Files 1 passed (1)`, `Tests 5 passed (5)`
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 
@@ -224,7 +224,18 @@
 - Mock `window.nostr` für NIP-07 Tests
 - Mock Fetch für NIP-05 Verification
 
-#### D. `src/routes/page.svelte.spec.ts` ✅
+#### D. `src/lib/stores/boardstore/nostr/handlers/deletion.spec.ts` ✅ **NEW - 5 Tests**
+**Modul:** Kind-5 (NIP-09) Deletion Handler Hardening
+**Status:** ✅ Vollständig + Passing
+
+**Getestete Regeln:**
+- ✅ Board-Deletion wird ignoriert, wenn `deletionEvent.pubkey` nicht zur `a`-Tag-Pubkey passt
+- ✅ Board-Deletion wird ignoriert, wenn lokales `board.author` nicht zur `a`-Tag-Pubkey passt
+- ✅ Board wird gelöscht, wenn Pubkey + Author matchen
+- ✅ Card-Deletion wird ignoriert bei Pubkey-Mismatch
+- ✅ Card-Deletion wird ignoriert bei Card-Author-Mismatch
+
+#### E. `src/routes/page.svelte.spec.ts` ✅
 **Klassen:** `Board`, `Column`, `Card`, `Chat`
 **Test-Coverage:** 16/16 Kernfunktionen
 **Status:** ✅ Vollständig

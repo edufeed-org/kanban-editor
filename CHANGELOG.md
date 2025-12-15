@@ -1,5 +1,24 @@
 # Changelog
 
+## Version 4.7.1 - Hotfix: Board-Delete Tombstones 🧯
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Gelöschte Boards tauchen nicht mehr wieder auf
+- Löschungen werden dauerhaft über eine Tombstone-Registry gespeichert (`kanban-deleted-boards-v1`).
+- Board-Discovery/Load/Rekonstruktion filtern tombstoned IDs konsequent, damit kein späterer Write-Pfad ein gelöschtes Board „resurrected“.
+
+### 🛡️ Fix: Keine False-Positives durch Nostr Kind-5 Deletions
+- Kind-5 Deletion-Events werden nur angewendet, wenn `deletionEvent.pubkey` dem Pubkey im `a`-Tag entspricht (NIP-09 Adressierung).
+- Board-Deletion wird nur ausgeführt, wenn ein lokales Board existiert und dessen `author` zum `a`-Tag passt.
+
+### 🔄 Fix: Shared Boards können sich aus stale Tombstones erholen
+- Shared-Boards, die fälschlich tombstoned wurden, werden beim Load revalidiert (Board-Event vs. Deletion-Event Timestamp) und ggf. automatisch „un-tombstoned“.
+
+---
+
 ## Version 4.7.0 - Board Snapshots / Versionshistorie 📸
 
 **Datum:** 3. Dezember 2025  
@@ -79,6 +98,19 @@ Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das 
 
 ### 🔧 Hinweis
 Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
+
+### 🐛 Fix: Start-Crash bei beschädigten Board-Metadaten
+- `getAllBoardsMetadata()` nutzt jetzt defensiv die Board-ID aus dem `localStorage`-Key (`kanban-{id}`), auch wenn das gespeicherte JSON kein `id` Feld enthält.
+- `loadFromStorage()` loggt Board-IDs crash-sicher (kein `.slice()` auf `undefined`).
+- Test ergänzt: `storage.spec.ts` deckt fehlendes `id` Feld ab.
+
+### 🐛 Fix: Endloses „Gelöscht ↔ Wiederhergestellt“ in Boardliste
+- `refreshBoardIds()` und `refreshBoardList()` sind jetzt **read-only** (UI-Refresh via `updateTrigger++`, kein `triggerUpdate()` → kein `lastAccessedAt` Update, kein Save, kein Publish).
+- Nostr-Board-Load leitet `boardIds` deterministisch aus `BoardStorage.loadBoardIds()` ab (Source-of-Truth inkl. Tombstone-Filter) statt Merge/Dedup.
+- `BoardStorage.loadBoardIds()` schließt den Tombstone-Registry-Key (`kanban-deleted-boards-v1`) explizit aus, damit er nie als „Board-ID“ in der Liste landet.
+- Shared-Board-Rekonstruktion/Laden bricht für tombstoned IDs hart ab (kein `fetchEvent()`, kein Save/Publish), um Retry-Spam zu verhindern.
+- Followers-Load speichert nur lokal (kein Publish, kein lastAccessed bump).
+- Dateien: `src/lib/stores/kanbanStore.svelte.ts`
 
 ### 🔧 Wartung (intern)
 - `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.

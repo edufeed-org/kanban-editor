@@ -3,6 +3,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BoardStorage } from './storage';
 
+const TOMBSTONE_KEY = 'kanban-deleted-boards-v1';
+
 /**
  * Unit Tests für BoardStorage
  * 
@@ -66,6 +68,12 @@ describe('BoardStorage', () => {
         mockLocalStorage.clear();
         vi.restoreAllMocks();
     });
+
+    function setTombstone(boardId: string, deletedAtMs: number = Date.now()): void {
+        localStorage.setItem(TOMBSTONE_KEY, JSON.stringify({
+            [boardId]: deletedAtMs
+        }));
+    }
 
     // ========================================================================
     // 1. loadBoardIds() - Filter Logic Tests
@@ -202,6 +210,22 @@ describe('BoardStorage', () => {
             expect(boardIds).toHaveLength(2); // Keine Duplikate
             expect(new Set(boardIds).size).toBe(boardIds.length); // Unique
         });
+
+        it('✅ sollte tombstoned Boards NICHT zurückgeben (Anti-Resurrection)', () => {
+            // ARRANGE
+            const tombstonedId = 'board-deleted123456789';
+            const activeId = 'board-active1234567890';
+            localStorage.setItem(`kanban-${tombstonedId}`, JSON.stringify({ id: tombstonedId, name: 'Deleted', createdAt: Date.now(), columns: [] }));
+            localStorage.setItem(`kanban-${activeId}`, JSON.stringify({ id: activeId, name: 'Active', createdAt: Date.now(), columns: [] }));
+            setTombstone(tombstonedId);
+
+            // ACT
+            const boardIds = BoardStorage.loadBoardIds();
+
+            // ASSERT
+            expect(boardIds).toContain(activeId);
+            expect(boardIds).not.toContain(tombstonedId);
+        });
     });
 
     // ========================================================================
@@ -271,6 +295,52 @@ describe('BoardStorage', () => {
 
             // ASSERT
             expect(metadata).toHaveLength(0);
+        });
+
+        it('✅ sollte tombstoned IDs defensiv filtern (auch wenn caller sie übergibt)', () => {
+            // ARRANGE
+            const tombstonedId = 'board-deleted123456789';
+            const validId = 'board-valid1234567890';
+
+            localStorage.setItem(`kanban-${tombstonedId}`, JSON.stringify({
+                id: tombstonedId,
+                name: 'Deleted Board',
+                createdAt: Date.now(),
+                columns: []
+            }));
+            localStorage.setItem(`kanban-${validId}`, JSON.stringify({
+                id: validId,
+                name: 'Valid Board',
+                createdAt: Date.now(),
+                columns: []
+            }));
+            setTombstone(tombstonedId);
+
+            // ACT
+            const metadata = BoardStorage.getAllBoardsMetadata([tombstonedId, validId]);
+
+            // ASSERT
+            expect(metadata).toHaveLength(1);
+            expect(metadata[0].id).toBe(validId);
+        });
+
+        it('✅ sollte ID aus localStorage-Key nutzen wenn JSON id fehlt (robust gegen korrupte Daten)', () => {
+            // ARRANGE
+            const keyId = 'board-missing-id-1234567890';
+            localStorage.setItem(`kanban-${keyId}`, JSON.stringify({
+                // id fehlt absichtlich
+                name: 'Board ohne ID',
+                createdAt: Date.now(),
+                columns: []
+            }));
+
+            // ACT
+            const metadata = BoardStorage.getAllBoardsMetadata([keyId]);
+
+            // ASSERT
+            expect(metadata).toHaveLength(1);
+            expect(metadata[0].id).toBe(keyId);
+            expect(metadata[0].name).toBe('Board ohne ID');
         });
     });
 
@@ -390,6 +460,85 @@ describe('BoardStorage', () => {
 
             // ASSERT: Invalid board sollte in Metadata nicht erscheinen (oder mit Defaults)
             expect(metadata.length).toBeGreaterThan(0);
+        });
+    });
+
+    // ========================================================================
+    // 5. Anti-Resurrection Tombstones (Delete/Save/Load)
+    // ========================================================================
+
+    describe('5. Tombstones (Anti-Resurrection)', () => {
+        it('✅ saveBoard() sollte tombstoned Boards NICHT persistieren', () => {
+            // ARRANGE
+            const tombstonedId = 'board-deleted123456789';
+            setTombstone(tombstonedId);
+
+            const fakeBoard = {
+                id: tombstonedId,
+                getContextData: () => ({ id: tombstonedId, name: 'Should not persist', columns: [] })
+            } as any;
+
+            // ACT
+            BoardStorage.saveBoard(fakeBoard);
+
+            // ASSERT
+            expect(localStorage.getItem(`kanban-${tombstonedId}`)).toBeNull();
+        });
+
+        it('✅ loadBoard() sollte tombstoned Boards immer als null zurückgeben (auch wenn Key existiert)', () => {
+            // ARRANGE
+            const tombstonedId = 'board-deleted123456789';
+            localStorage.setItem(`kanban-${tombstonedId}`, JSON.stringify({
+                id: tombstonedId,
+                name: 'Zombie',
+                createdAt: Date.now(),
+                columns: []
+            }));
+            setTombstone(tombstonedId);
+
+            // ACT
+            const loaded = BoardStorage.loadBoard(tombstonedId);
+
+            // ASSERT
+            expect(loaded).toBeNull();
+        });
+
+        it('✅ deleteBoard() sollte Tombstone setzen und Board-Key entfernen', () => {
+            // ARRANGE
+            const id = 'board-deleted123456789';
+            localStorage.setItem(`kanban-${id}`, JSON.stringify({ id, name: 'To delete', createdAt: Date.now(), columns: [] }));
+
+            // ACT
+            const ok = BoardStorage.deleteBoard(id);
+
+            // ASSERT
+            expect(ok).toBe(true);
+            expect(localStorage.getItem(`kanban-${id}`)).toBeNull();
+
+            const tombstonesRaw = localStorage.getItem(TOMBSTONE_KEY);
+            expect(tombstonesRaw).toBeTruthy();
+            const tombstones = JSON.parse(tombstonesRaw || '{}');
+            expect(tombstones[id]).toBeTypeOf('number');
+        });
+
+        it('✅ updateLastAccessed() sollte tombstoned Boards NICHT schreiben', () => {
+            // ARRANGE
+            const id = 'board-deleted123456789';
+            const initial = JSON.stringify({
+                id,
+                name: 'Zombie',
+                createdAt: Date.now(),
+                lastAccessedAt: '2020-01-01T00:00:00.000Z',
+                columns: []
+            });
+            localStorage.setItem(`kanban-${id}`, initial);
+            setTombstone(id);
+
+            // ACT
+            BoardStorage.updateLastAccessed(id);
+
+            // ASSERT
+            expect(localStorage.getItem(`kanban-${id}`)).toBe(initial);
         });
     });
 });

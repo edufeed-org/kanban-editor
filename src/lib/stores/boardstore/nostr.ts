@@ -28,6 +28,7 @@ import { subscribeToUpdates as subscribeToUpdatesImpl } from './nostr/subscripti
 import type NDK from '@nostr-dev-kit/ndk';
 import { NDKRelaySet } from '@nostr-dev-kit/ndk';
 import { toast } from 'svelte-sonner';
+import { isBoardTombstoned } from './deletedBoards.js';
 
 export class NostrIntegration {
     private ndk?: NDK;
@@ -150,6 +151,11 @@ export class NostrIntegration {
                     const boardProps = nostrEventToBoard(event);
                     const board = new BoardClass(boardProps);
 
+                    // ✅ Anti-Resurrection: Tombstone schlägt Relay-Discovery
+                    if (isBoardTombstoned(board.id)) {
+                        return null;
+                    }
+
                     // Merke dass dieses Board auf dem Relay existiert
                     relayBoardIds.add(board.id);
 
@@ -255,7 +261,10 @@ export class NostrIntegration {
                     loadedBoardIds.push(result.boardId);
                     
                     if (result.needsStorage && result.storageKey && result.context) {
-                        window.localStorage.setItem(result.storageKey, JSON.stringify(result.context));
+                        // ✅ Anti-Resurrection: Double-check vor dem Write
+                        if (!isBoardTombstoned(result.boardId)) {
+                            window.localStorage.setItem(result.storageKey, JSON.stringify(result.context));
+                        }
                     }
                 }
             } else {

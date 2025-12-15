@@ -74,7 +74,12 @@ boardStore.createCard(columnId, 'Meine Karte', 'Beschreibung');
 ┌────────────────────────────────────────────────────┐
 │ Persistierung & Synchronisation                    │
 │ ├─ localStorage: 'kanban-{boardId}' (Sync)        │
-│ ├─ localStorage: 'kanban-boards-list' (Sync)      │
+│ │    - boardId ist i.d.R. im Format 'board-<...>' │
+│ │    - dadurch ist der Key meistens 'kanban-board-<...>' │
+│ ├─ localStorage: 'kanban-deleted-boards-v1' (Tombstones) │
+│ │    - verhindert „Resurrection“ gelöschter Boards │
+│ ├─ Board-IDs: werden aus localStorage Keys abgeleitet │
+│ │    - legacy Key 'kanban-boards-list' ist NICHT mehr Source of Truth │
 │ └─ SyncManager: Offline-Queue & Nostr-Publishing (Async) │
 └────────────────────────────────────────────────────┘
 ```
@@ -676,34 +681,29 @@ public deleteBoard(boardId: string) {
     if (!this.board.canAddCard(signerPubkey ?? undefined)) {
         throw new Error('❌ Keine Berechtigung');
     }
+    // ✅ Anti-Resurrection: Tombstone setzen, dann Key entfernen
+    tombstoneBoard(boardId);
     localStorage.removeItem(`kanban-${boardId}`);
 }
 ```
 
-**Fix:** ALLE Write-Ops MÜSSEN `canAddCard()` prüfen!
+**Fix:**
+- ALLE lokalen Write-Ops MÜSSEN Permissions prüfen.
+- Für Nostr Kind-5 Deletions muss zusätzlich gelten: `deletionEvent.pubkey` entspricht dem Pubkey im `a`-Tag (NIP-09 Adressierung), sonst KEIN Delete/Tombstone.
 
-### Fehler 4: Board-IDs nicht synchronisiert
+### Fehler 4: Board-IDs werden aus Keys abgeleitet
 
-**Symptom:** Boards verschwinden aus der Liste
+**Symptom:** Veraltete Implementierungen pflegen eine separate ID-Liste und geraten aus Sync.
+
+**Aktueller Fix/Standard:** Board-IDs werden aus `Object.keys(localStorage)` abgeleitet (Single Source of Truth), und gelöschte Boards werden zusätzlich per Tombstone-Registry gefiltert.
 
 ```typescript
-// ❌ FALSCH
-public createBoard(name: string) {
-    const board = new Board({name});
-    localStorage.setItem(`kanban-${board.id}`, JSON.stringify(board));
-    // boardIds NICHT aktualisiert!
-}
+// ✅ RICHTIG (aktuell): Keine separate IDs-Liste als Source of Truth
+const boardIds = BoardStorage.loadBoardIds();
 
-// ✅ RICHTIG
-public createBoard(name: string) {
-    const board = new Board({name});
-    localStorage.setItem(`kanban-${board.id}`, JSON.stringify(board));
-    this.boardIds = [...this.boardIds, board.id];  // ← Hinzufügen!
-    this.saveBoardIds();
-}
+// ✅ Delete: Tombstone setzen (dauerhaft) + Key entfernen
+BoardStorage.deleteBoard(boardId);
 ```
-
-**Fix:** `boardIds` MUSS bei Create/Delete synchronisiert werden!
 
 ---
 

@@ -55,15 +55,26 @@ export async function handleDeletionEvent(
 		// Format: ['a', '30301:pubkey:board-id'] oder ['a', '30302:pubkey:card-id']
 		const aTags = deletionEvent.tags.filter((t: any) => t[0] === 'a');
 		const deleteTime = unixSecondsToMs(deletionEvent.created_at); // Millisekunden
+		const deletionPubkey: string | undefined = deletionEvent?.pubkey;
 
 		for (const aTag of aTags) {
 			const eventRef = aTag[1];
+
+			// NIP-09 Safety: Der Pubkey im 'a'-Tag ist Teil der Ziel-Adressierung.
+			// Ein Deletion-Event ist nur gültig, wenn deletionEvent.pubkey === targetPubkey.
+			// (sonst könnten fremde Deletions lokale Boards/Card-Instanzen tombstonen)
+			const partsForAuth = typeof eventRef === 'string' ? eventRef.split(':') : [];
+			const targetPubkey = partsForAuth.length >= 3 ? partsForAuth[1] : undefined;
+			if (targetPubkey && deletionPubkey !== targetPubkey) {
+				continue;
+			}
 
 			// ===== BOARD DELETION =====
 			if (eventRef && eventRef.startsWith('30301:')) {
 				const parts = eventRef.split(':');
 				if (parts.length >= 3) {
 					const boardId = parts.slice(2).join(':');
+					const boardAuthor = parts[1];
 
 					// ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
 					if (ctx.boardDeletionTimestamps.has(boardId)) {
@@ -74,7 +85,14 @@ export async function handleDeletionEvent(
 					ctx.boardDeletionTimestamps.set(boardId, deleteTime);
 
 					// Check if board exists locally
-					const existsLocally = BoardStorage.loadBoard(boardId) !== null;
+					const localBoard = BoardStorage.loadBoard(boardId);
+					const existsLocally = localBoard !== null;
+
+					// Extra safety: only apply board deletion when local board author matches target.
+					// Prevents tombstoning wrong boards when local cache used a different canonical owner.
+					if (existsLocally && localBoard?.author && localBoard.author !== boardAuthor) {
+						continue;
+					}
 
 					if (existsLocally) {
 						console.log(`🗑️ Deleting board ${boardId.substring(0, 16)}... (deletion event)`);
@@ -98,6 +116,7 @@ export async function handleDeletionEvent(
 				const parts = eventRef.split(':');
 				if (parts.length >= 3) {
 					const cardId = parts.slice(2).join(':');
+					const cardAuthor = parts[1];
 
 					// ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
 					if (ctx.cardDeletionTimestamps.has(cardId)) {
@@ -118,6 +137,11 @@ export async function handleDeletionEvent(
 
 					// Track deletion timestamp (für Ordering)
 					ctx.cardDeletionTimestamps.set(cardId, deleteTime);
+
+					// Optional extra safety: if card has an author, require it to match.
+					if (result.card?.author && result.card.author !== cardAuthor) {
+						continue;
+					}
 
 					console.log(`🗑️ Deleting card ${cardId.substring(0, 16)}... from board (deletion event)`);
 

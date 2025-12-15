@@ -275,7 +275,8 @@ const boardDataKeys = Object.keys(localStorage).filter(k => {
     // Skip Settings und andere System-Keys
     if (k === 'kanban-config') return false;
     if (k === 'kanban-board-ids') return false;
-    if (k === 'nostr-deleted-boards') return false;
+    // ✅ Anti-Resurrection: Tombstone registry ist kein Board-Key
+    if (k === 'kanban-deleted-boards-v1') return false;
     
     // Nur Keys die wie "kanban-board-xxx" aussehen
     return k.startsWith('kanban-') && k.includes('board-');
@@ -285,7 +286,7 @@ const boardDataKeys = Object.keys(localStorage).filter(k => {
 **Geschützte Keys:**
 - ✅ `kanban-config` - Settings (Theme, Relays, LLM Config)
 - ✅ `kanban-board-ids` - Board-IDs Liste
-- ✅ `nostr-deleted-boards` - Deletion-Tracking
+- ✅ `kanban-deleted-boards-v1` - Tombstones (Anti-Resurrection)
 
 **Gelöschte Keys (nur diese):**
 - 🗑️ `kanban-board-abc123` - Board-Daten die nicht mehr auf Relay sind

@@ -9,6 +9,7 @@ import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
 import { generateDTag } from '../utils/idGenerator.js';
 import type NDK from '@nostr-dev-kit/ndk';
+import type { NDKKind } from '@nostr-dev-kit/ndk';
 
 // Module imports
 import {
@@ -31,6 +32,9 @@ import { MetadataMigration } from './boardstore/migration.js';
 import { PermissionChecks } from '$lib/utils/permissionCheck.js';
 import { toast } from 'svelte-sonner';
 
+// ✅ Anti-Resurrection: Prevent loading/reconstructing tombstoned boards
+import { clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
+
 // Re-export types für Komponenten
 export type { CardItem, UIColumn };
 
@@ -48,6 +52,9 @@ export class BoardStore {
     private cachedSharedBoards = $state<Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; isShared: boolean; userRole: string; author?: string}>>([]); // Cache für geteilte Boards (inkl. author)
     private isLoadingSharedBoards = false; // Loading-Flag (non-reactive to prevent infinite loops in $effect)
     public updateTrigger = $state(0);
+
+	// Non-reactive guard to avoid repeated recovery attempts on spam-clicks.
+	private tombstoneRecoveryInFlight = new Set<string>();
     
     // 🚀 NEW: NDK Ready Signal (prevents race conditions)
     public ndkReady = $state(false);
@@ -255,7 +262,8 @@ export class BoardStore {
         console.log('🔍 loadFromStorage() - Available boards sorted by lastAccessed:');
         boards.slice(0, 5).forEach((board, index) => {
             const date = new Date(board.lastAccessed || board.updatedAt || board.createdAt || 0);
-            console.log(`  ${index + 1}. ${board.name} - ${date.toLocaleString()} (${board.id.slice(0, 8)}...)`);
+            const idPreview = typeof board.id === 'string' ? `${board.id.slice(0, 8)}...` : '(no-id)';
+            console.log(`  ${index + 1}. ${board.name} - ${date.toLocaleString()} (${idPreview})`);
         });
         
         if (boards.length > 0) {
@@ -435,6 +443,38 @@ export class BoardStore {
     }
 
     public loadBoard(boardId: string, options?: { skipLastAccessed?: boolean }): boolean {
+        // ✅ Hard guard: deleted boards must never be loaded or reconstructed.
+        // Exception handling: shared boards can end up tombstoned due to stale/invalid deletion events.
+        // In that case we try a Nostr revalidation and only keep the tombstone if deletion is confirmed.
+        if (isBoardTombstoned(boardId)) {
+            const isShared = this.cachedSharedBoards.some(b => b.id === boardId);
+
+            if (isShared && !this.tombstoneRecoveryInFlight.has(boardId)) {
+                console.warn(`⛔ loadBoard: Shared Board ${boardId} ist tombstoned – starte Revalidierung...`);
+                this.tombstoneRecoveryInFlight.add(boardId);
+                this.revalidateSharedBoardTombstone(boardId)
+                    .then(result => {
+                        if (result === 'recovered') {
+                            console.log(`✅ Tombstone revalidiert/entfernt – lade Shared Board ${boardId} erneut`);
+                            this.loadBoard(boardId, { skipLastAccessed: true });
+                        } else if (result === 'still-deleted') {
+                            const before = this.cachedSharedBoards.length;
+                            this.cachedSharedBoards = this.cachedSharedBoards.filter(b => b.id !== boardId);
+                            if (this.cachedSharedBoards.length !== before) {
+                                this.updateTrigger++;
+                            }
+                        }
+                    })
+                    .finally(() => {
+                        this.tombstoneRecoveryInFlight.delete(boardId);
+                    });
+            } else {
+                console.warn(`⛔ loadBoard: Board ${boardId} ist tombstoned – Skip load/reconstruct`);
+            }
+
+            return false;
+        }
+
         let board = BoardStorage.loadBoard(boardId);
         if (!board) {
             // Versuch: Shared Board Rekonstruktion asynchronously (wenn über p-tag entdeckt, aber noch nicht lokal persistiert)
@@ -516,6 +556,12 @@ export class BoardStore {
      * Rückgabe: true wenn Rekonstruktion erfolgreich oder bereits vorhanden, sonst false.
      */
     private async reconstructSharedBoard(boardId: string): Promise<boolean> {
+        // ✅ Hard guard: deleted boards must never be reconstructed from Nostr
+        if (isBoardTombstoned(boardId)) {
+            console.warn(`⛔ reconstructSharedBoard: Board ${boardId} ist tombstoned – Skip reconstruction`);
+            return false;
+        }
+
         // Bereits vorhanden?
         const existing = BoardStorage.loadBoard(boardId);
         if (existing) return true;
@@ -557,21 +603,62 @@ export class BoardStore {
                     updatedAt: reconstructed.updatedAt ? new Date(reconstructed.updatedAt).getTime() : undefined,
                     createdAt: reconstructed.createdAt ? new Date(reconstructed.createdAt).getTime() : Date.now()
                 };
-                this.triggerUpdate({ publish: false }); // UI aktualisieren
+                // ⚡ UI aktualisieren ohne Persist/Pub Side-Effects
+                this.updateTrigger++;
                 console.log(`✅ Board-Metadaten in Cache aktualisiert: ${reconstructed.name}`);
             }
-            
-            // 🔴 KRITISCH: Lade Followers aus Kind 30000 nach Rekonstruktion
-            // Der Event hat nur Maintainers in p-tags, Followers kommen aus separatem Follow Set
-            this.board = reconstructed;
-            await this.loadBoardFollowers().catch(err => {
-                console.warn('⚠️ Failed to load followers after shared board reconstruction:', err);
-            });
             
             return true;
         } catch (error) {
             console.error(`❌ Fehler bei Rekonstruktion von Shared Board ${boardId}:`, error);
             return false;
+        }
+    }
+
+    private async revalidateSharedBoardTombstone(
+        boardId: string,
+        explicitAuthor?: string
+    ): Promise<'recovered' | 'still-deleted' | 'unknown'> {
+        if (!isBoardTombstoned(boardId)) return 'recovered';
+
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) return 'unknown';
+
+        const sharedMeta = this.cachedSharedBoards.find(b => b.id === boardId);
+        const author = explicitAuthor || sharedMeta?.author;
+        if (!author) return 'unknown';
+
+        try {
+            // 1) Latest board event (acts as "board is still alive" signal)
+            const boardEvent = await ndk.fetchEvent({
+                kinds: [30301 as unknown as NDKKind],
+                authors: [author],
+                '#d': [boardId]
+            });
+            if (!boardEvent) return 'still-deleted';
+
+            const boardMs = (boardEvent.created_at || 0) * 1000;
+
+            // 2) Latest deletion event for this board address
+            // We scope by authors:[author] to avoid unrelated/malicious deletion events.
+            const deletionEvent = await ndk.fetchEvent({
+                kinds: [5 as unknown as NDKKind],
+                authors: [author],
+                '#a': [`30301:${author}:${boardId}`]
+            });
+            const deletionMs = deletionEvent?.created_at ? deletionEvent.created_at * 1000 : 0;
+
+            // If there's a deletion newer or equal to the latest board event, keep tombstone.
+            if (deletionMs && deletionMs >= boardMs) {
+                return 'still-deleted';
+            }
+
+            // Otherwise: tombstone is stale/false-positive.
+            clearBoardTombstone(boardId);
+            return 'recovered';
+        } catch (error) {
+            console.warn('⚠️ Tombstone revalidation failed:', error);
+            return 'unknown';
         }
     }
 
@@ -660,17 +747,20 @@ export class BoardStore {
             this.boardIds,
             this.board,
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
-                // ⚡ FIX: Duplikate vermeiden via Set-Deduplication
-                this.boardIds = [...new Set([...this.boardIds, ...updatedBoardIds])];
-                // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
-                console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} unique boards)`);
+                // ⚡ FIX: Board IDs NICHT per Merge deduplizieren, sondern aus Storage ableiten.
+                // Grund: Storage ist Source-of-Truth (inkl. Tombstones/Filter). Merge kann gelöschte IDs
+                // wieder einschleusen und in Kombination mit Refresh/Subscribe zu Feedback-Loops führen.
+                this.boardIds = BoardStorage.loadBoardIds();
+                console.log(`📋 Board IDs aktualisiert (${this.boardIds.length} boards, storage-derived)`);
                 
                 // ⚡ NEW (13.11.2025): Lade das Board mit dem neuesten lastAccessedAt
                 // NICHT das "erste" Board, um Race Conditions zu vermeiden!
                 if (switched && newBoard) {
                     this.board = newBoard;
                     this._columnOrder = newBoard.columns.map(c => c.id);
-                    this.triggerUpdate({ publish: false }); // ← Kein Nostr Publishing bei Load!
+
+                    // ⚠️ Nostr-driven Load: UI refresh ja, aber keine Side-Effects (kein lastAccessed/save/publish)
+                    this.updateTrigger++;
                 } else {
                     // ⚡ FIX: Re-load current board OHNE lastAccessed Update
                     // Das verhindert, dass alle Boards den gleichen Timestamp bekommen
@@ -1129,8 +1219,11 @@ export class BoardStore {
         
         console.log(`🔄 Board IDs refreshed: ${oldCount} → ${newCount}`);
         console.log(`   IDs: [${this.boardIds.slice(0, 5).join(', ')}${this.boardIds.length > 5 ? ', ...' : ''}]`);
-        
-        this.triggerUpdate(); // UI aktualisieren
+
+        // ⚠️ KRITISCH: Refresh ist READ-ONLY.
+        // NICHT triggerUpdate() aufrufen, weil das lastAccessedAt updated, speichert und ggf. publisht.
+        // Das kann sonst Delete/Restore Feedback-Loops auslösen.
+        this.updateTrigger++;
     }
 
     public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {
@@ -1995,7 +2088,9 @@ export class BoardStore {
         );
         
         this.board.followers = followers;
-        this.triggerUpdate();
+        // ⚡ Secondary data load: persist locally, but never publish or bump lastAccessed
+        BoardStorage.saveBoard(this.board);
+        this.updateTrigger++;
     }
 
     /**
@@ -2081,6 +2176,15 @@ export class BoardStore {
             console.log(`✅ Board-Liste aktualisiert`);
             
             // 3. Board rekonstruieren von Nostr (falls nicht lokal vorhanden)
+            // ⚠️ Recovery: wenn das Board tombstoned ist, zuerst gegen Nostr revalidieren.
+            if (isBoardTombstoned(boardId)) {
+                const revalidated = await this.revalidateSharedBoardTombstone(boardId, boardAuthor);
+                if (revalidated !== 'recovered') {
+                    console.warn(`⛔ followAndLoadBoard: Board ${boardId} bleibt tombstoned (${revalidated})`);
+                    return false;
+                }
+            }
+
             const reconstructed = await this.reconstructSharedBoard(boardId);
             if (!reconstructed) {
                 console.error(`❌ Board-Rekonstruktion fehlgeschlagen: ${boardId}`);
@@ -2850,30 +2954,6 @@ export class BoardStore {
     }
     
     /**
-     * ⚠️ DEPRECATED & REMOVED: deleteBoardFromNostr()
-     * 
-     * Nach Storage-Refactoring (Nov 2025):
-     * - Board deletion wird über deleteBoard() + NostrIntegration.deleteBoard() gehandelt
-     * - kanban-boards-metadata wird nicht mehr verwendet
-     * - Board-IDs werden automatisch aus localStorage Keys gescannt
-     * - Board-switching bei Deletion erfolgt automatisch über activeBoard-Mechanismus
-     * 
-     * @deprecated Entfernt am 13.11.2025 - Nicht mehr benötigt
-     * 
-     * Wird aufgerufen wenn ein Deletion-Event (Kind 5) für ein Board empfangen wird.
-     * 
-     * @param boardId - ID des zu löschenden Boards
-     */
-    public deleteBoardFromNostr(boardId: string): void {
-        console.warn(`⚠️ deleteBoardFromNostr() is deprecated - Board deletion handled by deleteBoard()`);
-        // NO-OP: Diese Methode wird nicht mehr benötigt
-        // Board-Deletion wird korrekt über:
-        // 1. boardStore.deleteBoard() → localStorage cleanup
-        // 2. NostrIntegration.deleteBoard() → Deletion Event (Kind 5)
-        // 3. Subscription handler ignoriert eigene Deletion Events via myPublishedEvents Set
-    }
-    
-    /**
      * ⚡ HELPER: Refresh board list after external deletion
      * 
      * Called when deletion event received from another device
@@ -2881,6 +2961,9 @@ export class BoardStore {
     public refreshBoardList(): void {
         this.boardIds = BoardStorage.loadBoardIds();
         console.log(`🔄 Board list refreshed: ${this.boardIds.length} boards`);
+
+        // Refresh ist READ-ONLY: UI update ohne triggerUpdate()-Side-Effects.
+        this.updateTrigger++;
     }
     
     /**

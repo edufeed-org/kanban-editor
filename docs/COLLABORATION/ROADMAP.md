@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.7 (Hotfix: LWW-Guard beim Reload + Board-scoped Card-Loads - 15. Dezember 2025)  
-**Aktualisiert:** 15. Dezember 2025 (Force-Reload bevorzugt neueste Card-Version; async Card-Loads leaken nicht mehr zwischen Boards)  
+**Version:** 3.8 (Hotfix: Board-Delete Loop Guard - 15. Dezember 2025)  
+**Aktualisiert:** 15. Dezember 2025 (Boardliste-Refresh ist read-only; `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion respektiert Tombstones; Nostr-Board-Load nutzt storage-derived IDs, verhindert Delete/Restore-Oszillation)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1587,6 +1587,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.8 | 15.12.2025 | 🧯 **Board-Delete Loop Guard:** `refreshBoardIds()`/`refreshBoardList()` sind read-only (kein `triggerUpdate()` Side-Effects); `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion lädt tombstoned IDs nicht; Nostr-Board-Load aktualisiert `boardIds` storage-basiert (tombstone-aware) statt Merge/Dedup. |
 | 3.7 | 15.12.2025 | 🧭 **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschützt; async Card-Loads werden Board-spezifisch angewendet (verhindert „alle Boards zeigen gleiche Cards“ und „Reload lädt älter“). |
 | 3.6 | 15.12.2025 | 🧷 **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollständige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |
 | 3.5 | 14.12.2025 | 🧩 **Hotfix Shared-Board Sync:** Board-Load überschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
