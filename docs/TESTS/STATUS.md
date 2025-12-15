@@ -1,16 +1,19 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 31.10.2025 (13:17 Phase 1.5D Final ✅)
-**Status:** 🟢 Vollständig funktional (121 Tests - Phase 1.5D Export/Import Unit Tests Complete!)
+**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅, Shared-Board Leave/Hide Tests ✅, Tombstone-Guard für `upsertBoardFromNostr()` ✅, Leave-Request Loader Tests ✅, Toast-Guard Tests ✅)
+**Status:** 🟢 Vollständig funktional (letzter Stand: 451 Tests) + 14 neue Unit-Tests (Kind-5 Authorization + Leave/Hide + Tombstone Guard + Leave-Request Loader + Toast-Guard) ✅
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Unit Tests** | ✅ Aktiv | 119 | Vitest |
-| **E2E Tests** | ✅ Aktiv | 1 | Playwright |
-| **Integration Tests** | ✅ Aktiv | ✓ | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 465 (451 vorher + 14 neu, zuletzt gezielt verifiziert) | Vitest |
+| **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
+
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr/subscriptions.toast.spec.ts` → `Test Files 1 passed (1)`, `Tests 3 passed (3)`
+
+> Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 
 ---
 
@@ -221,7 +224,18 @@
 - Mock `window.nostr` für NIP-07 Tests
 - Mock Fetch für NIP-05 Verification
 
-#### D. `src/routes/page.svelte.spec.ts` ✅
+#### D. `src/lib/stores/boardstore/nostr/handlers/deletion.spec.ts` ✅ **NEW - 5 Tests**
+**Modul:** Kind-5 (NIP-09) Deletion Handler Hardening
+**Status:** ✅ Vollständig + Passing
+
+**Getestete Regeln:**
+- ✅ Board-Deletion wird ignoriert, wenn `deletionEvent.pubkey` nicht zur `a`-Tag-Pubkey passt
+- ✅ Board-Deletion wird ignoriert, wenn lokales `board.author` nicht zur `a`-Tag-Pubkey passt
+- ✅ Board wird gelöscht, wenn Pubkey + Author matchen
+- ✅ Card-Deletion wird ignoriert bei Pubkey-Mismatch
+- ✅ Card-Deletion wird ignoriert bei Card-Author-Mismatch
+
+#### E. `src/routes/page.svelte.spec.ts` ✅
 **Klassen:** `Board`, `Column`, `Card`, `Chat`
 **Test-Coverage:** 16/16 Kernfunktionen
 **Status:** ✅ Vollständig

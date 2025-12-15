@@ -237,6 +237,12 @@ export function cardToNostrEvent(
   const event = new NDKEvent(ndk);
   event.kind = EVENT_KINDS.CARD;
 
+  // Millisecond-precision timestamp for deterministic LWW under same-second created_at ties.
+  // We store it as a custom tag because Nostr created_at is seconds resolution.
+  // NOTE: created_at is still set/normalized by the signer/publish pipeline.
+  const parsedUpdatedAtMs = card.updatedAt ? new Date(card.updatedAt).getTime() : 0;
+  const updatedAtMs = Number.isFinite(parsedUpdatedAtMs) && parsedUpdatedAtMs > 0 ? parsedUpdatedAtMs : Date.now();
+
   const tags: string[][] = [
     ['d', card.id],
     ['a', boardRef], // Reference to board
@@ -244,6 +250,7 @@ export function cardToNostrEvent(
     ['col_label', columnName], // SECONDARY: Human-readable name
     ['title', card.heading],
     ['rank', String(rank)],
+    ['ts', String(updatedAtMs)], // Milliseconds timestamp for deterministic LWW (client-side)
   ];
 
   // Optional fields
@@ -304,6 +311,10 @@ export function cardToNostrEvent(
 
   event.tags = tags;
   event.content = card.content || ''; // Markdown description
+
+  // Keep created_at aligned to updatedAtMs (seconds precision). This reduces the chance of
+  // local timestamps being ahead of incoming events when updates occur quickly.
+  event.created_at = Math.floor(updatedAtMs / 1000);
 
   return event;
 }
@@ -383,6 +394,11 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
   const rankTag = tags.find(t => t[0] === 'rank');
   const rank = rankTag ? parseInt(rankTag[1], 10) : undefined;
 
+  // Millisecond timestamp (custom tag) for deterministic LWW.
+  const tsTag = tags.find(t => t[0] === 'ts');
+  const updatedAtMsRaw = tsTag ? parseInt(tsTag[1], 10) : NaN;
+  const updatedAtMs = Number.isFinite(updatedAtMsRaw) && updatedAtMsRaw > 0 ? updatedAtMsRaw : undefined;
+
   return {
     id,
     eventId: event.id, // ← NEU: Actual event ID from Nostr
@@ -402,9 +418,13 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
     rank,
     // ⚡ v4.3: Extract timestamps from Nostr event for LWW and Merge-System
     createdAt: event.created_at,  // Unix timestamp (number)
-    updatedAt: event.created_at 
-      ? new Date(event.created_at * 1000).toISOString()  // ISO string for comparison
-      : new Date().toISOString(),  // Fallback to NOW if no timestamp
+    updatedAt: updatedAtMs
+      ? new Date(updatedAtMs).toISOString()
+      : (event.created_at
+        ? new Date(event.created_at * 1000).toISOString()  // ISO string for comparison
+        : new Date().toISOString()),  // Fallback to NOW if no timestamp
+    // @ts-ignore - updatedAtMs is not in CardProps, but is used by LWW in handlers
+    updatedAtMs,
     // @ts-ignore - columnName ist nicht in CardProps, aber wir brauchen es für Fallback-Matching
     columnName,
   };
@@ -440,8 +460,18 @@ export function createCommentEvent(
   event.kind = EVENT_KINDS.COMMENT;
 
   const tags: string[][] = [
-    ['a', cardRef], // Reference to replaceable card event
+    // Reference to replaceable card event
+    // NOTE: The 3rd element is optional and ignored by #a filtering.
+    ['a', cardRef, ''],
   ];
+
+  // Add p-tag (mention the card author) for compatibility with common clients.
+  // We derive the author from the addressable reference: "30302:<author>:<d-tag>".
+  const parts = cardRef.split(':');
+  const cardAuthor = parts.length >= 3 ? parts[1] : '';
+  if (cardAuthor && cardAuthor !== 'unknown') {
+    tags.push(['p', cardAuthor]);
+  }
 
   // If we have the event ID, add reply reference
   if (cardEventId) {

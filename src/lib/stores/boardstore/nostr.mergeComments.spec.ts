@@ -1,37 +1,10 @@
 // Unit tests for mergeComments() function in NostrIntegration
 import { describe, it, expect } from 'vitest';
 import type { Comment } from '$lib/classes/BoardModel';
+import { mergeComments } from './nostr/comments.js';
 
-/**
- * NOTE: mergeComments() is a private method of NostrIntegration
- * For testing purposes, we implement the algorithm here directly
- * This ensures the implementation in nostr.ts matches the specification
- */
-function mergeComments(localComments: Comment[], remoteComments: Comment[]): Comment[] {
-    // Step 1: Create Set of eventIds from local comments
-    const localEventIds = new Set<string>(
-        localComments
-            .filter(c => c.eventId) // Only comments with eventId
-            .map(c => c.eventId!)
-    );
-
-    // Step 2: Filter remote comments to exclude duplicates
-    const newRemoteComments = remoteComments.filter(
-        remote => remote.eventId && !localEventIds.has(remote.eventId)
-    );
-
-    // Step 3: Merge local + new remote comments
-    const merged = [...localComments, ...newRemoteComments];
-
-    // Step 4: Sort chronologically by createdAt (oldest first)
-    merged.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return dateA - dateB;
-    });
-
-    return merged;
-}
+// NOTE: Diese Tests prüfen das kanonische mergeComments() aus ./nostr/comments.ts.
+// (Single Source of Truth – keine Duplikat-Implementierung im Test.)
 
 describe('mergeComments()', () => {
     it('should deduplicate comments by eventId', () => {
@@ -285,12 +258,38 @@ describe('mergeComments()', () => {
 
         const merged = mergeComments(local, remote);
 
-        // Should have 2 comments (local version + remote with eventId)
-        // In real implementation, we'd need to reconcile by ID, not just eventId
-        expect(merged).toHaveLength(2);
-        
-        // NOTE: This test shows limitation of current implementation
-        // For full production, we'd need to also deduplicate by comment.id
-        // when eventId is missing on one side
+        // The local pending comment is reconciled and upgraded to synced.
+        expect(merged).toHaveLength(1);
+        expect(merged[0].id).toBe('comment-123');
+        expect(merged[0].eventId).toBe('event-new-123');
+        expect(merged[0].syncStatus).toBe('synced');
+    });
+
+    it('should deduplicate pending local comment by text+timestamp proximity', () => {
+        const local: Comment[] = [
+            {
+                id: 'local-pending',
+                text: 'Same text',
+                author: 'npub1abc',
+                createdAt: '2025-01-15T10:00:00Z',
+                syncStatus: 'local'
+            }
+        ];
+
+        const remote: Comment[] = [
+            {
+                id: 'remote-same',
+                text: 'Same text',
+                author: 'npub1abc',
+                createdAt: '2025-01-15T10:00:03Z',
+                eventId: 'event-same',
+                syncStatus: 'synced'
+            }
+        ];
+
+        const merged = mergeComments(local, remote);
+
+        expect(merged).toHaveLength(1);
+        expect(merged[0].text).toBe('Same text');
     });
 });

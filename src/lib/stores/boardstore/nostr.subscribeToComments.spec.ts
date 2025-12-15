@@ -238,19 +238,43 @@ describe('NostrIntegration.subscribeToComments()', () => {
         expect(() => cleanup()).not.toThrow();
     });
 
-    it('should cleanup existing subscription when subscribing to same card again', () => {
+    it('should reuse existing subscription when subscribing to same card again (ref-counted)', () => {
         // Arrange
         const cleanup1 = nostrIntegration.subscribeToComments(mockBoard, 'card-1');
 
         // Act - Subscribe to same card again
         const cleanup2 = nostrIntegration.subscribeToComments(mockBoard, 'card-1');
 
-        // Assert - First subscription should be stopped
+        // Assert - Only one underlying subscription should exist
         const subscribers = (mockNDK as any)._getSubscribers();
-        // 2 subscriptions were created, but first should have stop() called
-        expect(subscribers.length).toBe(2);
-        expect(subscribers[0].stop).toHaveBeenCalled();
+        expect(subscribers.length).toBe(1);
 
+        // First cleanup should NOT stop the subscription yet
+        cleanup1();
+        expect(subscribers[0].stop).not.toHaveBeenCalled();
+
+        // Second cleanup should stop it
+        cleanup2();
+        expect(subscribers[0].stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call multiple onUpdate callbacks for the same card subscription', async () => {
+        // Arrange
+        const onUpdate1 = vi.fn();
+        const onUpdate2 = vi.fn();
+        const cleanup1 = nostrIntegration.subscribeToComments(mockBoard, 'card-1', onUpdate1);
+        const cleanup2 = nostrIntegration.subscribeToComments(mockBoard, 'card-1', onUpdate2);
+
+        const event = createMockEvent('New comment', 'npub1user', 1736942400);
+        event.tags = [['a', '30302:npub1cardauthor:card-1', '']];
+
+        (mockNDK as any)._triggerEvent(event);
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        expect(onUpdate1).toHaveBeenCalledTimes(1);
+        expect(onUpdate2).toHaveBeenCalledTimes(1);
+
+        cleanup1();
         cleanup2();
     });
 

@@ -2,10 +2,23 @@
 // Board-Operationen (CRUD für Columns/Cards)
 
 import { Board, Column, Card, type CardProps, type ColumnProps } from '../../classes/BoardModel.js';
-import { generateDTag } from '../../utils/idGenerator.js';
+import { generateDTag, generateTimestamp } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
 import type { NostrIntegration } from './nostr.js';
 import { BoardStorage } from './storage.js';
+
+export type SyncBoardStateStrategy = 'defensive-merge' | 'hard-fail';
+
+export interface SyncBoardStateOptions {
+    strategy?: SyncBoardStateStrategy;
+}
+
+function isDndShadowPlaceholderId(id: unknown): boolean {
+    if (id === null || id === undefined) return false;
+    const value = String(id);
+    // svelte-dnd-action nutzt temporäre Placeholder-Items; diese dürfen nicht als "unknown" gewertet werden.
+    return value.includes('dnd-shadow-placeholder');
+}
 
 export class BoardOperations {
     /**
@@ -167,7 +180,8 @@ export class BoardOperations {
     public static syncBoardState(
         board: Board,
         columnOrder: string[],
-        uiColumns: UIColumn[]
+        uiColumns: UIColumn[],
+        options?: SyncBoardStateOptions
     ): { newColumnOrder: string[]; movedCardIds: string[] } {
         console.group('🔄 syncBoardState');
         console.log('Input:', {
@@ -175,6 +189,13 @@ export class BoardOperations {
             newColumnCount: uiColumns.length,
             totalCardsInUI: uiColumns.reduce((sum, col) => sum + col.items.length, 0)
         });
+
+        const strategy: SyncBoardStateStrategy = options?.strategy ?? 'defensive-merge';
+
+        const insertAt = <T>(arr: T[], index: number, item: T): T[] => {
+            const safeIndex = Math.min(Math.max(0, index), arr.length);
+            return [...arr.slice(0, safeIndex), item, ...arr.slice(safeIndex)];
+        };
 
         // 1. Build Map: Card-ID → Card Instance + old position (SNAPSHOT bevor wir Columns modifizieren!)
         const cardRegistry = new Map<string, { card: Card; oldColumnId: string; oldRank: number }>();
@@ -186,6 +207,74 @@ export class BoardOperations {
         }
         console.log('Card registry:', cardRegistry.size, 'cards');
 
+        // 1b. Optional Hard-Fail: wenn UI-Payload offensichtlich unvollständig/kaputt ist, NICHT syncen.
+        // Ziel: verhindere Persist/Publish auf Basis transienter DnD-Glitches.
+        if (strategy === 'hard-fail') {
+            const boardColumnIds = new Set(board.columns.map(c => c.id));
+            const uiColumnIds = new Set(
+                uiColumns
+                    .map(c => String(c.id))
+                    .filter(id => !isDndShadowPlaceholderId(id))
+            );
+
+            const missingColumnIds = board.columns
+                .map(c => c.id)
+                .filter(id => !uiColumnIds.has(id));
+            const unknownColumnIds = [...uiColumnIds].filter(id => !boardColumnIds.has(id));
+
+            const uiCardIds = new Set<string>();
+            let invalidUiCardIdCount = 0;
+            for (const uiCol of uiColumns) {
+                for (const item of uiCol.items ?? []) {
+                    const raw = (item as any)?.id;
+                    if (raw === undefined || raw === null || raw === '') {
+                        invalidUiCardIdCount++;
+                        continue;
+                    }
+                    if (isDndShadowPlaceholderId(raw)) {
+                        continue;
+                    }
+                    uiCardIds.add(String(raw));
+                }
+            }
+
+            const missingCardIds: string[] = [];
+            for (const cardId of cardRegistry.keys()) {
+                if (!uiCardIds.has(cardId)) missingCardIds.push(cardId);
+            }
+
+            const unknownCardIds: string[] = [];
+            for (const uiCardId of uiCardIds) {
+                if (!cardRegistry.has(uiCardId)) unknownCardIds.push(uiCardId);
+            }
+
+            console.log('Completeness check (hard-fail):', {
+                missingColumns: missingColumnIds.length,
+                unknownColumns: unknownColumnIds.length,
+                missingCards: missingCardIds.length,
+                unknownCards: unknownCardIds.length,
+                invalidUiCardIdCount
+            });
+
+            if (
+                missingColumnIds.length > 0 ||
+                unknownColumnIds.length > 0 ||
+                missingCardIds.length > 0 ||
+                unknownCardIds.length > 0 ||
+                invalidUiCardIdCount > 0
+            ) {
+                console.error('❌ syncBoardState hard-fail: UI payload is incomplete/invalid; aborting sync to avoid persisting corrupted state', {
+                    missingColumnIds,
+                    unknownColumnIds,
+                    missingCardIds,
+                    unknownCardIds,
+                    invalidUiCardIdCount
+                });
+                console.groupEnd();
+                throw new Error('syncBoardState hard-fail: incomplete UI payload');
+            }
+        }
+
         // 2. Update column order
         const newColumnOrder = uiColumns.map(c => c.id);
 
@@ -193,6 +282,8 @@ export class BoardOperations {
         const reorderedColumns: Column[] = [];
         const movedCardIds: string[] = [];
         const processedCardIds = new Set<string>(); // Duplikate-Prevention
+        const processedColumnIds = new Set<string>();
+        const cardsByColumnId = new Map<string, Card[]>();
 
         for (const uiCol of uiColumns) {
             const col = board.columns.find(c => c.id === uiCol.id);
@@ -200,6 +291,8 @@ export class BoardOperations {
                 console.warn(`⚠️ Column ${uiCol.id} nicht gefunden`);
                 continue;
             }
+
+            processedColumnIds.add(col.id);
 
             // Rebuild card array für diese Column
             const newCards: Card[] = [];
@@ -224,6 +317,10 @@ export class BoardOperations {
                     
                     if (columnChanged || positionChanged) {
                         movedCardIds.push(card.id);
+                        // ⚡ Wichtig für LWW + lokale Persistierung:
+                        // Eine Positionsänderung (Rank/Column) ist eine Card-Änderung und muss den Timestamp bumpen.
+                        // Sonst kann ein späteres Rehydrate/Sync die Reihenfolge wieder "zurückdrehen".
+                        card.updatedAt = generateTimestamp();
                         if (columnChanged) {
                             console.log(`  ↗️ Card "${card.heading}" verschoben: "${oldColumnId}" → "${col.id}"`);
                         } else {
@@ -239,8 +336,68 @@ export class BoardOperations {
             }
             
             console.log(`  Column "${col.name}": ${newCards.length} cards`);
-            col.cards = newCards;
+            cardsByColumnId.set(col.id, newCards);
             reorderedColumns.push(col);
+        }
+
+        // 3b. Preserve columns that were not present in UI payload (defensive against transient UI bugs)
+        for (const col of board.columns) {
+            if (processedColumnIds.has(col.id)) continue;
+            console.warn(
+                `⚠️ syncBoardState: UI list missed column ${col.id} ("${col.name}") – preserving to prevent data loss`
+            );
+            reorderedColumns.push(col);
+            cardsByColumnId.set(col.id, [...col.cards]);
+        }
+
+        // 3c. Preserve cards that were not present in UI payload (defensive against DnD/animation glitches)
+        const missingSnapshots: Array<{ card: Card; oldColumnId: string; oldRank: number }> = [];
+        for (const [cardId, snapshot] of cardRegistry) {
+            if (!processedCardIds.has(cardId)) missingSnapshots.push(snapshot);
+        }
+
+        if (missingSnapshots.length > 0) {
+            console.warn(
+                `⚠️ syncBoardState: UI list missed ${missingSnapshots.length}/${cardRegistry.size} card(s) – preserving existing cards to prevent data loss`
+            );
+
+            missingSnapshots.sort((a, b) => {
+                if (a.oldColumnId !== b.oldColumnId) return a.oldColumnId.localeCompare(b.oldColumnId);
+                return a.oldRank - b.oldRank;
+            });
+
+            const fallbackColumnId = reorderedColumns[0]?.id;
+            for (const snapshot of missingSnapshots) {
+                const cardId = snapshot.card.id;
+                if (processedCardIds.has(cardId)) continue;
+
+                const targetColumnId = cardsByColumnId.has(snapshot.oldColumnId)
+                    ? snapshot.oldColumnId
+                    : fallbackColumnId;
+
+                if (!targetColumnId) {
+                    console.error(
+                        `❌ syncBoardState: No columns available to preserve missing card ${cardId} – skipping (DATA LOSS RISK)`
+                    );
+                    continue;
+                }
+
+                if (targetColumnId !== snapshot.oldColumnId) {
+                    console.error(
+                        `❌ syncBoardState: Missing original column ${snapshot.oldColumnId} for card ${cardId}; appending to ${targetColumnId} (DATA LOSS PREVENTION)`
+                    );
+                }
+
+                const existing = cardsByColumnId.get(targetColumnId) ?? [];
+                const merged = insertAt(existing, snapshot.oldRank, snapshot.card);
+                cardsByColumnId.set(targetColumnId, merged);
+                processedCardIds.add(cardId);
+            }
+        }
+
+        // 3d. Apply final card arrays to columns (reassign for Svelte reactivity safety)
+        for (const col of reorderedColumns) {
+            col.cards = cardsByColumnId.get(col.id) ?? [];
         }
 
         board.columns = reorderedColumns;
@@ -381,6 +538,19 @@ export class BoardOperations {
         cardProps: CardProps
     ): boolean {
         console.log(`📥 upsertCardFromNostr: ${cardProps.heading || cardProps.id}`);
+
+        const toTimestampMs = (value: unknown): number => {
+            if (value === null || value === undefined) return 0;
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                // Heuristik: < 1e12 = Sekunden (unix) → ms
+                return value < 1_000_000_000_000 ? value * 1000 : value;
+            }
+            if (typeof value === 'string') {
+                const parsed = new Date(value).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+            return 0;
+        };
         
         // 1. Find target column
         // cardProps sollte columnId haben (aus Event deserialisiert)
@@ -413,6 +583,51 @@ export class BoardOperations {
         const existingCard = column.findCard(cardProps.id!);
         
         if (existingCard) {
+            // ⚡ LWW (Last-Write-Wins): verhindere, dass ältere Events neuere lokale Daten überschreiben.
+            // Wichtig für:
+            // - Initiale Loads (loadCardsForBoard kann mehrere Versionen liefern)
+            // - Background-Board Updates (async race)
+            const incomingTimeMs = toTimestampMs((cardProps as any).updatedAtMs)
+                || toTimestampMs(cardProps.updatedAt)
+                || toTimestampMs((cardProps as any).createdAtMs)
+                || toTimestampMs(cardProps.createdAt);
+
+            const localTimeMs = toTimestampMs((existingCard as any).updatedAtMs)
+                || toTimestampMs((existingCard as any).updatedAt)
+                || toTimestampMs((existingCard as any).createdAt);
+
+            if (localTimeMs > 0 && incomingTimeMs > 0) {
+                if (incomingTimeMs < localTimeMs) {
+                    console.log(
+                        `⏭️ LWW: Skip older card update ${cardProps.id} (incoming ${incomingTimeMs} < local ${localTimeMs})`
+                    );
+                    return true;
+                }
+
+                if (incomingTimeMs === localTimeMs) {
+                    const localEventId = (existingCard as any).eventId as string | undefined;
+                    const incomingEventId = (cardProps as any).eventId as string | undefined;
+
+                    // Deterministischer Tie-Break: höhere eventId gewinnt (analog zu handler/card.ts)
+                    if (localEventId && incomingEventId && incomingEventId <= localEventId) {
+                        console.log(
+                            `⏭️ LWW: Skip tie-break update ${cardProps.id} (incoming eventId <= local eventId)`
+                        );
+                        return true;
+                    }
+                    if (localEventId && !incomingEventId) {
+                        console.log(
+                            `⏭️ LWW: Skip update ${cardProps.id} (local has eventId, incoming missing eventId at same timestamp)`
+                        );
+                        return true;
+                    }
+                }
+            } else if (localTimeMs > 0 && incomingTimeMs === 0) {
+                // Incoming hat keinen Timestamp → niemals einen validen lokalen Stand überschreiben.
+                console.log(`⏭️ LWW: Skip update ${cardProps.id} (incoming timestamp missing)`);
+                return true;
+            }
+
             // ⚡ PRESERVE COMMENTS: Behalte bestehende Kommentare beim Update
             // Kommentare werden als separate Kind-1 Events gespeichert und
             // sollten beim Card-Update nicht verloren gehen

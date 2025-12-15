@@ -7,7 +7,354 @@ import { authStore } from '../authStore.svelte.js';
 import type NDK from '@nostr-dev-kit/ndk';
 import { NDKEvent, nip19 } from '@nostr-dev-kit/ndk';
 
+type HiddenBoardEntry = {
+    hiddenAt: string;
+    reason: 'left' | 'hidden';
+    source?: 'local' | 'nostr';
+    boardId: string;
+    boardAuthor?: string;
+};
+
+type HiddenBoardsRegistryV1 = {
+    byId: Record<string, HiddenBoardEntry>;
+    byAddress: Record<string, HiddenBoardEntry>; // key: 30301:{author}:{d}
+};
+
+const HIDDEN_BOARDS_KEY = 'nostr-kanban-hidden-boards-v1';
+
+const FOLLOW_SET_D_TAG = 'kanban-boards';
+const LEFT_BOARDS_D_TAG = 'kanban-left-boards';
+const LEAVE_REQUEST_D_TAG_PREFIX = 'kanban-leave-request:';
+
+export type LeaveRequestInfo = {
+    eventId: string;
+    createdAt?: number;
+};
+
 export class BoardSharingOperations {
+
+    private static loadHiddenBoardsRegistry(): HiddenBoardsRegistryV1 {
+        if (typeof window === 'undefined') {
+            return { byId: {}, byAddress: {} };
+        }
+
+        try {
+            const raw = localStorage.getItem(HIDDEN_BOARDS_KEY);
+            if (!raw) return { byId: {}, byAddress: {} };
+            const parsed = JSON.parse(raw) as Partial<HiddenBoardsRegistryV1>;
+            const byId = parsed.byId || {};
+            const byAddress = parsed.byAddress || {};
+
+            // Backwards-compat: ältere Einträge hatten kein `source` Feld.
+            for (const entry of Object.values(byId)) {
+                if (entry && !('source' in entry)) {
+                    (entry as HiddenBoardEntry).source = 'local';
+                }
+            }
+            for (const entry of Object.values(byAddress)) {
+                if (entry && !('source' in entry)) {
+                    (entry as HiddenBoardEntry).source = 'local';
+                }
+            }
+
+            return { byId, byAddress };
+        } catch {
+            return { byId: {}, byAddress: {} };
+        }
+    }
+
+    private static saveHiddenBoardsRegistry(registry: HiddenBoardsRegistryV1): void {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(HIDDEN_BOARDS_KEY, JSON.stringify(registry));
+    }
+
+    private static makeBoardAddress(boardId: string, boardAuthor: string): string {
+        return `30301:${boardAuthor}:${boardId}`;
+    }
+
+    public static isBoardHidden(boardId: string, boardAuthor?: string): boolean {
+        const registry = this.loadHiddenBoardsRegistry();
+        // ⚠️ Wichtig: Wenn der Author bekannt ist, MUSS die Prüfung author-scoped sein.
+        // Sonst kann ein alter byId-Eintrag (ohne Author) fälschlich auch andere Boards
+        // mit gleicher d-tag-ID verstecken (z.B. nach Leave/Unfollow ohne author-Info).
+        if (boardAuthor) {
+            const addr = this.makeBoardAddress(boardId, boardAuthor);
+            return !!registry.byAddress[addr];
+        }
+        return !!registry.byId[boardId];
+    }
+
+    public static hideBoard(boardId: string, boardAuthor?: string, reason: HiddenBoardEntry['reason'] = 'left'): void {
+        const registry = this.loadHiddenBoardsRegistry();
+        const entry: HiddenBoardEntry = {
+            boardId,
+            boardAuthor,
+            reason,
+            source: 'local',
+            hiddenAt: new Date().toISOString()
+        };
+
+        // Speichere author-scoped (präferiert). byId bleibt als Fallback für Legacy/unknown author.
+        if (boardAuthor) {
+            const addr = this.makeBoardAddress(boardId, boardAuthor);
+            // Wenn bereits ein Eintrag existiert, überschreiben wir nicht blind (z.B. um `hiddenAt` nicht zu churnen).
+            registry.byAddress[addr] = registry.byAddress[addr] || entry;
+        } else {
+            registry.byId[boardId] = registry.byId[boardId] || entry;
+        }
+
+        this.saveHiddenBoardsRegistry(registry);
+    }
+
+    public static unhideBoard(boardId: string, boardAuthor?: string): void {
+        const registry = this.loadHiddenBoardsRegistry();
+        delete registry.byId[boardId];
+        if (boardAuthor) {
+            delete registry.byAddress[this.makeBoardAddress(boardId, boardAuthor)];
+        }
+        this.saveHiddenBoardsRegistry(registry);
+    }
+
+    private static applyLeftBoardsFromNostrRefs(refs: string[]): { added: number; removed: number; total: number } {
+        const registry = this.loadHiddenBoardsRegistry();
+
+        const desiredAddresses = new Set<string>();
+
+        let added = 0;
+        let removed = 0;
+
+        for (const ref of refs) {
+            // expected: 30301:<author>:<d>
+            const parts = ref.split(':');
+            if (parts.length !== 3) continue;
+            const [kind, author, dTag] = parts;
+            if (kind !== '30301' || !author || !dTag) continue;
+
+            const addr = this.makeBoardAddress(dTag, author);
+            desiredAddresses.add(addr);
+
+            if (!registry.byAddress[addr]) {
+                registry.byAddress[addr] = {
+                    boardId: dTag,
+                    boardAuthor: author,
+                    reason: 'left',
+                    source: 'nostr',
+                    hiddenAt: new Date().toISOString(),
+                };
+                added++;
+            } else {
+                // Falls vorhanden, aber ohne source (Legacy), normalisieren.
+                registry.byAddress[addr].source = registry.byAddress[addr].source || 'local';
+            }
+        }
+
+        // Entferne stale Nostr-sourced Left-Entries, die nicht mehr im List-Event stehen.
+        for (const [addr, entry] of Object.entries(registry.byAddress)) {
+            if (entry?.source === 'nostr' && entry.reason === 'left' && !desiredAddresses.has(addr)) {
+                delete registry.byAddress[addr];
+                removed++;
+            }
+        }
+
+        this.saveHiddenBoardsRegistry(registry);
+
+        return { added, removed, total: desiredAddresses.size };
+    }
+
+    /**
+     * Cross-Device Leave Persistence:
+     * Lädt die NIP-51 Liste (Kind 30000, d=kanban-left-boards) und synchronisiert sie in die lokale Hide-Registry.
+     *
+     * Wichtig: Read-only. Funktioniert auch ohne Signer.
+     */
+    public static async syncLeftBoardsFromNostr(currentUserPubkey: string, ndk: NDK): Promise<void> {
+        if (!ndk || !currentUserPubkey) return;
+
+        try {
+            const leftSetEvent: any = await ndk.fetchEvent({
+                kinds: [30000],
+                authors: [currentUserPubkey],
+                '#d': [LEFT_BOARDS_D_TAG],
+            } as any);
+
+            if (!leftSetEvent) return;
+
+            const refs = (leftSetEvent.tags || [])
+                .filter((t: any) => t[0] === 'a')
+                .map((t: any) => t[1])
+                .filter(Boolean);
+
+            const shortUser = currentUserPubkey.slice(0, 12);
+            console.log(`\n📥 NIP-51 Left-Boards geladen (d=${LEFT_BOARDS_D_TAG})`, {
+                user: `${shortUser}…`,
+                eventId: leftSetEvent.id,
+                refs: refs.length,
+            });
+
+            const result = this.applyLeftBoardsFromNostrRefs(refs);
+            console.log('✅ Left-Boards → Hide-Registry sync', result);
+        } catch (error) {
+            console.warn('⚠️ syncLeftBoardsFromNostr fehlgeschlagen (best-effort):', error);
+        }
+    }
+
+    private static async upsertLeftBoardsList(boardRef: string, op: 'add' | 'remove', ndk: NDK): Promise<void> {
+        // Ohne Signer können wir nicht publizieren. Lokale Hide-Registry ist dann Source-of-Truth.
+        if (!ndk?.signer) {
+            console.log('ℹ️ NIP-51 Left-Boards: Kein Signer – publish übersprungen (nur lokales Hide)', {
+                op,
+                boardRef,
+            });
+            return;
+        }
+
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            console.log('ℹ️ NIP-51 Left-Boards: Kein User-Pubkey – publish übersprungen', {
+                op,
+                boardRef,
+            });
+            return;
+        }
+
+        const existing: any = await ndk.fetchEvent({
+            kinds: [30000],
+            authors: [currentUser],
+            '#d': [LEFT_BOARDS_D_TAG],
+        } as any);
+
+        const existingRefs = new Set<string>(
+            (existing?.tags || [])
+                .filter((t: any) => t[0] === 'a')
+                .map((t: any) => t[1])
+                .filter(Boolean)
+        );
+
+        if (op === 'add') existingRefs.add(boardRef);
+        if (op === 'remove') existingRefs.delete(boardRef);
+
+        const ev = new NDKEvent(ndk);
+        ev.kind = 30000;
+        ev.tags = [['d', LEFT_BOARDS_D_TAG]];
+
+        for (const ref of Array.from(existingRefs)) {
+            ev.tags.push(['a', ref]);
+        }
+
+        const relays = await ev.publish();
+        console.log('✅ NIP-51 Left-Boards publiziert', {
+            op,
+            d: LEFT_BOARDS_D_TAG,
+            boardRef,
+            eventId: ev.id,
+            relays: relays?.size ?? 0,
+        });
+    }
+
+    private static async publishLeaveRequest(boardRef: string, ownerPubkey: string, ndk: NDK): Promise<void> {
+        // Ohne Signer können wir nicht publizieren.
+        if (!ndk?.signer) {
+            console.log('ℹ️ Leave-Request: Kein Signer – publish übersprungen', {
+                boardRef,
+                owner: `${ownerPubkey.slice(0, 12)}…`,
+            });
+            return;
+        }
+
+        const ev = new NDKEvent(ndk);
+        ev.kind = 30000;
+        ev.tags = [
+            ['d', `${LEAVE_REQUEST_D_TAG_PREFIX}${boardRef}`],
+            ['a', boardRef],
+            ['p', ownerPubkey],
+        ];
+        ev.content = 'leave';
+
+        const relays = await ev.publish();
+        console.log('✅ Leave-Request publiziert', {
+            boardRef,
+            owner: `${ownerPubkey.slice(0, 12)}…`,
+            eventId: ev.id,
+            relays: relays?.size ?? 0,
+        });
+    }
+
+    /**
+     * Owner-Sichtbarkeit: lädt Leave-Requests (Kind 30000) für ein Board.
+     *
+     * Events werden von den jeweiligen Requestern publiziert und enthalten:
+     * - d = kanban-leave-request:<boardRef>
+     * - a = <boardRef>
+     * - p = <ownerPubkey>
+     *
+     * Rückgabe: Map requesterPubkey -> { eventId, createdAt }
+     */
+    public static async loadLeaveRequestsForBoard(
+        boardRef: string,
+        ndk: NDK
+    ): Promise<Record<string, LeaveRequestInfo>> {
+        if (!ndk || !boardRef) return {};
+
+        const dTag = `${LEAVE_REQUEST_D_TAG_PREFIX}${boardRef}`;
+        const filter: any = {
+            kinds: [30000],
+            '#d': [dTag],
+        };
+
+        try {
+            let events: Set<any> = new Set();
+
+            if (typeof (ndk as any).fetchEvents === 'function') {
+                events = await (ndk as any).fetchEvents(filter);
+            } else if (typeof (ndk as any).fetchEvent === 'function') {
+                const single = await (ndk as any).fetchEvent(filter);
+                if (single) events = new Set([single]);
+            }
+
+            const result: Record<string, LeaveRequestInfo> = {};
+            for (const ev of Array.from(events || [])) {
+                const requester = ev?.pubkey;
+                const eventId = ev?.id;
+                if (!requester || !eventId) continue;
+
+                // Best-effort: nur Events akzeptieren, die wirklich zum d-tag passen
+                const hasD = (ev.tags || []).some((t: any) => t?.[0] === 'd' && t?.[1] === dTag);
+                if (!hasD) continue;
+
+                const createdAt = typeof ev.created_at === 'number' ? ev.created_at : undefined;
+                result[requester] = {
+                    eventId,
+                    createdAt,
+                };
+            }
+            return result;
+        } catch (error) {
+            console.warn('⚠️ loadLeaveRequestsForBoard fehlgeschlagen (best-effort):', error);
+            return {};
+        }
+    }
+
+    /**
+     * Debug/Recovery: löscht alle lokal versteckten Boards (Leave/Hide Registry).
+     * Absichtlich best-effort und ohne Nebenwirkungen auf Tombstones.
+     */
+    public static clearAllHiddenBoards(): void {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.removeItem(HIDDEN_BOARDS_KEY);
+        } catch {
+            // ignore
+        }
+    }
+
+    private static removeLocalBoardCache(boardId: string): void {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.removeItem(`kanban-${boardId}`);
+        } catch {
+            // ignore
+        }
+    }
     
     /**
      * Fügt einen Editor (Maintainer) zum Board hinzu
@@ -552,8 +899,9 @@ export class BoardSharingOperations {
                 }
             }
             
-            console.log(`📥 ${sharedBoards.length} geteilte Boards geladen aus ${boardEvents.size} Events`);
-            return sharedBoards;
+            const filtered = sharedBoards.filter(b => !this.isBoardHidden(b.id, b.author));
+            console.log(`📥 ${filtered.length} geteilte Boards geladen aus ${boardEvents.size} Events (hidden filtered: ${sharedBoards.length - filtered.length})`);
+            return filtered;
             
         } catch (error) {
             console.error('❌ Fehler beim Laden der geteilten Boards:', error);
@@ -585,25 +933,35 @@ export class BoardSharingOperations {
         }
         
         console.log(`📥 Folge Board: ${boardId} von ${boardAuthor}`);
+
+        // Wenn User explizit folgt, soll ein zuvor "verlassen"/"versteckt"es Board wieder sichtbar sein
+        this.unhideBoard(boardId, boardAuthor);
         
         try {
             // 1. Aktuelles Follow-Set des Users laden (NIP-51 Kind 30000)
             const followSetFilter = {
                 kinds: [30000],
                 authors: [currentUser],
-                '#d': ['kanban-boards']
+                '#d': [FOLLOW_SET_D_TAG]
             };
             
             const existingFollowSet = await ndk.fetchEvent(followSetFilter);
             
             // 2. Board-Referenz erstellen (NIP-01 a-tag Format)
             const boardRef = `30301:${boardAuthor}:${boardId}`;
+
+            // Cross-Device: falls Board zuvor per Left-List versteckt wurde, entfernen wir den Eintrag (best-effort)
+            try {
+                await this.upsertLeftBoardsList(boardRef, 'remove', ndk);
+            } catch (error) {
+                console.warn('⚠️ followBoard: Entfernen aus Left-List fehlgeschlagen (best-effort):', error);
+            }
             
             // 3. Neues Follow-Set Event erstellen
             const followSetEvent = new NDKEvent(ndk);
             followSetEvent.kind = 30000;
             followSetEvent.tags = [
-                ['d', 'kanban-boards'] // Follow-Set identifier
+                ['d', FOLLOW_SET_D_TAG] // Follow-Set identifier
             ];
             
             // Bestehende a-tags übernehmen (wenn vorhanden)
@@ -666,7 +1024,7 @@ export class BoardSharingOperations {
             const followSetFilter = {
                 kinds: [30000],
                 authors: [currentUser],
-                '#d': ['kanban-boards']
+                '#d': [FOLLOW_SET_D_TAG]
             };
             
             const existingFollowSet = await ndk.fetchEvent(followSetFilter);
@@ -683,7 +1041,7 @@ export class BoardSharingOperations {
             const followSetEvent = new NDKEvent(ndk);
             followSetEvent.kind = 30000;
             followSetEvent.tags = [
-                ['d', 'kanban-boards']
+                ['d', FOLLOW_SET_D_TAG]
             ];
             
             // Alle a-tags AUSSER das zu entfernende Board
@@ -715,25 +1073,95 @@ export class BoardSharingOperations {
     public static async leaveBoard(
         boardId: string,
         currentUserPubkey: string,
-        ndk?: NDK
+        ndk?: NDK,
+        boardAuthor?: string
     ): Promise<void> {
-        if (!ndk || !currentUserPubkey) {
-            throw new Error('NDK oder Nutzer-Pubkey nicht verfügbar');
-        }
-        
         try {
-            console.log('🚪 Verlasse Board:', boardId);
-            
-            // TODO: Implementiere das Entfernen des Nutzers aus dem Board
-            // Das erfordert:
-            // 1. Board Event laden
-            // 2. Nutzer aus p-tags entfernen
-            // 3. Neues Board Event publizieren (falls Owner)
-            // 4. ODER NIP-51 Follow Set aktualisieren (falls nur Follower)
-            
-            // Vorerst als Placeholder - das wird vom BoardStore.deleteBoard() behandelt
-            console.log(`✅ Board ${boardId} verlassen (Placeholder-Implementation)`);
-            
+            if (!currentUserPubkey) {
+                throw new Error('Nutzer-Pubkey nicht verfügbar');
+            }
+
+            console.log('🚪 Verlasse Board:', { boardId, boardAuthor: boardAuthor?.slice(0, 12) });
+
+            // 1) Immer lokal verstecken (Editor kann nicht autoritativ aus Owner-Event entfernt werden)
+            //    und lokalen Cache entfernen, damit es NICHT als lokales Board wieder auftaucht.
+            this.hideBoard(boardId, boardAuthor, 'left');
+            this.removeLocalBoardCache(boardId);
+
+            if (boardAuthor) {
+                console.log('🙈 leaveBoard: lokal versteckt + Cache entfernt', {
+                    boardId,
+                    boardRef: `30301:${boardAuthor}:${boardId}`,
+                });
+            } else {
+                console.log('🙈 leaveBoard: lokal versteckt + Cache entfernt', {
+                    boardId,
+                    boardRef: null,
+                });
+            }
+
+            // 2) Wenn NDK verfügbar: best-effort Rolle erkennen + unfollow (Viewer-Fall)
+            if (!ndk) {
+                console.log('ℹ️ leaveBoard: Kein NDK – nur lokal versteckt');
+                return;
+            }
+
+            let resolvedAuthor = boardAuthor;
+
+            // Falls kein Author bekannt: best-effort über Board Event auflösen
+            if (!resolvedAuthor) {
+                const eventAny = await ndk.fetchEvent({
+                    kinds: [30301 as any],
+                    '#d': [boardId]
+                } as any);
+                if (eventAny?.pubkey) {
+                    resolvedAuthor = eventAny.pubkey;
+                }
+            }
+
+            const filter: any = resolvedAuthor
+                ? { kinds: [30301 as any], authors: [resolvedAuthor], '#d': [boardId] }
+                : { kinds: [30301 as any], '#d': [boardId] };
+
+            const boardEvent: any = await ndk.fetchEvent(filter);
+            const pTags: string[] = boardEvent?.tags
+                ? boardEvent.tags.filter((t: any) => t[0] === 'p').map((t: any) => t[1])
+                : [];
+            const canonicalOwner: string | undefined = boardEvent?.pubkey || resolvedAuthor;
+
+            const isOwner = canonicalOwner === currentUserPubkey;
+            const isEditor = !isOwner && pTags.includes(currentUserPubkey);
+
+            // 2.5) Cross-Device Leave: NIP-51 Left-Boards Liste updaten (best-effort, nur wenn wir die Adresse kennen)
+            if (resolvedAuthor) {
+                const boardRef = `30301:${resolvedAuthor}:${boardId}`;
+                try {
+                    await this.upsertLeftBoardsList(boardRef, 'add', ndk);
+                } catch (error) {
+                    console.warn('⚠️ leaveBoard: Left-List Update fehlgeschlagen (best-effort):', error);
+                }
+
+                // 2.6) Leave Request: Editor kann Owner nicht selbst aus p-tags entfernen → Request an Owner
+                if (isEditor && canonicalOwner) {
+                    try {
+                        await this.publishLeaveRequest(boardRef, canonicalOwner, ndk);
+                    } catch (error) {
+                        console.warn('⚠️ leaveBoard: Leave-Request Publish fehlgeschlagen (best-effort):', error);
+                    }
+                }
+            }
+
+            // 3) Viewer-Fall: Unfollow im eigenen NIP-51 Follow-Set (best-effort)
+            //    Editor-Fall: kann nicht aus p-tags entfernt werden → lokale Hide-Registry ist Source of Truth.
+            if (!isEditor && resolvedAuthor) {
+                try {
+                    await this.unfollowBoard(boardId, resolvedAuthor, ndk);
+                } catch (error) {
+                    console.warn('⚠️ leaveBoard: Unfollow fehlgeschlagen (Board bleibt lokal versteckt):', error);
+                }
+            }
+
+            console.log(`✅ Board ${boardId} verlassen (hidden locally${!isEditor && resolvedAuthor ? ' + unfollow attempted' : ''})`);
         } catch (error) {
             console.error('❌ Fehler beim Verlassen des Boards:', error);
             throw error;
@@ -842,8 +1270,9 @@ export class BoardSharingOperations {
                 }
             }
             
-            console.log(`✅ ${followedBoards.length} Boards aus Follow-Set geladen`);
-            return followedBoards;
+            const filtered = followedBoards.filter(b => !this.isBoardHidden(b.id, b.author));
+            console.log(`✅ ${filtered.length} Boards aus Follow-Set geladen (hidden filtered: ${followedBoards.length - filtered.length})`);
+            return filtered;
             
         } catch (error) {
             console.error('❌ Fehler beim Laden des Follow-Sets:', error);

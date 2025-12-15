@@ -21,6 +21,7 @@
     import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { BoardRole } from '$lib/types/sharing';
     import { authStore } from '$lib/index.js';
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import DownloadIcon from '@lucide/svelte/icons/download';
@@ -144,6 +145,36 @@
             toast.error('❌ Reconnect fehlgeschlagen', {
                 description: 'Konnte keine Verbindung zu Relays herstellen.',
                 duration: 3000
+            });
+        }
+    }
+
+    let canReloadBoardFromNostr = $derived(boardStore.ndkReady && (syncStatus.connectedRelays ?? 0) > 0);
+
+    async function handleReloadBoardFromNostr() {
+        if (!canReloadBoardFromNostr) return;
+
+        try {
+            const syncManager = getSyncManager();
+            toast.info('🔄 Board wird von Nostr neu geladen...', {
+                description: 'Lokaler Cache wird verworfen und das Board neu geladen.',
+                duration: 2000
+            });
+
+            await boardStore.forceReloadCurrentBoardFromNostr({
+                clearLocalCache: true,
+                syncManager
+            });
+
+            toast.success('✅ Board neu geladen', {
+                description: 'Aktueller Stand wurde von Nostr aktualisiert.',
+                duration: 2500
+            });
+        } catch (error) {
+            console.error('[Topbar] Reload from Nostr failed:', error);
+            toast.error('❌ Reload fehlgeschlagen', {
+                description: error instanceof Error ? error.message : 'Board konnte nicht von Nostr geladen werden.',
+                duration: 3500
             });
         }
     }
@@ -311,10 +342,23 @@
         console.log('🔄 currentBoardTitle wird neu berechnet:', currentBoardTitle);
     }
 
-    function handleDeleteBoard() {
-        if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
-            console.log('🗑️ Deleting entire board');
-            boardStore.deleteBoard();
+    async function handleDeleteBoard() {
+        const boardId = boardStore.getCurrentBoardId();
+        if (!boardId) return;
+
+        const role = await boardStore.getCurrentUserRole();
+
+        if (role === BoardRole.OWNER) {
+            if (confirm('⚠️ Willst du das gesamte Board mit ALLEN Spalten und Karten wirklich löschen? Dies kann nicht rückgängig gemacht werden!')) {
+                console.log('🗑️ Deleting entire board');
+                boardStore.deleteBoard(boardId);
+            }
+            return;
+        }
+
+        if (confirm('🚪 Willst du dieses geteilte Board verlassen? Es wird für dich ausgeblendet und kann später wieder durch Folgen/Einladung sichtbar werden.')) {
+            console.log('🚪 Leaving shared board');
+            await boardStore.leaveBoard(boardId);
         }
     }
 
@@ -476,6 +520,21 @@
                     <span class="text-muted-foreground">Syncing...</span>
                 {/if}
             </div>
+
+            <!-- 🔄 Reload current board from Nostr -->
+            <Button
+                title={canReloadBoardFromNostr
+                    ? 'Aktuelles Board von Nostr neu laden'
+                    : 'Reload nur möglich, wenn Nostr bereit ist und mindestens ein Relay verbunden ist'}
+                variant="ghost"
+                size="icon"
+                class="h-8 w-8"
+                disabled={!canReloadBoardFromNostr}
+                onclick={handleReloadBoardFromNostr}
+            >
+                <RefreshCwIcon class="h-4 w-4" />
+                <span class="sr-only">Board von Nostr neu laden</span>
+            </Button>
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>

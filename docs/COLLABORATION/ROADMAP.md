@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.4 (PHASE 1.5C COMPLETE - 3. Dezember 2025)  
-**Aktualisiert:** 3. Dezember 2025 (Board Snapshots Feature fertig)  
+**Version:** 3.11 (Hotfix: Shared-Discovery nutzt event.pubkey, kein Ghost-Toast nach Leave - 15. Dezember 2025)  
+**Aktualisiert:** 15. Dezember 2025 (Zusätzlich zu 3.10: Shared-Board Discovery (Kind 30301 `#p`) nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide Registry und Toast-Guard zuverlässig matchen)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -835,7 +835,7 @@ JANUAR 2026
 ### Meilenstein 1.3: Kommentar-System Grundlagen (Priorität: Hoch)
 
 **Ziel:** Kommentare werden als Nostr Kind 1 Events gespeichert  
-**Status:** ✅ PHASE A+B DONE | ⏳ Phase C-E PLANNED
+**Status:** ✅ PHASE A+B DONE | ✅ Phase D DONE | ⏳ Phase C+E PLANNED
 
 #### Phase A+B: Implementiert ✅
 
@@ -878,12 +878,13 @@ JANUAR 2026
   - [ ] Session-Management mit TTL
   - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** [`STORES/AUTHSTORE.md`](../ARCHITECTURE/STORES/AUTHSTORE.md), [`AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md)
 
-- [ ] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
-  - [ ] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
-  - [ ] Event-Tags: `a` (board-ref), `e` (card-event), `p` (author)
-  - [ ] Integration in `boardStore.publishToNostr()`
-  - [ ] Comment-Deletion mit NIP-09 Kind 5 Events
-  - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** NDK.md, Kanban-NIP.md
+- [x] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
+  - [x] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
+  - [x] Event-Tags: `a` (CardRef), `e` (Reply auf Card Event-ID), `p` (Mention Card-Autor)
+  - [x] Publishing via SyncManager (publishOrQueue)
+  - [x] Comment-Deletion via NIP-09 Kind 5 Events (für synced comments)
+  - [x] Live-Updates: Subscriptions über `#a` (Board-weit möglich)
+  **Dokumentation:** NDK.md, Kanban-NIP.md
 
 - [ ] **Phase E: Offline-First Sync** (Priorität: Mittel)
   - [ ] `syncManager.svelte.ts` mit IndexedDB Queue (Dexie)
@@ -901,11 +902,11 @@ JANUAR 2026
 - ✅ Keine TypeScript-Fehler
 - ✅ Kommentare werden mit Author & Timestamp gespeichert
 
-**Acceptance Criteria (Phase D - ausstehend):**
-- ⏳ Kommentare werden als Kind 1 Events publiziert
-- ⏳ Kommentare haben korrekte Tags (`a`, `p`, `e`)
-- ⏳ Kommentar-Löschung erzeugt Kind 5 Event
-- ⏳ Neue Kommentare erscheinen in Echtzeit über Relays
+**Acceptance Criteria (Phase D - ERFÜLLT):**
+- ✅ Kommentare werden als Kind 1 Events publiziert
+- ✅ Kommentare haben korrekte Tags (`a`, `p`, `e`)
+- ✅ Kommentar-Löschung erzeugt Kind 5 Event
+- ✅ Neue Kommentare erscheinen in Echtzeit über Relays
 
 ---
 
@@ -1586,6 +1587,13 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.11 | 15.12.2025 | 🧭 **Shared-Discovery Author Fix:** Shared-Board Discovery nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide & Toast-Guard zuverlässig matchen (kein „Neues Board geteilt“ Ghost-Toast nach Leave/Owner-Delete). |
+| 3.10 | 15.12.2025 | 👀 **Owner Leave-Request Badge:** Owner sieht Leave-Requests (Kind 30000, `d=kanban-leave-request:<boardRef>`) im ShareDialog als Marker bei Editoren (best-effort, Relay-abhängig). |
+| 3.9 | 15.12.2025 | 🧹 **NIP-09 Delete Guard:** `deleteBoard()`/`deleteCard()` publizieren Kind-5 Lösch-Events nur bei Autor-Übereinstimmung; kaskadierender Delete skippt Cards anderer Autoren (verhindert „DELETION AUTH MISMATCH“ / Relay-Rejects). |
+| 3.8 | 15.12.2025 | 🧯 **Board-Delete Loop Guard:** `refreshBoardIds()`/`refreshBoardList()` sind read-only (kein `triggerUpdate()` Side-Effects); `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion lädt tombstoned IDs nicht; Nostr-Board-Load aktualisiert `boardIds` storage-basiert (tombstone-aware) statt Merge/Dedup. |
+| 3.7 | 15.12.2025 | 🧭 **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschützt; async Card-Loads werden Board-spezifisch angewendet (verhindert „alle Boards zeigen gleiche Cards“ und „Reload lädt älter“). |
+| 3.6 | 15.12.2025 | 🧷 **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollständige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |
+| 3.5 | 14.12.2025 | 🧩 **Hotfix Shared-Board Sync:** Board-Load überschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
 | 3.1 | 10.11.2025 | 🚀 **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollständig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER für Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |
 | 3.0 | 06.11.2025 | 🤖 **PHASE 3.0 COMPLETE:** AI Agent Infrastructure (10 Module, ChatStore, AIPanel, 150+ Tests). 0 Breaking Changes, 52/52 Docs verlinkt. Phase 1 mostly complete. |
 | 2.8 | 31.10.2025 | 📦 **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). Förder-Anforderung erfüllt! |

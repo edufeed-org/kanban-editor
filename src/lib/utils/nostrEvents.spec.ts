@@ -1,7 +1,7 @@
 // src/lib/utils/nostrEvents.spec.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cardToNostrEvent, nostrEventToCard } from './nostrEvents.js';
+import { cardToNostrEvent, createCommentEvent, nostrEventToCard } from './nostrEvents.js';
 import { Card } from '../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
@@ -186,5 +186,60 @@ describe('nostrEvents - Card Serialization', () => {
             expect(deserializedCard.attendees).toContain('attendee1');
             expect(deserializedCard.attendees).toContain('attendee2');
         });
+    });
+});
+
+describe('nostrEvents - Comment Events', () => {
+    let mockNdk: NDK;
+
+    beforeEach(() => {
+        mockNdk = {} as NDK;
+    });
+
+    it('should include a-tag with cardRef and empty marker', () => {
+        const event = createCommentEvent(
+            'Hello',
+            '30302:npub1cardauthor:card-1',
+            'card-event-id-123',
+            mockNdk
+        );
+
+        expect(event.kind).toBe(1);
+        expect(event.content).toBe('Hello');
+        expect(event.tags).toContainEqual(['a', '30302:npub1cardauthor:card-1', '']);
+    });
+
+    it('should derive and include p-tag from cardRef when author is present', () => {
+        const event = createCommentEvent(
+            'Hello',
+            '30302:npub1cardauthor:card-1',
+            '',
+            mockNdk
+        );
+
+        expect(event.tags).toContainEqual(['p', 'npub1cardauthor']);
+    });
+
+    it('should not include p-tag when derived author is unknown', () => {
+        const event = createCommentEvent(
+            'Hello',
+            '30302:unknown:card-1',
+            '',
+            mockNdk
+        );
+
+        const pTags = event.tags.filter(t => t[0] === 'p');
+        expect(pTags.length).toBe(0);
+    });
+
+    it('should include e-tag with reply marker when cardEventId is provided', () => {
+        const event = createCommentEvent(
+            'Hello',
+            '30302:npub1cardauthor:card-1',
+            'card-event-id-123',
+            mockNdk
+        );
+
+        expect(event.tags).toContainEqual(['e', 'card-event-id-123', '', 'reply']);
     });
 });

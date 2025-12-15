@@ -47,7 +47,10 @@
         }));
         
         // Kombiniere beide Listen und entferne Duplikate
-        const allBoards = [...enrichedOwnBoards, ...sharedBoards];
+        // ⚠️ WICHTIG: Shared Boards FIRST!
+        // getAllBoards() enthält auch Maintainer-Boards → die tauchen sonst doppelt auf.
+        // Wenn "own" zuerst kommt, überschreibt es isShared/userRole und Editor-Klicks würden fälschlich deleteBoard() auslösen.
+        const allBoards = [...sharedBoards, ...enrichedOwnBoards];
         const uniqueBoards = allBoards.filter((board, index, self) => 
             index === self.findIndex(b => b.id === board.id)
         );
@@ -151,8 +154,12 @@
                 console.log('🚪 Board verlassen:', boardId);
             } else {
                 // Normales Löschen (eigenes Board oder Owner von geteiltem Board)
-                boardStore.deleteBoard(boardId);
-                console.log('🗑️ Board gelöscht:', boardId);
+                const ok = boardStore.deleteBoard(boardId);
+                if (ok) {
+                    console.log('🗑️ Board gelöscht:', boardId);
+                } else {
+                    console.log('🚫 Board NICHT gelöscht (fehlende Berechtigung oder Schutz-Guard):', boardId);
+                }
             }
             
             // Wenn das gelöschte Board das aktuelle war, wird loadBoard() automatisch ein anderes laden

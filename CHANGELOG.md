@@ -1,5 +1,114 @@
 # Changelog
 
+## Version 4.7.7 - Hotfix: Shared-Discovery Author/Adresse konsistent (kein Ghost-Toast) 🧭
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: canonicalOwner = event.pubkey
+- Shared-Board Discovery (Kind 30301 `#p`) nutzt für `author`/Adresse jetzt konsequent `event.pubkey` (Nostr-Address: `30301:<pubkey>:<d>`), statt die Reihenfolge der `p`-Tags zu interpretieren.
+- Effekt: Leave/Hide Registry (byAddress) matcht zuverlässig → der Toast „Neues Board geteilt“ wird nach „Board verlassen“ auch in Edge-Cases (Owner republish/delete) nicht mehr fälschlich auf jedem Reload angezeigt.
+- Zusätzlich: Toast-Guard berücksichtigt Tombstones (`kanban-deleted-boards-v1`) und unterdrückt den Toast für lokal gelöschte Boards auch dann, wenn das 30301-Event beim Reload vor dem Kind-5 Delete-Replay eintrifft.
+
+## Version 4.7.6 - UX: Owner sieht Leave-Requests im Share-Dialog 👀
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ UX: Leave-Request Marker
+- Wenn ein Editor ein Leave-Request Event publiziert (Kind `30000`, `d=kanban-leave-request:<boardRef>`), zeigt der Owner im ShareDialog (Tab „Editoren“) ein Badge beim betreffenden Editor.
+- Best-effort: Anzeige hängt von Relay-Verfügbarkeit ab und ist ein Signal, kein kanonischer Zustand.
+
+### 🧼 UX: Kein „Neues Board geteilt“-Toast nach Leave
+- Der Toast „Neues Board geteilt“ wird unterdrückt, wenn der Nutzer das Board bereits verlassen/versteckt hat (lokale Hide/Leave Registry). Damit werden „Ghost“-Toasts vermieden.
+
+## Version 4.7.5 - Hotfix: NIP-09 Delete Guard (keine „Auth Mismatch“ Deletes mehr) 🧹
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Remote-Löschungen nur mit gültiger Autorisierung
+- `deleteBoard()` publiziert das NIP-09 Kind-5 Lösch-Event nur, wenn der aktuelle Signer auch dem `board.author` entspricht.
+- Kaskadierende Card-Löschungen publizieren nur noch für Cards, deren `card.author` dem aktuellen Pubkey entspricht (alle anderen werden remote übersprungen).
+
+### 🎯 Effekt
+- Keine „DELETION AUTH MISMATCH“ Warn-Spam durch doomed Deletes.
+- Weniger Relay-Rejections bei Board-Delete, ohne das lokale Löschen zu beeinflussen.
+
+## Version 4.7.4 - Hotfix: „Leave“ bleibt auch cross-device weg (NIP-51 + Leave Request) 🚪
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Feature: Cross-Device Leave Persistenz
+- „Board verlassen“ wird zusätzlich über eine NIP-51 Liste persistiert: Kind `30000` mit `d=kanban-left-boards` und `a`-Tags im Format `30301:<author>:<d>`.
+- Beim Laden geteilter Boards wird diese Liste vor der Discovery gesynct, damit verlassene Boards auf neuen Devices direkt gefiltert werden.
+
+### 📬 Feature: Leave-Request Event (Owner-Koordination)
+- Editors können (best-effort, signer required) ein Leave-Request Event publizieren: Kind `30000` mit `d=kanban-leave-request:<boardRef>`, `a=<boardRef>` und `p=<ownerPubkey>`.
+- Ziel: Owner kann die Editor-Permission (30301 p-tags) serverseitig entfernen und das Board republishen.
+
+### ✅ Tests
+- Leave/Hide Tests aktualisiert (author-scoped Registry via `byAddress`).
+
+## Version 4.7.3 - Hotfix: Kein sofortiges „Resurrect“ nach Delete 🛑
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Nostr Board-Events können gelöschte Boards nicht reaktivieren
+- `upsertBoardFromNostr()` ignoriert **tombstoned** Boards (`kanban-deleted-boards-v1`) vollständig.
+- Zusätzlich: Shared/Followed Boards, die lokal **hidden** sind (`nostr-kanban-hidden-boards-v1`), werden nicht erneut gespeichert.
+
+### 🧹 Fix: Keine Self-Duplikate in Shared-Board Liste
+- Shared-Cache/Filter ignoriert Boards, deren `author` der aktuelle Nutzer ist.
+- Shared-Cache/Filter ignoriert tombstoned/hidden Boards defensiv (auch bei Real-Time Events).
+
+### ✅ Tests
+- Neuer Unit-Test: `src/lib/stores/kanbanStore.upsertBoardFromNostr.tombstone.spec.ts`.
+
+## Version 4.7.2 - Hotfix: Shared Board „Verlassen“ (Delete = Leave) 🚪
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ UX: Delete ist rollenbasiert
+- **Owner:** „Löschen“ bleibt eine destructive Delete-Operation.
+- **Editor/Viewer:** „Löschen“ verhält sich wie **„Board verlassen“** (Board verschwindet für diesen Nutzer).
+
+### 🧠 Persistenz: Board bleibt wirklich weg
+- Verlassene Shared Boards werden lokal in einer Hide-Registry gespeichert (`nostr-kanban-hidden-boards-v1`).
+- Shared-/Followed-Board Loader filtern hidden Boards konsequent heraus.
+- Für Viewer-Boards wird zusätzlich **best-effort** „unfollow“ versucht; unabhängig davon bleibt das Board lokal versteckt.
+
+### ✅ Tests
+- Neue Unit-Tests für Leave/Hide/Unfollow-Logik: `src/lib/stores/boardstore/sharing.leaveBoard.spec.ts`.
+
+## Version 4.7.1 - Hotfix: Board-Delete Tombstones 🧯
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Gelöschte Boards tauchen nicht mehr wieder auf
+- Löschungen werden dauerhaft über eine Tombstone-Registry gespeichert (`kanban-deleted-boards-v1`).
+- Board-Discovery/Load/Rekonstruktion filtern tombstoned IDs konsequent, damit kein späterer Write-Pfad ein gelöschtes Board „resurrected“.
+
+### 🛡️ Fix: Keine False-Positives durch Nostr Kind-5 Deletions
+- Kind-5 Deletion-Events werden nur angewendet, wenn `deletionEvent.pubkey` dem Pubkey im `a`-Tag entspricht (NIP-09 Adressierung).
+- Board-Deletion wird nur ausgeführt, wenn ein lokales Board existiert und dessen `author` zum `a`-Tag passt.
+
+### 🔄 Fix: Shared Boards können sich aus stale Tombstones erholen
+- Shared-Boards, die fälschlich tombstoned wurden, werden beim Load revalidiert (Board-Event vs. Deletion-Event Timestamp) und ggf. automatisch „un-tombstoned“.
+
+---
+
 ## Version 4.7.0 - Board Snapshots / Versionshistorie 📸
 
 **Datum:** 3. Dezember 2025  
@@ -57,6 +166,11 @@ Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das 
 - Neuer Store-Handler `handleSharedBoardEvent()` im `BoardStore` upsertet das Board in `cachedSharedBoards` und triggert `updateTrigger`
 - Kein Polling mehr nötig; keine künstliche Verzögerung
 
+### 🐛 Fix (Deterministische Card LWW bei Same-Second Updates)
+- Behebt seltene Race-Conditions bei schnellen Card-Moves/Ranks über mehrere Clients (zwei Events im selben `created_at`-Sekundenfenster)
+- Card-Events (Kind 30302) enthalten jetzt zusätzlich `ts` (Millisekunden) und LWW nutzt `ts` + deterministischen Tie-Break über `event.id`
+- Dateien: `src/lib/utils/nostrEvents.ts`, `src/lib/stores/boardstore/nostr/handlers/card.ts`
+
 ### 📚 Dokumentation
 - `docs/ARCHITECTURE/BOARD-SHARING.md` aktualisiert (Abschnitt "Realtime Appearance")
 
@@ -74,6 +188,55 @@ Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das 
 
 ### 🔧 Hinweis
 Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
+
+### 🐛 Fix: Start-Crash bei beschädigten Board-Metadaten
+- `getAllBoardsMetadata()` nutzt jetzt defensiv die Board-ID aus dem `localStorage`-Key (`kanban-{id}`), auch wenn das gespeicherte JSON kein `id` Feld enthält.
+- `loadFromStorage()` loggt Board-IDs crash-sicher (kein `.slice()` auf `undefined`).
+- Test ergänzt: `storage.spec.ts` deckt fehlendes `id` Feld ab.
+
+### 🐛 Fix: Endloses „Gelöscht ↔ Wiederhergestellt“ in Boardliste
+- `refreshBoardIds()` und `refreshBoardList()` sind jetzt **read-only** (UI-Refresh via `updateTrigger++`, kein `triggerUpdate()` → kein `lastAccessedAt` Update, kein Save, kein Publish).
+- Nostr-Board-Load leitet `boardIds` deterministisch aus `BoardStorage.loadBoardIds()` ab (Source-of-Truth inkl. Tombstone-Filter) statt Merge/Dedup.
+- `BoardStorage.loadBoardIds()` schließt den Tombstone-Registry-Key (`kanban-deleted-boards-v1`) explizit aus, damit er nie als „Board-ID“ in der Liste landet.
+- Shared-Board-Rekonstruktion/Laden bricht für tombstoned IDs hart ab (kein `fetchEvent()`, kein Save/Publish), um Retry-Spam zu verhindern.
+- Followers-Load speichert nur lokal (kein Publish, kein lastAccessed bump).
+- Dateien: `src/lib/stores/kanbanStore.svelte.ts`
+
+### 🔧 Wartung (intern)
+- `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.
+- A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknüpft (Svelte-Check ohne Warnings).
+- Dev-Workflow: `pnpm run preview` baut die Site und servt den `build/`-Output via `sirv` (verhindert 404s auf `/_app/immutable/chunks/*`).
+- Test-Stabilität: `BoardStore.forceReloadCurrentBoardFromNostr()` löscht den lokalen Cache-Eintrag `kanban-{boardId}` auch in Test/Node-Umgebungen ohne `window` (Guard basiert auf verfügbarem `localStorage`).
+
+### 🐛 Fix: Geteilte Boards verschwinden nicht mehr nach Reload
+- Board-Load (Kind 30301) überschreibt lokale Cards nicht mehr (Board-Events enthalten keine Cards) → verhindert “Cards verschwinden” durch localStorage-Overwrite.
+- Unsicheres Post-Cleanup entfernt (hatte Shared Boards fälschlich als „orphaned“ gelöscht, weil `authors:[pubkey]` keine fremd-owned Boards zurückliefert).
+- Session-Restore startet jetzt deterministisch Owned-Board Load + Live-Subscriptions (verhindert einmaliges Skippen, wenn Pubkey beim Initialisieren noch fehlt).
+- Dateien: `src/lib/stores/boardstore/nostr.ts`, `src/lib/stores/authStore.svelte.ts`
+
+### 🐛 Fix: DnD-Sync droppt keine Cards mehr
+- Behebt einen intermittenten Fehler beim Verschieben von Cards: wenn `svelte-dnd-action`/UI temporär ein unvollständiges Payload liefert, wurden bisher fehlende Cards aus dem Board-State entfernt.
+- `syncBoardState()` merged jetzt defensiv: Cards/Columns, die im UI-Payload fehlen, werden erhalten (statt implizit gelöscht).
+- Zusätzliches Safety-Net: **Hard-Fail Gate** (optional/konfiguriert) bricht den Sync komplett ab, wenn das UI-Payload Cards/Columns vermisst (kein Persist/Publish auf korrupter Momentaufnahme).
+- Hard-Fail berücksichtigt DnD-Placeholder (`dnd-shadow-placeholder-*`) und blockiert nicht fälschlich durch „unknown IDs“.
+- UX: Bei Hard-Fail erscheint eine Toast („Drag & Drop abgebrochen“) mit Hinweis zum Wiederholen/Reload; die Board-UI resettet den lokalen DnD-State auf den Store-Stand, damit Moves direkt wieder möglich sind.
+- Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/Board.svelte`
+
+### 🐛 Fix: Force-Reload lädt nicht mehr „ältere“ Cards
+- Erzwingt **Last-Write-Wins** bereits beim initialen Card-Upsert: ältere Events können neuere lokale Daten nicht mehr überschreiben (unabhängig von Fetch-Reihenfolge).
+- Verhindert Cross-Board-„Leakage“ bei async Card-Loads: späte Card-Events werden nicht mehr fälschlich auf das aktuell geöffnete Board angewendet.
+- Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`
+- Test: `src/lib/stores/boardstore/operations.lww.spec.ts`
+
+### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
+- Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
+- `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.
+- Kommentar-Events enthalten jetzt zusätzlich einen `p`-Tag (Card-Autor), aus dem `cardRef` abgeleitet.
+- Subscriber-Boards aktualisieren Kommentare jetzt sofort reaktiv (kein Reload/Drag nötig) – eingehende Events werden immer auf die aktuelle Card-Instanz im Board gemerged.
+- Dedupe/Reconcile verhindert doppelte Kommentare nach Reload und behebt den Svelte-Fehler `each_key_duplicate` (duplicate keyed-IDs im `{#each}`).
+- Board startet Background-Subscriptions für alle Karten (Kommentare syncen auch ohne geöffneten Dialog).
+- Mehrere Konsumenten (Background + Dialog) teilen sich pro Karte eine Subscription (Ref-Counting) — Dialog stoppt Background nicht mehr.
+- Dateien: `src/lib/stores/boardstore/nostr/comments.ts`, `src/lib/stores/boardstore/nostr/publish.ts`, `src/lib/stores/boardstore/nostr.mergeComments.spec.ts`, `src/lib/stores/boardstore/nostr.subscribeToComments.spec.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/+page.svelte`
 
 ### 🧪 Test-Hinweise (manuell)
 1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu

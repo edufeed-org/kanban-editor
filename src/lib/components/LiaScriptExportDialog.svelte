@@ -154,9 +154,9 @@
 			<!-- Success State: Link anzeigen -->
 			<div class="grid gap-4 py-4">
 				<div class="space-y-2">
-					<label class="text-sm font-medium">LiaScript Viewer Link</label>
+					<label for="liascript-viewer-link" class="text-sm font-medium">LiaScript Viewer Link</label>
 					<div class="flex gap-2">
-						<Input value={publishedLink} readonly class="font-mono text-xs" />
+						<Input id="liascript-viewer-link" value={publishedLink} readonly class="font-mono text-xs" />
 						<Button onclick={copyLink} variant="outline" size="icon">
 							{#if linkCopied}
 								<CheckIcon class="h-4 w-4 text-green-600" />

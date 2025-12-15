@@ -165,6 +165,20 @@ pnpm run test:unit
 
 ```
 
+### Preview (Production Build)
+
+`preview` servt den generierten Static-Output aus `build/` (inkl. `/_app/immutable/...`).
+
+```sh
+# Build + Preview auf http://127.0.0.1:4173
+pnpm run preview
+
+# Für CI/Container (bindet an 0.0.0.0:4173)
+pnpm run preview:ci
+```
+
+Falls Port `4173` belegt ist, bricht der Preview-Start ab (kein Auto-Port-Fallback).
+
 ### Lokales Relay
 
 1. `docker compose up # füge -d dazu, um das Terminal freizuhaben`
