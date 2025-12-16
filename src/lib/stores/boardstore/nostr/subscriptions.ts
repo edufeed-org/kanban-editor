@@ -111,11 +111,18 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	});
 
 	// 2️⃣ Subscription für Card-Events des AKTUELLEN Boards (Kind 30302)
-	const boardRef = `30301:${currentBoard.author || pubkey}:${currentBoard.id}`;
+	// Cards referenzieren Boards via `a`-Tag: `30301:<author>:<d>`.
+	// Für Robustheit (v.a. nach Reset / Shared Boards) abonnieren wir beide Kandidaten:
+	// - owner/canonical author (currentBoard.author)
+	// - eigener pubkey (pubkey)
+	const boardRefAuthors = Array.from(
+		new Set([currentBoard.author, pubkey].filter((v): v is string => typeof v === 'string' && v.length > 0))
+	);
+	const boardRefs = boardRefAuthors.map((author) => `30301:${author}:${currentBoard.id}`);
 	const cardsSub = ndk.subscribe(
 		{
 			kinds: [30302] as number[],
-			'#a': [boardRef],
+			'#a': boardRefs,
 			since: sevenDaysAgo,
 		} as any,
 		{ closeOnEose: false }
@@ -133,10 +140,23 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	});
 
 	// 3️⃣ Subscription für Deletion-Events (Kind 5)
+	// ⚡ OPTIMIZATION: Wir subscriben NICHT global auf alle Kind-5 Events.
+	// Stattdessen scopen wir auf relevante Autoren (mich + owner + maintainers),
+	// damit `nostr-processed-deletions` nicht durch irrelevante Deletes wächst.
+	const deletionAuthors = Array.from(
+		new Set(
+			[
+				pubkey,
+				currentBoard.author,
+				...(Array.isArray((currentBoard as any).maintainers) ? (currentBoard as any).maintainers : []),
+			].filter((v): v is string => typeof v === 'string' && v.length > 0)
+		)
+	);
 	const deletionsSub = ndk.subscribe(
 		{
 			kinds: [5] as number[],
 			since: sevenDaysAgo,
+			...(deletionAuthors.length > 0 ? { authors: deletionAuthors } : {}),
 		} as any,
 		{ closeOnEose: false }
 	);

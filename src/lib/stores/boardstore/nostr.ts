@@ -341,21 +341,34 @@ export class NostrIntegration {
 
         const pubkey = getCurrentPubkeyOrNull();
 
-        if (!pubkey || !board.author) {
-            console.log('[BoardStore] ℹ️ No pubkey or board author, skip loadCardsForBoard');
+        if (!pubkey) {
+            console.log('[BoardStore] ℹ️ No pubkey, skip loadCardsForBoard');
+            return;
+        }
+
+        // Cards referenzieren Boards via `a`-Tag: `30301:<author>:<d>`.
+        // In der Praxis kann (v.a. nach localStorage Reset / Shared-Board) die lokale `board.author`
+        // temporär fehlen oder inkonsistent sein. Daher laden wir defensiv über beide Kandidaten:
+        // - canonical owner (board.author)
+        // - aktueller Nutzer (pubkey)
+        const boardRefAuthors = Array.from(
+            new Set([board.author, pubkey].filter((v): v is string => typeof v === 'string' && v.length > 0))
+        );
+
+        if (boardRefAuthors.length === 0) {
+            console.log('[BoardStore] ℹ️ No boardRef authors available, skip loadCardsForBoard');
             return;
         }
 
         try {
-            // Baue die a-tag Referenz: "30301:pubkey:board-id"
-            const boardRef = `30301:${board.author}:${board.id}`;
+            const boardRefs = boardRefAuthors.map((author) => `30301:${author}:${board.id}`);
             
             // console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
 
             // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
             const cardFilter = {
                 kinds: [30302],
-                '#a': [boardRef]
+				'#a': boardRefs
             };
 
             const cardEvents = await this.ndk.fetchEvents(cardFilter as any);
@@ -378,9 +391,8 @@ export class NostrIntegration {
                 try {
                     const cardProps = nostrEventToCard(cardEvent);
                     
-                    // Validiere dass Card zum richtigen Board gehört
-                    if (cardProps.boardRef !== boardRef) {
-                        console.warn('[BoardStore] ⚠️ Card boardRef mismatch:', cardProps.boardRef, 'expected:', boardRef);
+                    // Validiere dass Card zum Board gehört (akzeptiere beide möglichen boardRefs)
+                    if (!cardProps.boardRef || !boardRefs.includes(cardProps.boardRef)) {
                         return null;
                     }
                     
