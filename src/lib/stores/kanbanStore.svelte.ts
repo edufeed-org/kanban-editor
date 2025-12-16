@@ -1515,8 +1515,23 @@ export class BoardStore {
         }
         
         if (BoardOperations.updateColumn(this.board, columnId, updates)) {
-            this.triggerUpdate();
-            this.publishBoardAsync();
+            // Wir publizieren hier manuell (Owner: 30301, Editor: Column-Patch), daher publish=false.
+            this.triggerUpdate({ publish: false });
+
+            if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                void this.publishBoardAsync();
+            } else {
+                const namePatch = typeof updates.name === 'string' ? updates.name.trim() : '';
+                const colorPatch = typeof updates.color === 'string' ? updates.color : '';
+
+                const patchEntry: { id: string; name?: string; color?: string } = { id: columnId };
+                if (namePatch.length > 0) patchEntry.name = namePatch;
+                if (colorPatch.length > 0) patchEntry.color = colorPatch;
+
+                if (patchEntry.name || patchEntry.color) {
+                    void this.publishColumnPatchAsync({ columns: [patchEntry] });
+                }
+            }
         }
     }
 
@@ -1599,52 +1614,109 @@ export class BoardStore {
         await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
     }
 
+    private async publishColumnPatchAsync(args: {
+        columnOrder?: string[];
+        columns?: Array<{ id: string; name?: string; color?: string }>;
+    }): Promise<void> {
+        await this.nostrIntegration.publishColumnPatch(this.board, args);
+    }
+
     public applyColumnOrderPatchFromNostr(args: {
         boardId: string;
         columnOrder: string[];
+        columnUpdates?: Array<{
+            id: string;
+            namePresent: boolean;
+            colorPresent: boolean;
+            name?: string;
+            color?: string;
+        }>;
         eventTimeMs: number;
         publisherPubkey?: string;
     }): boolean {
         const { boardId, columnOrder, eventTimeMs } = args;
+        const columnUpdates = Array.isArray(args.columnUpdates) ? args.columnUpdates : [];
         if (boardId !== this.board.id) return false;
-        if (!Array.isArray(columnOrder) || columnOrder.length === 0) return false;
+        const hasOrderPatch = Array.isArray(columnOrder) && columnOrder.length > 0;
+        const hasMetaPatch = columnUpdates.length > 0;
+        if (!hasOrderPatch && !hasMetaPatch) return false;
         if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return false;
         if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return false;
 
-        const existingColumnIds = this.board.columns.map((c) => c.id);
-        const existingSet = new Set(existingColumnIds);
+        let didChange = false;
 
-        const dedupedIncoming: string[] = [];
-        const seen = new Set<string>();
-        for (const id of columnOrder) {
-            if (typeof id !== 'string' || id.length === 0) continue;
-            if (seen.has(id)) continue;
-            seen.add(id);
-            if (existingSet.has(id)) dedupedIncoming.push(id);
+        // 1) Column metadata patches (name/color)
+        if (hasMetaPatch) {
+            for (const patch of columnUpdates) {
+                if (!patch?.id) continue;
+                const col = this.board.findColumn(patch.id);
+                if (!col) continue;
+
+                const next: Partial<ColumnProps> = {};
+
+                if (patch.namePresent && typeof patch.name === 'string') {
+                    const incomingName = patch.name.trim();
+                    if (incomingName.length > 0 && incomingName !== col.name) {
+                        next.name = incomingName;
+                    }
+                }
+
+                if (patch.colorPresent && typeof patch.color === 'string') {
+                    const incomingColor = patch.color;
+                    const currentColor = col.color || '';
+                    if (incomingColor !== currentColor) {
+                        next.color = incomingColor;
+                    }
+                }
+
+                if (Object.keys(next).length > 0) {
+                    col.update(next);
+                    didChange = true;
+                }
+            }
         }
 
-        if (dedupedIncoming.length === 0) return false;
+        // 2) Column order patch
+        if (hasOrderPatch) {
+            const existingColumnIds = this.board.columns.map((c) => c.id);
+            const existingSet = new Set(existingColumnIds);
 
-        // Defensive merge: keep all existing columns, never drop unknowns.
-        const mergedOrder = [
-            ...dedupedIncoming,
-            ...existingColumnIds.filter((id) => !seen.has(id)),
-        ];
+            const dedupedIncoming: string[] = [];
+            const seen = new Set<string>();
+            for (const id of columnOrder) {
+                if (typeof id !== 'string' || id.length === 0) continue;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                if (existingSet.has(id)) dedupedIncoming.push(id);
+            }
 
-        // No-op guard: wenn Order identisch ist, nur LWW-Timestamp aktualisieren.
-        // Das verhindert den sichtbaren "neu sortiert"-Effekt beim Board-Load,
-        // wenn ein Patch/Event die gleiche Reihenfolge nochmals liefert.
-        const current = this._columnOrder;
-        const sameOrder =
-            current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
-        if (sameOrder) {
-            this.lastColumnOrderPatchAtMs = eventTimeMs;
+            if (dedupedIncoming.length > 0) {
+                // Defensive merge: keep all existing columns, never drop unknowns.
+                const mergedOrder = [
+                    ...dedupedIncoming,
+                    ...existingColumnIds.filter((id) => !seen.has(id)),
+                ];
+
+                // No-op guard: wenn Order identisch ist, nur LWW-Timestamp aktualisieren.
+                // Das verhindert den sichtbaren "neu sortiert"-Effekt beim Board-Load,
+                // wenn ein Patch/Event die gleiche Reihenfolge nochmals liefert.
+                const current = this._columnOrder;
+                const sameOrder =
+                    current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
+                if (!sameOrder) {
+                    this._columnOrder = mergedOrder;
+                    BoardOperations.reorderColumns(this.board, mergedOrder);
+                    didChange = true;
+                }
+            }
+        }
+
+        // Always advance LWW timestamp once we've accepted this event (even if it was a no-op).
+        this.lastColumnOrderPatchAtMs = eventTimeMs;
+
+        if (!didChange) {
             return false;
         }
-
-        this._columnOrder = mergedOrder;
-        BoardOperations.reorderColumns(this.board, mergedOrder);
-        this.lastColumnOrderPatchAtMs = eventTimeMs;
 
         // Lokale Persistierung/UI-Update, ohne Board-Event zu publizieren.
         this.triggerUpdate({ publish: false });

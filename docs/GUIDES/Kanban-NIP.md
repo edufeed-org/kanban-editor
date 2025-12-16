@@ -185,15 +185,26 @@ Clients MAY show easy drop-downs to designate the link labels so that the users 
 
 #### Column Order Patch Events (kind: 8571) (Project Extension)
 
-This project uses a dedicated patch event to synchronize **column order** without requiring maintainers to republish the Board event (kind `30301`).
+This project uses a dedicated patch event to synchronize **board-level column changes** (order + column metadata) without requiring maintainers to republish the Board event (kind `30301`).
 
 Rationale: Board events are parameterized replaceable (`30301:<publisherPubkey>:<d>`). If a maintainer/editor republishes kind `30301`, it creates a **fork board** under their pubkey. A separate regular-kind patch avoids this.
 
 Required tags:
 - `d`: The board id (same value as the board's `d` tag). Allows reliable subscriptions via `#d`.
 - `a`: The canonical board address: `30301:<board-creator-pubkey>:<board-d-identifier>`
-- `order`: The column IDs in their desired order (one tag with multiple values)
 - `updated_at_ms`: Millisecond timestamp for Last-Write-Wins (LWW) ordering
+
+Optional tags:
+- `order`: The column IDs in their desired order (one tag with multiple values). This tag MAY be omitted for “metadata-only” patches.
+- `col`: Repeatable column metadata update tags.
+
+`col` tag format (repeatable):
+- `['col', '<columnId>', '<nameOrEmpty>', '<colorOrEmpty>']`
+
+Semantics:
+- Empty strings in `col` mean “no update” (they do not clear existing values).
+- A patch event MUST include at least one meaningful change (`order` and/or at least one `col` tag with a non-empty name or color). Clients SHOULD ignore empty/no-op patches.
+- LWW ordering MUST use `updated_at_ms` (millisecond precision). If multiple patches exist, clients MUST apply only the most recent one.
 
 ### Access Control
 
@@ -203,9 +214,9 @@ Required tags:
 2. Only the board maintainers can:
    - Add a card to the board
    - Publish edits to the existing cards (including the status)
-    - Publish column order patches (kind `8571`) referencing the canonical board address
+    - Publish column patches (kind `8571`) referencing the canonical board address
 
-2. Any user can:
+3. Any user can:
    - View the board and cards
    - React, comment, zap on board and cards
 

@@ -264,4 +264,47 @@ describe('nostrEvents - Column Order Patch Events', () => {
 
         expect(event.tags).toContainEqual(['d', 'board-123']);
     });
+
+    it('should omit order tag when columnOrder is missing/empty', () => {
+        const event = createColumnOrderPatchEvent(
+            {
+                boardId: 'board-123',
+                boardAuthor: 'pubkey-owner-hex',
+                // no columnOrder
+                updatedAtMs: 1700000000000,
+            },
+            mockNdk
+        );
+
+        const orderTag = event.tags.find((t) => t[0] === 'order');
+        expect(orderTag).toBeUndefined();
+    });
+
+    it('should include col tag for name patch', () => {
+        const event = createColumnOrderPatchEvent(
+            {
+                boardId: 'board-123',
+                boardAuthor: 'pubkey-owner-hex',
+                columns: [{ id: 'col-a', name: 'Neu', color: '' }],
+                updatedAtMs: 1700000000000,
+            },
+            mockNdk
+        );
+
+        expect(event.tags).toContainEqual(['col', 'col-a', 'Neu', '']);
+    });
+
+    it('should include col tag for color-only patch (empty name)', () => {
+        const event = createColumnOrderPatchEvent(
+            {
+                boardId: 'board-123',
+                boardAuthor: 'pubkey-owner-hex',
+                columns: [{ id: 'col-a', color: 'slate' }],
+                updatedAtMs: 1700000000000,
+            },
+            mockNdk
+        );
+
+        expect(event.tags).toContainEqual(['col', 'col-a', '', 'slate']);
+    });
 });

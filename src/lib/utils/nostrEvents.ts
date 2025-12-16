@@ -47,14 +47,20 @@ export const EVENT_KINDS = {
  *
  * Tags:
  * - a: Board address reference: "30301:<ownerPubkey>:<boardId>"
- * - order: ordered column ids (one tag, variable length)
+ * - order: ordered column ids (one tag, variable length) (optional)
+ * - col: column metadata patch entries (repeatable): ["col", <colId>, <name>, <color>]
  * - updated_at_ms: millisecond timestamp for LWW
  */
 export function createColumnOrderPatchEvent(
   args: {
     boardId: string;
     boardAuthor: string;
-    columnOrder: string[];
+    columnOrder?: string[];
+    columns?: Array<{
+      id: string;
+      name?: string;
+      color?: string;
+    }>;
     updatedAtMs?: number;
   },
   ndk: NDK
@@ -78,8 +84,27 @@ export function createColumnOrderPatchEvent(
     ['d', args.boardId],
     ['a', boardRef],
     ['updated_at_ms', String(updatedAtMs)],
-    ['order', ...cleanOrder],
   ];
+
+  if (cleanOrder.length > 0) {
+    event.tags.push(['order', ...cleanOrder]);
+  }
+
+  const columns = Array.isArray(args.columns) ? args.columns : [];
+  for (const col of columns) {
+    const id = typeof col?.id === 'string' ? col.id : '';
+    if (!id) continue;
+
+    const name = typeof col?.name === 'string' ? col.name : '';
+    const color = typeof col?.color === 'string' ? col.color : '';
+
+    // Always emit 4 fields to support color-only patches (name can be empty string).
+    // Consumers should treat empty name as "no name update".
+    if (name !== '' || color !== '') {
+      event.tags.push(['col', id, name, color]);
+    }
+  }
+
   // Content intentionally empty; all data lives in tags.
   event.content = '';
   return event;

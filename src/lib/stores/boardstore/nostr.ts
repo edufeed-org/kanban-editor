@@ -617,12 +617,22 @@ export class NostrIntegration {
      * - Editors dürfen kein 30301 publizieren (würde Board-Adresse forken).
      * - Trotzdem soll Column-Reihenfolge kollaborativ synchronisiert werden.
      */
-    public async publishColumnOrderPatch(board: Board, columnOrder: string[]): Promise<void> {
+    public async publishColumnPatch(
+        board: Board,
+        args: {
+            columnOrder?: string[];
+            columns?: Array<{ id: string; name?: string; color?: string }>;
+        }
+    ): Promise<void> {
         if (!this.ndk) return;
+
+        const hasOrder = Array.isArray(args.columnOrder) && args.columnOrder.length > 0;
+        const hasColumns = Array.isArray(args.columns) && args.columns.length > 0;
+        if (!hasOrder && !hasColumns) return;
 
         try {
             if (!board.author) {
-                console.warn('[NostrIntegration] ⚠️ Cannot publish column order patch: board.author missing');
+                console.warn('[NostrIntegration] ⚠️ Cannot publish column patch: board.author missing');
                 return;
             }
 
@@ -630,17 +640,19 @@ export class NostrIntegration {
                 {
                     boardId: board.id,
                     boardAuthor: board.author,
-                    columnOrder,
+                    columnOrder: args.columnOrder,
+                    columns: args.columns,
                     updatedAtMs: Date.now(),
                 },
                 this.ndk
             );
 
-            console.log('[NostrIntegration] 🧩 publishColumnOrderPatch', {
+            console.log('[NostrIntegration] 🧩 publishColumnPatch', {
                 kind: event.kind,
                 boardId: board.id,
                 boardAuthor: board.author,
-                orderLen: Array.isArray(columnOrder) ? columnOrder.length : undefined,
+                orderLen: Array.isArray(args.columnOrder) ? args.columnOrder.length : 0,
+                colsLen: Array.isArray(args.columns) ? args.columns.length : 0,
             });
 
             const publishState = board.publishState || 'draft';
@@ -656,29 +668,16 @@ export class NostrIntegration {
                 relaysPrivate: settingsStore.settings.relaysPrivate,
             });
 
-            console.log('[NostrIntegration] 🧩 columnOrderPatch target relays', {
-                normalizedState,
-                targetRelaysCount: Array.isArray(targetRelays) ? targetRelays.length : undefined,
-                targetRelays,
-            });
-
             const syncManager = getSyncManager();
 
-            const publishedEvent = await syncManager.publishOrQueue(
-                event,
-                'board',
-                'normal',
-                normalizedState,
-                targetRelays
-            );
-
-            console.log('[NostrIntegration] 🧩 columnOrderPatch publishOrQueue result', {
-                id: publishedEvent?.id ?? event.id,
-                queued: (publishedEvent as any)?.queued,
-            });
+            await syncManager.publishOrQueue(event, 'board', 'normal', normalizedState, targetRelays);
         } catch (error) {
-            console.error('❌ Error publishing column order patch:', error);
+            console.error('❌ Error publishing column patch:', error);
         }
+    }
+
+    public async publishColumnOrderPatch(board: Board, columnOrder: string[]): Promise<void> {
+        return this.publishColumnPatch(board, { columnOrder });
     }
 
     /**
