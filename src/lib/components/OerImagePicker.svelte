@@ -1,4 +1,11 @@
 <script lang="ts">
+	import type {
+		OerSearchResultEvent,
+		OerSearchElement,
+		OerListElement,
+		PaginationElement,
+        OerCardClickEvent
+	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 
 	interface Props {
@@ -9,30 +16,30 @@
 
 	const { apiUrl = 'http://localhost:3001', language = 'de', onSelect }: Props = $props();
 
-	let searchEl: HTMLElement;
-	let listEl: HTMLElement;
-	let paginationEl: HTMLElement;
+	let searchEl: OerSearchElement;
+	let listEl: OerListElement;
+	let paginationEl: PaginationElement;
 
 	onMount(async () => {
 		// Dynamically import the plugin only on the client side to avoid SSR issues
 		await import('@edufeed-org/oer-finder-plugin');
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
-			const customEvent = e as CustomEvent;
-			(listEl as any).oers = customEvent.detail.data;
-			(listEl as any).loading = false;
-			(paginationEl as any).metadata = customEvent.detail.meta;
+			const customEvent = e as CustomEvent<OerSearchResultEvent>;
+			listEl.oers = customEvent.detail.data;
+			listEl.loading = false;
+			paginationEl.metadata = customEvent.detail.meta;
 		});
 
 		searchEl?.addEventListener('search-error', (e: Event) => {
-			const customEvent = e as CustomEvent;
-			(listEl as any).oers = [];
-			(listEl as any).error = customEvent.detail.error;
+			const customEvent = e as CustomEvent<{ error: string }>;
+			listEl.oers = [];
+			listEl.error = customEvent.detail.error;
 		});
 
 		// Handle card selection - extract original image URL
 		listEl?.addEventListener('card-click', (e: Event) => {
-			const customEvent = e as CustomEvent;
+			const customEvent = e as CustomEvent<OerCardClickEvent>;
 			const oer = customEvent.detail.oer;
 			const imageUrl = oer.images?.original || oer.images?.medium || oer.images?.small;
 			if (imageUrl) {
