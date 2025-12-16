@@ -1,4 +1,15 @@
 services:
+  app:
+    tty: true
+    stdin_open: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/home/node/app
+    ports:
+      - "5173:5173"
   nostr-relay:
     image: scsibug/nostr-rs-relay:latest
     ports:
