@@ -28,10 +28,62 @@ export const EVENT_KINDS = {
   BOARD: 30301, // Board definition (replaceable)
   CARD: 30302, // Card definition (replaceable)
   SNAPSHOT: 30303, // Board snapshot/version (non-replaceable) - Phase 1.5
+  COLUMN_ORDER_PATCH: 8571, // Column order patch (regular) - allows editors to sync column order without 30301 forks
   COMMENT: 1, // Text note (regular)
   DELETION: 5, // Event deletion (NIP-09)
   SOFT_LOCK: 20001, // "Now editing" soft lock (ephemeral)
 } as const;
+
+// ============================================================================
+// COLUMN ORDER PATCH (Kind 8571)
+// ============================================================================
+
+/**
+ * Column order patch event.
+ *
+ * Motivation:
+ * - Editors must not publish Board events (30301) because that would fork the board address.
+ * - Column ordering is board-level state, but we still want editors to sync it collaboratively.
+ *
+ * Tags:
+ * - a: Board address reference: "30301:<ownerPubkey>:<boardId>"
+ * - order: ordered column ids (one tag, variable length)
+ * - updated_at_ms: millisecond timestamp for LWW
+ */
+export function createColumnOrderPatchEvent(
+  args: {
+    boardId: string;
+    boardAuthor: string;
+    columnOrder: string[];
+    updatedAtMs?: number;
+  },
+  ndk: NDK
+): NDKEvent {
+  const event = new NDKEvent(ndk);
+  event.kind = EVENT_KINDS.COLUMN_ORDER_PATCH;
+
+  const updatedAtMs =
+    typeof args.updatedAtMs === 'number' && Number.isFinite(args.updatedAtMs) && args.updatedAtMs > 0
+      ? Math.floor(args.updatedAtMs)
+      : Date.now();
+
+  const cleanOrder = Array.from(
+    new Set((args.columnOrder || []).filter((id) => typeof id === 'string' && id.length > 0))
+  );
+
+  const boardRef = `30301:${args.boardAuthor}:${args.boardId}`;
+  event.tags = [
+    // Convenience tag for subscription filters: allows `#d:[boardId]`.
+    // (Still keep the canonical `a` tag as the primary reference.)
+    ['d', args.boardId],
+    ['a', boardRef],
+    ['updated_at_ms', String(updatedAtMs)],
+    ['order', ...cleanOrder],
+  ];
+  // Content intentionally empty; all data lives in tags.
+  event.content = '';
+  return event;
+}
 
 // ============================================================================
 // BOARD EVENT SERIALIZATION (Kind 30301)
@@ -89,14 +141,18 @@ export function boardToNostrEvent(board: Board, ndk: NDK): NDKEvent {
   });
 
   // Add author (p-tag) - only if available
-  if (board.author) {
+  const owner = board.author;
+  if (owner) {
     // Convert display name to hex pubkey if needed (TODO: implement if storing names)
-    tags.push(['p', board.author]);
+    tags.push(['p', owner]);
   }
 
-  // Add maintainers (co-editors)
+  // Add maintainers (co-editors) – never include owner (sonst Owner erscheint als Editor)
   if (board.maintainers && board.maintainers.length > 0) {
-    board.maintainers.forEach(pubkey => {
+    const uniqueMaintainers = Array.from(
+      new Set(board.maintainers.filter(pubkey => typeof pubkey === 'string' && pubkey && pubkey !== owner))
+    );
+    uniqueMaintainers.forEach(pubkey => {
       tags.push(['p', pubkey]);
     });
   }
@@ -146,11 +202,18 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
   // Remaining p-tags are maintainers/editors
   // 🔴 CRITICAL FIX: Do NOT use event.pubkey as author, because when an editor
   // publishes an update, event.pubkey would be the editor, causing ownership to shift!
-  const pTags = tags.filter(t => t[0] === 'p').map(t => t[1]);
+  const pTags = tags
+    .filter(t => t[0] === 'p')
+    .map(t => t[1])
+    .filter((p): p is string => typeof p === 'string' && p.length > 0);
+
   const author = pTags.length > 0 ? pTags[0] : event.pubkey; // First p-tag is canonical owner
-  
+
   // Maintainers = all p-tags except the first one (which is the owner)
-  const maintainers = pTags.slice(1); // Skip first p-tag (author)
+  // Normalize: de-dup und Owner entfernen (Owner darf nicht in maintainers stehen)
+  const maintainers = Array.from(
+    new Set(pTags.slice(1).filter(p => p !== author))
+  );
   
   // NOTE: Followers (viewers) come from separate Kind 30000 Follow Set events (NIP-51)
   // They should NOT be in the Kind 30301 event p-tags

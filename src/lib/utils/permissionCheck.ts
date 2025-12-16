@@ -137,6 +137,24 @@ export const PermissionChecks = {
     
     canEditBoard: (userRole: BoardRole | null, boardId?: string) => 
         requirePermission('canEdit', userRole, 'Board-Einstellungen ändern', boardId),
+
+    // 🔒 Board-Metadaten (Name/Beschreibung/Tags/Lizenz/PublishState) sind Nostr Kind 30301
+    // und damit parametrized replaceable unter der Pubkey des Signers.
+    // Wenn ein Editor hier publisht, entsteht ein Fork-Board (30301:<editorPubkey>:<d>).
+    // Daher: Nur OWNER (oder Demo-Board) darf Board-Metadaten ändern/publizieren.
+    canEditBoardMeta: (userRole: BoardRole | null, boardId?: string) => {
+        if (boardId === 'demo-board') return true;
+        if (userRole === BoardRole.OWNER) return true;
+        showPermissionDeniedMessage('Board-Metadaten dürfen nur vom Board-Besitzer geändert werden.');
+        return false;
+    },
+
+    // 🔒 Board-Event Publishing (Kind 30301) ist owner-only, um Forks zu verhindern.
+    canPublishBoard: (userRole: BoardRole | null, boardId?: string) => {
+        if (boardId === 'demo-board') return true;
+        if (userRole === BoardRole.OWNER) return true;
+        return false;
+    },
     
     canInviteUsers: (userRole: BoardRole | null, boardId?: string) => 
         requirePermission('canInvite', userRole, 'andere Benutzer einladen', boardId)

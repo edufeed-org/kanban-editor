@@ -1,7 +1,7 @@
 // src/lib/utils/nostrEvents.spec.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cardToNostrEvent, createCommentEvent, nostrEventToCard } from './nostrEvents.js';
+import { cardToNostrEvent, createCommentEvent, createColumnOrderPatchEvent, nostrEventToCard } from './nostrEvents.js';
 import { Card } from '../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
@@ -241,5 +241,27 @@ describe('nostrEvents - Comment Events', () => {
         );
 
         expect(event.tags).toContainEqual(['e', 'card-event-id-123', '', 'reply']);
+    });
+});
+
+describe('nostrEvents - Column Order Patch Events', () => {
+    let mockNdk: NDK;
+
+    beforeEach(() => {
+        mockNdk = {} as NDK;
+    });
+
+    it('should include d-tag with board id for #d subscriptions', () => {
+        const event = createColumnOrderPatchEvent(
+            {
+                boardId: 'board-123',
+                boardAuthor: 'pubkey-owner-hex',
+                columnOrder: ['col-a', 'col-b'],
+                updatedAtMs: 1700000000000,
+            },
+            mockNdk
+        );
+
+        expect(event.tags).toContainEqual(['d', 'board-123']);
     });
 });

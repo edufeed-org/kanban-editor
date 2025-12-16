@@ -3,7 +3,14 @@
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
-import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent, EVENT_KINDS } from '../../utils/nostrEvents.js';
+import {
+    boardToNostrEvent,
+    cardToNostrEvent,
+    createCommentEvent,
+    createDeletionEvent,
+    createColumnOrderPatchEvent,
+    EVENT_KINDS
+} from '../../utils/nostrEvents.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
@@ -588,6 +595,77 @@ export class NostrIntegration {
             }
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
+        }
+    }
+
+    /**
+     * Publiziert eine Column-Order Änderung als Patch-Event.
+     *
+     * Motivation:
+     * - Editors dürfen kein 30301 publizieren (würde Board-Adresse forken).
+     * - Trotzdem soll Column-Reihenfolge kollaborativ synchronisiert werden.
+     */
+    public async publishColumnOrderPatch(board: Board, columnOrder: string[]): Promise<void> {
+        if (!this.ndk) return;
+
+        try {
+            if (!board.author) {
+                console.warn('[NostrIntegration] ⚠️ Cannot publish column order patch: board.author missing');
+                return;
+            }
+
+            const event = createColumnOrderPatchEvent(
+                {
+                    boardId: board.id,
+                    boardAuthor: board.author,
+                    columnOrder,
+                    updatedAtMs: Date.now(),
+                },
+                this.ndk
+            );
+
+            console.log('[NostrIntegration] 🧩 publishColumnOrderPatch', {
+                kind: event.kind,
+                boardId: board.id,
+                boardAuthor: board.author,
+                orderLen: Array.isArray(columnOrder) ? columnOrder.length : undefined,
+            });
+
+            const publishState = board.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+                | 'published'
+                | 'draft'
+                | 'private';
+
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate,
+            });
+
+            console.log('[NostrIntegration] 🧩 columnOrderPatch target relays', {
+                normalizedState,
+                targetRelaysCount: Array.isArray(targetRelays) ? targetRelays.length : undefined,
+                targetRelays,
+            });
+
+            const syncManager = getSyncManager();
+
+            const publishedEvent = await syncManager.publishOrQueue(
+                event,
+                'board',
+                'normal',
+                normalizedState,
+                targetRelays
+            );
+
+            console.log('[NostrIntegration] 🧩 columnOrderPatch publishOrQueue result', {
+                id: publishedEvent?.id ?? event.id,
+                queued: (publishedEvent as any)?.queued,
+            });
+        } catch (error) {
+            console.error('❌ Error publishing column order patch:', error);
         }
     }
 

@@ -60,6 +60,29 @@ describe('BoardOperations.syncBoardState (defensive merge)', () => {
 		expect(board.findCardAndColumn('c2')).not.toBeNull();
 	});
 
+	it('dedupes duplicate columns in UI payload (prevents duplicate keys / columnOrder corruption)', () => {
+		const board = new Board({
+			name: 'Test',
+			columns: [
+				{ id: 'col-a', name: 'A', cards: [{ id: 'c1', heading: 'One' }] },
+				{ id: 'col-b', name: 'B', cards: [{ id: 'c2', heading: 'Two' }] }
+			]
+		});
+
+		const uiColumns = [
+			{ id: 'col-a', name: 'A', items: [{ id: 'c1', title: 'One' }] },
+			{ id: 'col-a', name: 'A (dup)', items: [{ id: 'c1', title: 'One' }] },
+			{ id: 'col-b', name: 'B', items: [{ id: 'c2', title: 'Two' }] }
+		];
+
+		const result = BoardOperations.syncBoardState(board, ['col-a', 'col-b'], uiColumns as any);
+
+		expect(result.newColumnOrder).toEqual(['col-a', 'col-b']);
+		expect(board.columns.map((c) => c.id)).toEqual(['col-a', 'col-b']);
+		expect(board.findCardAndColumn('c1')?.column.id).toBe('col-a');
+		expect(board.findCardAndColumn('c2')?.column.id).toBe('col-b');
+	});
+
 	it('hard-fail: throws (and does not mutate) when cards are missing from UI payload', () => {
 		const board = new Board({
 			name: 'Test',

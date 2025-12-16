@@ -162,11 +162,31 @@ export class BoardStore {
                 return;
             }
             
+            // 🔴 IMPORTANT: maintainers dürfen den Owner (author) NICHT enthalten.
+            // Sonst erscheint der Owner im Share-UI doppelt (Owner + Editor) und ist "nicht entfernbar".
             if (this.board.author === 'anonymous' || !this.board.author) {
                 this.board.author = pubkey;
-                this.board.maintainers = [pubkey];
+            }
+
+            const owner = this.board.author;
+            const rawMaintainers = Array.isArray(this.board.maintainers) ? this.board.maintainers : [];
+            const normalizedMaintainers = Array.from(
+                new Set(rawMaintainers.filter(p => typeof p === 'string' && p && p !== owner))
+            );
+
+            // Nur schreiben, wenn sich etwas geändert hat
+            const changed =
+                (owner === pubkey && (this.board.author === 'anonymous' || !this.board.author)) ||
+                normalizedMaintainers.length !== rawMaintainers.length ||
+                normalizedMaintainers.some((p, i) => p !== rawMaintainers[i]);
+
+            if (changed) {
+                this.board.maintainers = normalizedMaintainers;
                 this.saveToStorage();
-                console.log('✅ Board-Author aktualisiert:', pubkey);
+                console.log('✅ Board-Author/Maintainers normalisiert:', {
+                    author: this.board.author,
+                    maintainers: this.board.maintainers.length,
+                });
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
@@ -1280,14 +1300,17 @@ export class BoardStore {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
-        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+        if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
             toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+                description: 'Nur der Board-Besitzer kann Name, Beschreibung, Tags, Lizenz und Publish-Status ändern.'
             });
             return; // Silently fail - Permission denied message already shown
         }
         
         BoardOperations.updateBoardMetadata(this.board, updates);
+        if (updates.publishState !== undefined) {
+            BoardOperations.setBoardPublishState(this.board, updates.publishState);
+        }
         this.triggerUpdate();
         this.publishBoardAsync();
     }
@@ -1296,9 +1319,9 @@ export class BoardStore {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
-        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+        if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
             toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+                description: 'Nur der Board-Besitzer kann den Publish-Status ändern.'
             });
             return; // Silently fail - Permission denied message already shown
         }
@@ -1322,15 +1345,23 @@ export class BoardStore {
             // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
             this.board.updateLastAccessed();
             
-            this.triggerUpdate();
+            // Wir publishen den Move als Card-Event (30302). Board-Publish (30301) ist dafür nicht nötig.
+            // Zusätzlich: triggerUpdate mit publish=false, damit Editor-Flows nicht unnötig publishBoardAsync() anstoßen.
+            this.triggerUpdate({ publish: false });
             // ⚠️ CRITICAL: Position (column/rank) ist Teil des Card-Events (30302).
             // Wenn wir hier nur das Board publizieren, kann Reload/Remote-Sync die Move-Position verlieren.
             this.publishCardAsync(cardId);
-            this.publishBoardAsync();
         }
     }
 
     private async publishBoardAsync(): Promise<void> {
+        // 🔒 Board-Events (Kind 30301) sind parametrized replaceable und werden unter der Signer-Pubkey adressiert.
+        // Wenn ein Editor publisht, entsteht ein Fork-Board (30301:<editorPubkey>:<d>) und kann Maintainers/Meta „wegschreiben“.
+        // Daher: Board-Publish nur als OWNER (oder Demo-Board).
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canPublishBoard(userRole, boardId)) return;
+
         await this.nostrIntegration.publishBoard(this.board);
     }
 
@@ -1504,7 +1535,6 @@ export class BoardStore {
         if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
-            this.publishBoardAsync();
         }
     }
 
@@ -1521,8 +1551,14 @@ export class BoardStore {
         
         this._columnOrder = columnIds;
         BoardOperations.reorderColumns(this.board, columnIds);
-        this.triggerUpdate();
-        this.publishBoardAsync();
+        // Wir publizieren hier manuell (Owner: 30301, Editor: ColumnOrder-Patch), daher publish=false.
+        this.triggerUpdate({ publish: false });
+
+        if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+            void this.publishBoardAsync();
+        } else {
+            void this.publishColumnOrderPatchAsync(columnIds);
+        }
     }
 
     private syncInProgress = $state(false);
@@ -1530,6 +1566,51 @@ export class BoardStore {
     private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private lastDnDSyncAbortToastAt = 0;
     public dndSyncAbortToken = $state(0);
+    private lastColumnOrderPatchAtMs = $state(0);
+
+    private async publishColumnOrderPatchAsync(columnIds: string[]): Promise<void> {
+        await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
+    }
+
+    public applyColumnOrderPatchFromNostr(args: {
+        boardId: string;
+        columnOrder: string[];
+        eventTimeMs: number;
+        publisherPubkey?: string;
+    }): void {
+        const { boardId, columnOrder, eventTimeMs } = args;
+        if (boardId !== this.board.id) return;
+        if (!Array.isArray(columnOrder) || columnOrder.length === 0) return;
+        if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return;
+        if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return;
+
+        const existingColumnIds = this.board.columns.map((c) => c.id);
+        const existingSet = new Set(existingColumnIds);
+
+        const dedupedIncoming: string[] = [];
+        const seen = new Set<string>();
+        for (const id of columnOrder) {
+            if (typeof id !== 'string' || id.length === 0) continue;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            if (existingSet.has(id)) dedupedIncoming.push(id);
+        }
+
+        if (dedupedIncoming.length === 0) return;
+
+        // Defensive merge: keep all existing columns, never drop unknowns.
+        const mergedOrder = [
+            ...dedupedIncoming,
+            ...existingColumnIds.filter((id) => !seen.has(id)),
+        ];
+
+        this._columnOrder = mergedOrder;
+        BoardOperations.reorderColumns(this.board, mergedOrder);
+        this.lastColumnOrderPatchAtMs = eventTimeMs;
+
+        // Lokale Persistierung/UI-Update, ohne Board-Event zu publizieren.
+        this.triggerUpdate({ publish: false });
+    }
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
         // Permission Check: Kann Benutzer Karten verschieben?
@@ -1574,6 +1655,10 @@ export class BoardStore {
         console.log('Processing columns:', uiColumns.length);
         
         try {
+            const userRole = this.getCurrentUserRole();
+            const boardId = this.board.id;
+            const prevColumnOrder = [...this._columnOrder];
+
             const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
                 this.board,
                 this._columnOrder,
@@ -1581,14 +1666,26 @@ export class BoardStore {
                 { strategy: 'hard-fail' }
             );
             this._columnOrder = newColumnOrder;
+            const columnOrderChanged =
+                prevColumnOrder.length !== newColumnOrder.length ||
+                prevColumnOrder.some((v, i) => v !== newColumnOrder[i]);
             
             // ⚡ CRITICAL: triggerUpdate mit publish=false
             // Grund: Wir publishen selbst weiter unten sequentiell!
             this.triggerUpdate({ publish: false });
-            
+			
             // Publishing sequentiell (nicht parallel) um Race Conditions zu vermeiden
-            console.log('📤 Publishing board...');
-            await this.publishBoardAsync();
+            // - Owner: publisht 30301 nur wenn Column-Order tatsächlich geändert wurde
+            // - Editor: publisht ColumnOrder-Patch (kein 30301 Fork)
+            if (columnOrderChanged) {
+                if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                    console.log('📤 Publishing board (column order changed)...');
+                    await this.publishBoardAsync();
+                } else {
+                    console.log('📤 Publishing column order patch (editor)...');
+                    await this.publishColumnOrderPatchAsync(newColumnOrder);
+                }
+            }
             
             // Publiziere verschobene Cards
             if (movedCardIds.length > 0) {
@@ -2460,7 +2557,8 @@ export class BoardStore {
             const { authorName } = this.getAuthorFields();
             demoBoard.author = currentUserPubkey;
             demoBoard.authorName = authorName || undefined;
-            demoBoard.maintainers = [currentUserPubkey];
+            // Owner ist KEIN Maintainer (Editor) – maintainers sind nur Co-Editoren.
+            demoBoard.maintainers = [];
             
             // Neuen Board-Namen und Beschreibung
             demoBoard.name = '🏠 Mein erstes Board';

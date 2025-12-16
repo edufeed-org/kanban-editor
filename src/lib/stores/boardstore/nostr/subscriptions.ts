@@ -1,8 +1,10 @@
 import type { Board } from '../../../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
 import { unixSecondsToMs } from './time.js';
+import { EVENT_KINDS } from '$lib/utils/nostrEvents.js';
 import { handleBoardEvent } from './handlers/board.js';
 import { handleCardEvent } from './handlers/card.js';
+import { handleColumnOrderPatchEvent } from './handlers/columnOrderPatch.js';
 import { handleDeletionEvent } from './handlers/deletion.js';
 import { BoardSharingOperations } from '../sharing.js';
 import { isBoardTombstoned } from '../deletedBoards.js';
@@ -139,6 +141,59 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 		}
 	});
 
+	// 2b️⃣ Subscription für Column-Order Patches (Kind 8571)
+	// Wird von Editoren verwendet, um Column-Order zu synchronisieren, ohne 30301 zu publizieren.
+	// Column-order patches (Kind 8571): subscribe via canonical `a` ref AND a fallback `d=<boardId>`.
+	// Using multiple filters makes this robust against boardRef/author timing issues.
+	console.log('[BoardStore] 🧩 ColumnOrderPatch subscribe', {
+		kind: EVENT_KINDS.COLUMN_ORDER_PATCH,
+		boardId: currentBoard.id,
+		boardAuthor: currentBoard.author,
+		viewerPubkey: pubkey,
+		boardRefs,
+		sevenDaysAgo,
+	});
+	const columnOrderPatchSub = ndk.subscribe(
+		[
+			{
+				kinds: [EVENT_KINDS.COLUMN_ORDER_PATCH],
+				'#a': boardRefs,
+				since: sevenDaysAgo,
+			},
+			{
+				kinds: [EVENT_KINDS.COLUMN_ORDER_PATCH],
+				'#d': [currentBoard.id],
+				since: sevenDaysAgo,
+			},
+		] as any,
+		{ closeOnEose: false }
+	);
+
+	columnOrderPatchSub.on('event', async (event: any) => {
+		if (event.kind === EVENT_KINDS.COLUMN_ORDER_PATCH) {
+			try {
+				const tags: any[] = Array.isArray(event.tags) ? event.tags : [];
+				const aTag = tags.find((t) => Array.isArray(t) && t[0] === 'a')?.[1];
+				const dTag = tags.find((t) => Array.isArray(t) && t[0] === 'd')?.[1];
+				const updatedMsTag = tags.find((t) => Array.isArray(t) && t[0] === 'updated_at_ms')?.[1];
+				const orderLen = tags.find((t) => Array.isArray(t) && t[0] === 'order')?.length;
+				console.log('[BoardStore] 📥 ColumnOrderPatch event received', {
+					id: event.id,
+					pubkey: event.pubkey,
+					created_at: event.created_at,
+					a: aTag,
+					d: dTag,
+					updated_at_ms: updatedMsTag,
+					orderTagItems: typeof orderLen === 'number' ? Math.max(0, orderLen - 1) : undefined,
+					currentBoardId: currentBoard.id,
+				});
+			} catch {
+				// ignore
+			}
+			await handleColumnOrderPatchEvent({ processedEvents }, event, currentBoard, boardStore);
+		}
+	});
+
 	// 3️⃣ Subscription für Deletion-Events (Kind 5)
 	// ⚡ OPTIMIZATION: Wir subscriben NICHT global auf alle Kind-5 Events.
 	// Stattdessen scopen wir auf relevante Autoren (mich + owner + maintainers),
@@ -171,7 +226,7 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 		}
 	});
 
-	const subscriptions: SubscriptionLike[] = [ownBoardsSub, cardsSub, deletionsSub];
+	const subscriptions: SubscriptionLike[] = [ownBoardsSub, cardsSub, columnOrderPatchSub, deletionsSub];
 
 	// 4️⃣ Shared Board Updates vom Owner
 	if (currentBoard.author && currentBoard.author !== pubkey) {

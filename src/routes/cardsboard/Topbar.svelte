@@ -323,11 +323,9 @@
             name: metaForm.title,
             description: metaForm.description,
             tags: tagsArray,
-            ccLicense: metaForm.license
+            ccLicense: metaForm.license,
+            publishState: metaForm.publishState
         });
-        
-        // 2. Aktualisiere publishState separat
-        boardStore.setPublishState(metaForm.publishState);
         
         console.log('✅ Board-Meta gespeichert:', {
             name: metaForm.title,
