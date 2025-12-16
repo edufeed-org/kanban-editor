@@ -1,7 +1,7 @@
 {
   "name": "nostr-cli",
   "version": "0.0.1",
-"scripts": {
+  "scripts": {
     "dev": "vite dev",
     "build:site": "vite build",
     "build": "vite build && npm run prepack",
