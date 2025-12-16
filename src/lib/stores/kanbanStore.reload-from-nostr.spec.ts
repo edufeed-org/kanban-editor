@@ -46,6 +46,40 @@ describe('BoardStore.forceReloadCurrentBoardFromNostr()', () => {
 		expect(loadBoardSpy).toHaveBeenCalledWith(boardId, { skipLastAccessed: true });
 	});
 
+	it('wartet bei Shared Boards auf Rekonstruktion (loadBoard=false → reconstructSharedBoard → retry)', async () => {
+		const boardId = store.getCurrentBoardId();
+		const storageKey = `kanban-${boardId}`;
+		localStorage.setItem(storageKey, JSON.stringify({ id: boardId, name: 'Shared (stale)' }));
+
+		vi.spyOn(localStorage, 'removeItem');
+		vi.spyOn(store, 'loadBoardsFromNostr').mockImplementation(async () => {
+			// Simuliere: Shared Boards werden nicht über loadBoardsFromNostr() rehydrated
+		});
+
+		// Simuliere Shared-Board Meta, damit isShared=true wird
+		(store as any).cachedSharedBoards = [{ id: boardId, author: 'owner_pubkey_hex', name: 'Shared', userRole: 'editor' }];
+
+		// loadBoard liefert beim ersten Versuch false (weil Cache gelöscht), nach Rekonstruktion true
+		const loadBoardSpy = vi
+			.spyOn(store, 'loadBoard')
+			.mockReturnValueOnce(false)
+			.mockReturnValueOnce(true);
+
+		const reconstructSpy = vi
+			.spyOn(store as any, 'reconstructSharedBoard')
+			.mockResolvedValue(true);
+
+		await expect(
+			store.forceReloadCurrentBoardFromNostr({
+				clearLocalCache: true,
+				syncManager: { lastConnectedCount: 1 }
+			})
+		).resolves.toBeUndefined();
+
+		expect(reconstructSpy).toHaveBeenCalledWith(boardId);
+		expect(loadBoardSpy).toHaveBeenCalledTimes(2);
+	});
+
 	it('wirft, wenn ndkReady=false', async () => {
 		(store as any).ndkReady = false;
 		await expect(store.forceReloadCurrentBoardFromNostr({ syncManager: { lastConnectedCount: 1 } }))

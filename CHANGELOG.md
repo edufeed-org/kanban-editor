@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 4.7.17 - UX: Board-Metadaten für Nicht-Owner read-only 🔐
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🔐 UX/Permissions: Board-Einstellungen nur für Owner editierbar
+- In `Board-Einstellungen` sind Metadaten-Felder (Titel, Beschreibung, Status, Tags, CC-Lizenz) für Nicht-Owner jetzt read-only/disabled.
+- Der `Speichern`-Button ist für Nicht-Owner deaktiviert (Store-level Guard bleibt weiterhin die Source of Truth).
+
 ## Version 4.7.16 - Fix: ColumnOrderPatch Subscribe ist idempotent + Catch-up wendet nur latest Patch an 🧩
 
 **Datum:** 16. Dezember 2025  

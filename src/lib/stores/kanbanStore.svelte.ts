@@ -992,7 +992,18 @@ export class BoardStore {
             // Sicherstellen, dass das aktuelle Board erneut geladen wird
             const ok = this.loadBoard(boardId, { skipLastAccessed: true });
             if (!ok) {
-                throw new Error('Board konnte nicht aus Nostr geladen werden');
+                // Shared Boards können nach Cache-Clear erst asynchron via Nostr rekonstruiert werden.
+                // In diesem Fall blockieren wir hier deterministisch, statt sofort zu throwen.
+                const isShared = this.cachedSharedBoards.some(b => b.id === boardId);
+                if (isShared) {
+                    const reconstructed = await this.reconstructSharedBoard(boardId);
+                    const okAfter = reconstructed && this.loadBoard(boardId, { skipLastAccessed: true });
+                    if (!okAfter) {
+                        throw new Error('Board konnte nicht aus Nostr geladen werden');
+                    }
+                } else {
+                    throw new Error('Board konnte nicht aus Nostr geladen werden');
+                }
             }
         } catch (error) {
             // Fallback: lokalen Cache wiederherstellen, um Datenverlust zu vermeiden

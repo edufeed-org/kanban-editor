@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.14 (UX Fix: kein sichtbares "Re-Sort" beim Board-Load – No-op Guards für Column-Order Updates - 16. Dezember 2025)  
-**Aktualisiert:** 16. Dezember 2025 (Wenn beim Board-Load nach Page-Reload ein Column-Order Update erneut eintrifft oder der Nostr-Bootstrap das aktuelle Board nochmals lädt, obwohl die Reihenfolge identisch ist, wird kein redundanter Re-render/Resort mehr ausgelöst; No-op Guards in `reorderColumns()`, `applyColumnOrderPatchFromNostr()` und im `loadBoard()`/Nostr-Load Pfad.)  
+**Version:** 3.15 (Permissions UX: Board-Metadaten sind für Nicht-Owner read-only - 16. Dezember 2025)  
+**Aktualisiert:** 16. Dezember 2025 (Im Board-Einstellungen-Dialog sind Metadaten-Felder für Editoren/Viewers deaktiviert/read-only; nur Owner kann Titel/Beschreibung/Status/Tags/CC-Lizenz speichern. Store-Level Permission Guard bleibt bestehen.)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1587,6 +1587,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.15 | 16.12.2025 | 🔐 **Permissions UX:** Board-Metadaten sind für Nicht-Owner read-only; Speichern deaktiviert. |
 | 3.14 | 16.12.2025 | 👀 **UX Fix:** Kein sichtbares "Re-Sort" beim Board-Load durch No-op Guards bei identischer Column-Order. |
 | 3.13 | 16.12.2025 | ✅ **Column-Order Patch Apply Fix:** `updated_at_ms` wird robust geparsed (auch numerischer String); bei Parse-Fehler Fallback auf `created_at` → Owner übernimmt Editor-Reorders zuverlässig. |
 | 3.12 | 16.12.2025 | ↕️ **Editor-Safe Column Reorder:** Spalten-Reihenfolge wird über Kind `8571` (Column Order Patch) synchronisiert; referenziert das kanonische Board via `a=30301:<author>:<d>` und zusätzlich `d=<boardId>`; nutzt `updated_at_ms` für LWW. Editoren publizieren kein Kind `30301` → keine Fork-Boards. |
