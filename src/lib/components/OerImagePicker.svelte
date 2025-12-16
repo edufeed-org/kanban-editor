@@ -7,14 +7,15 @@
         OerCardClickEvent
 	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
+	import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
 	interface Props {
-		apiUrl?: string;
-		language?: string;
 		onSelect: (imageUrl: string) => void;
 	}
 
-	const { apiUrl = 'http://localhost:3001', language = 'de', onSelect }: Props = $props();
+	const apiUrl = $state(settingsStore.settings.oerFinderPlugin.apiUrl)
+	const language = $state(settingsStore.settings.oerFinderPlugin.language)
+	const { onSelect }: Props = $props();
 
 	let searchEl: OerSearchElement;
 	let listEl: OerListElement;
