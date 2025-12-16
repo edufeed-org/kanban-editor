@@ -14,6 +14,11 @@
 - Ursache: Der Patch-Subscribe nutzt `since: sevenDaysAgo`, wodurch beim initialen Subscribe mehrere historische Kind-`8571` Events geliefert werden. Wenn jedes Event sofort angewendet wird, sieht man mehrere Reorders.
 - Fix: Während des initialen Catch-up werden Patch-Events gepuffert und nach `eose` wird nur das neueste Event einmalig angewendet; danach werden neue Patch-Events live verarbeitet.
 
+### 🧹 Logging: Weniger Spam pro Board
+- ColumnOrderPatch: keine per-Event "received" Logs mehr während Catch-up; stattdessen eine kompakte Summary nach `eose`.
+- Live-Events: Log nur bei tatsächlichem Apply; No-op/LWW/Duplicate/Board-mismatch wird auf `console.debug` reduziert.
+- Column reorder: "Spalten neu angeordnet" auf `console.debug`.
+
 ## Version 4.7.15 - UX Fix: kein sichtbares "Re-Sort" beim Board-Load (No-op Column-Order Updates) 👀
 
 **Datum:** 16. Dezember 2025  

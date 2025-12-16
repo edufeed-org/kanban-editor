@@ -145,7 +145,7 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	// Wird von Editoren verwendet, um Column-Order zu synchronisieren, ohne 30301 zu publizieren.
 	// Column-order patches (Kind 8571): subscribe via canonical `a` ref AND a fallback `d=<boardId>`.
 	// Using multiple filters makes this robust against boardRef/author timing issues.
-	console.log('[BoardStore] 🧩 ColumnOrderPatch subscribe', {
+	console.info('[BoardStore] 🧩 ColumnOrderPatch subscribe', {
 		kind: EVENT_KINDS.COLUMN_ORDER_PATCH,
 		boardId: currentBoard.id,
 		boardAuthor: currentBoard.author,
@@ -173,6 +173,7 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	// Wenn wir die alle nacheinander anwenden, "springt" die UI durch alte Orders.
 	// Daher: während initialem Catch-up puffern wir nur das NEUESTE Patch-Event und wenden es nach EOSE einmal an.
 	let columnOrderPatchCatchUpActive = true;
+	let columnOrderPatchCatchUpReceived = 0;
 	let bufferedLatestPatch: { event: any; eventTimeMs: number } | null = null;
 	const getPatchEventTimeMs = (event: any): number => {
 		const tags: any[] = Array.isArray(event?.tags) ? event.tags : [];
@@ -186,56 +187,56 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	(columnOrderPatchSub as any).on?.('eose', async () => {
 		columnOrderPatchCatchUpActive = false;
 		if (bufferedLatestPatch?.event) {
-			try {
-				console.log('[BoardStore] 🧩 ColumnOrderPatch catch-up: applying latest only', {
-					id: bufferedLatestPatch.event.id,
-					eventTimeMs: bufferedLatestPatch.eventTimeMs,
-					currentBoardId: currentBoard.id,
-				});
-			} catch {
-				// ignore
-			}
-			await handleColumnOrderPatchEvent(
+			const applied = await handleColumnOrderPatchEvent(
 				{ processedEvents },
 				bufferedLatestPatch.event,
 				currentBoard,
 				boardStore
 			);
+			console.info('[BoardStore] 🧩 ColumnOrderPatch catch-up done', {
+				currentBoardId: currentBoard.id,
+				received: columnOrderPatchCatchUpReceived,
+				applied,
+				id: bufferedLatestPatch.event.id,
+				eventTimeMs: bufferedLatestPatch.eventTimeMs,
+			});
+		} else if (columnOrderPatchCatchUpReceived > 0) {
+			console.info('[BoardStore] 🧩 ColumnOrderPatch catch-up done', {
+				currentBoardId: currentBoard.id,
+				received: columnOrderPatchCatchUpReceived,
+				applied: false,
+			});
 		}
 		bufferedLatestPatch = null;
+		columnOrderPatchCatchUpReceived = 0;
 	});
 
 	columnOrderPatchSub.on('event', async (event: any) => {
 		if (event.kind === EVENT_KINDS.COLUMN_ORDER_PATCH) {
 			// Catch-up: nur das neueste Event puffern, nicht alles anwenden.
 			if (columnOrderPatchCatchUpActive) {
+				columnOrderPatchCatchUpReceived++;
 				const eventTimeMs = getPatchEventTimeMs(event);
 				if (!bufferedLatestPatch || eventTimeMs >= bufferedLatestPatch.eventTimeMs) {
 					bufferedLatestPatch = { event, eventTimeMs };
 				}
 				return;
 			}
-
-			try {
-				const tags: any[] = Array.isArray(event.tags) ? event.tags : [];
-				const aTag = tags.find((t) => Array.isArray(t) && t[0] === 'a')?.[1];
-				const dTag = tags.find((t) => Array.isArray(t) && t[0] === 'd')?.[1];
-				const updatedMsTag = tags.find((t) => Array.isArray(t) && t[0] === 'updated_at_ms')?.[1];
-				const orderLen = tags.find((t) => Array.isArray(t) && t[0] === 'order')?.length;
-				console.log('[BoardStore] 📥 ColumnOrderPatch event received', {
-					id: event.id,
-					pubkey: event.pubkey,
-					created_at: event.created_at,
-					a: aTag,
-					d: dTag,
-					updated_at_ms: updatedMsTag,
-					orderTagItems: typeof orderLen === 'number' ? Math.max(0, orderLen - 1) : undefined,
+			const applied = await handleColumnOrderPatchEvent({ processedEvents }, event, currentBoard, boardStore);
+			if (applied) {
+				const eventTimeMs = getPatchEventTimeMs(event);
+				console.info('[BoardStore] 🧩 ColumnOrderPatch applied (live)', {
 					currentBoardId: currentBoard.id,
+					id: event.id,
+					eventTimeMs,
 				});
-			} catch {
-				// ignore
+			} else {
+				// Sehr häufig (No-op, LWW, Duplikate, Board mismatch) → bewusst nur debug.
+				console.debug('[BoardStore] ColumnOrderPatch ignored (live)', {
+					currentBoardId: currentBoard.id,
+					id: event?.id,
+				});
 			}
-			await handleColumnOrderPatchEvent({ processedEvents }, event, currentBoard, boardStore);
 		}
 	});
 

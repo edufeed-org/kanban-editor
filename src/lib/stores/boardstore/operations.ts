@@ -473,7 +473,7 @@ export class BoardOperations {
             if (col) reordered.push(col);
         }
         board.columns = reordered;
-        console.log('🔄 Spalten neu angeordnet');
+        console.debug('🔄 Spalten neu angeordnet');
     }
 
     /**

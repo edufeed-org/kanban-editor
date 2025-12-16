@@ -1604,12 +1604,12 @@ export class BoardStore {
         columnOrder: string[];
         eventTimeMs: number;
         publisherPubkey?: string;
-    }): void {
+    }): boolean {
         const { boardId, columnOrder, eventTimeMs } = args;
-        if (boardId !== this.board.id) return;
-        if (!Array.isArray(columnOrder) || columnOrder.length === 0) return;
-        if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return;
-        if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return;
+        if (boardId !== this.board.id) return false;
+        if (!Array.isArray(columnOrder) || columnOrder.length === 0) return false;
+        if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return false;
+        if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return false;
 
         const existingColumnIds = this.board.columns.map((c) => c.id);
         const existingSet = new Set(existingColumnIds);
@@ -1623,7 +1623,7 @@ export class BoardStore {
             if (existingSet.has(id)) dedupedIncoming.push(id);
         }
 
-        if (dedupedIncoming.length === 0) return;
+        if (dedupedIncoming.length === 0) return false;
 
         // Defensive merge: keep all existing columns, never drop unknowns.
         const mergedOrder = [
@@ -1639,7 +1639,7 @@ export class BoardStore {
             current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
         if (sameOrder) {
             this.lastColumnOrderPatchAtMs = eventTimeMs;
-            return;
+            return false;
         }
 
         this._columnOrder = mergedOrder;
@@ -1648,6 +1648,8 @@ export class BoardStore {
 
         // Lokale Persistierung/UI-Update, ohne Board-Event zu publizieren.
         this.triggerUpdate({ publish: false });
+
+        return true;
     }
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {

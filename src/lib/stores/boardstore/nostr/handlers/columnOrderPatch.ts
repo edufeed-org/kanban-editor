@@ -8,12 +8,12 @@ export async function handleColumnOrderPatchEvent(
 	event: any,
 	currentBoard: any,
 	boardStore: any
-): Promise<void> {
-	if (!event || event.kind !== EVENT_KINDS.COLUMN_ORDER_PATCH) return;
-	if (!event.id || typeof event.id !== 'string') return;
+): Promise<boolean> {
+	if (!event || event.kind !== EVENT_KINDS.COLUMN_ORDER_PATCH) return false;
+	if (!event.id || typeof event.id !== 'string') return false;
 	if (ctx.processedEvents.has(event.id)) {
-		console.log('[ColumnOrderPatch] ⏭️ ignored (already processed)', { id: event.id });
-		return;
+		console.debug('[ColumnOrderPatch] ignored (already processed)', { id: event.id });
+		return false;
 	}
 	ctx.processedEvents.add(event.id);
 
@@ -28,7 +28,7 @@ export async function handleColumnOrderPatchEvent(
 	const boardId = typeof currentBoard?.id === 'string' ? currentBoard.id : '';
 	if (!boardId) {
 		console.warn('[ColumnOrderPatch] ⚠️ missing currentBoard.id; ignoring event', { id: event.id });
-		return;
+		return false;
 	}
 
 	// Optional sanity: ensure this patch is for the current board id.
@@ -39,19 +39,19 @@ export async function handleColumnOrderPatchEvent(
 	const aOk = aTag?.[1] && typeof aTag[1] === 'string' ? String(aTag[1]).endsWith(`:${boardId}`) : false;
 	const dOk = dTag?.[1] && typeof dTag[1] === 'string' ? String(dTag[1]) === boardId : false;
 	if (!aOk && !dOk) {
-		console.log('[ColumnOrderPatch] ⛔ ignored (board mismatch)', {
+		console.debug('[ColumnOrderPatch] ignored (board mismatch)', {
 			id: event.id,
 			currentBoardId: boardId,
 			a: aTag?.[1],
 			d: dTag?.[1],
 		});
-		return;
+		return false;
 	}
 
 	const columnOrder: string[] = Array.isArray(orderTag) ? orderTag.slice(1).filter((v) => typeof v === 'string') : [];
 	if (columnOrder.length === 0) {
 		console.warn('[ColumnOrderPatch] ⚠️ empty order; ignoring', { id: event.id, boardId });
-		return;
+		return false;
 	}
 
 	let eventTimeMs = updatedMsTag?.[1] ? unknownTimestampToMs(updatedMsTag[1]) : 0;
@@ -60,18 +60,22 @@ export async function handleColumnOrderPatchEvent(
 	}
 
 	if (typeof boardStore?.applyColumnOrderPatchFromNostr === 'function') {
-		console.log('[ColumnOrderPatch] ✅ applying', {
+		console.debug('[ColumnOrderPatch] applying', {
 			id: event.id,
 			boardId,
 			eventTimeMs,
 			publisherPubkey: typeof event.pubkey === 'string' ? event.pubkey : undefined,
 			orderLen: columnOrder.length,
 		});
-		boardStore.applyColumnOrderPatchFromNostr({
+		return Boolean(
+			boardStore.applyColumnOrderPatchFromNostr({
 			boardId,
 			columnOrder,
 			eventTimeMs,
 			publisherPubkey: typeof event.pubkey === 'string' ? event.pubkey : undefined,
-		});
+			})
+		);
 	}
+
+	return false;
 }
