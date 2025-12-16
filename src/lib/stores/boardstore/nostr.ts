@@ -40,6 +40,7 @@ import { isBoardTombstoned } from './deletedBoards.js';
 export class NostrIntegration {
     private ndk?: NDK;
     private boardSubscription: any | null = null;
+    private activeBoardSubscriptionKey: string | null = null;
     private commentSubscriptions = new Map<string, any>(); // cardId -> subscription
 
     // ⚡ NEU (v2.0): Event-Deduplication für Event-Driven Architecture
@@ -453,6 +454,15 @@ export class NostrIntegration {
             return;
         }
 
+        // Idempotency-Guard: subscribeToNostrUpdates() wird an mehreren Stellen aufgerufen
+        // (z.B. initializeNostr + loadBoard + UI). Wenn Board+User gleich bleiben, dürfen
+        // wir NICHT jedes Mal dispose+resubscribe ausführen, sonst gibt es mehrfaches
+        // ColumnOrderPatch subscribe + unnötige Catch-up Replays.
+        const subscriptionKey = `${pubkey}|${currentBoard.id}|${currentBoard.author || ''}`;
+        if (this.boardSubscription && this.activeBoardSubscriptionKey === subscriptionKey) {
+            return;
+        }
+
         // Stoppe ALLE existierenden Subscriptions (inkl. shared/follower/comment)
         this.dispose();
 
@@ -466,6 +476,8 @@ export class NostrIntegration {
             cardDeletionTimestamps: this.cardDeletionTimestamps,
             boardDeletionTimestamps: this.boardDeletionTimestamps,
         });
+
+        this.activeBoardSubscriptionKey = subscriptionKey;
     }
 
     /**
@@ -1170,6 +1182,9 @@ export class NostrIntegration {
                 // ignore
             }
         }
+
+        this.boardSubscription = null;
+        this.activeBoardSubscriptionKey = null;
 
         this.stopAllCommentSubscriptions();
     }

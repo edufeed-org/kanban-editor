@@ -1,5 +1,32 @@
 # Changelog
 
+## Version 4.7.16 - Fix: ColumnOrderPatch Subscribe ist idempotent + Catch-up wendet nur latest Patch an 🧩
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: "ColumnOrderPatch subscribe" wird beim Laden mehrfach ausgeführt
+- Ursache: `subscribeToNostrUpdates()` wird aus mehreren Pfaden aufgerufen (u.a. `initializeNostr()`, `loadBoard()` und ggf. UI-Aliases). Ohne Idempotenz führt das zu wiederholtem `dispose()+subscribe()`.
+- Fix: Nostr-Integration überspringt Resubscribe, wenn `(pubkey, boardId, boardAuthor)` unverändert sind.
+
+### 👀 UX Fix: Relays replayen viele alte Patch-Events → UI "springt" durch alte Orders
+- Ursache: Der Patch-Subscribe nutzt `since: sevenDaysAgo`, wodurch beim initialen Subscribe mehrere historische Kind-`8571` Events geliefert werden. Wenn jedes Event sofort angewendet wird, sieht man mehrere Reorders.
+- Fix: Während des initialen Catch-up werden Patch-Events gepuffert und nach `eose` wird nur das neueste Event einmalig angewendet; danach werden neue Patch-Events live verarbeitet.
+
+## Version 4.7.15 - UX Fix: kein sichtbares "Re-Sort" beim Board-Load (No-op Column-Order Updates) 👀
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🧼 Fix: Board lädt korrekt, sortiert aber danach "nochmal" (gleiche Reihenfolge)
+- Ursache: Nach Page-Reload kann der Board-State zuerst aus localStorage gerendert werden und danach durch Nostr-Bootstrap/Subscriptions erneut „bestätigt“ werden. Auch wenn die Reihenfolge identisch ist, triggert eine erneute Zuweisung (`_columnOrder = [...]`) einen sichtbaren Re-render („Spalten springen“).
+- Fix: No-op Guards an allen relevanten Stellen:
+  - `reorderColumns()` (User/DnD)
+  - `applyColumnOrderPatchFromNostr()` (Kind `8571` Patch)
+  - `loadBoard()` / Nostr-Load-Switch-Pfad: `_columnOrder` wird nur gesetzt, wenn sich die Order wirklich ändert.
+
 ## Version 4.7.14 - Fix: Column-Order Patch (8571) wird angewandt (updated_at_ms Parsing + Fallback) ✅
 
 **Datum:** 16. Dezember 2025  

@@ -525,7 +525,16 @@ export class BoardStore {
         }
 
         this.board = board;
-        this._columnOrder = board.columns.map(c => c.id);
+        // No-op guard: Beim Reload kann loadBoard() (z.B. via Nostr bootstrap) erneut für das
+        // bereits initial gerenderte Board aufgerufen werden. Wenn die Reihenfolge identisch ist,
+        // vermeiden wir ein redundantes Reassign, das sichtbar als "Spalten springen" wirkt.
+        const nextOrder = board.columns.map(c => c.id);
+        if (
+            nextOrder.length !== this._columnOrder.length ||
+            !this._columnOrder.every((v, i) => v === nextOrder[i])
+        ) {
+            this._columnOrder = nextOrder;
+        }
         
         // ✅ KRITISCH: Wenn User Viewer ist (aus Follow-Set), zur followers Liste hinzufügen
         // Dies ermöglicht korrekte Viewer-Rolle in getCurrentUserRole()
@@ -786,7 +795,15 @@ export class BoardStore {
                 // NICHT das "erste" Board, um Race Conditions zu vermeiden!
                 if (switched && newBoard) {
                     this.board = newBoard;
-                    this._columnOrder = newBoard.columns.map(c => c.id);
+
+                    // No-op guard: identische Order soll keinen sichtbaren Re-sort triggern.
+                    const nextOrder = newBoard.columns.map(c => c.id);
+                    if (
+                        nextOrder.length !== this._columnOrder.length ||
+                        !this._columnOrder.every((v, i) => v === nextOrder[i])
+                    ) {
+                        this._columnOrder = nextOrder;
+                    }
 
                     // ⚠️ Nostr-driven Load: UI refresh ja, aber keine Side-Effects (kein lastAccessed/save/publish)
                     this.updateTrigger++;
@@ -1548,6 +1565,16 @@ export class BoardStore {
             });
             return; // Silently fail - Permission denied message already shown
         }
+
+        // No-op guard: Verhindert sichtbares "Re-sort"/Re-render, wenn die Reihenfolge identisch ist.
+        // (Wichtig bei Board-Load + Subscriptions: der Patch kann die gleiche Order erneut liefern.)
+        if (
+            Array.isArray(columnIds) &&
+            columnIds.length === this._columnOrder.length &&
+            this._columnOrder.every((v, i) => v === columnIds[i])
+        ) {
+            return;
+        }
         
         this._columnOrder = columnIds;
         BoardOperations.reorderColumns(this.board, columnIds);
@@ -1603,6 +1630,17 @@ export class BoardStore {
             ...dedupedIncoming,
             ...existingColumnIds.filter((id) => !seen.has(id)),
         ];
+
+        // No-op guard: wenn Order identisch ist, nur LWW-Timestamp aktualisieren.
+        // Das verhindert den sichtbaren "neu sortiert"-Effekt beim Board-Load,
+        // wenn ein Patch/Event die gleiche Reihenfolge nochmals liefert.
+        const current = this._columnOrder;
+        const sameOrder =
+            current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
+        if (sameOrder) {
+            this.lastColumnOrderPatchAtMs = eventTimeMs;
+            return;
+        }
 
         this._columnOrder = mergedOrder;
         BoardOperations.reorderColumns(this.board, mergedOrder);

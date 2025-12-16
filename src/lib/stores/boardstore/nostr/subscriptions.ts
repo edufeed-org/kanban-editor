@@ -1,6 +1,6 @@
 import type { Board } from '../../../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
-import { unixSecondsToMs } from './time.js';
+import { unixSecondsToMs, unknownTimestampToMs } from './time.js';
 import { EVENT_KINDS } from '$lib/utils/nostrEvents.js';
 import { handleBoardEvent } from './handlers/board.js';
 import { handleCardEvent } from './handlers/card.js';
@@ -169,8 +169,53 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 		{ closeOnEose: false }
 	);
 
+	// ⚠️ UX/Perf: Relays können beim Subscribe viele historische Patch-Events replayen.
+	// Wenn wir die alle nacheinander anwenden, "springt" die UI durch alte Orders.
+	// Daher: während initialem Catch-up puffern wir nur das NEUESTE Patch-Event und wenden es nach EOSE einmal an.
+	let columnOrderPatchCatchUpActive = true;
+	let bufferedLatestPatch: { event: any; eventTimeMs: number } | null = null;
+	const getPatchEventTimeMs = (event: any): number => {
+		const tags: any[] = Array.isArray(event?.tags) ? event.tags : [];
+		const updatedMsTag = tags.find((t) => Array.isArray(t) && t[0] === 'updated_at_ms')?.[1];
+		const updatedMs = unknownTimestampToMs(updatedMsTag);
+		if (updatedMs > 0) return updatedMs;
+		return unixSecondsToMs(event?.created_at);
+	};
+
+	// EOSE: Ende des initialen Replays. Danach live anwenden.
+	(columnOrderPatchSub as any).on?.('eose', async () => {
+		columnOrderPatchCatchUpActive = false;
+		if (bufferedLatestPatch?.event) {
+			try {
+				console.log('[BoardStore] 🧩 ColumnOrderPatch catch-up: applying latest only', {
+					id: bufferedLatestPatch.event.id,
+					eventTimeMs: bufferedLatestPatch.eventTimeMs,
+					currentBoardId: currentBoard.id,
+				});
+			} catch {
+				// ignore
+			}
+			await handleColumnOrderPatchEvent(
+				{ processedEvents },
+				bufferedLatestPatch.event,
+				currentBoard,
+				boardStore
+			);
+		}
+		bufferedLatestPatch = null;
+	});
+
 	columnOrderPatchSub.on('event', async (event: any) => {
 		if (event.kind === EVENT_KINDS.COLUMN_ORDER_PATCH) {
+			// Catch-up: nur das neueste Event puffern, nicht alles anwenden.
+			if (columnOrderPatchCatchUpActive) {
+				const eventTimeMs = getPatchEventTimeMs(event);
+				if (!bufferedLatestPatch || eventTimeMs >= bufferedLatestPatch.eventTimeMs) {
+					bufferedLatestPatch = { event, eventTimeMs };
+				}
+				return;
+			}
+
 			try {
 				const tags: any[] = Array.isArray(event.tags) ? event.tags : [];
 				const aTag = tags.find((t) => Array.isArray(t) && t[0] === 'a')?.[1];
