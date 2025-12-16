@@ -154,7 +154,7 @@ describe('handleDeletionEvent (Kind 5) authorization + safety', () => {
 		await handleDeletionEvent(ctx as any, deletionEvent as any, boardStore as any);
 
 		expect(boardStore.deleteCardFromNostr).not.toHaveBeenCalled();
-		expect(saveProcessedDeletions).toHaveBeenCalledTimes(1);
+		expect(saveProcessedDeletions).not.toHaveBeenCalled();
 	});
 
 		it('persists deletion id when board is not local but deletion timestamp is tracked (anti-resurrection)', async () => {

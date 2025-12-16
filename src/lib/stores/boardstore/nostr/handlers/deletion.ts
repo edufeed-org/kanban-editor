@@ -79,14 +79,6 @@ export async function handleDeletionEvent(
 					const boardId = parts.slice(2).join(':');
 					const boardAuthor = parts[1];
 
-					// Track deletion timestamp (für Ordering)
-					if (!ctx.boardDeletionTimestamps.has(boardId)) {
-						ctx.boardDeletionTimestamps.set(boardId, deleteTime);
-						didProcessRelevantDeletion = true;
-					} else {
-						continue;
-					}
-
 					// Check if board exists locally
 					const localBoard = BoardStorage.loadBoard(boardId);
 					const existsLocally = localBoard !== null;
@@ -97,9 +89,16 @@ export async function handleDeletionEvent(
 						continue;
 					}
 
+					// Track deletion timestamp (für Ordering)
+					if (ctx.boardDeletionTimestamps.has(boardId)) {
+						continue;
+					}
+					ctx.boardDeletionTimestamps.set(boardId, deleteTime);
+
 					// Tombstone ist immer safe (anti-resurrection), selbst wenn das Board lokal noch nicht existiert.
 					// BoardStorage.deleteBoard() setzt Tombstone + entfernt ggf. das Key.
 					BoardStorage.deleteBoard(boardId);
+					didProcessRelevantDeletion = true;
 
 					if (existsLocally) {
 						console.log(`🗑️ Deleting board ${boardId.substring(0, 16)}... (deletion event)`);
@@ -136,19 +135,20 @@ export async function handleDeletionEvent(
 						continue;
 					}
 
-					// Track deletion timestamp (für Ordering)
-					ctx.cardDeletionTimestamps.set(cardId, deleteTime);
-					didProcessRelevantDeletion = true;
 
 					// Optional extra safety: if card has an author, require it to match.
 					if (result.card?.author && result.card.author !== cardAuthor) {
 						continue;
 					}
 
+					// Track deletion timestamp (für Ordering)
+					ctx.cardDeletionTimestamps.set(cardId, deleteTime);
+
 					console.log(`🗑️ Deleting card ${cardId.substring(0, 16)}... from board (deletion event)`);
 
 					// ⚡ v2.0: Direkte Store-API (SECONDARY action)
 					boardStore.deleteCardFromNostr(cardId);
+					didProcessRelevantDeletion = true;
 				}
 			}
 		}
