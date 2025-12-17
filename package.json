@@ -89,7 +89,8 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "@edufeed-org/oer-finder-plugin"
     ],
     "overrides": {
       "nostr-tools": "~2.14.2",
