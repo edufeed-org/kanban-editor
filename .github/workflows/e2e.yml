@@ -26,8 +26,6 @@ jobs:
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
