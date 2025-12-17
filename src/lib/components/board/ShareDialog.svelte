@@ -241,6 +241,7 @@
                             <Button 
                                 onclick={handleInviteEditor}
                                 disabled={isLoading || !newEditorPubkey.trim()}
+                                data-testid="add-editor-button"
                             >
                                 Hinzufügen
                             </Button>

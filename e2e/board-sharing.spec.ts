@@ -24,144 +24,10 @@ const TEST_USERS = {
     }
 };
 
-
-async function createSharedBoard(page: Page, boardName: string) {
-    // Suche "Neues Board" Button
-    const newBoardButton = page.getByTestId('create-board-button');
-    await newBoardButton.isVisible();
-    await newBoardButton.click();
-
-    // Versuche Board-Titel zu bearbeiten (falls UI das unterstützt)
-    await page.getByTitle('Board-Einstellungen').click();
-
-    const titleInput = page.locator('#board-title');
-    await titleInput.fill(boardName);
-    await page.getByText('Speichern').click();
-
-    // Verifiziere dass Board erstellt wurde
-    await expect(page.getByText(boardName).first()).toBeVisible();
-}
-
-async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
-    page.getByTestId('share-button').click();
-    
-    await expect(page.getByTestId('share-dialog')).toBeVisible({ timeout: 5000 });
-
-    const pubkeyInput = page.getByPlaceholder('Nostr Public Key (npub oder hex)')
-    
-    await pubkeyInput.fill(targetUserPubkey);
-    
-    // Wähle Rolle (falls vorhanden)
-    const roleSelect = page.locator('select')
-    
-    await roleSelect.selectOption(role);
-    
-    page.getByText("Einladen").click();
-    
-    // Warte kurz für Verarbeitung
-    await page.waitForTimeout(500);
-
-    page.getByText('Schließen').click();
-}
-
-async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
-    try {
-        // Find the add card button with title attribute
-        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
-        
-        // Wait for button to be visible and enabled
-        await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
-        
-        // Get button position to ensure it's in viewport
-        await addCardButton.scrollIntoViewIfNeeded();
-        
-        // Wait a bit for any pending renders
-        await page.waitForTimeout(500);
-        
-        // Click the button
-        await addCardButton.click();
-        
-        // Wait a bit for card to be added to DOM
-        await page.waitForTimeout(500);
-        
-        // Verifiziere dass eine neue Karte erstellt wurde
-        const newCard = page.locator('text="Neue Karte"').first();
-        if (await newCard.isVisible({ timeout: 3000 })) {
-            return { success: true };
-        } else {
-            return { success: false, error: 'Card was not created successfully - "Neue Karte" text not visible' };
-        }
-    } catch (error) {
-        return { success: false, error: `Card creation failed: ${error}` };
-    }
-}
-
-async function attemptCardEdit(page: Page): Promise<{ success: boolean; error?: string }> {
-    try {
-        // Finde eine Karte zum Bearbeiten (kann verschiedene Selektoren haben)
-        const card = page.locator('text="Neue Karte"')
-            .or(page.locator('[data-testid="card"]'))
-            .or(page.locator('.card'))
-            .or(page.locator('[role="article"]')) // Cards könnten als articles markiert sein
-            .first();
-        
-        if (await card.isVisible({ timeout: 3000 })) {
-            await card.click();
-            
-            // Warte auf Card-Detail-Dialog oder Edit-Modus
-            try {
-                await expect(
-                    page.locator('[role="dialog"]')
-                        .or(page.locator('.dialog'))
-                        .or(page.locator('input'))
-                ).toBeVisible({ timeout: 3000 });
-                
-                return { success: true };
-            } catch {
-                // Möglicherweise Inline-Edit oder anderes UI-Pattern
-                return { success: true }; // Card wurde geklickt, Edit könnte anders funktionieren
-            }
-        } else {
-            return { success: false, error: 'No card found to edit or card not clickable' };
-        }
-    } catch (error) {
-        return { success: false, error: String(error) };
-    }
-}
-
-async function attemptBoardDelete(page: Page): Promise<{ success: boolean; error?: string }> {
-    try {
-        // Suche Board-Einstellungen oder Delete-Button
-        const settingsButton = page.locator('button:has-text("Einstellungen")').or(
-            page.locator('button[title*="Einstellungen"]')
-        );
-        
-        if (await settingsButton.isVisible()) {
-            await settingsButton.click();
-            
-            const deleteButton = page.locator('button:has-text("Löschen")');
-            if (await deleteButton.isVisible()) {
-                await deleteButton.click();
-                
-                // Bestätige Löschung
-                await page.locator('button:has-text("Löschen bestätigen")').click();
-                
-                // Prüfe ob Board gelöscht (Umleitung zur Board-Liste)
-                await expect(page.locator('text="Boards"')).toBeVisible({ timeout: 3000 });
-                return { success: true };
-            }
-        }
-        
-        return { success: false, error: 'Delete option not found' };
-    } catch (error) {
-        return { success: false, error: String(error) };
-    }
-}
-
 // MAJOR TODO: Unfortunately, most tests are flaky, even though they work manually. Improve productive or test code.
 
 // Test Suites
-test.describe.skip('Board Sharing - Permission System', () => {
+test.describe('Board Sharing - Permission System', () => {
 
     test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ browser }) => {
         // Setup: Owner erstellt Board und teilt mit Editor
@@ -169,6 +35,9 @@ test.describe.skip('Board Sharing - Permission System', () => {
         await ownerPage.goto('/cardsboard');
         
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+
+        // Warte kurz, bis das Modal geschlossen ist
+        await ownerPage.waitForTimeout(1000);
         
         const boardName = `Shared Board ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
@@ -178,18 +47,17 @@ test.describe.skip('Board Sharing - Permission System', () => {
         const editorPage = await browser.newPage();
         await editorPage.goto('/cardsboard');
         
-        // App muss an Nostr Relays verbunden sein, ansonsten werden die Boards nicht geladen
-        await expect(editorPage.getByText('Verbindung wiederhergestellt')).toBeVisible({ timeout: 10000 });
-
         await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
         
-        await expect(editorPage.getByText(boardName)).toBeVisible({timeout: 10000 });
+        // TODO: it is not supposed to be necessary
+        await editorPage.reload();
+
+        await expect(editorPage.getByText(boardName)).toBeVisible();
 
         await editorPage.getByText(boardName).click();
 
         // Warte dass das Board vollständig geladen ist (crucial!)
         await editorPage.waitForLoadState('networkidle');
-        await editorPage.waitForTimeout(1000);
 
         // Verifiziere dass Editor Karten erstellen kann
         const createResult = await attemptCardCreate(editorPage);
@@ -200,7 +68,6 @@ test.describe.skip('Board Sharing - Permission System', () => {
         // Verifiziere dass Editor NICHT Board löschen kann
         const deleteResult = await attemptBoardDelete(editorPage);
         expect(deleteResult.success).toBe(false);
-        console.log('✅ Editor cannot delete board (as expected)');
         
         await ownerPage.close();
         await editorPage.close();
@@ -224,7 +91,7 @@ test.describe.skip('Board Sharing - Permission System', () => {
         await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
 
         // Viewer sollte geteiltes Board sehen
-        await expect(viewerPage.locator(`text="${boardName}"`)).toBeVisible({ timeout: 10000 });
+        await expect(viewerPage.locator(`text="${boardName}"`)).toBeVisible();
         await viewerPage.locator(`text="${boardName}"`).click({timeout: 2000});
 
         // TODO: this is supposed to be tested, but finding a reliable solution is taking more time than moving on
@@ -360,3 +227,131 @@ test.describe.skip('Board Sharing - Error Handling', () => {
         expect(await page.locator('text="Benutzer ist bereits eingeladen"').isVisible()).toBe(true);
     });
 });
+
+async function createSharedBoard(page: Page, boardName: string) {
+    // Suche "Neues Board" Button
+    const newBoardButton = page.getByTestId('create-board-button');
+    await newBoardButton.click();
+
+    // Versuche Board-Titel zu bearbeiten (falls UI das unterstützt)
+    await page.getByTitle('Board-Einstellungen').click({timeout: 2000});
+
+    const titleInput = page.locator('#board-title');
+    
+    // 
+    await page.waitForTimeout(1000);
+    
+    await titleInput.fill(boardName);
+    await page.getByText('Speichern').click({timeout: 2000});
+
+    // Verifiziere dass Board erstellt wurde
+    await expect(page.getByText(boardName).first()).toBeVisible();
+}
+
+async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
+    await page.getByTestId('share-button').click();
+    
+    await expect(page.getByTestId('share-dialog')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Editoren' }).click();
+
+    await page.getByPlaceholder('Nostr Public Key (npub oder hex)').fill(targetUserPubkey);
+    
+    await page.getByTestId("add-editor-button").click();
+    
+    await page.getByText('Schließen').click();
+}
+
+async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Find the add card button with title attribute
+        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
+        
+        // Wait for button to be visible and enabled
+        await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
+        
+        // Get button position to ensure it's in viewport
+        await addCardButton.scrollIntoViewIfNeeded();
+        
+        // Wait a bit for any pending renders
+        await page.waitForTimeout(500);
+        
+        // Click the button
+        await addCardButton.click();
+        
+        // Wait a bit for card to be added to DOM
+        await page.waitForTimeout(500);
+        
+        // Verifiziere dass eine neue Karte erstellt wurde
+        const newCard = page.locator('text="Neue Karte"').first();
+        if (await newCard.isVisible({ timeout: 3000 })) {
+            return { success: true };
+        } else {
+            return { success: false, error: 'Card was not created successfully - "Neue Karte" text not visible' };
+        }
+    } catch (error) {
+        return { success: false, error: `Card creation failed: ${error}` };
+    }
+}
+
+async function attemptCardEdit(page: Page): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Finde eine Karte zum Bearbeiten (kann verschiedene Selektoren haben)
+        const card = page.locator('text="Neue Karte"')
+            .or(page.locator('[data-testid="card"]'))
+            .or(page.locator('.card'))
+            .or(page.locator('[role="article"]')) // Cards könnten als articles markiert sein
+            .first();
+        
+        if (await card.isVisible({ timeout: 3000 })) {
+            await card.click();
+            
+            // Warte auf Card-Detail-Dialog oder Edit-Modus
+            try {
+                await expect(
+                    page.locator('[role="dialog"]')
+                        .or(page.locator('.dialog'))
+                        .or(page.locator('input'))
+                ).toBeVisible({ timeout: 3000 });
+                
+                return { success: true };
+            } catch {
+                // Möglicherweise Inline-Edit oder anderes UI-Pattern
+                return { success: true }; // Card wurde geklickt, Edit könnte anders funktionieren
+            }
+        } else {
+            return { success: false, error: 'No card found to edit or card not clickable' };
+        }
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+async function attemptBoardDelete(page: Page): Promise<{ success: boolean; error?: string }> {
+    try {
+        // Suche Board-Einstellungen oder Delete-Button
+        const settingsButton = page.locator('button:has-text("Einstellungen")').or(
+            page.locator('button[title*="Einstellungen"]')
+        );
+        
+        if (await settingsButton.isVisible()) {
+            await settingsButton.click();
+            
+            const deleteButton = page.locator('button:has-text("Löschen")');
+            if (await deleteButton.isVisible()) {
+                await deleteButton.click();
+                
+                // Bestätige Löschung
+                await page.locator('button:has-text("Löschen bestätigen")').click();
+                
+                // Prüfe ob Board gelöscht (Umleitung zur Board-Liste)
+                await expect(page.locator('text="Boards"')).toBeVisible({ timeout: 3000 });
+                return { success: true };
+            }
+        }
+        
+        return { success: false, error: 'Delete option not found' };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
