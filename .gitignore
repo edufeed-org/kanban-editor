@@ -43,3 +43,5 @@ storybook-static
 
 git.log
 PR.md
+scripts/load-env.ps1
+scripts/run-with-env.ps1
