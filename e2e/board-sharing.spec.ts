@@ -92,7 +92,9 @@ test.describe('Board Sharing - Permission System', () => {
 
         await viewerPage.getByRole('button', { name: 'Board folgen' }).click();
         
-        await viewerPage.getByRole('button', { name: boardName }).click();
+        const boardButton = await viewerPage.getByRole('button', { name: boardName })
+        boardButton.scrollIntoViewIfNeeded()
+        boardButton.click();
 
         // TODO: this is supposed to be tested, but finding a reliable solution is taking more time than moving on
         // Problem: The attemptCardCreate finds the first add button in the html document, and not the one of the currently active board
@@ -211,9 +213,6 @@ async function createSharedBoard(page: Page, boardName: string) {
     await page.getByTitle('Board-Einstellungen').click({timeout: 2000});
 
     const titleInput = page.locator('#board-title');
-    
-    // 
-    await page.waitForTimeout(1000);
     
     await titleInput.fill(boardName);
     await page.getByText('Speichern').click({timeout: 2000});
