@@ -341,6 +341,7 @@ export async function shareTestBoard(
         const { pubkey, role } = args;
         
         try {
+            // @ts-expect-error
             if (window.boardStore) {
                 if (role === 'editor') {
                     // @ts-expect-error

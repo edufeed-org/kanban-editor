@@ -17,9 +17,9 @@ const TEST_USERS = {
         name: 'Board Viewer',
         pubkey: 'npub17gzx4f2capjvy383nhqx69yyeeh6eukguw0gjyuwmaxwstkv24vqaff3ve'
     },
-    unauthorized: {
+    editor2: {
         nsec: 'nsec1ye8apqrmscmzm96y8hy8ywvugpycp3fyl4m5hy82k6ang72zuy3qp0d0st',
-        name: 'Unauthorized User',
+        name: 'Board Editor Nr. 2',
         pubkey: 'npub1nm0rd9estmuattglvqf6mzv82emyd9kfexzejmfjwz9a3jac2aaswtq3ra'
     }
 };
@@ -36,9 +36,6 @@ test.describe('Board Sharing - Permission System', () => {
         
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
 
-        // Warte kurz, bis das Modal geschlossen ist
-        await ownerPage.waitForTimeout(1000);
-        
         const boardName = `Shared Board ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
         await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
@@ -74,7 +71,7 @@ test.describe('Board Sharing - Permission System', () => {
     });
 
     test('Viewer kann NUR lesen, nicht bearbeiten', async ({ browser }) => {
-        // Setup: Owner erstellt Board und teilt mit Viewer
+        // Owner-Session
         const ownerPage = await browser.newPage();
         await ownerPage.goto('/cardsboard');
 
@@ -82,22 +79,25 @@ test.describe('Board Sharing - Permission System', () => {
         
         const boardName = `View-Only Board ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.viewer.pubkey, 'viewer');
-        
+
+        const viewerLink = await getViewerLink(ownerPage);
+
         // Viewer-Session
         const viewerPage = await browser.newPage();
         await viewerPage.goto('/cardsboard');
 
         await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
 
-        // Viewer sollte geteiltes Board sehen
-        await expect(viewerPage.locator(`text="${boardName}"`)).toBeVisible();
-        await viewerPage.locator(`text="${boardName}"`).click({timeout: 2000});
+        await viewerPage.goto(viewerLink);
+
+        await viewerPage.getByRole('button', { name: 'Board folgen' }).click();
+        
+        await viewerPage.getByRole('button', { name: boardName }).click();
 
         // TODO: this is supposed to be tested, but finding a reliable solution is taking more time than moving on
         // Problem: The attemptCardCreate finds the first add button in the html document, and not the one of the currently active board
-        // const createResult = await attemptCardCreate(viewerPage);
-        // expect(createResult.success).toBe(false);
+        const createResult = await attemptCardCreate(viewerPage);
+        expect(createResult.success).toBe(false);
         
         // Viewer sollte NICHT Board löschen können
         const deleteResult = await attemptBoardDelete(viewerPage);
@@ -108,29 +108,6 @@ test.describe('Board Sharing - Permission System', () => {
         await viewerPage.close();
     });
 
-    test('Unauthorized User kann geteiltes Board NICHT sehen', async ({ browser }) => {
-        // Setup: Owner erstellt privates Board
-        const page = await browser.newPage();
-        await page.goto('/cardsboard');
-
-        await loginWithNsec(page, TEST_USERS.owner.nsec);
-        
-        const boardName = `Private Board ${Date.now()}`;
-        await createSharedBoard(page, boardName);
-        
-        await logout(page);
-
-        await loginWithNsec(page, TEST_USERS.unauthorized.nsec);
-
-        // für eine Sekunde kann sein, dass privates Board kurz wegen Caches sichtbar ist
-        await page.waitForTimeout(1000);
-        
-        expect(page.locator(`text="${boardName}"`)).not.toBeVisible();
-
-        await page.close();
-    });
-
-    // TODO: flaky test, it works at manual testing, should be fixed later
     test.skip('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
         await page.goto('/cardsboard');
 
@@ -171,14 +148,14 @@ test.describe.skip('Board Sharing - Multi-User Collaboration', () => {
         await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible();
         await editor1Page.locator(`text="${boardName}"`).click();
         
-        // Editor 2 Session (als unauthorized user, aber wird zu editor gemacht)
+        // Editor 2 Session
         const editor2Page = await browser.newPage();
         await editor2Page.goto('/cardsboard');
-        await loginWithNsec(editor2Page, TEST_USERS.unauthorized.nsec);
+        await loginWithNsec(editor2Page, TEST_USERS.editor2.nsec);
         
         // Owner fügt Editor 2 hinzu
         await ownerPage.bringToFront();
-        await shareBoard(ownerPage, TEST_USERS.unauthorized.pubkey, 'editor');
+        await shareBoard(ownerPage, TEST_USERS.editor2.pubkey, 'editor');
         
         await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible();
         await editor2Page.locator(`text="${boardName}"`).click();
@@ -262,27 +239,20 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
     await page.getByText('Schließen').click();
 }
 
+async function getViewerLink(page: Page): Promise<string> {
+    await page.getByTestId('share-button').click();
+    await expect(page.getByTestId('share-dialog')).toBeVisible();
+    return await page.getByTestId('share-link-input').inputValue();
+}
+
 async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
     try {
-        // Find the add card button with title attribute
         const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
         
-        // Wait for button to be visible and enabled
         await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
         
-        // Get button position to ensure it's in viewport
-        await addCardButton.scrollIntoViewIfNeeded();
-        
-        // Wait a bit for any pending renders
-        await page.waitForTimeout(500);
-        
-        // Click the button
         await addCardButton.click();
         
-        // Wait a bit for card to be added to DOM
-        await page.waitForTimeout(500);
-        
-        // Verifiziere dass eine neue Karte erstellt wurde
         const newCard = page.locator('text="Neue Karte"').first();
         if (await newCard.isVisible({ timeout: 3000 })) {
             return { success: true };

@@ -199,6 +199,7 @@
                             value={shareLink}
                             readonly
                             class="flex-1 font-mono text-xs"
+                            data-testid="share-link-input"
                         />
                         <Button 
                             onclick={copyShareLink}
