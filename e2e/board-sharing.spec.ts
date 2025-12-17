@@ -108,22 +108,19 @@ test.describe('Board Sharing - Permission System', () => {
         await viewerPage.close();
     });
 
-    test.skip('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
+    test('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
         await page.goto('/cardsboard');
 
         await clearAuthState(page);
         await clearBoardState(page);
         
-        
         await expect(page.getByTestId('demo-board-button')).toBeVisible();
                 
-        await expect(page.getByText('Demo-Board - Testen Sie die App!')).toBeVisible();
+        await page.getByText('Demo-Board - Testen Sie die App!').click();
         
-        // Anonymer Benutzer sollte Karten erstellen können
         const createResult = await attemptCardCreate(page);
         expect(createResult.success).toBe(true);
         
-        // Anonymer Benutzer sollte Karten bearbeiten können
         const editResult = await attemptCardEdit(page);
         expect(editResult.success).toBe(true);
     });
