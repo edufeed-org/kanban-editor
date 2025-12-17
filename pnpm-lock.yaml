@@ -7,15 +7,15 @@ settings:
 overrides:
   nostr-tools: ~2.14.2
   '@nostr-dev-kit/ndk': ^2.14.2
-  '@edufeed-org/oer-finder-api-client': github:edufeed-org/oer-finder-plugin#test-prepare-finder-plugin&path:packages/oer-finder-api-client
+  '@edufeed-org/oer-finder-api-client': github:edufeed-org/oer-finder-plugin#main&path:packages/oer-finder-api-client
 
 importers:
 
   .:
     dependencies:
       '@edufeed-org/oer-finder-plugin':
-        specifier: github:edufeed-org/oer-finder-plugin#test-prepare-finder-plugin&path:packages/oer-finder-plugin
-        version: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-plugin
+        specifier: github:edufeed-org/oer-finder-plugin#main&path:packages/oer-finder-plugin
+        version: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-plugin
       '@nostr-dev-kit/ndk':
         specifier: ^2.14.2
         version: 2.17.4(nostr-tools@2.14.3(typescript@5.9.3))
@@ -250,12 +250,12 @@ packages:
     resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
     engines: {node: '>=18'}
 
-  '@edufeed-org/oer-finder-api-client@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-api-client':
-    resolution: {path: packages/oer-finder-api-client, tarball: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093}
+  '@edufeed-org/oer-finder-api-client@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-api-client':
+    resolution: {path: packages/oer-finder-api-client, tarball: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8}
     version: 0.0.3
 
-  '@edufeed-org/oer-finder-plugin@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-plugin':
-    resolution: {path: packages/oer-finder-plugin, tarball: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093}
+  '@edufeed-org/oer-finder-plugin@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-plugin':
+    resolution: {path: packages/oer-finder-plugin, tarball: https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8}
     version: 0.0.5
 
   '@esbuild/aix-ppc64@0.25.10':
@@ -3160,13 +3160,13 @@ snapshots:
 
   '@csstools/css-tokenizer@3.0.4': {}
 
-  '@edufeed-org/oer-finder-api-client@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-api-client':
+  '@edufeed-org/oer-finder-api-client@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-api-client':
     dependencies:
       openapi-fetch: 0.13.8
 
-  '@edufeed-org/oer-finder-plugin@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-plugin':
+  '@edufeed-org/oer-finder-plugin@https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-plugin':
     dependencies:
-      '@edufeed-org/oer-finder-api-client': https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/e46cfa23d06573dbd40c4a39ab9141ac65b3b093#path:packages/oer-finder-api-client
+      '@edufeed-org/oer-finder-api-client': https://codeload.github.com/edufeed-org/oer-finder-plugin/tar.gz/1c3b99705aac9366c01f799255b4c215ec19b8f8#path:packages/oer-finder-api-client
       lit: 3.3.1
 
   '@esbuild/aix-ppc64@0.25.10':
