@@ -90,7 +90,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "@edufeed-org/oer-finder-plugin"
+      "@edufeed-org/oer-finder-plugin",
+      "@edufeed-org/oer-finder-api-client"
     ],
     "overrides": {
       "nostr-tools": "~2.14.2",
