@@ -47,6 +47,11 @@
     "showLeft": true,
     "showRight": true
   },
+
+  "oerFinderPlugin": {
+    "apiUrl": "http://localhost:3001",
+    "language": "de"
+  },
   
   "learning": {
     "useLearningManager": true,
