@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 4.7.18 - Fix: Reload für Shared Boards funktioniert auch als Editor 🔄
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: „Board konnte nicht aus Nostr geladen werden“ beim Reload (nur Editoren)
+- Ursache: Bei Shared Boards kann `loadBoard()` nach Cache-Clear initial `false` zurückgeben, weil die Rekonstruktion (`reconstructSharedBoard()`) asynchron startet.
+- Fix: `forceReloadCurrentBoardFromNostr()` wartet bei Shared Boards auf die Rekonstruktion und versucht `loadBoard()` danach erneut, statt sofort zu werfen.
+
+### ✅ Tests
+- Regression-Test ergänzt: Shared-Board Reload wartet auf Rekonstruktion und retry’t erfolgreich.
+
 ## Version 4.7.17 - UX: Board-Metadaten für Nicht-Owner read-only 🔐
 
 **Datum:** 16. Dezember 2025  
