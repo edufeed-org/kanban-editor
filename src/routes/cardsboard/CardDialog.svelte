@@ -10,6 +10,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import type { CardProps, PublishState } from '../../lib/classes/BoardModel.js';
+	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 
 	interface Props {
 		card: CardProps | null;
@@ -254,11 +255,10 @@
 					<Field>
 						<FieldLabel for="description">Beschreibung</FieldLabel>
 						<FieldContent>
-							<Textarea
-								id="description"
-								bind:value={formData.content}
-								placeholder="Kartenbeschreibung eingeben"
-								class="min-h-[100px]"
+							<MarkdownEditor 
+								value={formData.content || ''}
+								onchange={(content) => formData.content = content}
+								placeholder="Kartenbeschreibung eingeben..."
 								disabled={isSubmitting}
 							/>
 						</FieldContent>
