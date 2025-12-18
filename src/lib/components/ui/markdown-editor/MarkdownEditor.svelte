@@ -17,8 +17,6 @@
 	import Heading1Icon from '@lucide/svelte/icons/heading-1';
 	import Heading2Icon from '@lucide/svelte/icons/heading-2';
 	import LinkIcon from '@lucide/svelte/icons/link';
-	import UndoIcon from '@lucide/svelte/icons/undo';
-	import RedoIcon from '@lucide/svelte/icons/redo';
 	
 	interface Props {
 		value: string;
@@ -137,14 +135,6 @@
 			editor?.chain().focus().setLink({ href: url }).run();
 		}
 	}
-	
-	function undo() {
-		editor?.chain().focus().undo().run();
-	}
-	
-	function redo() {
-		editor?.chain().focus().redo().run();
-	}
 </script>
 
 <div class="border rounded-md overflow-hidden {disabled ? 'opacity-50 cursor-not-allowed' : ''}">
@@ -260,29 +250,6 @@
 			>
 				<LinkIcon class="h-4 w-4" />
 			</button>
-			
-			<div class="w-px bg-border mx-1"></div>
-			
-			<!-- Undo/Redo -->
-			<button
-				type="button"
-				onclick={undo}
-				class="p-1.5 rounded hover:bg-muted"
-				disabled={disabled || !editor.can().undo()}
-				title="Rückgängig"
-			>
-				<UndoIcon class="h-4 w-4" />
-			</button>
-			
-			<button
-				type="button"
-				onclick={redo}
-				class="p-1.5 rounded hover:bg-muted"
-				disabled={disabled || !editor.can().redo()}
-				title="Wiederholen"
-			>
-				<RedoIcon class="h-4 w-4" />
-			</button>
 		</div>
 	{/if}
 	
@@ -322,32 +289,60 @@
 		padding-left: 1.5em;
 		margin-top: 0.5em;
 		margin-bottom: 0.5em;
+		list-style: inherit;
+	}
+	
+	:global(.ProseMirror ul) {
+		list-style-type: disc;
+	}
+	
+	:global(.ProseMirror ol) {
+		list-style-type: decimal;
+	}
+	
+	:global(.ProseMirror li) {
+		display: list-item;
 	}
 	
 	:global(.ProseMirror blockquote) {
-		border-left: 3px solid #ddd;
+		border-left: 3px solid hsl(var(--border));
 		padding-left: 1em;
 		margin-left: 0;
 		font-style: italic;
+		color: hsl(var(--muted-foreground));
 	}
 	
+	/* Code Styles - deutlich sichtbarer Hintergrund */
 	:global(.ProseMirror code) {
-		background-color: #f4f4f4;
+		background-color: rgba(0, 0, 0, 0.1);
+		color: hsl(var(--foreground));
 		padding: 0.2em 0.4em;
 		border-radius: 3px;
 		font-family: monospace;
 		font-size: 0.9em;
 	}
 	
+	/* Dark mode anpassung */
+	:global(.dark .ProseMirror code) {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+	
 	:global(.ProseMirror pre) {
-		background-color: #f4f4f4;
+		background-color: rgba(0, 0, 0, 0.1);
+		color: hsl(var(--foreground));
 		padding: 1em;
 		border-radius: 5px;
 		overflow-x: auto;
 	}
 	
+	/* Dark mode anpassung */
+	:global(.dark .ProseMirror pre) {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+	
 	:global(.ProseMirror pre code) {
 		background: none;
+		color: inherit;
 		padding: 0;
 	}
 </style>
