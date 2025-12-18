@@ -77,7 +77,7 @@ test.describe('Board Sharing - Permission System', () => {
 
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
-        const boardName = `View-Only Board ${Date.now()}`;
+        const boardName = `View ${Date.now()}`;
         await createSharedBoard(ownerPage, boardName);
 
         const viewerLink = await getViewerLink(ownerPage);
@@ -92,19 +92,15 @@ test.describe('Board Sharing - Permission System', () => {
 
         await viewerPage.getByRole('button', { name: 'Board folgen' }).click();
         
-        const boardButton = await viewerPage.getByRole('button', { name: boardName })
-        boardButton.scrollIntoViewIfNeeded()
-        boardButton.click();
+        await viewerPage.getByRole('button', { name: boardName }).click();
 
-        // TODO: this is supposed to be tested, but finding a reliable solution is taking more time than moving on
-        // Problem: The attemptCardCreate finds the first add button in the html document, and not the one of the currently active board
+        await viewerPage.waitForLoadState('networkidle');
+
         const createResult = await attemptCardCreate(viewerPage);
         expect(createResult.success).toBe(false);
         
-        // Viewer sollte NICHT Board löschen können
         const deleteResult = await attemptBoardDelete(viewerPage);
         expect(deleteResult.success).toBe(false);
-        console.log('✅ Viewer cannot delete board (as expected)');
         
         await ownerPage.close();
         await viewerPage.close();
@@ -255,7 +251,7 @@ async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?
         await addCardButton.click();
         
         const newCard = page.locator('text="Neue Karte"').first();
-        if (await newCard.isVisible({ timeout: 3000 })) {
+        if (await newCard.isVisible({ timeout: 5000 })) {
             return { success: true };
         } else {
             return { success: false, error: 'Card was not created successfully - "Neue Karte" text not visible' };

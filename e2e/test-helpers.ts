@@ -76,10 +76,6 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
 
   await expect(page.getByTestId('auth-user-avatar')).toBeVisible();
-
-  if (await page.getByText('Close').isVisible()) {
-    await page.getByText('Close').click();
-  }
 }
 
 /**
