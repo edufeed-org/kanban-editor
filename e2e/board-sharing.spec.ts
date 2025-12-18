@@ -36,7 +36,9 @@ test.describe('Board Sharing - Permission System', () => {
         
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
 
-        const boardName = `Shared Board ${Date.now()}`;
+        const now = Date.now().toString()
+
+        const boardName = `Shared Board ${now.slice(now.length - 5, now.length)}`;
         await createSharedBoard(ownerPage, boardName);
         await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
         
@@ -77,7 +79,9 @@ test.describe('Board Sharing - Permission System', () => {
 
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
-        const boardName = `View ${Date.now()}`;
+        const now = Date.now().toString()
+
+        const boardName = `View-Only ${now.slice(now.length - 5, now.length)}`;
         await createSharedBoard(ownerPage, boardName);
 
         const viewerLink = await getViewerLink(ownerPage);
@@ -132,7 +136,9 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         await ownerPage.goto('/cardsboard');
         await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
         
-        const boardName = `Collaborative Board ${Date.now()}`;
+        const now = Date.now().toString();
+
+        const boardName = `Collaborative Board ${now.slice(now.length - 5, now.length)}`;
         await createSharedBoard(ownerPage, boardName);
         await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
         
