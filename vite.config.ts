@@ -9,6 +9,9 @@ export default defineConfig({
 		sveltekit(),
 		devtoolsJson()
 	],
+	ssr: {
+		noExternal: ['@edufeed-org/oer-finder-plugin']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
