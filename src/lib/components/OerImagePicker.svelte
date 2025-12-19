@@ -1,4 +1,5 @@
 <script lang="ts">
+	import 'reflect-metadata'; // decorator polyfill for web components, needed for oer-finder-plugin
 	import type {
 		OerSearchResultEvent,
 		OerSearchElement,
@@ -22,18 +23,6 @@
 	let paginationEl: PaginationElement;
 
 	onMount(async () => {
-		try {
-			// Dynamically import the plugin only on the client side to avoid SSR issues
-			// Load decorator polyfill first to support web component decorators
-			if (typeof (window as any).Reflect === 'undefined' || !(window as any).Reflect.decorate) {
-				await import('core-js/proposals/decorator-metadata-v2');
-			}
-			await import('@edufeed-org/oer-finder-plugin');
-		} catch (error) {
-			console.error('Failed to load OER plugin:', error);
-			// The component will gracefully fail if plugin can't be loaded
-			return;
-		}
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
 			const customEvent = e as CustomEvent<OerSearchResultEvent>;
