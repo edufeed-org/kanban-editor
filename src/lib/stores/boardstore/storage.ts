@@ -1,7 +1,7 @@
 // src/lib/stores/boardstore/storage.ts
 // localStorage Verwaltung für Boards
 
-import { Board, Column, Card, type CardProps, type ColumnProps } from '../../classes/BoardModel.js';
+import { Board, Column, Card, type BoardProps, type CardProps, type ColumnProps } from '../../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../../utils/idGenerator.js';
 import { authStore } from '../authStore.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
@@ -146,7 +146,14 @@ export class BoardStorage {
             }
         }
         
-        const boardProps = {
+        const rawMaintainers: unknown[] = Array.isArray((data as any).maintainers) ? (data as any).maintainers : [];
+        const isNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+        const authorStr = typeof author === 'string' ? author : undefined;
+        const normalizedMaintainers: string[] = Array.from(
+            new Set(rawMaintainers.filter(isNonEmptyString).filter(p => p !== authorStr))
+        );
+
+        const boardProps: BoardProps = {
             id: data.id,
             eventId: data.eventId, // ← NEU: Event-ID laden!
             name: data.name,
@@ -154,7 +161,8 @@ export class BoardStorage {
             publishState: data.publishState,
             author: author,
             authorName: authorName,
-            maintainers: data.maintainers || [],
+            // maintainers sind ausschließlich Co-Editoren (Owner darf hier NICHT auftauchen)
+            maintainers: normalizedMaintainers,
             tags: data.tags || [],
             ccLicense: data.ccLicense || 'cc-by-4.0',
             updatedAt: data.updatedAt, // ← KRITISCH: Timestamp MUSS aus localStorage kommen!
@@ -203,7 +211,8 @@ export class BoardStorage {
             name: 'Mein KI Kanban Board',
             description: 'Ein intelligentes Kanban-Board mit KI-Unterstützung',
             author: author,
-            maintainers: author !== 'anonymous' ? [author] : [],
+            // Owner ist KEIN Maintainer (Editor) – maintainers sind nur Co-Editoren.
+            maintainers: [],
             columns
         });
     }

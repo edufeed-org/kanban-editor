@@ -1,0 +1,72 @@
+{
+  "$comment": "Kanban Board Configuration - Single Source of Truth",
+  "$schema_version": "1.1.0",
+  "$last_updated": "2025-11-04",
+
+  "ui": {
+    "maxCardsBeforeScroll": 20,
+    "alignColumnsToMaxHeight": true,
+    "columnWidth": 350,
+    "theme": "auto",
+    "$comment": "UI-spezifische Einstellungen für Layout und Darstellung"
+  },
+
+  "nostr": {
+    "relaysPublic": [
+      "ws://localhost:7000"
+    ],
+    "relaysPrivate": [
+      "ws://localhost:7000"
+    ],
+    "$comment": "⚠️ Development: Verwende 'ws://localhost:7000' nur wenn lokaler Docker-Relay läuft! Production: Nutze öffentliche wss:// Relays.",
+    "$comment_localhost": "Lokaler Relay für Tests: ws://localhost:7000 (erfordert: docker-compose up -d)"
+  },
+
+  "llm": {
+    "model": "ollama/mistral",
+    "baseUrl": "http://localhost:11434",
+    "apiKey": "",
+    "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
+    "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben.",
+    "useLlmIntent": false,
+    "$comment_useLlmIntent": "LLM-basierte Intent Detection (experimentell). false = regelbasiert (schneller, offline), true = LLM-basiert (flexibler, benötigt API)"
+  },
+
+  "oidc": {
+    "authority": "http://localhost:8080/realms/master",
+    "clientId": "kanban-board"
+  },
+
+  "mcp": {
+    "urls": []
+  },
+  "shareTokenMaxSize": 200000,
+
+  "defaults": {
+    "columns": ["Material", "Einstieg","Erarbeitung", "Sicherung"],
+    "boardPublishState": "private",
+    "cardPublishState": "private"
+  },
+
+  "sidebar": {
+    "showLeft": true,
+    "showRight": true
+  },
+  
+  "learning": {
+    "useLearningManager": true,
+    "confidenceThreshold": 0.7,
+    "initialConfidence": 0.3,
+    "confidenceIncrement": 0.15,
+    "minUsageCount": 3,
+    "$comment_useLearningManager": "Aktiviert das Cross-Board Learning System (UserPreferencesStore + BoardLearningManager)",
+    "$comment_confidenceThreshold": "Ab diesem Wert (0.0-1.0) werden KI-Aktionen automatisch ausgeführt ohne User-Confirmation",
+    "$comment_initialConfidence": "Startwert für neu gelernte Patterns",
+    "$comment_confidenceIncrement": "Um wie viel steigt Confidence bei jeder erfolgreichen Nutzung",
+    "$comment_minUsageCount": "Mindestanzahl Nutzungen bevor Pattern als 'learned' gilt"
+  },
+  
+  "allow_demo_session": {
+    "enabled": false
+  }
+}

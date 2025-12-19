@@ -190,6 +190,49 @@ export class BoardOperations {
             totalCardsInUI: uiColumns.reduce((sum, col) => sum + col.items.length, 0)
         });
 
+        // Normalize UI columns defensively:
+        // - drop invalid ids and DnD shadow placeholders
+        // - dedupe by column id (keep first)
+        // Rationale: svelte-dnd-action can occasionally emit transient duplicate items during rapid drag.
+        const normalizeUiColumns = (cols: UIColumn[]): UIColumn[] => {
+            const result: UIColumn[] = [];
+            const seen = new Set<string>();
+            let droppedDuplicates = 0;
+            let droppedInvalid = 0;
+
+            for (const c of cols ?? []) {
+                const rawId = (c as any)?.id;
+                if (rawId === undefined || rawId === null || rawId === '') {
+                    droppedInvalid++;
+                    continue;
+                }
+                const id = String(rawId);
+                if (isDndShadowPlaceholderId(id)) {
+                    // Shadow placeholder is not a real column.
+                    continue;
+                }
+                if (seen.has(id)) {
+                    droppedDuplicates++;
+                    continue;
+                }
+                seen.add(id);
+                result.push(c);
+            }
+
+            if (droppedInvalid > 0 || droppedDuplicates > 0) {
+                console.warn('⚠️ syncBoardState: normalized UI columns (dropped invalid/duplicates)', {
+                    droppedInvalid,
+                    droppedDuplicates,
+                    inCount: cols?.length ?? 0,
+                    outCount: result.length,
+                });
+            }
+
+            return result;
+        };
+
+        const normalizedUiColumns = normalizeUiColumns(uiColumns);
+
         const strategy: SyncBoardStateStrategy = options?.strategy ?? 'defensive-merge';
 
         const insertAt = <T>(arr: T[], index: number, item: T): T[] => {
@@ -212,7 +255,7 @@ export class BoardOperations {
         if (strategy === 'hard-fail') {
             const boardColumnIds = new Set(board.columns.map(c => c.id));
             const uiColumnIds = new Set(
-                uiColumns
+            normalizedUiColumns
                     .map(c => String(c.id))
                     .filter(id => !isDndShadowPlaceholderId(id))
             );
@@ -224,7 +267,7 @@ export class BoardOperations {
 
             const uiCardIds = new Set<string>();
             let invalidUiCardIdCount = 0;
-            for (const uiCol of uiColumns) {
+            for (const uiCol of normalizedUiColumns) {
                 for (const item of uiCol.items ?? []) {
                     const raw = (item as any)?.id;
                     if (raw === undefined || raw === null || raw === '') {
@@ -276,7 +319,7 @@ export class BoardOperations {
         }
 
         // 2. Update column order
-        const newColumnOrder = uiColumns.map(c => c.id);
+        const newColumnOrder = normalizedUiColumns.map(c => c.id);
 
         // 3. Reorder board.columns UND rebuild card arrays
         const reorderedColumns: Column[] = [];
@@ -285,7 +328,7 @@ export class BoardOperations {
         const processedColumnIds = new Set<string>();
         const cardsByColumnId = new Map<string, Card[]>();
 
-        for (const uiCol of uiColumns) {
+        for (const uiCol of normalizedUiColumns) {
             const col = board.columns.find(c => c.id === uiCol.id);
             if (!col) {
                 console.warn(`⚠️ Column ${uiCol.id} nicht gefunden`);
@@ -420,12 +463,17 @@ export class BoardOperations {
         columnIds: string[]
     ): void {
         const reordered: Column[] = [];
-        for (const id of columnIds) {
+        const seen = new Set<string>();
+        for (const raw of columnIds) {
+            const id = String(raw);
+            if (!id) continue;
+            if (seen.has(id)) continue;
+            seen.add(id);
             const col = board.columns.find(c => c.id === id);
             if (col) reordered.push(col);
         }
         board.columns = reordered;
-        console.log('🔄 Spalten neu angeordnet');
+        console.debug('🔄 Spalten neu angeordnet');
     }
 
     /**
@@ -512,11 +560,27 @@ export class BoardOperations {
             ccLicense?: string;
         }
     ): void {
-        if (updates.name !== undefined) board.name = updates.name;
-        if (updates.description !== undefined) board.description = updates.description;
-        if (updates.tags !== undefined) board.tags = updates.tags;
-        if (updates.maintainers !== undefined) board.maintainers = updates.maintainers;
-        if (updates.ccLicense !== undefined) board.ccLicense = updates.ccLicense;
+        const hasCoreMetaUpdate =
+            updates.name !== undefined ||
+            updates.description !== undefined ||
+            updates.tags !== undefined ||
+            updates.ccLicense !== undefined;
+
+        if (hasCoreMetaUpdate) {
+            board.update({
+                name: updates.name,
+                description: updates.description,
+                tags: updates.tags,
+                ccLicense: updates.ccLicense,
+            });
+        }
+        if (updates.maintainers !== undefined) {
+            const owner = board.author;
+            const maintainers = Array.isArray(updates.maintainers) ? updates.maintainers : [];
+            board.maintainers = Array.from(
+                new Set(maintainers.filter(p => typeof p === 'string' && p && p !== owner))
+            );
+        }
         
         console.log('✅ Board-Metadaten aktualisiert');
     }

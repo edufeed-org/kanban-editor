@@ -394,16 +394,21 @@ export class BoardSharingOperations {
         if (!currentUser || !board.canEditBoard(currentUser)) {
             throw new Error('Nur Editoren können neue Editoren einladen');
         }
+
+        if (normalizedPubkey === board.author) {
+            throw new Error('Board-Owner ist bereits Owner (kein Editor-Eintrag)');
+        }
         
         if (board.isEditor(normalizedPubkey)) {
             throw new Error('Nutzer ist bereits Editor');
         }
         
         // 2. Lokale State aktualisieren
-        if (!board.maintainers) {
-            board.maintainers = [];
-        }
-        board.maintainers = [...board.maintainers, normalizedPubkey];
+        const owner = board.author;
+        const existing = Array.isArray(board.maintainers) ? board.maintainers : [];
+        board.maintainers = Array.from(
+            new Set([...existing.filter(p => typeof p === 'string' && p && p !== owner), normalizedPubkey])
+        );
         
         // 3. Nostr Event publizieren (Board Update)
         try {
@@ -746,7 +751,16 @@ export class BoardSharingOperations {
         
         // Maintainers (Editors) als p-tags hinzufügen (NIP-51 compliant)
         if (board.maintainers) {
-            for (const maintainer of board.maintainers) {
+            const owner = board.author;
+            const maintainers = Array.from(
+                new Set(
+                    board.maintainers
+                        .filter(p => typeof p === 'string' && p)
+                        .filter(p => p !== owner)
+                )
+            );
+
+            for (const maintainer of maintainers) {
                 event.tags.push(['p', maintainer]);
             }
         }

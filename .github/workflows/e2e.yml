@@ -33,6 +33,9 @@ jobs:
     - name: Spin up relay server
       run: docker compose up -d
 
+    - name: Use specific ci config
+      run: cp static/config.ci.json static/config.json
+
     - name: Run Playwright tests
       run: PW_DEBUG=1 pnpm test:e2e
 

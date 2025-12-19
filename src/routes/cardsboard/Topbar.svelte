@@ -61,6 +61,10 @@
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+
+    // 🔐 Permissions (Owner-only Board Meta)
+    let currentUserRole = $derived(boardStore.getCurrentUserRole());
+    let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
     
     // 🔥 Sync Status - reactive derived from SyncManager
     // ✅ ALTERNATIVE APPROACH: Poll SyncManager directly from component with $effect
@@ -312,6 +316,10 @@
     
 
     function saveBoardMeta() {
+        if (!canEditBoardMeta) {
+            // UI sollte den Button bereits deaktivieren; guard als Fallback.
+            return;
+        }
         // Parse tags from comma-separated string to array
         const tagsArray = metaForm.tags
             .split(',')
@@ -323,11 +331,9 @@
             name: metaForm.title,
             description: metaForm.description,
             tags: tagsArray,
-            ccLicense: metaForm.license
+            ccLicense: metaForm.license,
+            publishState: metaForm.publishState
         });
-        
-        // 2. Aktualisiere publishState separat
-        boardStore.setPublishState(metaForm.publishState);
         
         console.log('✅ Board-Meta gespeichert:', {
             name: metaForm.title,
@@ -557,6 +563,7 @@
                                 id="board-title" 
                                 bind:value={metaForm.title} 
                                 placeholder="Projekt-Titel"
+                                readonly={!canEditBoardMeta}
                             />
                         </div>
                         
@@ -566,12 +573,13 @@
                                 id="board-description" 
                                 bind:value={metaForm.description} 
                                 placeholder="Projekt-Beschreibung"
+                                readonly={!canEditBoardMeta}
                             />
                         </div>
                         
                         <div class="space-y-2">
                             <Label>Veröffentlichungsstatus</Label>
-                            <RadioGroup.Root bind:value={metaForm.publishState}>
+                            <RadioGroup.Root bind:value={metaForm.publishState} disabled={!canEditBoardMeta}>
                                 <div class="flex items-center space-x-2">
                                     <RadioGroup.Item value="draft" id="state-draft" />
                                     <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
@@ -593,6 +601,7 @@
                                 id="board-tags" 
                                 bind:value={metaForm.tags} 
                                 placeholder="tag1, tag2, tag3"
+                                readonly={!canEditBoardMeta}
                             />
                         </div>
                         
@@ -601,6 +610,7 @@
                             <select 
                                 id="cc-license" 
                                 bind:value={metaForm.license}
+                                disabled={!canEditBoardMeta}
                                 class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {#each ccLicenses as license}
@@ -632,7 +642,7 @@
                             </div>
                             <div  class="flex gap-2">
                                 <Button variant="outline" onclick={() => { dialogOpen = false; }} class="bg-secondary">Abbrechen</Button>
-                                <Button variant="default" onclick={saveBoardMeta} class="bg-primary border">Speichern</Button>
+                                <Button variant="default" onclick={saveBoardMeta} class="bg-primary border" disabled={!canEditBoardMeta}>Speichern</Button>
                                 
                             </div>
                         </div>

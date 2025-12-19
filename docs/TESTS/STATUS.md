@@ -1,17 +1,17 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 15.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅, Shared-Board Leave/Hide Tests ✅, Tombstone-Guard für `upsertBoardFromNostr()` ✅, Leave-Request Loader Tests ✅, Toast-Guard Tests ✅)
-**Status:** 🟢 Vollständig funktional (letzter Stand: 451 Tests) + 14 neue Unit-Tests (Kind-5 Authorization + Leave/Hide + Tombstone Guard + Leave-Request Loader + Toast-Guard) ✅
+**Letzte Aktualisierung:** 16.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅, Shared-Board Leave/Hide Tests ✅, Tombstone-Guard für `upsertBoardFromNostr()` ✅, Leave-Request Loader Tests ✅, Toast-Guard Tests ✅, Board-Metadaten/Maintainers Regression-Test ✅, Permission-Guards (Owner-only Board-Meta/Publish) ✅, Column-Order Patch `d`-Tag + `updated_at_ms` Parsing Tests ✅, Shared-Board Reload Rekonstruktions-Test ✅)
+**Status:** 🟢 Vollständig funktional (letzter Stand: 508 Tests: 505 passed | 3 skipped) ✅
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Vitest (Unit+Integration)** | ✅ Aktiv | 465 (451 vorher + 14 neu, zuletzt gezielt verifiziert) | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 508 (505 passed  3 skipped; zuletzt verifiziert) | Vitest |
 | **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/stores/boardstore/nostr/subscriptions.toast.spec.ts` → `Test Files 1 passed (1)`, `Tests 3 passed (3)`
+**Letzter Vitest-Lauf:** `npm run test:unit -- --run` → `Test Files 40 passed (40)`, `Tests 505 passed | 3 skipped (508)`
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 

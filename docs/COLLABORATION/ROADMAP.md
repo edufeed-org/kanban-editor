@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.11 (Hotfix: Shared-Discovery nutzt event.pubkey, kein Ghost-Toast nach Leave - 15. Dezember 2025)  
-**Aktualisiert:** 15. Dezember 2025 (Zusätzlich zu 3.10: Shared-Board Discovery (Kind 30301 `#p`) nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide Registry und Toast-Guard zuverlässig matchen)  
+**Version:** 3.15 (Permissions UX: Board-Metadaten sind für Nicht-Owner read-only - 16. Dezember 2025)  
+**Aktualisiert:** 16. Dezember 2025 (Im Board-Einstellungen-Dialog sind Metadaten-Felder für Editoren/Viewers deaktiviert/read-only; nur Owner kann Titel/Beschreibung/Status/Tags/CC-Lizenz speichern. Store-Level Permission Guard bleibt bestehen.)  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1587,6 +1587,10 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.15 | 16.12.2025 | 🔐 **Permissions UX:** Board-Metadaten sind für Nicht-Owner read-only; Speichern deaktiviert. |
+| 3.14 | 16.12.2025 | 👀 **UX Fix:** Kein sichtbares "Re-Sort" beim Board-Load durch No-op Guards bei identischer Column-Order. |
+| 3.13 | 16.12.2025 | ✅ **Column-Order Patch Apply Fix:** `updated_at_ms` wird robust geparsed (auch numerischer String); bei Parse-Fehler Fallback auf `created_at` → Owner übernimmt Editor-Reorders zuverlässig. |
+| 3.12 | 16.12.2025 | ↕️ **Editor-Safe Column Reorder:** Spalten-Reihenfolge wird über Kind `8571` (Column Order Patch) synchronisiert; referenziert das kanonische Board via `a=30301:<author>:<d>` und zusätzlich `d=<boardId>`; nutzt `updated_at_ms` für LWW. Editoren publizieren kein Kind `30301` → keine Fork-Boards. |
 | 3.11 | 15.12.2025 | 🧭 **Shared-Discovery Author Fix:** Shared-Board Discovery nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide & Toast-Guard zuverlässig matchen (kein „Neues Board geteilt“ Ghost-Toast nach Leave/Owner-Delete). |
 | 3.10 | 15.12.2025 | 👀 **Owner Leave-Request Badge:** Owner sieht Leave-Requests (Kind 30000, `d=kanban-leave-request:<boardRef>`) im ShareDialog als Marker bei Editoren (best-effort, Relay-abhängig). |
 | 3.9 | 15.12.2025 | 🧹 **NIP-09 Delete Guard:** `deleteBoard()`/`deleteCard()` publizieren Kind-5 Lösch-Events nur bei Autor-Übereinstimmung; kaskadierender Delete skippt Cards anderer Autoren (verhindert „DELETION AUTH MISMATCH“ / Relay-Rejects). |

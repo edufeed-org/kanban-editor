@@ -199,6 +199,7 @@
                             value={shareLink}
                             readonly
                             class="flex-1 font-mono text-xs"
+                            data-testid="share-link-input"
                         />
                         <Button 
                             onclick={copyShareLink}
@@ -241,6 +242,7 @@
                             <Button 
                                 onclick={handleInviteEditor}
                                 disabled={isLoading || !newEditorPubkey.trim()}
+                                data-testid="add-editor-button"
                             >
                                 Hinzufügen
                             </Button>

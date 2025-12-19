@@ -17,76 +17,278 @@ const TEST_USERS = {
         name: 'Board Viewer',
         pubkey: 'npub17gzx4f2capjvy383nhqx69yyeeh6eukguw0gjyuwmaxwstkv24vqaff3ve'
     },
-    unauthorized: {
+    editor2: {
         nsec: 'nsec1ye8apqrmscmzm96y8hy8ywvugpycp3fyl4m5hy82k6ang72zuy3qp0d0st',
-        name: 'Unauthorized User',
+        name: 'Board Editor Nr. 2',
         pubkey: 'npub1nm0rd9estmuattglvqf6mzv82emyd9kfexzejmfjwz9a3jac2aaswtq3ra'
     }
 };
 
+// MAJOR TODO: Unfortunately, most tests are flaky, even though they work manually. Improve productive or test code.
+
+// Test Suites
+test.describe('Board Sharing - Permission System', () => {
+
+    test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ browser }) => {
+        // Setup: Owner erstellt Board und teilt mit Editor
+        const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
+        
+        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+
+        const now = Date.now().toString()
+
+        const boardName = `Shared ${now.slice(now.length - 5, now.length)}`;
+        await createSharedBoard(ownerPage, boardName);
+        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
+        
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
+        
+        // Editor-Session
+        const editorPage = await browser.newPage();
+        await editorPage.goto('/cardsboard');
+        
+        await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
+        
+        // TODO: it is not supposed to be necessary
+        await editorPage.reload();
+
+        // Warte auf Board-Liste und Nostr-Synchronisation
+        await editorPage.waitForLoadState('networkidle');
+        await editorPage.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden (3s -> 4s)
+
+        // Warte mit längerem Timeout auf Board-Sichtbarkeit (Nostr Sync braucht Zeit)
+        await expect(editorPage.getByText(boardName)).toBeVisible({ timeout: 20000 });
+
+        await editorPage.getByText(boardName).click();
+
+        // Warte dass das Board vollständig geladen ist (crucial!)
+        await editorPage.waitForLoadState('networkidle');
+
+        // Verifiziere dass Editor Karten erstellen kann
+        const createResult = await attemptCardCreate(editorPage);
+        if (!createResult.success) {
+            throw new Error(createResult.error);
+        }
+
+        // Verifiziere dass Editor NICHT Board löschen kann
+        const deleteResult = await attemptBoardDelete(editorPage);
+        expect(deleteResult.success).toBe(false);
+        
+        await ownerPage.close();
+        await editorPage.close();
+    });
+
+    test('Viewer kann NUR lesen, nicht bearbeiten', async ({ browser }) => {
+        // Owner-Session
+        const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
+
+        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+        
+        const now = Date.now().toString()
+
+        const boardName = `View-Only ${now.slice(now.length - 5, now.length)}`;
+        await createSharedBoard(ownerPage, boardName);
+
+        const viewerLink = await getViewerLink(ownerPage);
+
+        // Viewer-Session
+        const viewerPage = await browser.newPage();
+        await viewerPage.goto('/cardsboard');
+
+        await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
+
+        await viewerPage.goto(viewerLink);
+        await viewerPage.waitForLoadState('networkidle');
+
+        await viewerPage.getByRole('button', { name: 'Board folgen' }).click();
+        
+        // Warte auf Board-Synchronisation nach "folgen" - Board muss von Nostr geladen werden
+        await viewerPage.waitForTimeout(4000);
+        
+        // Navigiere zurück zur Board-Liste um das gefolgten Board zu sehen
+        await viewerPage.goto('/cardsboard');
+        await viewerPage.waitForLoadState('networkidle');
+        await viewerPage.waitForTimeout(2000);
+        
+        // Warte explizit dass Board in Liste erscheint
+        await expect(viewerPage.getByRole('button', { name: boardName })).toBeVisible({ timeout: 15000 });
+        await viewerPage.getByRole('button', { name: boardName }).click();
+
+        await viewerPage.waitForLoadState('networkidle');
+
+        const createResult = await attemptCardCreate(viewerPage);
+        expect(createResult.success).toBe(false);
+        
+        const deleteResult = await attemptBoardDelete(viewerPage);
+        expect(deleteResult.success).toBe(false);
+        
+        await ownerPage.close();
+        await viewerPage.close();
+    });
+
+    test('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
+        await page.goto('/cardsboard');
+
+        await clearAuthState(page);
+        await clearBoardState(page);
+        
+        await expect(page.getByTestId('demo-board-button')).toBeVisible();
+                
+        await page.getByText('Demo-Board - Testen Sie die App!').click();
+        
+        const createResult = await attemptCardCreate(page);
+        expect(createResult.success).toBe(true);
+        
+        const editResult = await attemptCardEdit(page);
+        expect(editResult.success).toBe(true);
+    });
+});
+
+test.describe('Board Sharing - Multi-User Collaboration', () => {
+    
+    test('Concurrent Editing: Zwei Editoren bearbeiten gleichzeitig', async ({ browser }) => {
+        // Setup: Owner erstellt Board und teilt mit zwei Editoren
+        const ownerPage = await browser.newPage();
+        await ownerPage.goto('/cardsboard');
+        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+        
+        const now = Date.now().toString();
+
+        const boardName = `Collab ${now.slice(now.length - 5, now.length)}`;
+        await createSharedBoard(ownerPage, boardName);
+        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
+        
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
+        
+        // Editor 1 Session
+        const editor1Page = await browser.newPage();
+        await editor1Page.goto('/cardsboard');
+        await loginWithNsec(editor1Page, TEST_USERS.editor.nsec);
+        
+        // TODO: should not be necessary after bug fix
+        await editor1Page.reload();
+        await editor1Page.waitForLoadState('networkidle');
+        await editor1Page.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden
+        
+        await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 20000 });
+        await editor1Page.locator(`text="${boardName}"`).click();
+        
+        // Editor 2 Session
+        const editor2Page = await browser.newPage();
+        await editor2Page.goto('/cardsboard');
+        await loginWithNsec(editor2Page, TEST_USERS.editor2.nsec);
+        
+        // Owner fügt Editor 2 hinzu
+        await ownerPage.bringToFront();
+        await shareBoard(ownerPage, TEST_USERS.editor2.pubkey, 'editor');
+        
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
+        
+        // TODO: should not be necessary after bug fix
+        await editor2Page.reload();
+        await editor2Page.waitForLoadState('networkidle');
+        await editor2Page.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden
+        
+        await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 20000 });
+        await editor2Page.locator(`text="${boardName}"`).click();
+        
+        // Beide Editoren erstellen gleichzeitig Karten
+        const [result1, result2] = await Promise.all([
+            attemptCardCreate(editor1Page),
+            attemptCardCreate(editor2Page)
+        ]);
+        
+        expect(result1.success || result2.success).toBe(true);
+        
+        await ownerPage.close();
+        await editor1Page.close();
+        await editor2Page.close();
+    });
+});
+
+test.describe.skip('Board Sharing - Error Handling', () => {
+    
+    test.beforeEach(async ({ page }) => {
+        await page.goto('/cardsboard');
+    });
+    
+    test('Invalid pubkey wird korrekt behandelt', async ({ page }) => {
+        await loginWithNsec(page, TEST_USERS.owner.nsec);
+        
+        const boardName = `Error Test Board ${Date.now()}`;
+        await createSharedBoard(page, boardName);
+        
+        await shareBoard(page, 'invalidpubkey000', 'editor');
+
+        expect(await page.locator('text="Ungültiger Public Key"').isVisible()).toBe(true);
+    });
+
+    test('Duplicate sharing wird verhindert', async ({ page }) => {
+        await loginWithNsec(page, TEST_USERS.owner.nsec);
+        
+        const boardName = `Duplicate Test Board ${Date.now()}`;
+        await createSharedBoard(page, boardName);
+        
+        // Teile Board mit Editor
+        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
+        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
+
+        expect(await page.locator('text="Benutzer ist bereits eingeladen"').isVisible()).toBe(true);
+    });
+});
 
 async function createSharedBoard(page: Page, boardName: string) {
     // Suche "Neues Board" Button
     const newBoardButton = page.getByTestId('create-board-button');
-    await newBoardButton.isVisible();
     await newBoardButton.click();
 
     // Versuche Board-Titel zu bearbeiten (falls UI das unterstützt)
-    await page.getByTitle('Board-Einstellungen').click();
+    await page.getByTitle('Board-Einstellungen').click({timeout: 2000});
 
     const titleInput = page.locator('#board-title');
+    
     await titleInput.fill(boardName);
-    await page.getByText('Speichern').click();
+    await page.getByText('Speichern').click({timeout: 2000});
 
     // Verifiziere dass Board erstellt wurde
     await expect(page.getByText(boardName).first()).toBeVisible();
 }
 
 async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
-    page.getByTestId('share-button').click();
+    await page.getByTestId('share-button').click();
     
-    await expect(page.getByTestId('share-dialog')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('share-dialog')).toBeVisible();
 
-    const pubkeyInput = page.getByPlaceholder('Nostr Public Key (npub oder hex)')
-    
-    await pubkeyInput.fill(targetUserPubkey);
-    
-    // Wähle Rolle (falls vorhanden)
-    const roleSelect = page.locator('select')
-    
-    await roleSelect.selectOption(role);
-    
-    page.getByText("Einladen").click();
-    
-    // Warte kurz für Verarbeitung
-    await page.waitForTimeout(500);
+    await page.getByRole('tab', { name: 'Editoren' }).click();
 
-    page.getByText('Schließen').click();
+    await page.getByPlaceholder('Nostr Public Key (npub oder hex)').fill(targetUserPubkey);
+    
+    await page.getByTestId("add-editor-button").click();
+    
+    await page.getByText('Schließen').click();
+}
+
+async function getViewerLink(page: Page): Promise<string> {
+    await page.getByTestId('share-button').click();
+    await expect(page.getByTestId('share-dialog')).toBeVisible();
+    return await page.getByTestId('share-link-input').inputValue();
 }
 
 async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
     try {
-        // Find the add card button with title attribute
         const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
         
-        // Wait for button to be visible and enabled
         await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
         
-        // Get button position to ensure it's in viewport
-        await addCardButton.scrollIntoViewIfNeeded();
-        
-        // Wait a bit for any pending renders
-        await page.waitForTimeout(500);
-        
-        // Click the button
         await addCardButton.click();
         
-        // Wait a bit for card to be added to DOM
-        await page.waitForTimeout(500);
-        
-        // Verifiziere dass eine neue Karte erstellt wurde
         const newCard = page.locator('text="Neue Karte"').first();
-        if (await newCard.isVisible({ timeout: 3000 })) {
+        if (await newCard.isVisible({ timeout: 5000 })) {
             return { success: true };
         } else {
             return { success: false, error: 'Card was not created successfully - "Neue Karte" text not visible' };
@@ -157,206 +359,3 @@ async function attemptBoardDelete(page: Page): Promise<{ success: boolean; error
         return { success: false, error: String(error) };
     }
 }
-
-// MAJOR TODO: Unfortunately, most tests are flaky, even though they work manually. Improve productive or test code.
-
-// Test Suites
-test.describe.skip('Board Sharing - Permission System', () => {
-
-    test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ browser }) => {
-        // Setup: Owner erstellt Board und teilt mit Editor
-        const ownerPage = await browser.newPage();
-        await ownerPage.goto('/cardsboard');
-        
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
-        
-        const boardName = `Shared Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
-        
-        // Editor-Session
-        const editorPage = await browser.newPage();
-        await editorPage.goto('/cardsboard');
-        
-        // App muss an Nostr Relays verbunden sein, ansonsten werden die Boards nicht geladen
-        await expect(editorPage.getByText('Verbindung wiederhergestellt')).toBeVisible({ timeout: 10000 });
-
-        await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
-        
-        await expect(editorPage.getByText(boardName)).toBeVisible({timeout: 10000 });
-
-        await editorPage.getByText(boardName).click();
-
-        // Warte dass das Board vollständig geladen ist (crucial!)
-        await editorPage.waitForLoadState('networkidle');
-        await editorPage.waitForTimeout(1000);
-
-        // Verifiziere dass Editor Karten erstellen kann
-        const createResult = await attemptCardCreate(editorPage);
-        if (!createResult.success) {
-            throw new Error(createResult.error);
-        }
-
-        // Verifiziere dass Editor NICHT Board löschen kann
-        const deleteResult = await attemptBoardDelete(editorPage);
-        expect(deleteResult.success).toBe(false);
-        console.log('✅ Editor cannot delete board (as expected)');
-        
-        await ownerPage.close();
-        await editorPage.close();
-    });
-
-    test('Viewer kann NUR lesen, nicht bearbeiten', async ({ browser }) => {
-        // Setup: Owner erstellt Board und teilt mit Viewer
-        const ownerPage = await browser.newPage();
-        await ownerPage.goto('/cardsboard');
-
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
-        
-        const boardName = `View-Only Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.viewer.pubkey, 'viewer');
-        
-        // Viewer-Session
-        const viewerPage = await browser.newPage();
-        await viewerPage.goto('/cardsboard');
-
-        await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
-
-        // Viewer sollte geteiltes Board sehen
-        await expect(viewerPage.locator(`text="${boardName}"`)).toBeVisible({ timeout: 10000 });
-        await viewerPage.locator(`text="${boardName}"`).click({timeout: 2000});
-
-        // TODO: this is supposed to be tested, but finding a reliable solution is taking more time than moving on
-        // Problem: The attemptCardCreate finds the first add button in the html document, and not the one of the currently active board
-        // const createResult = await attemptCardCreate(viewerPage);
-        // expect(createResult.success).toBe(false);
-        
-        // Viewer sollte NICHT Board löschen können
-        const deleteResult = await attemptBoardDelete(viewerPage);
-        expect(deleteResult.success).toBe(false);
-        console.log('✅ Viewer cannot delete board (as expected)');
-        
-        await ownerPage.close();
-        await viewerPage.close();
-    });
-
-    test('Unauthorized User kann geteiltes Board NICHT sehen', async ({ browser }) => {
-        // Setup: Owner erstellt privates Board
-        const page = await browser.newPage();
-        await page.goto('/cardsboard');
-
-        await loginWithNsec(page, TEST_USERS.owner.nsec);
-        
-        const boardName = `Private Board ${Date.now()}`;
-        await createSharedBoard(page, boardName);
-        
-        await logout(page);
-
-        await loginWithNsec(page, TEST_USERS.unauthorized.nsec);
-
-        // für eine Sekunde kann sein, dass privates Board kurz wegen Caches sichtbar ist
-        await page.waitForTimeout(1000);
-        
-        expect(page.locator(`text="${boardName}"`)).not.toBeVisible();
-
-        await page.close();
-    });
-
-    // TODO: flaky test, it works at manual testing, should be fixed later
-    test.skip('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
-        await page.goto('/cardsboard');
-
-        await clearAuthState(page);
-        await clearBoardState(page);
-        
-        
-        await expect(page.getByTestId('demo-board-button')).toBeVisible();
-                
-        await expect(page.getByText('Demo-Board - Testen Sie die App!')).toBeVisible();
-        
-        // Anonymer Benutzer sollte Karten erstellen können
-        const createResult = await attemptCardCreate(page);
-        expect(createResult.success).toBe(true);
-        
-        // Anonymer Benutzer sollte Karten bearbeiten können
-        const editResult = await attemptCardEdit(page);
-        expect(editResult.success).toBe(true);
-    });
-});
-
-test.describe.skip('Board Sharing - Multi-User Collaboration', () => {
-    
-    test('Concurrent Editing: Zwei Editoren bearbeiten gleichzeitig', async ({ browser }) => {
-        // Setup: Owner erstellt Board und teilt mit zwei Editoren
-        const ownerPage = await browser.newPage();
-        await ownerPage.goto('/cardsboard');
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
-        
-        const boardName = `Collaborative Board ${Date.now()}`;
-        await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
-        
-        // Editor 1 Session
-        const editor1Page = await browser.newPage();
-        await editor1Page.goto('/cardsboard');
-        await loginWithNsec(editor1Page, TEST_USERS.editor.nsec);
-        await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible();
-        await editor1Page.locator(`text="${boardName}"`).click();
-        
-        // Editor 2 Session (als unauthorized user, aber wird zu editor gemacht)
-        const editor2Page = await browser.newPage();
-        await editor2Page.goto('/cardsboard');
-        await loginWithNsec(editor2Page, TEST_USERS.unauthorized.nsec);
-        
-        // Owner fügt Editor 2 hinzu
-        await ownerPage.bringToFront();
-        await shareBoard(ownerPage, TEST_USERS.unauthorized.pubkey, 'editor');
-        
-        await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible();
-        await editor2Page.locator(`text="${boardName}"`).click();
-        
-        // Beide Editoren erstellen gleichzeitig Karten
-        const [result1, result2] = await Promise.all([
-            attemptCardCreate(editor1Page),
-            attemptCardCreate(editor2Page)
-        ]);
-        
-        expect(result1.success || result2.success).toBe(true);
-        
-        await ownerPage.close();
-        await editor1Page.close();
-        await editor2Page.close();
-    });
-});
-
-test.describe.skip('Board Sharing - Error Handling', () => {
-    
-    test.beforeEach(async ({ page }) => {
-        await page.goto('/cardsboard');
-    });
-    
-    test('Invalid pubkey wird korrekt behandelt', async ({ page }) => {
-        await loginWithNsec(page, TEST_USERS.owner.nsec);
-        
-        const boardName = `Error Test Board ${Date.now()}`;
-        await createSharedBoard(page, boardName);
-        
-        await shareBoard(page, 'invalidpubkey000', 'editor');
-
-        expect(await page.locator('text="Ungültiger Public Key"').isVisible()).toBe(true);
-    });
-
-    test('Duplicate sharing wird verhindert', async ({ page }) => {
-        await loginWithNsec(page, TEST_USERS.owner.nsec);
-        
-        const boardName = `Duplicate Test Board ${Date.now()}`;
-        await createSharedBoard(page, boardName);
-        
-        // Teile Board mit Editor
-        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
-        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
-
-        expect(await page.locator('text="Benutzer ist bereits eingeladen"').isVisible()).toBe(true);
-    });
-});

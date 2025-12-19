@@ -223,6 +223,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 |-------|----------|--------|
 | **NDK Setup** | [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md) | 20 min |
 | **Offline-First** | [`ARCHITECTURE/STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | 30 min |
+| **Lokale Secrets (Windows/PowerShell)** | [`GUIDES/LOCAL-ENV-SETUP.md`](./GUIDES/LOCAL-ENV-SETUP.md) | 10 min |
 
 ### 📚 Learning Resources
 
@@ -236,6 +237,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
 | **🆕 Store-Patterns Guide (20 min)** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
+| **Lokale Secrets (Windows/PowerShell)** | [`GUIDES/LOCAL-ENV-SETUP.md`](./GUIDES/LOCAL-ENV-SETUP.md) |
 | **Store-Übersicht (30 min)** | [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md) |
 | **ChatStore API (25 min)** | [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) |
 | **Authentifizierung Store (35 min)** | [`ARCHITECTURE/STORES/AUTHSTORE.md`](./ARCHITECTURE/STORES/AUTHSTORE.md) |
@@ -282,6 +284,7 @@ docs/
 │
 ├── GUIDES/
 │   ├── Kanban-NIP.md
+│   ├── LOCAL-ENV-SETUP.md
 │   ├── PROP-VS-STATE-CHEATSHEET.md
 │   ├── QUICK-START.md
 │   ├── STORE-PATTERNS.md

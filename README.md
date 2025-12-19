@@ -182,6 +182,7 @@ Falls Port `4173` belegt ist, bricht der Preview-Start ab (kein Auto-Port-Fallba
 ### Lokales Relay
 
 1. `docker compose up # füge -d dazu, um das Terminal freizuhaben`
+   - Falls du bereits läuft: nach Config-Änderungen einmal neu starten: `docker compose restart`
 2. Ändere `./static/config.json` so
 ```json
   "nostr": {
@@ -190,6 +191,8 @@ Falls Port `4173` belegt ist, bricht der Preview-Start ab (kein Auto-Port-Fallba
     ],
     "relaysPrivate": []
 ```
+3. **Wichtig (Column-Reorder als Editor):** Der lokale Relay nutzt eine `event_kind_allowlist` in `docker-relay-config.toml`.
+   - Für den Column-Order Patch muss Kind `8571` erlaubt sein, sonst siehst du beim Publish: `Not enough relays received the event (0 published, 1 required)`.
 3. `pnpm dev`
 4. Um zu testen, ob es funktioniert, gib ins Terminal rein: `$ websocat ws://localhost:7000`
 

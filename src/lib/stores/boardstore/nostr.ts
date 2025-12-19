@@ -3,7 +3,14 @@
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
 import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
-import { boardToNostrEvent, cardToNostrEvent, createCommentEvent, createDeletionEvent, EVENT_KINDS } from '../../utils/nostrEvents.js';
+import {
+    boardToNostrEvent,
+    cardToNostrEvent,
+    createCommentEvent,
+    createDeletionEvent,
+    createColumnOrderPatchEvent,
+    EVENT_KINDS
+} from '../../utils/nostrEvents.js';
 import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
@@ -33,6 +40,7 @@ import { isBoardTombstoned } from './deletedBoards.js';
 export class NostrIntegration {
     private ndk?: NDK;
     private boardSubscription: any | null = null;
+    private activeBoardSubscriptionKey: string | null = null;
     private commentSubscriptions = new Map<string, any>(); // cardId -> subscription
 
     // ⚡ NEU (v2.0): Event-Deduplication für Event-Driven Architecture
@@ -341,21 +349,34 @@ export class NostrIntegration {
 
         const pubkey = getCurrentPubkeyOrNull();
 
-        if (!pubkey || !board.author) {
-            console.log('[BoardStore] ℹ️ No pubkey or board author, skip loadCardsForBoard');
+        if (!pubkey) {
+            console.log('[BoardStore] ℹ️ No pubkey, skip loadCardsForBoard');
+            return;
+        }
+
+        // Cards referenzieren Boards via `a`-Tag: `30301:<author>:<d>`.
+        // In der Praxis kann (v.a. nach localStorage Reset / Shared-Board) die lokale `board.author`
+        // temporär fehlen oder inkonsistent sein. Daher laden wir defensiv über beide Kandidaten:
+        // - canonical owner (board.author)
+        // - aktueller Nutzer (pubkey)
+        const boardRefAuthors = Array.from(
+            new Set([board.author, pubkey].filter((v): v is string => typeof v === 'string' && v.length > 0))
+        );
+
+        if (boardRefAuthors.length === 0) {
+            console.log('[BoardStore] ℹ️ No boardRef authors available, skip loadCardsForBoard');
             return;
         }
 
         try {
-            // Baue die a-tag Referenz: "30301:pubkey:board-id"
-            const boardRef = `30301:${board.author}:${board.id}`;
+            const boardRefs = boardRefAuthors.map((author) => `30301:${author}:${board.id}`);
             
             // console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
 
             // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
             const cardFilter = {
                 kinds: [30302],
-                '#a': [boardRef]
+				'#a': boardRefs
             };
 
             const cardEvents = await this.ndk.fetchEvents(cardFilter as any);
@@ -378,9 +399,8 @@ export class NostrIntegration {
                 try {
                     const cardProps = nostrEventToCard(cardEvent);
                     
-                    // Validiere dass Card zum richtigen Board gehört
-                    if (cardProps.boardRef !== boardRef) {
-                        console.warn('[BoardStore] ⚠️ Card boardRef mismatch:', cardProps.boardRef, 'expected:', boardRef);
+                    // Validiere dass Card zum Board gehört (akzeptiere beide möglichen boardRefs)
+                    if (!cardProps.boardRef || !boardRefs.includes(cardProps.boardRef)) {
                         return null;
                     }
                     
@@ -434,6 +454,15 @@ export class NostrIntegration {
             return;
         }
 
+        // Idempotency-Guard: subscribeToNostrUpdates() wird an mehreren Stellen aufgerufen
+        // (z.B. initializeNostr + loadBoard + UI). Wenn Board+User gleich bleiben, dürfen
+        // wir NICHT jedes Mal dispose+resubscribe ausführen, sonst gibt es mehrfaches
+        // ColumnOrderPatch subscribe + unnötige Catch-up Replays.
+        const subscriptionKey = `${pubkey}|${currentBoard.id}|${currentBoard.author || ''}`;
+        if (this.boardSubscription && this.activeBoardSubscriptionKey === subscriptionKey) {
+            return;
+        }
+
         // Stoppe ALLE existierenden Subscriptions (inkl. shared/follower/comment)
         this.dispose();
 
@@ -447,6 +476,8 @@ export class NostrIntegration {
             cardDeletionTimestamps: this.cardDeletionTimestamps,
             boardDeletionTimestamps: this.boardDeletionTimestamps,
         });
+
+        this.activeBoardSubscriptionKey = subscriptionKey;
     }
 
     /**
@@ -577,6 +608,76 @@ export class NostrIntegration {
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
+    }
+
+    /**
+     * Publiziert eine Column-Order Änderung als Patch-Event.
+     *
+     * Motivation:
+     * - Editors dürfen kein 30301 publizieren (würde Board-Adresse forken).
+     * - Trotzdem soll Column-Reihenfolge kollaborativ synchronisiert werden.
+     */
+    public async publishColumnPatch(
+        board: Board,
+        args: {
+            columnOrder?: string[];
+            columns?: Array<{ id: string; name?: string; color?: string }>;
+        }
+    ): Promise<void> {
+        if (!this.ndk) return;
+
+        const hasOrder = Array.isArray(args.columnOrder) && args.columnOrder.length > 0;
+        const hasColumns = Array.isArray(args.columns) && args.columns.length > 0;
+        if (!hasOrder && !hasColumns) return;
+
+        try {
+            if (!board.author) {
+                console.warn('[NostrIntegration] ⚠️ Cannot publish column patch: board.author missing');
+                return;
+            }
+
+            const event = createColumnOrderPatchEvent(
+                {
+                    boardId: board.id,
+                    boardAuthor: board.author,
+                    columnOrder: args.columnOrder,
+                    columns: args.columns,
+                    updatedAtMs: Date.now(),
+                },
+                this.ndk
+            );
+
+            console.log('[NostrIntegration] 🧩 publishColumnPatch', {
+                kind: event.kind,
+                boardId: board.id,
+                boardAuthor: board.author,
+                orderLen: Array.isArray(args.columnOrder) ? args.columnOrder.length : 0,
+                colsLen: Array.isArray(args.columns) ? args.columns.length : 0,
+            });
+
+            const publishState = board.publishState || 'draft';
+            const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+                | 'published'
+                | 'draft'
+                | 'private';
+
+            const targetRelays = getTargetRelays({
+                publishState: normalizedState,
+                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                relaysPublic: settingsStore.settings.relaysPublic,
+                relaysPrivate: settingsStore.settings.relaysPrivate,
+            });
+
+            const syncManager = getSyncManager();
+
+            await syncManager.publishOrQueue(event, 'board', 'normal', normalizedState, targetRelays);
+        } catch (error) {
+            console.error('❌ Error publishing column patch:', error);
+        }
+    }
+
+    public async publishColumnOrderPatch(board: Board, columnOrder: string[]): Promise<void> {
+        return this.publishColumnPatch(board, { columnOrder });
     }
 
     /**
@@ -1080,6 +1181,9 @@ export class NostrIntegration {
                 // ignore
             }
         }
+
+        this.boardSubscription = null;
+        this.activeBoardSubscriptionKey = null;
 
         this.stopAllCommentSubscriptions();
     }

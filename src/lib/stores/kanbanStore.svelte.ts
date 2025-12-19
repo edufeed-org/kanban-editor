@@ -162,11 +162,31 @@ export class BoardStore {
                 return;
             }
             
+            // 🔴 IMPORTANT: maintainers dürfen den Owner (author) NICHT enthalten.
+            // Sonst erscheint der Owner im Share-UI doppelt (Owner + Editor) und ist "nicht entfernbar".
             if (this.board.author === 'anonymous' || !this.board.author) {
                 this.board.author = pubkey;
-                this.board.maintainers = [pubkey];
+            }
+
+            const owner = this.board.author;
+            const rawMaintainers = Array.isArray(this.board.maintainers) ? this.board.maintainers : [];
+            const normalizedMaintainers = Array.from(
+                new Set(rawMaintainers.filter(p => typeof p === 'string' && p && p !== owner))
+            );
+
+            // Nur schreiben, wenn sich etwas geändert hat
+            const changed =
+                (owner === pubkey && (this.board.author === 'anonymous' || !this.board.author)) ||
+                normalizedMaintainers.length !== rawMaintainers.length ||
+                normalizedMaintainers.some((p, i) => p !== rawMaintainers[i]);
+
+            if (changed) {
+                this.board.maintainers = normalizedMaintainers;
                 this.saveToStorage();
-                console.log('✅ Board-Author aktualisiert:', pubkey);
+                console.log('✅ Board-Author/Maintainers normalisiert:', {
+                    author: this.board.author,
+                    maintainers: this.board.maintainers.length,
+                });
             }
         } catch (error) {
             console.warn('⚠️ Fehler beim Fixen des Board-Authors:', error);
@@ -505,7 +525,16 @@ export class BoardStore {
         }
 
         this.board = board;
-        this._columnOrder = board.columns.map(c => c.id);
+        // No-op guard: Beim Reload kann loadBoard() (z.B. via Nostr bootstrap) erneut für das
+        // bereits initial gerenderte Board aufgerufen werden. Wenn die Reihenfolge identisch ist,
+        // vermeiden wir ein redundantes Reassign, das sichtbar als "Spalten springen" wirkt.
+        const nextOrder = board.columns.map(c => c.id);
+        if (
+            nextOrder.length !== this._columnOrder.length ||
+            !this._columnOrder.every((v, i) => v === nextOrder[i])
+        ) {
+            this._columnOrder = nextOrder;
+        }
         
         // ✅ KRITISCH: Wenn User Viewer ist (aus Follow-Set), zur followers Liste hinzufügen
         // Dies ermöglicht korrekte Viewer-Rolle in getCurrentUserRole()
@@ -766,7 +795,15 @@ export class BoardStore {
                 // NICHT das "erste" Board, um Race Conditions zu vermeiden!
                 if (switched && newBoard) {
                     this.board = newBoard;
-                    this._columnOrder = newBoard.columns.map(c => c.id);
+
+                    // No-op guard: identische Order soll keinen sichtbaren Re-sort triggern.
+                    const nextOrder = newBoard.columns.map(c => c.id);
+                    if (
+                        nextOrder.length !== this._columnOrder.length ||
+                        !this._columnOrder.every((v, i) => v === nextOrder[i])
+                    ) {
+                        this._columnOrder = nextOrder;
+                    }
 
                     // ⚠️ Nostr-driven Load: UI refresh ja, aber keine Side-Effects (kein lastAccessed/save/publish)
                     this.updateTrigger++;
@@ -955,7 +992,18 @@ export class BoardStore {
             // Sicherstellen, dass das aktuelle Board erneut geladen wird
             const ok = this.loadBoard(boardId, { skipLastAccessed: true });
             if (!ok) {
-                throw new Error('Board konnte nicht aus Nostr geladen werden');
+                // Shared Boards können nach Cache-Clear erst asynchron via Nostr rekonstruiert werden.
+                // In diesem Fall blockieren wir hier deterministisch, statt sofort zu throwen.
+                const isShared = this.cachedSharedBoards.some(b => b.id === boardId);
+                if (isShared) {
+                    const reconstructed = await this.reconstructSharedBoard(boardId);
+                    const okAfter = reconstructed && this.loadBoard(boardId, { skipLastAccessed: true });
+                    if (!okAfter) {
+                        throw new Error('Board konnte nicht aus Nostr geladen werden');
+                    }
+                } else {
+                    throw new Error('Board konnte nicht aus Nostr geladen werden');
+                }
             }
         } catch (error) {
             // Fallback: lokalen Cache wiederherstellen, um Datenverlust zu vermeiden
@@ -1280,14 +1328,17 @@ export class BoardStore {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
-        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+        if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
             toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+                description: 'Nur der Board-Besitzer kann Name, Beschreibung, Tags, Lizenz und Publish-Status ändern.'
             });
             return; // Silently fail - Permission denied message already shown
         }
         
         BoardOperations.updateBoardMetadata(this.board, updates);
+        if (updates.publishState !== undefined) {
+            BoardOperations.setBoardPublishState(this.board, updates.publishState);
+        }
         this.triggerUpdate();
         this.publishBoardAsync();
     }
@@ -1296,9 +1347,9 @@ export class BoardStore {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
-        if (!PermissionChecks.canEditBoard(userRole, boardId)) {
+        if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
             toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
+                description: 'Nur der Board-Besitzer kann den Publish-Status ändern.'
             });
             return; // Silently fail - Permission denied message already shown
         }
@@ -1322,15 +1373,23 @@ export class BoardStore {
             // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
             this.board.updateLastAccessed();
             
-            this.triggerUpdate();
+            // Wir publishen den Move als Card-Event (30302). Board-Publish (30301) ist dafür nicht nötig.
+            // Zusätzlich: triggerUpdate mit publish=false, damit Editor-Flows nicht unnötig publishBoardAsync() anstoßen.
+            this.triggerUpdate({ publish: false });
             // ⚠️ CRITICAL: Position (column/rank) ist Teil des Card-Events (30302).
             // Wenn wir hier nur das Board publizieren, kann Reload/Remote-Sync die Move-Position verlieren.
             this.publishCardAsync(cardId);
-            this.publishBoardAsync();
         }
     }
 
     private async publishBoardAsync(): Promise<void> {
+        // 🔒 Board-Events (Kind 30301) sind parametrized replaceable und werden unter der Signer-Pubkey adressiert.
+        // Wenn ein Editor publisht, entsteht ein Fork-Board (30301:<editorPubkey>:<d>) und kann Maintainers/Meta „wegschreiben“.
+        // Daher: Board-Publish nur als OWNER (oder Demo-Board).
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canPublishBoard(userRole, boardId)) return;
+
         await this.nostrIntegration.publishBoard(this.board);
     }
 
@@ -1467,8 +1526,23 @@ export class BoardStore {
         }
         
         if (BoardOperations.updateColumn(this.board, columnId, updates)) {
-            this.triggerUpdate();
-            this.publishBoardAsync();
+            // Wir publizieren hier manuell (Owner: 30301, Editor: Column-Patch), daher publish=false.
+            this.triggerUpdate({ publish: false });
+
+            if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                void this.publishBoardAsync();
+            } else {
+                const namePatch = typeof updates.name === 'string' ? updates.name.trim() : '';
+                const colorPatch = typeof updates.color === 'string' ? updates.color : '';
+
+                const patchEntry: { id: string; name?: string; color?: string } = { id: columnId };
+                if (namePatch.length > 0) patchEntry.name = namePatch;
+                if (colorPatch.length > 0) patchEntry.color = colorPatch;
+
+                if (patchEntry.name || patchEntry.color) {
+                    void this.publishColumnPatchAsync({ columns: [patchEntry] });
+                }
+            }
         }
     }
 
@@ -1504,7 +1578,6 @@ export class BoardStore {
         if (BoardOperations.moveCard(this.board, cardId, fromColumnId, toColumnId)) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
-            this.publishBoardAsync();
         }
     }
 
@@ -1518,11 +1591,27 @@ export class BoardStore {
             });
             return; // Silently fail - Permission denied message already shown
         }
+
+        // No-op guard: Verhindert sichtbares "Re-sort"/Re-render, wenn die Reihenfolge identisch ist.
+        // (Wichtig bei Board-Load + Subscriptions: der Patch kann die gleiche Order erneut liefern.)
+        if (
+            Array.isArray(columnIds) &&
+            columnIds.length === this._columnOrder.length &&
+            this._columnOrder.every((v, i) => v === columnIds[i])
+        ) {
+            return;
+        }
         
         this._columnOrder = columnIds;
         BoardOperations.reorderColumns(this.board, columnIds);
-        this.triggerUpdate();
-        this.publishBoardAsync();
+        // Wir publizieren hier manuell (Owner: 30301, Editor: ColumnOrder-Patch), daher publish=false.
+        this.triggerUpdate({ publish: false });
+
+        if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+            void this.publishBoardAsync();
+        } else {
+            void this.publishColumnOrderPatchAsync(columnIds);
+        }
     }
 
     private syncInProgress = $state(false);
@@ -1530,6 +1619,121 @@ export class BoardStore {
     private syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
     private lastDnDSyncAbortToastAt = 0;
     public dndSyncAbortToken = $state(0);
+    private lastColumnOrderPatchAtMs = $state(0);
+
+    private async publishColumnOrderPatchAsync(columnIds: string[]): Promise<void> {
+        await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
+    }
+
+    private async publishColumnPatchAsync(args: {
+        columnOrder?: string[];
+        columns?: Array<{ id: string; name?: string; color?: string }>;
+    }): Promise<void> {
+        await this.nostrIntegration.publishColumnPatch(this.board, args);
+    }
+
+    public applyColumnOrderPatchFromNostr(args: {
+        boardId: string;
+        columnOrder: string[];
+        columnUpdates?: Array<{
+            id: string;
+            namePresent: boolean;
+            colorPresent: boolean;
+            name?: string;
+            color?: string;
+        }>;
+        eventTimeMs: number;
+        publisherPubkey?: string;
+    }): boolean {
+        const { boardId, columnOrder, eventTimeMs } = args;
+        const columnUpdates = Array.isArray(args.columnUpdates) ? args.columnUpdates : [];
+        if (boardId !== this.board.id) return false;
+        const hasOrderPatch = Array.isArray(columnOrder) && columnOrder.length > 0;
+        const hasMetaPatch = columnUpdates.length > 0;
+        if (!hasOrderPatch && !hasMetaPatch) return false;
+        if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return false;
+        if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return false;
+
+        let didChange = false;
+
+        // 1) Column metadata patches (name/color)
+        if (hasMetaPatch) {
+            for (const patch of columnUpdates) {
+                if (!patch?.id) continue;
+                const col = this.board.findColumn(patch.id);
+                if (!col) continue;
+
+                const next: Partial<ColumnProps> = {};
+
+                if (patch.namePresent && typeof patch.name === 'string') {
+                    const incomingName = patch.name.trim();
+                    if (incomingName.length > 0 && incomingName !== col.name) {
+                        next.name = incomingName;
+                    }
+                }
+
+                if (patch.colorPresent && typeof patch.color === 'string') {
+                    const incomingColor = patch.color;
+                    const currentColor = col.color || '';
+                    if (incomingColor !== currentColor) {
+                        next.color = incomingColor;
+                    }
+                }
+
+                if (Object.keys(next).length > 0) {
+                    col.update(next);
+                    didChange = true;
+                }
+            }
+        }
+
+        // 2) Column order patch
+        if (hasOrderPatch) {
+            const existingColumnIds = this.board.columns.map((c) => c.id);
+            const existingSet = new Set(existingColumnIds);
+
+            const dedupedIncoming: string[] = [];
+            const seen = new Set<string>();
+            for (const id of columnOrder) {
+                if (typeof id !== 'string' || id.length === 0) continue;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                if (existingSet.has(id)) dedupedIncoming.push(id);
+            }
+
+            if (dedupedIncoming.length > 0) {
+                // Defensive merge: keep all existing columns, never drop unknowns.
+                const mergedOrder = [
+                    ...dedupedIncoming,
+                    ...existingColumnIds.filter((id) => !seen.has(id)),
+                ];
+
+                // No-op guard: wenn Order identisch ist, nur LWW-Timestamp aktualisieren.
+                // Das verhindert den sichtbaren "neu sortiert"-Effekt beim Board-Load,
+                // wenn ein Patch/Event die gleiche Reihenfolge nochmals liefert.
+                const current = this._columnOrder;
+                const sameOrder =
+                    current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
+                if (!sameOrder) {
+                    this._columnOrder = mergedOrder;
+                    BoardOperations.reorderColumns(this.board, mergedOrder);
+                    didChange = true;
+                }
+            }
+        }
+
+        // Always advance LWW timestamp once we've accepted this event (even if it was a no-op).
+        this.lastColumnOrderPatchAtMs = eventTimeMs;
+
+        if (!didChange) {
+            return false;
+        }
+
+        // Lokale Persistierung/UI-Update, ohne Board-Event zu publizieren.
+        this.triggerUpdate({ publish: false });
+
+        return true;
+    }
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
         // Permission Check: Kann Benutzer Karten verschieben?
@@ -1574,6 +1778,10 @@ export class BoardStore {
         console.log('Processing columns:', uiColumns.length);
         
         try {
+            const userRole = this.getCurrentUserRole();
+            const boardId = this.board.id;
+            const prevColumnOrder = [...this._columnOrder];
+
             const { newColumnOrder, movedCardIds } = BoardOperations.syncBoardState(
                 this.board,
                 this._columnOrder,
@@ -1581,14 +1789,26 @@ export class BoardStore {
                 { strategy: 'hard-fail' }
             );
             this._columnOrder = newColumnOrder;
+            const columnOrderChanged =
+                prevColumnOrder.length !== newColumnOrder.length ||
+                prevColumnOrder.some((v, i) => v !== newColumnOrder[i]);
             
             // ⚡ CRITICAL: triggerUpdate mit publish=false
             // Grund: Wir publishen selbst weiter unten sequentiell!
             this.triggerUpdate({ publish: false });
-            
+			
             // Publishing sequentiell (nicht parallel) um Race Conditions zu vermeiden
-            console.log('📤 Publishing board...');
-            await this.publishBoardAsync();
+            // - Owner: publisht 30301 nur wenn Column-Order tatsächlich geändert wurde
+            // - Editor: publisht ColumnOrder-Patch (kein 30301 Fork)
+            if (columnOrderChanged) {
+                if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                    console.log('📤 Publishing board (column order changed)...');
+                    await this.publishBoardAsync();
+                } else {
+                    console.log('📤 Publishing column order patch (editor)...');
+                    await this.publishColumnOrderPatchAsync(newColumnOrder);
+                }
+            }
             
             // Publiziere verschobene Cards
             if (movedCardIds.length > 0) {
@@ -2460,7 +2680,8 @@ export class BoardStore {
             const { authorName } = this.getAuthorFields();
             demoBoard.author = currentUserPubkey;
             demoBoard.authorName = authorName || undefined;
-            demoBoard.maintainers = [currentUserPubkey];
+            // Owner ist KEIN Maintainer (Editor) – maintainers sind nur Co-Editoren.
+            demoBoard.maintainers = [];
             
             // Neuen Board-Namen und Beschreibung
             demoBoard.name = '🏠 Mein erstes Board';

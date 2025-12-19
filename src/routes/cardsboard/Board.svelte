@@ -101,12 +101,52 @@
 	function handleDndConsiderColumns(e: any) {
      isDragging = true;
      isLocalDnD = true;  // ← NEU: Markiere lokale DnD-Operation
-     columns = e.detail.items;
+
+		// ⚡ IMPORTANT: svelte-dnd-action kann bei verschachtelten Strukturen (Column.items)
+		// transiente/partielle Payloads liefern. Für UI-Rendering akzeptieren wir das,
+		// aber für Store-Sync (onFinalUpdate) rekonstruieren wir später eine vollständige Payload.
+		// ⚠️ Zusätzlich: niemals Duplikate in die keyed {#each}-Liste lassen (sonst each_key_duplicate).
+		const incoming = (e.detail?.items ?? []) as any[];
+		const seenIds = new Set<string>();
+		const deduped: ColumnType[] = [];
+		for (const col of incoming) {
+			const rawId = col?.id;
+			const id = rawId ? String(rawId) : '';
+			if (!id) continue;
+			if (id.includes('svelte-dnd-action-shadow') || id.includes('shadow')) continue;
+			if (seenIds.has(id)) continue;
+			seenIds.add(id);
+			deduped.push(col);
+		}
+		columns = deduped;
   	}
 
    	function handleDndFinalizeColumns(e: any) {
      isDragging = false;
      const finalItems = e.detail.items;
+
+		// Helper: Stelle sicher, dass das Payload für den Store vollständige Columns inkl. items enthält.
+		// Beim Spalten-Reorder brauchen wir semantisch nur die Reihenfolge; Cards dürfen dabei nie „verschwinden“.
+		const buildFullColumnsPayload = (items: any[]): ColumnType[] => {
+			const idsInOrder = (items ?? [])
+				.map((c: any) => String(c?.id ?? ''))
+				.filter((id: string) => id && !id.includes('svelte-dnd-action-shadow') && !id.includes('shadow'));
+
+			const seen = new Set<string>();
+			const uniqueIds = idsInOrder.filter((id: string) => {
+				if (seen.has(id)) return false;
+				seen.add(id);
+				return true;
+			});
+
+			const result: ColumnType[] = [];
+			for (const id of uniqueIds) {
+				// Prefer local state (während DnD aktualisiert), fallback to parent snapshot.
+				const source = columns.find((c) => String(c.id) === id) || columns_inner.find((c) => String(c.id) === id);
+				if (source) result.push(source);
+			}
+			return result;
+		};
      
      // SICHERHEIT: Filtere Duplikate bevor sie an den Parent gesendet werden
      const seenIds = new Set<string>();
@@ -119,14 +159,23 @@
        return true;
      });
      
+		// ⚡ CRITICAL: Für den Store-Sync IMMER vollständige Columns mit items liefern.
+		// Sonst triggert BoardOperations.syncBoardState(strategy='hard-fail') zu Recht den Abort.
+		const fullPayload = buildFullColumnsPayload(deduplicated);
+		if (fullPayload.length === 0) {
+			console.error('❌ Column DnD finalize: empty payload after normalization; aborting onFinalUpdate');
+			// UI in einen sicheren Zustand zurücksetzen
+			columns = [...columns_inner];
+			isLocalDnD = false;
+			return;
+		}
+
      if (deduplicated.length !== finalItems.length) {
        console.error(`❌ ${finalItems.length - deduplicated.length} Duplikat(e) gefunden und entfernt`);
-       columns = deduplicated;
-       onFinalUpdate(deduplicated);
-     } else {
-       columns = finalItems;
-       onFinalUpdate(finalItems);
      }
+
+		columns = fullPayload;
+		onFinalUpdate(fullPayload);
      
      // ⚡ CRITICAL: Warte auf Nostr-Roundtrip, dann erlaube wieder Parent-Sync
      // Grund: onFinalUpdate() → executeSyncBoardState() → publishToNostr() → Echo zurück

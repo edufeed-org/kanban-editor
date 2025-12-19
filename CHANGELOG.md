@@ -1,5 +1,157 @@
 # Changelog
 
+## Version 4.7.18 - Fix: Reload für Shared Boards funktioniert auch als Editor 🔄
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: „Board konnte nicht aus Nostr geladen werden“ beim Reload (nur Editoren)
+- Ursache: Bei Shared Boards kann `loadBoard()` nach Cache-Clear initial `false` zurückgeben, weil die Rekonstruktion (`reconstructSharedBoard()`) asynchron startet.
+- Fix: `forceReloadCurrentBoardFromNostr()` wartet bei Shared Boards auf die Rekonstruktion und versucht `loadBoard()` danach erneut, statt sofort zu werfen.
+
+### ✅ Tests
+- Regression-Test ergänzt: Shared-Board Reload wartet auf Rekonstruktion und retry’t erfolgreich.
+
+## Version 4.7.17 - UX: Board-Metadaten für Nicht-Owner read-only 🔐
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🔐 UX/Permissions: Board-Einstellungen nur für Owner editierbar
+- In `Board-Einstellungen` sind Metadaten-Felder (Titel, Beschreibung, Status, Tags, CC-Lizenz) für Nicht-Owner jetzt read-only/disabled.
+- Der `Speichern`-Button ist für Nicht-Owner deaktiviert (Store-level Guard bleibt weiterhin die Source of Truth).
+
+## Version 4.7.16 - Fix: ColumnOrderPatch Subscribe ist idempotent + Catch-up wendet nur latest Patch an 🧩
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: "ColumnOrderPatch subscribe" wird beim Laden mehrfach ausgeführt
+- Ursache: `subscribeToNostrUpdates()` wird aus mehreren Pfaden aufgerufen (u.a. `initializeNostr()`, `loadBoard()` und ggf. UI-Aliases). Ohne Idempotenz führt das zu wiederholtem `dispose()+subscribe()`.
+- Fix: Nostr-Integration überspringt Resubscribe, wenn `(pubkey, boardId, boardAuthor)` unverändert sind.
+
+### 👀 UX Fix: Relays replayen viele alte Patch-Events → UI "springt" durch alte Orders
+- Ursache: Der Patch-Subscribe nutzt `since: sevenDaysAgo`, wodurch beim initialen Subscribe mehrere historische Kind-`8571` Events geliefert werden. Wenn jedes Event sofort angewendet wird, sieht man mehrere Reorders.
+- Fix: Während des initialen Catch-up werden Patch-Events gepuffert und nach `eose` wird nur das neueste Event einmalig angewendet; danach werden neue Patch-Events live verarbeitet.
+
+### 🧹 Logging: Weniger Spam pro Board
+- ColumnOrderPatch: keine per-Event "received" Logs mehr während Catch-up; stattdessen eine kompakte Summary nach `eose`.
+- Live-Events: Log nur bei tatsächlichem Apply; No-op/LWW/Duplicate/Board-mismatch wird auf `console.debug` reduziert.
+- Column reorder: "Spalten neu angeordnet" auf `console.debug`.
+
+## Version 4.7.15 - UX Fix: kein sichtbares "Re-Sort" beim Board-Load (No-op Column-Order Updates) 👀
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🧼 Fix: Board lädt korrekt, sortiert aber danach "nochmal" (gleiche Reihenfolge)
+- Ursache: Nach Page-Reload kann der Board-State zuerst aus localStorage gerendert werden und danach durch Nostr-Bootstrap/Subscriptions erneut „bestätigt“ werden. Auch wenn die Reihenfolge identisch ist, triggert eine erneute Zuweisung (`_columnOrder = [...]`) einen sichtbaren Re-render („Spalten springen“).
+- Fix: No-op Guards an allen relevanten Stellen:
+  - `reorderColumns()` (User/DnD)
+  - `applyColumnOrderPatchFromNostr()` (Kind `8571` Patch)
+  - `loadBoard()` / Nostr-Load-Switch-Pfad: `_columnOrder` wird nur gesetzt, wenn sich die Order wirklich ändert.
+
+## Version 4.7.14 - Fix: Column-Order Patch (8571) wird angewandt (updated_at_ms Parsing + Fallback) ✅
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Owner empfängt Patch, aber UI/Storage änderte sich nicht
+- Ursache: `updated_at_ms` wurde teils als **numerischer String** (z.B. `"1765908093000"`) publiziert. `unknownTimestampToMs()` behandelte Strings nur als ISO-Date → Ergebnis `0`.
+- Effekt: LWW/Guards verwarfen den Patch still (`eventTimeMs <= 0`), obwohl Logs „received/applying“ zeigten.
+- Fix:
+  - `unknownTimestampToMs()` unterstützt jetzt numerische Strings (10-stellig = Sekunden → ms, sonst ms).
+  - `handleColumnOrderPatchEvent()` fällt auf `created_at`/`Date.now()` zurück, wenn `updated_at_ms` nicht sinnvoll parsebar ist.
+
+### 🧯 Fix: Svelte Runtime Crash `each_key_duplicate` bei schnellem Column-DnD
+- DnD-„consider“ kann transient duplizierte Column-IDs liefern; diese werden jetzt vor dem Rendern dedupliziert, damit keyed `{#each}` nicht crasht.
+
+### ✅ Tests
+- Gezielter Vitest-Lauf: `pnpm vitest run src/lib/stores/boardstore/nostr/time.spec.ts --project server` → ✅ 4/4
+
+## Version 4.7.13 - Fix: Column-Order Patch (8571) wird zuverlässig empfangen (d-Tag + #d Fallback) 📡
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Owner sieht Editor-Spalten-Reorder wieder zuverlässig
+- Column-Order Patch Events (Kind `8571`) enthalten jetzt zusätzlich `d=<boardId>`.
+- Subscriptions filtern jetzt nicht nur über `#a` (kanonische Board-Address), sondern zusätzlich über `#d` als robusten Fallback.
+
+### ✅ Tests
+- Gezielter Vitest-Lauf: `pnpm run test:unit -- --run src/lib/utils/nostrEvents.spec.ts` → ✅ 12/12
+
+## Version 4.7.12 - Fix: Spalten-DnD sendet vollständiges Board-Payload (kein hard-fail Abort) 🧩
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: syncBoardState hard-fail nur bei Spalten-Reorder
+- Ursache: `svelte-dnd-action` kann beim Spalten-Verschieben kurzfristig ein **partielles** Payload liefern (Columns ohne vollständige `items`-Liste). Der Store nutzt absichtlich `strategy: 'hard-fail'`, um in solchen Momenten **keinen** korrupten Zustand zu persistieren/publizieren.
+- Fix: Beim Column-Reorder wird das Payload für `onFinalUpdate()` jetzt aus dem lokalen/Parent-Snapshot rekonstruiert (Reihenfolge-IDs aus DnD, aber `items` aus der kanonischen Column-Quelle).
+
+
+## Version 4.7.11 - Collaboration Fix: Editoren können Spalten wieder verschieben (ohne Board-Forks) ↕️
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Feature/Fix: Column-Order Sync ohne 30301-Publish
+- Hintergrund: Kind `30301` ist **parameterized replaceable** (Adresse `30301:<publisherPubkey>:<d>`). Wenn Editoren `30301` publizieren, entstehen Fork-Boards.
+- Lösung: Spalten-Reihenfolge wird jetzt über ein separates Patch-Event synchronisiert: Kind `8571` (**Column Order Patch**).
+- Patch-Events referenzieren das kanonische Board via `a`-Tag (`30301:<boardAuthor>:<boardId>`) und enthalten die neue Reihenfolge als `order`-Tag sowie `updated_at_ms` für LWW.
+- Effekt: Editoren können DnD/Spalten-Reorder wieder synchronisieren, ohne jemals `30301` zu publizieren.
+
+### ✅ Tests
+- Bestehende Unit-Testsuite ausgeführt (Vitest): ✅ grün (493 Tests, 38 Files; 3 skipped).
+
+## Version 4.7.10 - Hotfix: Editoren können kein Board „forken“ via Meta-Update 🛡️
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Metadaten-Edits durch Editoren verlieren keine Maintainers mehr
+- Board-Metadaten (Name/Beschreibung/Tags/Lizenz/PublishState) sind Kind `30301` (parametrized replaceable) und dürfen daher nur vom **Owner** publiziert werden.
+- `updateCurrentBoardMeta()` und `setPublishState()` sind jetzt **Owner-only** (Demo-Board bleibt ausgenommen).
+- Zusätzlich: Board-Publishing (`publishBoardAsync`) ist **Owner-only**, um Fork-Boards (`30301:<editorPubkey>:<d>`) grundsätzlich zu verhindern.
+
+### ✅ Tests
+- Neue Unit-Tests für Permission-Guards (`permissionCheck.spec.ts`).
+
+## Version 4.7.9 - Hotfix: Owner wird nicht als Editor doppelt geführt 🔐
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Share-Dialog zeigt Owner nicht mehr als Editor
+- Invariant: `maintainers` enthält **nie** den `author` (Owner) – weder nach localStorage-Rekonstruktion noch nach Nostr (de)serialisierung oder Board-Metadaten-Updates.
+- `addEditor()` verhindert explizit, den Owner als Editor hinzuzufügen; Publisher-Updates deduplizieren `p`-Tags und schließen den Owner als Maintainer defensiv aus.
+- Effekt: Beim Bearbeiten der Board-Description „verschieben“ sich Pubkeys nicht mehr in eine korrupten Owner+Editor Doppelrolle; echte Editoren bleiben entfernbar.
+
+## Version 4.7.8 - Hotfix: Cards laden nach localStorage-Reset + weniger Deletion-Cache-Wachstum 🧯
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Board öffnet nicht mehr „leer“ nach Reset/Login
+- Card-Load und Card-Subscriptions akzeptieren jetzt mehrere mögliche `boardRef`-Varianten (z.B. `30301:<board.author>:<d>` und `30301:<currentPubkey>:<d>`), statt hart von einem einzigen `board.author`-Wert auszugehen.
+- Effekt: Wenn `localStorage` geleert wurde und `board.author` initial noch fehlt/abweicht, werden Cards trotzdem korrekt über `#a` geladen.
+
+### 🧹 Fix: `nostr-processed-deletions` wächst nicht mehr unnötig
+- Kind-5 Deletion-IDs werden nur noch persistiert, wenn das Event tatsächlich relevant angewendet wurde (z.B. Tombstone/Deletion ausgeführt), statt bei jedem empfangenen Deletion-Event.
+- Deletion-Subscription wird auf relevante Autoren eingeschränkt (aktueller Pubkey + Board-Teilnehmer), um unnötigen Netzwerk-/Cache-Noise zu reduzieren.
+
 ## Version 4.7.7 - Hotfix: Shared-Discovery Author/Adresse konsistent (kein Ghost-Toast) 🧭
 
 **Datum:** 15. Dezember 2025  

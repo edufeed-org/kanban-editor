@@ -32,30 +32,33 @@ export async function handleDeletionEvent(
 	deletionEvent: any,
 	boardStore: any
 ): Promise<void> {
-	// ⚡ OPTIMIZATION: Check persistent deletion event cache FIRST
-	if (ctx.processedDeletionEvents.has(deletionEvent.id)) {
-		// Silently skip - already processed in previous session
-		return;
-	}
-
-	// ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
-	if (ctx.processedEvents.has(deletionEvent.id)) {
-		return; // Silent skip - Event bereits verarbeitet
-	}
-
-	ctx.processedEvents.add(deletionEvent.id);
-
-	// ⚡ Track this deletion event persistently
-	ctx.processedDeletionEvents.add(deletionEvent.id);
-	const persisted = saveProcessedDeletions(ctx.processedDeletionEvents);
-	syncSetInPlace(ctx.processedDeletionEvents, persisted);
-
 	try {
+		const deletionId: string | undefined = deletionEvent?.id;
+		if (!deletionId) return;
+
+		// ⚡ OPTIMIZATION: Check persistent deletion event cache FIRST
+		if (ctx.processedDeletionEvents.has(deletionId)) {
+			// Silently skip - already processed in previous session
+			return;
+		}
+
+		// ⚡ v4.1: Event-Deduplication (SILENT - kein Log bei Skip)
+		if (ctx.processedEvents.has(deletionId)) {
+			return; // Silent skip - Event bereits verarbeitet
+		}
+
 		// NIP-09: Parse 'a' tags für replaceable events
 		// Format: ['a', '30301:pubkey:board-id'] oder ['a', '30302:pubkey:card-id']
 		const aTags = deletionEvent.tags.filter((t: any) => t[0] === 'a');
+		if (!Array.isArray(aTags) || aTags.length === 0) {
+			// Nicht persistieren (irrelevant), aber in-memory dedup verhindern
+			ctx.processedEvents.add(deletionId);
+			return;
+		}
+
 		const deleteTime = unixSecondsToMs(deletionEvent.created_at); // Millisekunden
 		const deletionPubkey: string | undefined = deletionEvent?.pubkey;
+		let didProcessRelevantDeletion = false;
 
 		for (const aTag of aTags) {
 			const eventRef = aTag[1];
@@ -76,14 +79,6 @@ export async function handleDeletionEvent(
 					const boardId = parts.slice(2).join(':');
 					const boardAuthor = parts[1];
 
-					// ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
-					if (ctx.boardDeletionTimestamps.has(boardId)) {
-						continue;
-					}
-
-					// Track deletion timestamp (für Ordering)
-					ctx.boardDeletionTimestamps.set(boardId, deleteTime);
-
 					// Check if board exists locally
 					const localBoard = BoardStorage.loadBoard(boardId);
 					const existsLocally = localBoard !== null;
@@ -94,13 +89,19 @@ export async function handleDeletionEvent(
 						continue;
 					}
 
+					// Track deletion timestamp (für Ordering)
+					if (ctx.boardDeletionTimestamps.has(boardId)) {
+						continue;
+					}
+					ctx.boardDeletionTimestamps.set(boardId, deleteTime);
+
+					// Tombstone ist immer safe (anti-resurrection), selbst wenn das Board lokal noch nicht existiert.
+					// BoardStorage.deleteBoard() setzt Tombstone + entfernt ggf. das Key.
+					BoardStorage.deleteBoard(boardId);
+					didProcessRelevantDeletion = true;
+
 					if (existsLocally) {
 						console.log(`🗑️ Deleting board ${boardId.substring(0, 16)}... (deletion event)`);
-
-						// Delete from localStorage (publish: false to avoid re-publishing deletion event)
-						BoardStorage.deleteBoard(boardId);
-
-						// Update board list in store
 						boardStore.refreshBoardList();
 
 						// If this was the active board, switch to another board
@@ -118,7 +119,6 @@ export async function handleDeletionEvent(
 					const cardId = parts.slice(2).join(':');
 					const cardAuthor = parts[1];
 
-					// ⚡ OPTIMIZATION: Skip if already tracked (prevents duplicate processing)
 					if (ctx.cardDeletionTimestamps.has(cardId)) {
 						continue;
 					}
@@ -135,20 +135,31 @@ export async function handleDeletionEvent(
 						continue;
 					}
 
-					// Track deletion timestamp (für Ordering)
-					ctx.cardDeletionTimestamps.set(cardId, deleteTime);
 
 					// Optional extra safety: if card has an author, require it to match.
 					if (result.card?.author && result.card.author !== cardAuthor) {
 						continue;
 					}
 
+					// Track deletion timestamp (für Ordering)
+					ctx.cardDeletionTimestamps.set(cardId, deleteTime);
+
 					console.log(`🗑️ Deleting card ${cardId.substring(0, 16)}... from board (deletion event)`);
 
 					// ⚡ v2.0: Direkte Store-API (SECONDARY action)
 					boardStore.deleteCardFromNostr(cardId);
+					didProcessRelevantDeletion = true;
 				}
 			}
+		}
+
+		// Persistiere nur, wenn wir mindestens eine autorisierte/relevante Löschung verarbeitet haben.
+		// Das reduziert unnötiges Wachstum von `nostr-processed-deletions` bei globalen/irrelevanten Deletes.
+		ctx.processedEvents.add(deletionId);
+		if (didProcessRelevantDeletion) {
+			ctx.processedDeletionEvents.add(deletionId);
+			const persisted = saveProcessedDeletions(ctx.processedDeletionEvents);
+			syncSetInPlace(ctx.processedDeletionEvents, persisted);
 		}
 	} catch (error) {
 		console.error(`❌ Error processing deletion event:`, error);

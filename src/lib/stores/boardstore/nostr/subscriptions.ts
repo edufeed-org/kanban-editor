@@ -1,8 +1,10 @@
 import type { Board } from '../../../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
-import { unixSecondsToMs } from './time.js';
+import { unixSecondsToMs, unknownTimestampToMs } from './time.js';
+import { EVENT_KINDS } from '$lib/utils/nostrEvents.js';
 import { handleBoardEvent } from './handlers/board.js';
 import { handleCardEvent } from './handlers/card.js';
+import { handleColumnOrderPatchEvent } from './handlers/columnOrderPatch.js';
 import { handleDeletionEvent } from './handlers/deletion.js';
 import { BoardSharingOperations } from '../sharing.js';
 import { isBoardTombstoned } from '../deletedBoards.js';
@@ -111,11 +113,18 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 	});
 
 	// 2️⃣ Subscription für Card-Events des AKTUELLEN Boards (Kind 30302)
-	const boardRef = `30301:${currentBoard.author || pubkey}:${currentBoard.id}`;
+	// Cards referenzieren Boards via `a`-Tag: `30301:<author>:<d>`.
+	// Für Robustheit (v.a. nach Reset / Shared Boards) abonnieren wir beide Kandidaten:
+	// - owner/canonical author (currentBoard.author)
+	// - eigener pubkey (pubkey)
+	const boardRefAuthors = Array.from(
+		new Set([currentBoard.author, pubkey].filter((v): v is string => typeof v === 'string' && v.length > 0))
+	);
+	const boardRefs = boardRefAuthors.map((author) => `30301:${author}:${currentBoard.id}`);
 	const cardsSub = ndk.subscribe(
 		{
 			kinds: [30302] as number[],
-			'#a': [boardRef],
+			'#a': boardRefs,
 			since: sevenDaysAgo,
 		} as any,
 		{ closeOnEose: false }
@@ -132,11 +141,123 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 		}
 	});
 
+	// 2b️⃣ Subscription für Column-Order Patches (Kind 8571)
+	// Wird von Editoren verwendet, um Column-Order zu synchronisieren, ohne 30301 zu publizieren.
+	// Column-order patches (Kind 8571): subscribe via canonical `a` ref AND a fallback `d=<boardId>`.
+	// Using multiple filters makes this robust against boardRef/author timing issues.
+	console.info('[BoardStore] 🧩 ColumnOrderPatch subscribe', {
+		kind: EVENT_KINDS.COLUMN_ORDER_PATCH,
+		boardId: currentBoard.id,
+		boardAuthor: currentBoard.author,
+		viewerPubkey: pubkey,
+		boardRefs,
+		sevenDaysAgo,
+	});
+	const columnOrderPatchSub = ndk.subscribe(
+		[
+			{
+				kinds: [EVENT_KINDS.COLUMN_ORDER_PATCH],
+				'#a': boardRefs,
+				since: sevenDaysAgo,
+			},
+			{
+				kinds: [EVENT_KINDS.COLUMN_ORDER_PATCH],
+				'#d': [currentBoard.id],
+				since: sevenDaysAgo,
+			},
+		] as any,
+		{ closeOnEose: false }
+	);
+
+	// ⚠️ UX/Perf: Relays können beim Subscribe viele historische Patch-Events replayen.
+	// Wenn wir die alle nacheinander anwenden, "springt" die UI durch alte Orders.
+	// Daher: während initialem Catch-up puffern wir nur das NEUESTE Patch-Event und wenden es nach EOSE einmal an.
+	let columnOrderPatchCatchUpActive = true;
+	let columnOrderPatchCatchUpReceived = 0;
+	let bufferedLatestPatch: { event: any; eventTimeMs: number } | null = null;
+	const getPatchEventTimeMs = (event: any): number => {
+		const tags: any[] = Array.isArray(event?.tags) ? event.tags : [];
+		const updatedMsTag = tags.find((t) => Array.isArray(t) && t[0] === 'updated_at_ms')?.[1];
+		const updatedMs = unknownTimestampToMs(updatedMsTag);
+		if (updatedMs > 0) return updatedMs;
+		return unixSecondsToMs(event?.created_at);
+	};
+
+	// EOSE: Ende des initialen Replays. Danach live anwenden.
+	(columnOrderPatchSub as any).on?.('eose', async () => {
+		columnOrderPatchCatchUpActive = false;
+		if (bufferedLatestPatch?.event) {
+			const applied = await handleColumnOrderPatchEvent(
+				{ processedEvents },
+				bufferedLatestPatch.event,
+				currentBoard,
+				boardStore
+			);
+			console.info('[BoardStore] 🧩 ColumnOrderPatch catch-up done', {
+				currentBoardId: currentBoard.id,
+				received: columnOrderPatchCatchUpReceived,
+				applied,
+				id: bufferedLatestPatch.event.id,
+				eventTimeMs: bufferedLatestPatch.eventTimeMs,
+			});
+		} else if (columnOrderPatchCatchUpReceived > 0) {
+			console.info('[BoardStore] 🧩 ColumnOrderPatch catch-up done', {
+				currentBoardId: currentBoard.id,
+				received: columnOrderPatchCatchUpReceived,
+				applied: false,
+			});
+		}
+		bufferedLatestPatch = null;
+		columnOrderPatchCatchUpReceived = 0;
+	});
+
+	columnOrderPatchSub.on('event', async (event: any) => {
+		if (event.kind === EVENT_KINDS.COLUMN_ORDER_PATCH) {
+			// Catch-up: nur das neueste Event puffern, nicht alles anwenden.
+			if (columnOrderPatchCatchUpActive) {
+				columnOrderPatchCatchUpReceived++;
+				const eventTimeMs = getPatchEventTimeMs(event);
+				if (!bufferedLatestPatch || eventTimeMs >= bufferedLatestPatch.eventTimeMs) {
+					bufferedLatestPatch = { event, eventTimeMs };
+				}
+				return;
+			}
+			const applied = await handleColumnOrderPatchEvent({ processedEvents }, event, currentBoard, boardStore);
+			if (applied) {
+				const eventTimeMs = getPatchEventTimeMs(event);
+				console.info('[BoardStore] 🧩 ColumnOrderPatch applied (live)', {
+					currentBoardId: currentBoard.id,
+					id: event.id,
+					eventTimeMs,
+				});
+			} else {
+				// Sehr häufig (No-op, LWW, Duplikate, Board mismatch) → bewusst nur debug.
+				console.debug('[BoardStore] ColumnOrderPatch ignored (live)', {
+					currentBoardId: currentBoard.id,
+					id: event?.id,
+				});
+			}
+		}
+	});
+
 	// 3️⃣ Subscription für Deletion-Events (Kind 5)
+	// ⚡ OPTIMIZATION: Wir subscriben NICHT global auf alle Kind-5 Events.
+	// Stattdessen scopen wir auf relevante Autoren (mich + owner + maintainers),
+	// damit `nostr-processed-deletions` nicht durch irrelevante Deletes wächst.
+	const deletionAuthors = Array.from(
+		new Set(
+			[
+				pubkey,
+				currentBoard.author,
+				...(Array.isArray((currentBoard as any).maintainers) ? (currentBoard as any).maintainers : []),
+			].filter((v): v is string => typeof v === 'string' && v.length > 0)
+		)
+	);
 	const deletionsSub = ndk.subscribe(
 		{
 			kinds: [5] as number[],
 			since: sevenDaysAgo,
+			...(deletionAuthors.length > 0 ? { authors: deletionAuthors } : {}),
 		} as any,
 		{ closeOnEose: false }
 	);
@@ -151,7 +272,7 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 		}
 	});
 
-	const subscriptions: SubscriptionLike[] = [ownBoardsSub, cardsSub, deletionsSub];
+	const subscriptions: SubscriptionLike[] = [ownBoardsSub, cardsSub, columnOrderPatchSub, deletionsSub];
 
 	// 4️⃣ Shared Board Updates vom Owner
 	if (currentBoard.author && currentBoard.author !== pubkey) {
