@@ -307,11 +307,17 @@
 	}
 	
 	:global(.ProseMirror blockquote) {
-		border-left: 3px solid hsl(var(--border));
+		border-left: 4px solid hsl(var(--primary));
 		padding-left: 1em;
 		margin-left: 0;
 		font-style: italic;
-		color: hsl(var(--muted-foreground));
+		color: hsl(var(--foreground));
+		background-color: rgba(0, 0, 0, 0.05);
+	}
+	
+	/* Dark mode anpassung für blockquote */
+	:global(.dark .ProseMirror blockquote) {
+		background-color: rgba(255, 255, 255, 0.05);
 	}
 	
 	/* Code Styles - deutlich sichtbarer Hintergrund */
