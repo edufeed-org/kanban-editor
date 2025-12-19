@@ -49,9 +49,6 @@ importers:
       oidc-client-ts:
         specifier: ^3.3.0
         version: 3.3.0
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
       svelte-dnd-action:
         specifier: ^0.9.65
         version: 0.9.65(svelte@5.39.11)
@@ -2582,9 +2579,6 @@ packages:
   readdirp@4.1.2:
     resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
     engines: {node: '>= 14.18.0'}
-
-  reflect-metadata@0.2.2:
-    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
   regex-recursion@6.0.2:
     resolution: {integrity: sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==}
@@ -5748,8 +5742,6 @@ snapshots:
     optional: true
 
   readdirp@4.1.2: {}
-
-  reflect-metadata@0.2.2: {}
 
   regex-recursion@6.0.2:
     dependencies:
