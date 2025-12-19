@@ -60,10 +60,10 @@ export interface SettingsState {
   learningConfidenceIncrement: number; // Increment bei erfolgreicher Nutzung (Default: 0.15)
   learningMinUsageCount: number; // Mindestanzahl Nutzungen für "learned" Status (Default: 3)
 
-  oerFinderPlugin: {
-    apiUrl: string,
-    language: string
-  }
+  // OER Finder Plugin Configuration
+  apiUrl: string,
+  language: string
+
 }
 
 /**
@@ -175,10 +175,9 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   learningConfidenceIncrement: 0.15,
   learningMinUsageCount: 3,
 
-  oerFinderPlugin: {
-    apiUrl: "http://localhost:3001",
-    language: "de"
-  },
+  // OER Finder Plugin
+  apiUrl: "http://localhost:3001",
+  language: "de"
 };
 
 /**
@@ -465,6 +464,24 @@ export class SettingsStore {
         this.settings = { ...this.settings, ...learningPartial };
         console.log('📚 Learning configuration loaded from config.json');
       }
+    }
+
+    if (config.oerFinderPlugin) {
+      const oerFinderPluginPartial: Partial<SettingsState> = {};
+
+      if (config.oerFinderPlugin.apiUrl !== undefined) {
+        oerFinderPluginPartial.apiUrl = config.oerFinderPlugin.apiUrl
+      }
+
+      if (config.oerFinderPlugin.language !== undefined) {
+        oerFinderPluginPartial.language = config.oerFinderPlugin.language
+      }
+      
+      if (Object.keys(oerFinderPluginPartial).length > 0) {
+        this.settings = { ...this.settings, ...oerFinderPluginPartial };
+        console.log('📚 OER Finder Plugin configuration loaded from config.json');
+      }
+
     }
 
     // Speichere die gemergten Settings

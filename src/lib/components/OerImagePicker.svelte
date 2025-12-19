@@ -13,8 +13,8 @@
 		onSelect: (imageUrl: string) => void;
 	}
 
-	const apiUrl = $state(settingsStore.settings.oerFinderPlugin.apiUrl)
-	const language = $state(settingsStore.settings.oerFinderPlugin.language)
+	const apiUrl = $state(settingsStore.settings.apiUrl)
+	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
 	let searchEl: OerSearchElement;
