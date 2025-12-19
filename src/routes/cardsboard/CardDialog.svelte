@@ -219,7 +219,7 @@
 		onClose();
 	}
 }}>
-	<Dialog.Content class="sm:max-w-[600px]">
+	<Dialog.Content class="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
 		<Dialog.Header>
 			<Dialog.Title>{card?.heading || 'Neue Karte'}</Dialog.Title>
 			<Dialog.Description>
