@@ -38,9 +38,12 @@ test.describe('Board Sharing - Permission System', () => {
 
         const now = Date.now().toString()
 
-        const boardName = `Shared Board ${now.slice(now.length - 5, now.length)}`;
+        const boardName = `Shared ${now.slice(now.length - 5, now.length)}`;
         await createSharedBoard(ownerPage, boardName);
         await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
+        
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
         
         // Editor-Session
         const editorPage = await browser.newPage();
@@ -51,7 +54,12 @@ test.describe('Board Sharing - Permission System', () => {
         // TODO: it is not supposed to be necessary
         await editorPage.reload();
 
-        await expect(editorPage.getByText(boardName)).toBeVisible();
+        // Warte auf Board-Liste und Nostr-Synchronisation
+        await editorPage.waitForLoadState('networkidle');
+        await editorPage.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden (3s -> 4s)
+
+        // Warte mit längerem Timeout auf Board-Sichtbarkeit (Nostr Sync braucht Zeit)
+        await expect(editorPage.getByText(boardName)).toBeVisible({ timeout: 20000 });
 
         await editorPage.getByText(boardName).click();
 
@@ -93,9 +101,20 @@ test.describe('Board Sharing - Permission System', () => {
         await loginWithNsec(viewerPage, TEST_USERS.viewer.nsec);
 
         await viewerPage.goto(viewerLink);
+        await viewerPage.waitForLoadState('networkidle');
 
         await viewerPage.getByRole('button', { name: 'Board folgen' }).click();
         
+        // Warte auf Board-Synchronisation nach "folgen" - Board muss von Nostr geladen werden
+        await viewerPage.waitForTimeout(4000);
+        
+        // Navigiere zurück zur Board-Liste um das gefolgten Board zu sehen
+        await viewerPage.goto('/cardsboard');
+        await viewerPage.waitForLoadState('networkidle');
+        await viewerPage.waitForTimeout(2000);
+        
+        // Warte explizit dass Board in Liste erscheint
+        await expect(viewerPage.getByRole('button', { name: boardName })).toBeVisible({ timeout: 15000 });
         await viewerPage.getByRole('button', { name: boardName }).click();
 
         await viewerPage.waitForLoadState('networkidle');
@@ -138,9 +157,12 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         
         const now = Date.now().toString();
 
-        const boardName = `Collaborative Board ${now.slice(now.length - 5, now.length)}`;
+        const boardName = `Collab ${now.slice(now.length - 5, now.length)}`;
         await createSharedBoard(ownerPage, boardName);
         await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
+        
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
         
         // Editor 1 Session
         const editor1Page = await browser.newPage();
@@ -149,7 +171,10 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         
         // TODO: should not be necessary after bug fix
         await editor1Page.reload();
-        await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible();
+        await editor1Page.waitForLoadState('networkidle');
+        await editor1Page.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden
+        
+        await expect(editor1Page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 20000 });
         await editor1Page.locator(`text="${boardName}"`).click();
         
         // Editor 2 Session
@@ -161,9 +186,15 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         await ownerPage.bringToFront();
         await shareBoard(ownerPage, TEST_USERS.editor2.pubkey, 'editor');
         
+        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
+        await ownerPage.waitForTimeout(3000);
+        
         // TODO: should not be necessary after bug fix
         await editor2Page.reload();
-        await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible();
+        await editor2Page.waitForLoadState('networkidle');
+        await editor2Page.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden
+        
+        await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 20000 });
         await editor2Page.locator(`text="${boardName}"`).click();
         
         // Beide Editoren erstellen gleichzeitig Karten

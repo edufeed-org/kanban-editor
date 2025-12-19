@@ -387,8 +387,8 @@
 
 		<!-- Description Section (Markdown Content) -->
 		{#if card.description}
-			<div class="card-description">
-				{card.description}
+			<div class="card-description prose prose-sm max-w-none line-clamp-3">
+				{@html card.description}
 			</div>
 		{/if}
 

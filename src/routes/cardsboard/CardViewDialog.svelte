@@ -10,6 +10,7 @@
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
 	import PublishStateToggle from './PublishStateToggle.svelte';
+	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
@@ -381,8 +382,11 @@
 			{#if card.description}
 				<div class="space-y-2">
 					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
-					<div class="p-3 bg-muted/50 rounded-md text-sm whitespace-pre-wrap break-words border">
-						{card.description}
+					<div class="p-3 bg-muted/50 rounded-md text-sm border">
+						<MarkdownEditor 
+							value={card.description}
+							disabled={true}
+						/>
 					</div>
 				</div>
 			{/if}
