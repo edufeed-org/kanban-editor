@@ -23,6 +23,15 @@
 	let paginationEl: PaginationElement;
 
 	onMount(async () => {
+		try {
+			// Dynamically import the plugin only on the client side
+			// reflect-metadata is already loaded at component import time above
+			await import('@edufeed-org/oer-finder-plugin');
+		} catch (error) {
+			console.error('Failed to load OER plugin:', error);
+			return;
+		}
+		
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
 			const customEvent = e as CustomEvent<OerSearchResultEvent>;
