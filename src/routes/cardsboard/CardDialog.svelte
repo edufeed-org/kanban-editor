@@ -10,6 +10,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import type { CardProps, PublishState } from '../../lib/classes/BoardModel.js';
+  import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 
 	interface Props {
@@ -88,6 +89,7 @@
 	let isSubmitting = $state(false);
 	let activeTab = $state<'content' | 'settings'>('content');
 	let isUserEditing = $state(false); // Guard gegen $effect Überschreibung während Editing
+	let imageMode = $state<'url' | 'oer'>('url');
 
 	// Neue Label und Link Input
 	let newLabel = $state('');
@@ -268,21 +270,53 @@
 					</Field>
 
 					<Field>
-						<FieldLabel for="image">Kartenbild (URL)</FieldLabel>
-						<FieldContent>
-							<Input
-								id="image"
-								bind:value={formData.image}
-								placeholder="https://example.com/image.jpg"
+						<FieldLabel for="image">Kartenbild</FieldLabel>
+
+						<!-- Mode Toggle -->
+						<div class="flex gap-1 mb-2">
+							<Button
+								type="button"
+								variant={imageMode === 'url' ? 'default' : 'outline'}
+								size="sm"
+								onclick={() => (imageMode = 'url')}
 								disabled={isSubmitting}
-								aria-invalid={!!errors.image}
+							>
+								URL eingeben
+							</Button>
+							<Button
+								type="button"
+								variant={imageMode === 'oer' ? 'default' : 'outline'}
+								size="sm"
+								onclick={() => (imageMode = 'oer')}
+								disabled={isSubmitting}
+							>
+								OER suchen
+							</Button>
+						</div>
+
+						{#if imageMode === 'url'}
+							<FieldContent>
+								<Input
+									id="image"
+									bind:value={formData.image}
+									placeholder="https://example.com/image.jpg"
+									disabled={isSubmitting}
+									aria-invalid={!!errors.image}
+								/>
+							</FieldContent>
+							{#if errors.image}
+								<FieldError errors={[{ message: errors.image }]} />
+							{/if}
+						{:else}
+							<OerImagePicker
+								onSelect={(url) => {
+									formData.image = url;
+									imageMode = 'url';
+								}}
 							/>
-						</FieldContent>
-						{#if errors.image}
-							<FieldError errors={[{ message: errors.image }]} />
 						{/if}
-						
-						<!-- 🔥 PREVIEW: Zeige GESPEICHERTE Bild (reaktiv!) -->
+
+						<!-- Image Preview (shown in both modes when image exists) -->
 						{#if previewCard?.image}
 							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted">
 								<img
@@ -298,7 +332,6 @@
 								</div>
 							</div>
 						{:else if formData.image}
-							<!-- FALLBACK: Zeige INPUT-Vorschau während Editing -->
 							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted border-2 border-blue-400">
 								<img
 									src={formData.image}

@@ -36,5 +36,10 @@ export default defineConfig({
 				}
 			}
 		]
+	},
+	server: {
+		watch: {
+		    ignored: ['**/.pnpm-store/**']
+		}
 	}
 });

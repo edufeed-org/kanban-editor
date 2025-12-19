@@ -59,6 +59,11 @@ export interface SettingsState {
   learningInitialConfidence: number; // Startwert für neue Patterns (Default: 0.3)
   learningConfidenceIncrement: number; // Increment bei erfolgreicher Nutzung (Default: 0.15)
   learningMinUsageCount: number; // Mindestanzahl Nutzungen für "learned" Status (Default: 3)
+
+  oerFinderPlugin: {
+    apiUrl: string,
+    language: string
+  }
 }
 
 /**
@@ -169,6 +174,11 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   learningInitialConfidence: 0.3,
   learningConfidenceIncrement: 0.15,
   learningMinUsageCount: 3,
+
+  oerFinderPlugin: {
+    apiUrl: "http://localhost:3001",
+    language: "de"
+  },
 };
 
 /**
