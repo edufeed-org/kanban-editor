@@ -89,21 +89,19 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild",
-      "@edufeed-org/oer-finder-plugin",
-      "@edufeed-org/oer-finder-api-client"
+      "esbuild"
     ],
     "overrides": {
       "nostr-tools": "~2.14.2",
       "@nostr-dev-kit/ndk": "^2.14.2",
-      "@edufeed-org/oer-finder-api-client": "github:edufeed-org/oer-finder-plugin#v0.1.1&path:packages/oer-finder-api-client"
+      "@edufeed-org/oer-finder-api-client": "github:edufeed-org/oer-finder-plugin#v0.1.3&path:packages/oer-finder-api-client"
     },
     "ignoredBuiltDependencies": [
       "svelte-preprocess"
     ]
   },
   "dependencies": {
-    "@edufeed-org/oer-finder-plugin": "github:edufeed-org/oer-finder-plugin#v0.1.1&path:packages/oer-finder-plugin",
+    "@edufeed-org/oer-finder-plugin": "github:edufeed-org/oer-finder-plugin#v0.1.3&path:packages/oer-finder-plugin",
     "@nostr-dev-kit/ndk": "2.14.2",
     "@nostr-dev-kit/svelte": "^2.0.8",
     "@tiptap/core": "^3.13.0",
