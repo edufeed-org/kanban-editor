@@ -8,13 +8,12 @@ import Topbar from "./Topbar.svelte";
 import ImportPopover from "$lib/components/ImportPopover.svelte";
 import FollowBoardDialog from "$lib/components/board/FollowBoardDialog.svelte";
 import AIPanel from "./AIPanel.svelte";
-import type { Column, BoardUpdateHandler } from "./types.js";
-import { Button } from "$lib/components/ui/button/index.js";
-import { Separator } from "$lib/components/ui/separator/index.js";
+import type { Column } from "./types.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
+  import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
@@ -150,7 +149,6 @@ import { toast } from "svelte-sonner";
 
 	// Aktuelles Board Meta
 	let currentBoardId = $derived(boardStore.getCurrentBoardId());
-	let boardMeta = $derived(boardStore.getCurrentBoardMeta());
 	
 	// 🔥 WICHTIG: Direkter reaktiver Zugriff für Topbar!
 	// Damit Svelte erkennt, dass sich der Titel geändert hat
@@ -253,6 +251,10 @@ import { toast } from "svelte-sonner";
 		if (isMobile) {
 			leftSidebarOpen = false;
 			rightSidebarOpen = false;
+			
+			if (!authStore.isAuthenticated) {
+				leftSidebarOpen = true
+			}
 		}
 	});
 	
