@@ -12,6 +12,7 @@ import type { Column, BoardUpdateHandler } from "./types.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { Separator } from "$lib/components/ui/separator/index.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
+import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
 
@@ -22,6 +23,9 @@ import { toast } from "svelte-sonner";
 	let showFollowDialog = $state(false);
 	let shareLinkBoardId = $state<string>('');
 	let shareLinkBoardAuthor = $state<string>('');
+	
+	// Mobile detection (screens < 768px are considered mobile)
+	let isMobile = $state(false);
 
 	// ============================================================================
 	// LIFECYCLE: ONMOUNT HOOKS (Browser API calls - only once per component mount)
@@ -119,6 +123,24 @@ import { toast } from "svelte-sonner";
 		} catch (error) {
 			console.error('❌ Error auto-loading comments:', error);
 		}
+	});
+
+	// Hook 4: Mobile detection and responsive listener
+	onMount(() => {
+		const checkMobile = () => {
+			isMobile = window.innerWidth < 768;
+		};
+		
+		// Initial check
+		checkMobile();
+		
+		// Listen for resize events
+		window.addEventListener('resize', checkMobile);
+		
+		// Cleanup
+		return () => {
+			window.removeEventListener('resize', checkMobile);
+		};
 	});
 
 	// Konvertiere boardStore.uiData in das Format, das Board.svelte erwartet
@@ -226,6 +248,14 @@ import { toast } from "svelte-sonner";
 	let leftSidebarSize = $state(15);
 	let rightSidebarSize = $state(15);
 	
+	// Auto-close sidebars on mobile
+	$effect(() => {
+		if (isMobile) {
+			leftSidebarOpen = false;
+			rightSidebarOpen = false;
+		}
+	});
+	
 	// Funktionen zum Toggle mit Größenänderung
 	function toggleLeftSidebar() {
 		if (leftSidebarOpen) {
@@ -257,74 +287,129 @@ import { toast } from "svelte-sonner";
 
 <div class="flex h-screen w-full flex-col overflow-hidden">
 	
-	<!-- Main Layout with resizable sidebars -->
-	<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
-		<!-- Linke Sidebar - nur rendern wenn offen -->
-		{#if leftSidebarOpen}
-			<Resizable.Pane 
-				defaultSize={15} 
-				minSize={10} 
-				maxSize={40} 
-				class="border-r bg-muted/10 overflow-y-auto"
-				onResize={(size: number) => { leftSidebarSize = size; }}
-			>
+	{#if isMobile}
+		<!-- Mobile Layout: Sidebars as overlay sheets -->
+		<main class="flex flex-1 flex-col overflow-hidden">
+			<Topbar
+				title={boardTitle}
+				boardMeta={{
+					title: boardTitle,
+					description: '',
+					tags: []
+				}}
+				onToggleLeftSidebar={toggleLeftSidebar}
+				onToggleRightSidebar={toggleRightSidebar}
+				{isMobile}
+			/>
+			
+			<div class="flex-1 overflow-hidden p-0 min-h-0">
+				<Board 
+					columns={columns} 
+					onFinalUpdate={handleBoardUpdated}
+					{selectedColumn}
+					{selectedCard}
+					onSelectColumn={handleSelectColumn}
+					onSelectCard={handleSelectCard}
+				/>
+			</div>
+		</main>
+		
+		<!-- Left Sidebar Sheet (Mobile) -->
+		<Sheet.Root bind:open={leftSidebarOpen}>
+			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0">
 				<div class="p-4 h-full flex flex-col overflow-hidden">
-					<h2 class="text-sm font-semibold mb-4">Meine Boards</h2>
+					<Sheet.Header class="mb-4">
+						<Sheet.Title>Meine Boards</Sheet.Title>
+					</Sheet.Header>
 					<div class="flex-1 overflow-y-auto min-h-0">
 						<BoardsList {currentBoardId} />
 					</div>
 					<LeftSidebarFooter />
 				</div>
+			</Sheet.Content>
+		</Sheet.Root>
+		
+		<!-- Right Sidebar Sheet (Mobile) -->
+		<Sheet.Root bind:open={rightSidebarOpen}>
+			<Sheet.Content side="right" class="w-[320px] sm:w-[380px] p-0">
+				<Sheet.Header class="p-4 border-b">
+					<Sheet.Title>KI-Assistent</Sheet.Title>
+				</Sheet.Header>
+				<AIPanel boardId={currentBoardId} />
+			</Sheet.Content>
+		</Sheet.Root>
+		
+	{:else}
+		<!-- Desktop Layout: Resizable sidebars -->
+		<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
+			<!-- Linke Sidebar - nur rendern wenn offen -->
+			{#if leftSidebarOpen}
+				<Resizable.Pane 
+					defaultSize={15} 
+					minSize={10} 
+					maxSize={40} 
+					class="border-r bg-muted/10 overflow-y-auto"
+					onResize={(size: number) => { leftSidebarSize = size; }}
+				>
+					<div class="p-4 h-full flex flex-col overflow-hidden">
+						<h2 class="text-sm font-semibold mb-4">Meine Boards</h2>
+						<div class="flex-1 overflow-y-auto min-h-0">
+							<BoardsList {currentBoardId} />
+						</div>
+						<LeftSidebarFooter />
+					</div>
+				</Resizable.Pane>
+				
+				<Resizable.Handle withHandle />
+			{/if}
+			
+			<!-- Hauptbereich -->
+			<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
+				<main class="flex flex-1 flex-col overflow-hidden min-w-0">
+					<Topbar
+						title={boardTitle}
+						boardMeta={{
+							title: boardTitle,
+							description: '',
+							tags: []
+						}}
+						onToggleLeftSidebar={toggleLeftSidebar}
+						onToggleRightSidebar={toggleRightSidebar}
+						{isMobile}
+					/>
+					
+					<div class="flex-1 overflow-hidden p-0 min-h-0">
+						<Board 
+							columns={columns} 
+							onFinalUpdate={handleBoardUpdated}
+							{selectedColumn}
+							{selectedCard}
+							onSelectColumn={handleSelectColumn}
+							onSelectCard={handleSelectCard}
+						/>
+					</div>
+				</main>
 			</Resizable.Pane>
 			
-			<Resizable.Handle withHandle />
-		{/if}
-		
-		<!-- Hauptbereich -->
-		<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
-			<main class="flex flex-1 flex-col overflow-hidden min-w-0">
-		<!-- Topbar mit integrierten Sidebar-Triggern -->
-		<Topbar
-			title={boardTitle}
-			boardMeta={{
-				title: boardTitle,
-				description: '',
-				tags: []
-			}}
-			onToggleLeftSidebar={toggleLeftSidebar}
-			onToggleRightSidebar={toggleRightSidebar}
-		/>			<!-- Board Content - KEIN Scroll hier, nur im Board selbst -->
-			<div class="flex-1 overflow-hidden p-0 min-h-0">
-					<Board 
-						columns={columns} 
-						onFinalUpdate={handleBoardUpdated}
-						{selectedColumn}
-						{selectedCard}
-						onSelectColumn={handleSelectColumn}
-						onSelectCard={handleSelectCard}
-					/>
-				</div>
-			</main>
-		</Resizable.Pane>
-		
-		<!-- Handle zwischen Main und rechter Sidebar -->
-		{#if rightSidebarOpen}
-			<Resizable.Handle withHandle />
-		{/if}
-		
-		<!-- Rechte Sidebar (KI-Agent) - nur rendern wenn offen -->
-		{#if rightSidebarOpen}
-			<Resizable.Pane 
-				defaultSize={20} 
-				minSize={15} 
-				maxSize={50} 
-				class="border-l bg-background"
-				onResize={(size: number) => { rightSidebarSize = size; }}
-			>
-				<AIPanel boardId={currentBoardId} />
-			</Resizable.Pane>
-		{/if}
-	</Resizable.PaneGroup>
+			<!-- Handle zwischen Main und rechter Sidebar -->
+			{#if rightSidebarOpen}
+				<Resizable.Handle withHandle />
+			{/if}
+			
+			<!-- Rechte Sidebar (KI-Agent) - nur rendern wenn offen -->
+			{#if rightSidebarOpen}
+				<Resizable.Pane 
+					defaultSize={20} 
+					minSize={15} 
+					maxSize={50} 
+					class="border-l bg-background"
+					onResize={(size: number) => { rightSidebarSize = size; }}
+				>
+					<AIPanel boardId={currentBoardId} />
+				</Resizable.Pane>
+			{/if}
+		</Resizable.PaneGroup>
+	{/if}
 </div>
 
 <!-- ImportPopover Component (hidden, used for share-link preview) -->

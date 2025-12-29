@@ -8,6 +8,8 @@
     import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+    import MenuIcon from "@lucide/svelte/icons/menu";
+    import BotIcon from "@lucide/svelte/icons/bot";
     import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
     import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
     import MoonIcon from "@lucide/svelte/icons/moon";
@@ -37,12 +39,14 @@
         title = 'Kanbanboard',
         onToggleLeftSidebar,
         onToggleRightSidebar,
-        boardMeta
+        boardMeta,
+        isMobile = false
     }: {
         title?: string;
         onToggleLeftSidebar?: () => void;
         onToggleRightSidebar?: () => void;
         boardMeta?: { title: string; description: string; tags: string[] };
+        isMobile?: boolean;
     } = $props();
 
     // State für Board-Metadaten Form
@@ -463,8 +467,8 @@
     
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0">
-    <div class="container flex h-14 items-center justify-between px-4 w-full mx-auto">
+<header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0 overflow-x-auto">
+    <div class="flex h-14 items-center justify-between gap-2 px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-2">
             <!-- Left Sidebar Trigger -->
@@ -474,7 +478,11 @@
                 onclick={onToggleLeftSidebar}
                 class="h-8 w-8 bg-secondary"
             >
-                <PanelLeftIcon class="h-4 w-4" />
+                {#if isMobile}
+                    <MenuIcon class="h-4 w-4" />
+                {:else}
+                    <PanelLeftIcon class="h-4 w-4" />
+                {/if}
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
@@ -725,7 +733,11 @@
                 onclick={onToggleRightSidebar}
                 class="  h-8 w-8 bg-secondary"
             >
-                <PanelRightIcon class="h-4 w-4"/>
+                {#if isMobile}
+                    <BotIcon class="h-4 w-4" />
+                {:else}
+                    <PanelRightIcon class="h-4 w-4"/>
+                {/if}
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>
