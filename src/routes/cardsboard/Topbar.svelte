@@ -560,7 +560,7 @@
                     <EllipsisVerticalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
                 {/if}
-                <Dialog.Content class="max-w-md">
+                <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-md max-h-[85vh] overflow-y-auto">
                     <Dialog.Header>
                         <Dialog.Title>Board-Einstellungen</Dialog.Title>
                     </Dialog.Header>
@@ -690,11 +690,13 @@
                 >
                     <SlidersHorizontalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
-                <Dialog.Content class="max-w-5xl max-h-[90vh] overflow-y-auto">
+                <Dialog.Content class="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
                     <Dialog.Header>
                         <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
                     </Dialog.Header>
-                    <SettingsPanel />
+                    <div class="flex-1 overflow-y-auto">
+                        <SettingsPanel />
+                    </div>
                 </Dialog.Content>
             </Dialog.Root>
 
@@ -746,7 +748,7 @@
 
 <!-- Share-Link Dialog -->
 <Dialog.Root bind:open={shareDialogOpen}>
-    <Dialog.Content class="max-w-lg">
+    <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <Dialog.Header>
             <Dialog.Title>Share-Link für Board</Dialog.Title>
         </Dialog.Header>

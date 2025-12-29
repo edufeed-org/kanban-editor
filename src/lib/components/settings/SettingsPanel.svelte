@@ -170,25 +170,25 @@
           <!-- Theme -->
           <div class="space-y-2">
             <Label>Theme</Label>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
               <Button 
                 variant={settings.theme === 'default' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setTheme('default')}
-                class="w-24"
+                class="flex-1"
               >
                 Hell
               </Button>
               <Button 
                 variant={settings.theme === 'dark' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setTheme('dark')}
-                class="w-24"
+                class="flex-1"
               >
                 Dunkel
               </Button>
               <Button 
                 variant={settings.theme === 'auto' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setTheme('auto')}
-                class="w-24"
+                class="flex-1"
               >
                 Auto
               </Button>
@@ -622,25 +622,25 @@
           <!-- Board Publish State -->
           <div class="space-y-2">
             <Label>Standard Board Publish State</Label>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
               <Button 
                 variant={settings.defaultBoardPublishState === 'draft' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultBoardPublishState('draft')}
-                class="w-28"
+                class="flex-1"
               >
                 Draft
               </Button>
               <Button 
                 variant={settings.defaultBoardPublishState === 'private' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultBoardPublishState('private')}
-                class="w-28"
+                class="flex-1"
               >
                 Private
               </Button>
               <Button 
                 variant={settings.defaultBoardPublishState === 'published' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultBoardPublishState('published')}
-                class="w-28"
+                class="flex-1"
               >
                 Published
               </Button>
@@ -650,25 +650,25 @@
           <!-- Card Publish State -->
           <div class="space-y-2">
             <Label>Standard Card Publish State</Label>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
               <Button 
                 variant={settings.defaultCardPublishState === 'draft' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultCardPublishState('draft')}
-                class="w-28"
+                class="flex-1"
               >
                 Draft
               </Button>
               <Button 
                 variant={settings.defaultCardPublishState === 'private' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultCardPublishState('private')}
-                class="w-28"
+                class="flex-1"
               >
                 Private
               </Button>
               <Button 
                 variant={settings.defaultCardPublishState === 'published' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultCardPublishState('published')}
-                class="w-28"
+                class="flex-1"
               >
                 Published
               </Button>
