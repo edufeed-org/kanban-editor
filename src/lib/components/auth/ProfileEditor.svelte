@@ -19,11 +19,11 @@
   const { open, onClose }: Props = $props();
   
   const profileSchema = z.object({
-    name: z.string().min(1, "Name is required").max(50, "Name too long"),
-    about: z.string().max(500, "About section too long").optional(),
-    picture: z.string().url("Invalid image URL").optional().or(z.literal("")),
-    nip05: z.string().email("Invalid NIP-05 identifier").optional().or(z.literal("")),
-    lud16: z.string().email("Invalid Lightning Address").optional().or(z.literal(""))
+    name: z.string().min(1, "Name ist erforderlich").max(50, "Name zu lang"),
+    about: z.string().max(500, "Über-mich-Abschnitt zu lang").optional(),
+    picture: z.string().url("Ungültige Bild-URL").optional().or(z.literal("")),
+    nip05: z.string().email("Ungültiger NIP-05 Identifikator").optional().or(z.literal("")),
+    lud16: z.string().email("Ungültige Lightning-Adresse").optional().or(z.literal(""))
   });
   
   // Form State
@@ -113,7 +113,7 @@
       onClose();
       
     } catch (error: any) {
-      errors = { submit: error.message || 'Failed to update profile' };
+      errors = { submit: error.message || 'Fehler beim Aktualisieren des Profils' };
     } finally {
       isSubmitting = false;
     }
@@ -136,24 +136,31 @@
 </script>
 
 <Dialog.Root {open} onOpenChange={(newOpen) => !newOpen && handleCancel()}>
-  <Dialog.Content class="sm:max-w-md">
+  <Dialog.Content class="sm:max-w-md max-h-[90vh] overflow-y-auto">
     <Dialog.Header>
-      <Dialog.Title>Edit Profile</Dialog.Title>
+      <Dialog.Title>Profil bearbeiten</Dialog.Title>
       <Dialog.Description>
-        Update your Nostr profile information. Changes will be published to the network.
+        Aktualisieren Sie Ihre Nostr-Profilinformationen. Änderungen werden im Netzwerk veröffentlicht.
       </Dialog.Description>
     </Dialog.Header>
     
     <form onsubmit={handleSubmit} class="space-y-4">
+      <!-- Nostr Public Key (Read-only) -->
+      <div class="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border-2 border-slate-300 dark:border-slate-600 shadow-sm">
+        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2 block uppercase tracking-wide">Ihre Nostr Public Key (npub)</label>
+        <div class="font-mono text-sm text-slate-700 dark:text-slate-200 break-all select-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+          {authStore.getNpub() || authStore.currentUser?.pubkey || 'Nicht verfügbar'}
+        </div>
+      </div>
       <!-- Display Name -->
       <Field.Field>
-        <Field.Label for="name">Display Name *</Field.Label>
+        <Field.Label for="name">Anzeigename *</Field.Label>
         <Field.Content>
           <Input
             id="name"
             bind:value={formData.name}
             disabled={isSubmitting}
-            placeholder="Your name"
+            placeholder="Ihr Name"
             aria-invalid={!!errors.name}
           />
         </Field.Content>
@@ -162,13 +169,13 @@
       
       <!-- About -->
       <Field.Field>
-        <Field.Label for="about">About</Field.Label>
+        <Field.Label for="about">Über mich</Field.Label>
         <Field.Content>
           <Textarea
             id="about"
             bind:value={formData.about}
             disabled={isSubmitting}
-            placeholder="Tell others about yourself..."
+            placeholder="Erzählen Sie anderen über sich..."
             rows={3}
             aria-invalid={!!errors.about}
           />
@@ -178,14 +185,14 @@
       
       <!-- Profile Picture -->
       <Field.Field>
-        <Field.Label for="picture">Profile Picture URL</Field.Label>
+        <Field.Label for="picture">Profilbild-URL</Field.Label>
         <Field.Content>
           <Input
             id="picture"
             type="url"
             bind:value={formData.picture}
             disabled={isSubmitting}
-            placeholder="https://example.com/avatar.jpg"
+            placeholder="https://beispiel.de/avatar.jpg"
             aria-invalid={!!errors.picture}
           />
         </Field.Content>
@@ -195,18 +202,18 @@
       <!-- NIP-05 Identifier -->
       <Field.Field>
         <Field.Label for="nip05" class="flex items-center gap-2">
-          NIP-05 Identifier
+          NIP-05 Identifikator
           {#if isVerifyingNip05}
             <LoaderIcon class="h-3 w-3 animate-spin text-blue-600" />
           {:else if nip05Verified === true}
             <Badge variant="secondary" class="text-xs">
               <CheckCircleIcon class="mr-1 h-3 w-3" />
-              Verified
+              Verifiziert
             </Badge>
           {:else if nip05Verified === false}
             <Badge variant="destructive" class="text-xs">
               <XCircleIcon class="mr-1 h-3 w-3" />
-              Invalid
+              Ungültig
             </Badge>
           {/if}
         </Field.Label>
@@ -216,32 +223,32 @@
             type="email"
             bind:value={formData.nip05}
             disabled={isSubmitting}
-            placeholder="you@example.com"
+            placeholder="sie@beispiel.de"
             aria-invalid={!!errors.nip05}
           />
         </Field.Content>
         <Field.Error errors={errors.nip05 ? [{ message: errors.nip05 }] : undefined} />
         <Field.Description>
-          For identity verification. Must be configured by domain owner.
+          Zur Identitätsverifizierung. Muss vom Domain-Inhaber konfiguriert werden.
         </Field.Description>
       </Field.Field>
       
       <!-- Lightning Address -->
       <Field.Field>
-        <Field.Label for="lud16">Lightning Address (LUD-16)</Field.Label>
+        <Field.Label for="lud16">Lightning-Adresse (LUD-16)</Field.Label>
         <Field.Content>
           <Input
             id="lud16"
             type="email"
             bind:value={formData.lud16}
             disabled={isSubmitting}
-            placeholder="you@wallet.example.com"
+            placeholder="sie@wallet.beispiel.de"
             aria-invalid={!!errors.lud16}
           />
         </Field.Content>
         <Field.Error errors={errors.lud16 ? [{ message: errors.lud16 }] : undefined} />
         <Field.Description>
-          For receiving Lightning payments (zaps).
+          Zum Empfangen von Lightning-Zahlungen (Zaps).
         </Field.Description>
       </Field.Field>
       
@@ -255,13 +262,13 @@
       <!-- Buttons -->
       <Dialog.Footer>
         <Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting} class="bg-secondary border">
-          Cancel
+          Abbrechen
         </Button>
         <Button type="submit" disabled={isSubmitting || Object.keys(errors).length > 0} class="bg-primary border">
           {#if isSubmitting}
             <LoaderIcon class="mr-2 h-4 w-4 animate-spin" />
           {/if}
-          Save Changes
+          Änderungen speichern
         </Button>
       </Dialog.Footer>
     </form>
