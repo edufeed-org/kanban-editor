@@ -193,9 +193,7 @@ export class AuthStore {
 
       const nsec = (oidcUser.profile as { nsec?: string }).nsec;
 
-      if (!nsec ||
-        !nsec.startsWith("nsec1") || 
-        nsec.length !== 63) {
+      if (!nsec) {
         throw new Error("Invalid nsec format");
       }
 
