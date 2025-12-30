@@ -847,6 +847,17 @@ export class AuthStore {
       session: this.getStoredSession(),
     };
   }
+
+  public async fetchProfileFromPubkey(pubkey: string) {
+    try {
+      const user = await this.ndk.fetchUser(pubkey);
+      if (user) return user.fetchProfile();
+      console.warn(`⚠️ Profile not found for ${pubkey}:`);
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch profile for ${pubkey}:`, error);
+    }
+  }
+
 }
 
 /**
@@ -1026,6 +1037,9 @@ class AuthStoreProxy {
   }
   getSessionInfo() {
     return AuthStoreWrapper.getInstance().getSessionInfo();
+  }
+  fetchProfileFromPubkey(pubkey: string) {
+    return AuthStoreWrapper.getInstance().fetchProfileFromPubkey(pubkey);
   }
 }
 

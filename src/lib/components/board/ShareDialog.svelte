@@ -29,6 +29,9 @@
 
     let leaveRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number }>>({});
     
+    // Cache for display names
+    let displayNameCache = $state<Record<string, string>>({});
+    
     // Share-Link generieren
     function generateShareLink(): string {
         const boardId = boardStore.data?.id;
@@ -73,9 +76,31 @@
     async function loadParticipants() {
         try {
             participants = await boardStore.getBoardParticipants();
+            // Load display names for all participants
+            await loadDisplayNames();
         } catch (error) {
             console.error('Fehler beim Laden der Teilnehmer:', error);
             errorMessage = 'Teilnehmer konnten nicht geladen werden';
+        }
+    }
+    
+    // Display names für alle Teilnehmer laden
+    async function loadDisplayNames() {
+        for (const participant of participants) {
+            if (!displayNameCache[participant.pubkey]) {
+                try {
+                    const profile = await authStore.fetchProfileFromPubkey(participant.pubkey);
+                    if (profile?.name || profile?.displayName || profile?.display_name) {
+                        // Reassign entire object to trigger reactivity
+                        displayNameCache = {
+                            ...displayNameCache,
+                            [participant.pubkey]: profile.displayName || profile.name || ''
+                        };
+                    }
+                } catch (error) {
+                    console.warn('Could not fetch profile for', participant.pubkey, error);
+                }
+            }
         }
     }
 
@@ -134,14 +159,42 @@
         }
     }
     
-    // Display Name für Pubkey
-    function getDisplayName(pubkey: string): string {
-        return authStore.getDisplayNameForPubkey?.(pubkey) || 
-               `${pubkey.slice(0, 8)}...${pubkey.slice(-4)}`;
-    }
+    // Display Name für Pubkey (reactive derived)
+    let participantsWithNames = $derived(
+        participants.map(participant => {
+            let displayName = '';
+            
+            // Check cache first
+            if (displayNameCache[participant.pubkey]) {
+                displayName = displayNameCache[participant.pubkey];
+            }
+            // Try authStore method (if available)
+            else if (authStore.getDisplayNameForPubkey) {
+                const name = authStore.getDisplayNameForPubkey(participant.pubkey);
+                if (name && name !== participant.pubkey) {
+                    displayName = name;
+                }
+            }
+            // Check if it's the current user
+            else if (participant.pubkey === authStore.getPubkey()) {
+                const userName = authStore.getUserName();
+                if (userName) displayName = userName;
+            }
+            
+            // Fallback: shortened pubkey
+            if (!displayName) {
+                displayName = `${participant.pubkey.slice(0, 8)}...${participant.pubkey.slice(-4)}`;
+            }
+            
+            return {
+                ...participant,
+                displayName
+            };
+        })
+    );
     
     // Filtered participants
-    let editorsAndOwners = $derived(participants.filter(p => p.role === 'editor' || p.role === 'owner'));
+    let editorsAndOwners = $derived(participantsWithNames.filter(p => p.role === 'editor' || p.role === 'owner'));
     
     // Bei Dialog-Öffnung laden
     $effect(() => {
@@ -259,7 +312,7 @@
                         <div class="flex items-center justify-between p-2 rounded-md border">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium">
-                                    {getDisplayName(participant.pubkey)}
+                                    {participant.displayName}
                                 </span>
                                 <Badge variant={participant.role === 'owner' ? 'default' : 'secondary'}>
                                     {participant.role === 'owner' ? 'Owner' : 'Editor'}
