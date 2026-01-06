@@ -25,12 +25,15 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
 
       - name: Enable pnpm (Corepack)
         run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run pnpm check
         run: pnpm check
@@ -54,12 +57,15 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
 
       - name: Enable pnpm (Corepack)
         run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run pnpm build
         run: pnpm build
