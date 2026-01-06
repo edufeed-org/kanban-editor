@@ -7,6 +7,9 @@ on:
 jobs:
   build_site:
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
+
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v5
