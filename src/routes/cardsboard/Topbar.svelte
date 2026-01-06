@@ -60,6 +60,7 @@
 
     let dialogOpen = $state(false);
     let previousDialogState = $state(false); // ← NEU: Track previous state
+    let isPublishingToEdufeed = $state(false); // Track publishing status
     
     // 🔥 WICHTIG: Nutze $derived vom Store - das ist reactive!
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
@@ -304,6 +305,7 @@
     import LinkIcon from "@lucide/svelte/icons/link";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";
+    import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -350,6 +352,61 @@
         // 3. Schließe Dialog
         dialogOpen = false;
         console.log('🔄 currentBoardTitle wird neu berechnet:', currentBoardTitle);
+    }
+
+    /**
+     * Publishes the current board as a Learning Resource to Edufeed
+     * following the AMB (Adaptive Material Bundle) protocol
+     */
+    async function handlePublishToEdufeed() {
+        if (isPublishingToEdufeed) return;
+        
+        try {
+            isPublishingToEdufeed = true;
+            
+            // Get current board data
+            const boardData = boardStore.data;
+            if (!boardData) {
+                toast.error('Fehler: Kein Board geladen');
+                return;
+            }
+
+            // Validate board has required metadata
+            if (!boardData.name || boardData.name.trim() === '') {
+                toast.error('Bitte gib dem Board einen Titel');
+                return;
+            }
+
+            // TODO: Import and use AMB converter
+            // import { boardToAMB } from '@edufeed-org/amb-nostr-converter';
+            // const ambEvent = boardToAMB(boardData, {
+            //     title: metaForm.title,
+            //     description: metaForm.description,
+            //     tags: metaForm.tags.split(',').map(t => t.trim()).filter(t => t),
+            //     license: metaForm.license
+            // });
+            
+            // For now, show success toast
+            toast.success('🚀 Board wird als Learning Resource vorbereitet...', {
+                description: 'Die AMB-Konvertierung wird implementiert'
+            });
+            
+            console.log('📚 Publishing board to Edufeed as Learning Resource:', {
+                boardId: boardData.id,
+                title: metaForm.title,
+                description: metaForm.description,
+                tags: metaForm.tags,
+                license: metaForm.license
+            });
+            
+        } catch (error) {
+            console.error('❌ Error publishing to Edufeed:', error);
+            toast.error('Fehler beim Veröffentlichen', {
+                description: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        } finally {
+            isPublishingToEdufeed = false;
+        }
     }
 
     async function handleDeleteBoard() {
@@ -560,7 +617,7 @@
                     <EllipsisVerticalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
                 {/if}
-                <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-md max-h-[85vh] overflow-y-auto">
+                <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                     <Dialog.Header>
                         <Dialog.Title>Board-Einstellungen</Dialog.Title>
                     </Dialog.Header>
@@ -629,29 +686,67 @@
                     </div>
                     
                     <Dialog.Footer>
-                        <div class="flex justify-between w-full">
-                            <div class="flex gap-2">
-                                <Button variant="outline" onclick={handleDeleteBoard} class="h-9 w-9 bg-destructive btn">
-                                    <TrashIcon class="h-4 w-4" />
-                                </Button>
+                        <div class="flex flex-col gap-3 w-full">
+                            <!-- First row: Action buttons (Export, Share, Publish) -->
+                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 <ExportButton />
                                 <LiaScriptExportButton />
                                 <!-- ShareLink Button -->
                                 <Button 
                                     variant="outline" 
-                                    size="icon"
-                                    class="h-9 bg-secondary btn"
+                                    size="sm"
+                                    class="h-9 gap-2"
                                     title="Share-Link generieren"
                                     onclick={generateAndShowShareLink}
                                     disabled={isGeneratingShareLink}
                                 >
                                     <LinkIcon class="h-4 w-4" />
+                                    <span class="hidden sm:inline">Share</span>
+                                </Button>
+                                <!-- Publish to Edufeed Button -->
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    class="h-9 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                                    title="Als Learning Resource bei Edufeed veröffentlichen"
+                                    onclick={handlePublishToEdufeed}
+                                    disabled={isPublishingToEdufeed || !canEditBoardMeta}
+                                >
+                                    <UploadCloudIcon class="h-4 w-4" />
+                                    <span>Edufeed</span>
                                 </Button>
                             </div>
-                            <div  class="flex gap-2">
-                                <Button variant="outline" onclick={() => { dialogOpen = false; }} class="bg-secondary">Abbrechen</Button>
-                                <Button variant="default" onclick={saveBoardMeta} class="bg-primary border" disabled={!canEditBoardMeta}>Speichern</Button>
-                                
+                            
+                            <!-- Second row: Delete, Cancel, Save -->
+                            <div class="flex justify-between w-full gap-2">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onclick={handleDeleteBoard} 
+                                    class="h-9 gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    <TrashIcon class="h-4 w-4" />
+                                    <span class="hidden sm:inline">Löschen</span>
+                                </Button>
+                                <div class="flex gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onclick={() => { dialogOpen = false; }} 
+                                        class="h-9"
+                                    >
+                                        Abbrechen
+                                    </Button>
+                                    <Button 
+                                        variant="default" 
+                                        size="sm"
+                                        onclick={saveBoardMeta} 
+                                        class="h-9" 
+                                        disabled={!canEditBoardMeta}
+                                    >
+                                        Speichern
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </Dialog.Footer>
