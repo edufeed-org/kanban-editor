@@ -31,6 +31,7 @@
     import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
     import { ShareButton, VersionHistory } from '$lib/components/board';
+    import { publishBoardToEdufeed } from '$lib/utils/ambPublisher';
 	
     
 
@@ -364,43 +365,71 @@
         try {
             isPublishingToEdufeed = true;
             
-            // Get current board data
-            const boardData = boardStore.data;
-            if (!boardData) {
+            // Get current board instance
+            const board = boardStore.data;
+            if (!board) {
                 toast.error('Fehler: Kein Board geladen');
                 return;
             }
 
             // Validate board has required metadata
-            if (!boardData.name || boardData.name.trim() === '') {
+            if (!board.name || board.name.trim() === '') {
                 toast.error('Bitte gib dem Board einen Titel');
                 return;
             }
+            
+            // Check if user is authenticated
+            if (!authStore.isAuthenticated) {
+                toast.error('Bitte melde dich an, um Inhalte zu veröffentlichen');
+                return;
+            }
+            
+            const pubkey = authStore.getPubkey();
+            if (!pubkey) {
+                toast.error('Fehler: Keine Public Key verfügbar');
+                return;
+            }
 
-            // TODO: Import and use AMB converter
-            // import { boardToAMB } from '@edufeed-org/amb-nostr-converter';
-            // const ambEvent = boardToAMB(boardData, {
-            //     title: metaForm.title,
-            //     description: metaForm.description,
-            //     tags: metaForm.tags.split(',').map(t => t.trim()).filter(t => t),
-            //     license: metaForm.license
-            // });
+            // Show loading toast
+            toast.loading('🚀 Board wird als Learning Resource publiziert...');
             
-            // For now, show success toast
-            toast.success('🚀 Board wird als Learning Resource vorbereitet...', {
-                description: 'Die AMB-Konvertierung wird implementiert'
-            });
+            // Parse tags from form
+            const tagsArray = metaForm.tags
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
             
-            console.log('📚 Publishing board to Edufeed as Learning Resource:', {
-                boardId: boardData.id,
+            // Publish to Edufeed using AMB protocol
+            const result = await publishBoardToEdufeed(board, {
+                pubkey,
                 title: metaForm.title,
                 description: metaForm.description,
-                tags: metaForm.tags,
+                tags: tagsArray,
                 license: metaForm.license
             });
             
+            // Dismiss loading toast
+            toast.dismiss();
+            
+            if (result.success) {
+                toast.success('✅ Board erfolgreich als Learning Resource publiziert!', {
+                    description: `Event-ID: ${result.eventId?.substring(0, 16)}...`
+                });
+                
+                console.log('📚 Successfully published to Edufeed:', {
+                    eventId: result.eventId,
+                    boardId: board.id,
+                    ambResource: result.ambResource
+                });
+            } else {
+                toast.error('Fehler beim Veröffentlichen', {
+                    description: result.error || 'Unbekannter Fehler'
+                });
+            }
+            
         } catch (error) {
             console.error('❌ Error publishing to Edufeed:', error);
+            toast.dismiss();
             toast.error('Fehler beim Veröffentlichen', {
                 description: error instanceof Error ? error.message : 'Unbekannter Fehler'
             });
