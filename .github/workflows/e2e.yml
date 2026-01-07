@@ -9,7 +9,9 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    
+    permissions:
+      packages: read
+
     steps:
     - uses: actions/checkout@v4
 
@@ -23,10 +25,13 @@ jobs:
       with:
         node-version: '22'
         cache: 'pnpm'
+        registry-url: https://npm.pkg.github.com
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
-      
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
       

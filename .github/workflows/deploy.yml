@@ -7,6 +7,9 @@ on:
 jobs:
   build_site:
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
+
     steps:
       - name: Checkout this repository
         uses: actions/checkout@v5
@@ -21,9 +24,12 @@ jobs:
         with:
           node-version: '25'
           cache: pnpm
+          registry-url: https://npm.pkg.github.com
 
       - name: Install dependencies
         run: pnpm install
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build
         env:
