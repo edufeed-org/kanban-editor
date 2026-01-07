@@ -1,0 +1,83 @@
+name: ❓ Frage / Support
+description: Du weißt nicht genau, ob ein Behavior ein Bug oder ein Feature ist, dann stelle doch mal eine Frage!
+title: "[FRAGE]: "
+labels: ["question"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Willkommen! 🤔
+        
+        Nutze dieses Template, wenn du dir unsicher bist, ob ein bestimmtes Verhalten 
+        der Anwendung gewollt (Feature) oder ein Fehler (Bug) ist.
+
+  - type: textarea
+    id: observed-behavior
+    attributes:
+      label: Beobachtetes Verhalten
+      description: |
+        Beschreibe genau, was aktuell passiert.
+        Was macht die Anwendung?
+      placeholder: |
+        Beispiel: "Wenn ich eine Karte in eine andere Spalte verschiebe, 
+        wird die Karte sortiert nach Erstellungsdatum eingefügt, 
+        nicht an der Position wo ich sie fallen lasse."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Was hättest du erwartet?
+      description: |
+        Was denkst du, sollte passieren?
+        Oder was würdest du als intuitiveres Verhalten empfinden?
+      placeholder: |
+        Beispiel: "Ich hätte erwartet, dass die Karte genau dort eingefügt wird, 
+        wo ich sie fallen lasse, unabhängig vom Erstellungsdatum."
+
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext & Reproduktions-Schritte
+      description: |
+        Wie kann man das Verhalten reproduzieren?
+        In welcher Situation tritt es auf?
+      placeholder: |
+        1. Board mit mindestens 2 Spalten öffnen
+        2. Karte erstellen in Spalte A
+        3. Karte per Drag & Drop in Spalte B verschieben
+        4. Beobachten: Karte erscheint nicht an Drop-Position
+
+  - type: input
+    id: docs-checked
+    attributes:
+      label: Falls ja, welche Dokumente hast du gelesen?
+      description: Optional, hilft uns zu verstehen, wo wir nachbessern können
+      placeholder: "z.B. docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md, README.md"
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: |
+        Optional: Zeige uns, wo du nicht weiterkommst
+        Drag & Drop Screenshots hier herein
+      placeholder: "Screenshots hier einfügen..."
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Danke für deine Frage!** 💡
+        
+        Unser Team oder die Community wird sich melden.
+        
+        **Weitere Hilfe:**
+        - 📚 [Vollständige Dokumentation](../docs/_INDEX.md)
+        - 🗺️ [Roadmap](../docs/COLLABORATION/ROADMAP.md)
+        - 💬 [GitHub Discussions](../../discussions) für allgemeine Diskussionen
+        - 🐛 [Bug Report](?template=bug_report.yml) für technische Probleme
