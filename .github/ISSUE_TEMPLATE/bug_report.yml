@@ -1,0 +1,144 @@
+name: 🐛 Bug Report
+description: Melde einen Fehler oder ein Problem mit der Anwendung
+title: "[BUG]: "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vielen Dank, dass du einen Bug meldest! Bitte fülle das Formular so vollständig wie möglich aus.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung des Problems
+      description: Eine klare und präzise Beschreibung des Fehlers
+      placeholder: "Beispiel: Wenn ich eine Karte verschiebe, verschwindet sie..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte deiner Meinung nach passieren?
+      placeholder: "Die Karte sollte in der neuen Spalte erscheinen..."
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+      description: Was passiert stattdessen?
+      placeholder: "Die Karte verschwindet komplett aus dem Board..."
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie können wir den Fehler nachstellen?
+      placeholder: |
+        1. Gehe zu Board "XYZ"
+        2. Klicke auf Karte "ABC"
+        3. Ziehe die Karte in Spalte "DEF"
+        4. Fehler tritt auf
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: In welchem Browser tritt das Problem auf?
+      multiple: true
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Brave
+        - Other (bitte in Kommentaren angeben)
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser Version
+      description: Welche Browser-Version nutzt du?
+      placeholder: "z.B. Chrome 120.0.6099.129"
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Betriebssystem
+      description: Welches Betriebssystem nutzt du?
+      multiple: true
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS 14 (Sonoma)
+        - macOS 13 (Ventura)
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - iOS 17
+        - iOS 18
+        - Android 13
+        - Android 14
+        - Other (bitte in Kommentaren angeben)
+
+  - type: dropdown
+    id: device-type
+    attributes:
+      label: Gerätetyp
+      description: Auf welchem Gerät tritt der Fehler auf?
+      options:
+        - Desktop/Laptop
+        - Tablet
+        - Smartphone
+
+  - type: input
+    id: screen-resolution
+    attributes:
+      label: Bildschirmauflösung
+      description: Optional, aber hilfreich bei UI-Problemen
+      placeholder: "z.B. 1920x1080"
+
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: Browser Console Logs
+      description: |
+        Falls vorhanden, kopiere relevante Fehler aus der Browser Console (F12 → Console Tab)
+        Bitte in Code-Blöcke einschließen mit ```
+      placeholder: |
+        ```
+        Error: Cannot read property 'id' of undefined
+            at BoardStore.moveCard (kanbanStore.svelte.ts:123)
+        ```
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Videos
+      description: |
+        Ziehe Screenshots oder Videos hier herein (Drag & Drop)
+        Bei UI-Problemen extrem hilfreich!
+      placeholder: "Screenshots hier einfügen..."
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Gibt es noch weitere Informationen, die helfen könnten?
+      placeholder: |
+        - War das Board groß (>100 Karten)?
+        - Gab es parallele Operationen?
+        - Ist es nach einem Browser-Reload reproduzierbar?
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Danke für deinen Bug-Report!** 🙏
+        
+        Unser Team wird sich das Issue so schnell wie möglich ansehen.
+        Du erhältst Benachrichtigungen über Updates zu diesem Issue.
