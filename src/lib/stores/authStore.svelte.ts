@@ -230,6 +230,19 @@ export class AuthStore {
         console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after OIDC login:', error);
       }
 
+      // 🧹 Clean up OIDC query parameters from URL
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        // Remove OIDC-related parameters
+        url.searchParams.delete('code');
+        url.searchParams.delete('state');
+        url.searchParams.delete('session_state');
+        url.searchParams.delete('iss');
+        
+        // Update URL without page reload
+        window.history.replaceState({}, '', url.toString());
+      }
+
       return user;
     } catch (error) {
       console.error("oidc login failed:", error);
