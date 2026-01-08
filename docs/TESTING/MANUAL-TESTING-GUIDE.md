@@ -2,7 +2,8 @@
 
 **Datum:** 07. Januar 2026  
 **Zielgruppe:** QA Tester, Beta Tester, Entwickler  
-**Seite:** `[edufeed-org.github.io/kanban-editor/cardsboard](https://edufeed-org.github.io/kanban-editor/cardsboard)`)
+**Seite:** [edufeed-org.github.io/kanban-editor/cardsboard](https://edufeed-org.github.io/kanban-editor/cardsboard)
+**Wo soll ich berichten:** [github.com/edufeed-org/kanban-editor/issues/new/choose](https://github.com/edufeed-org/kanban-editor/issues/new/choose)
 
 ---
 
@@ -364,9 +365,6 @@ Anm.: Das Wort "Share" ist irrenführend, da es auch die Teilen-Funktionalität 
 - [ ] **Erwartung:** "Skip to main content" Link erscheint
 - [ ] **Test:** Skip-Link aktivieren
 - [ ] **Erwartung:** Fokus springt direkt zum Board (Main-Content)
-
----
-
 
 ---
 
