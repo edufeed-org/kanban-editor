@@ -1057,7 +1057,7 @@ export class BoardStore {
         this.deleteCard(cardId);
     }
 
-    public setCardPublishState(cardId: string, state: 'draft' | 'published' | 'archived'): void {
+    public setCardPublishState(cardId: string, state: 'draft' | 'published'): void {
         BoardOperations.setCardPublishState(this.board, cardId, state);
         this.triggerUpdate();
         this.publishCardAsync(cardId);
@@ -1324,7 +1324,7 @@ export class BoardStore {
         this.triggerUpdate({ publish: false });
     }
 
-    public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published' | 'archived'; tags?: string[]; ccLicense?: string }): void {
+    public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published'; tags?: string[]; ccLicense?: string }): void {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -1343,7 +1343,7 @@ export class BoardStore {
         this.publishBoardAsync();
     }
 
-    public setPublishState(state: 'draft' | 'published' | 'archived'): void {
+    public setPublishState(state: 'draft' | 'published'): void {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;

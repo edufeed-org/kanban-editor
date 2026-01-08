@@ -231,9 +231,6 @@ export class BoardStorage {
         if (lowerName.includes('done') || lowerName.includes('complete') || lowerName.includes('finished')) {
             return 'green';
         }
-        if (lowerName.includes('archive') || lowerName.includes('archived')) {
-            return 'red';
-        }
         return 'slate';
     }
 

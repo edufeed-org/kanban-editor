@@ -125,7 +125,7 @@ export function createColumnOrderPatchEvent(
  *     ["d", "board-id"],  // d-tag: unique identifier
  *     ["title", "Board Name"],
  *     ["description", "..."],
- *     ["state", "draft|published|archived"],
+ *     ["state", "draft|published"],
  *     ["col", "col-id", "Column Name", "order", "color"],
  *     ["col", "col-id-2", "Column Name 2", "order", "color"],
  *     ["p", "maintainer-pubkey"],  // co-editors (NIP-51)
@@ -300,7 +300,7 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *     ["col_label", "Column Name"],  // SECONDARY: Human-readable name
  *     ["title", "Card Title"],
  *     ["description", "..."],
- *     ["state", "draft|published|archived"],
+ *     ["state", "draft|published"],
  *     ["rank", "0"],  // Position in column
  *     ["image", "https://..."],  // Optional image
  *     ["p", "author-pubkey"],  // Card author

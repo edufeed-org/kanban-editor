@@ -72,11 +72,17 @@
 				title: z.string().min(1, 'Link-Titel erforderlich')
 			})
 		),
-		publishState: z.enum(['draft', 'published', 'archived'] as const)
+		publishState: z.enum(['draft', 'published'] as const)
 	});
 
-	// Form State mit Svelte 5 Runes
-	let formData = $state<Partial<CardProps>>({
+	let formData = $state<{
+		heading: string;
+		content: string;
+		image: string;
+		labels: string[];
+		links: { id: string; url: string; title: string }[];
+		publishState: 'draft' | 'published';
+	}>({
 		heading: '',
 		content: '',
 		image: '',
@@ -475,15 +481,7 @@
 								/>
 								<span>Veröffentlicht</span>
 							</label>
-							<label class="flex items-center gap-2">
-								<input
-									type="radio"
-									bind:group={formData.publishState}
-									value="archived"
-									disabled={isSubmitting}
-								/>
-								<span>Archiviert</span>
-							</label>
+
 						</FieldContent>
 					</Field>
 				</Tabs.Content>
