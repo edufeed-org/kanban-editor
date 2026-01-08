@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { flip } from 'svelte/animate';
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
@@ -272,6 +273,7 @@
             {#each filteredBoards as board (board.id)}
                 {@const isActive = currentBoardId === board.id}
                 <div
+                    animate:flip={{ duration: 300 }}
                     class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
                         {isActive
                             ? 'active-board'
