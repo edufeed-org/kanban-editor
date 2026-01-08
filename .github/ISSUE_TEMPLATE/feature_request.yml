@@ -2,7 +2,7 @@ name: ✨ Feature Request
 description: Schlage eine neue Funktion oder Verbesserung vor
 title: "[FEATURE]: "
 labels: ["enhancement"]
-assignees: []
+projects: ["edufeed-org/2"]
 
 body:
   - type: markdown

@@ -2,7 +2,7 @@ name: ❓ Frage / Support
 description: Du weißt nicht genau, ob ein Behavior ein Bug oder ein Feature ist, dann stelle doch mal eine Frage!
 title: "[FRAGE]: "
 labels: ["question"]
-assignees: []
+projects: ["edufeed-org/2"]
 
 body:
   - type: markdown

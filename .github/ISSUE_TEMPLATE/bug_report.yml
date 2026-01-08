@@ -2,7 +2,7 @@ name: 🐛 Bug Report
 description: Melde einen Fehler oder ein Problem mit der Anwendung
 title: "[BUG]: "
 labels: ["bug"]
-assignees: []
+projects: ["edufeed-org/2"]
 
 body:
   - type: markdown
