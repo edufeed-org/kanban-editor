@@ -16,13 +16,10 @@
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import UserIcon from '@lucide/svelte/icons/user';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import type { CardItem } from './types.js';
 	import { onMount, onDestroy } from 'svelte';
 
 	interface Props {
@@ -35,7 +32,6 @@
 	let commentText = $state('');
 	let isSubmitting = $state(false);
 	let isLoadingComments = $state(false);
-	let selectedAuthorPopover = $state<string | null>(null);
 	let editName = $state('');
 	let selectedColor = $state('slate');
 	let localPublishState = $state<'draft' | 'published'>('draft');

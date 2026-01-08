@@ -139,7 +139,7 @@
 
 <div class="border rounded-md overflow-hidden {disabled ? 'opacity-50 cursor-not-allowed' : ''}">
 	<!-- Toolbar -->
-	{#if isEditorReady && editor}
+	{#if isEditorReady && editor && !disabled}
 		<div class="bg-muted/30 border-b p-2 flex flex-wrap gap-1">
 			<!-- Text Formatting -->
 			<button
