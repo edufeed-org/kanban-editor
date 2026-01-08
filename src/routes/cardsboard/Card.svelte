@@ -231,7 +231,7 @@
 	}
 
 	function handleRenameChange() {
-		// 🎯 DIREKT SPEICHERN beim Input ändern (onchange/onblur)
+		// 🎯 DIREKT SPEICHERN beim Input ändern (real-time mit oninput)
 		if (editName !== card.name) {
 			console.log('📝 Card name changed:', { old: card.name, new: editName });
 			boardStore.editCard(String(card.id), { heading: editName });
@@ -277,7 +277,7 @@
 			<div class="flex flex-col gap-0 flex-1">
 				<!-- Card Title mit Comment Badge -->
 				<div class="flex items-center justify-between border-b pb-2">
-					<Card.Title class="text-sm flex-1">{card.name}</Card.Title>
+					<Card.Title class="text-sm flex-1">{localName}</Card.Title>
 					
 					
 				</div>
@@ -338,12 +338,12 @@
 									<Input 
 										bind:value={editName} 
 										placeholder="Kartenname"
-										onchange={handleRenameChange}
-										onblur={handleRenameChange}
-									/>
-								</div>
-								
-								<Separator />
+									oninput={handleRenameChange}
+									onblur={handleRenameChange}
+								/>
+							</div>
+							
+							<Separator />
 								
 								<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
 									selectedColor = colorValue;
