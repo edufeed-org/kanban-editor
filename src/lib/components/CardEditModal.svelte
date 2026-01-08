@@ -108,8 +108,7 @@
     // Publish state options
     const publishOptions = [
         { value: 'draft', label: 'Entwurf' },
-        { value: 'published', label: 'Veröffentlicht' },
-        { value: 'archived', label: 'Archiviert' }
+        { value: 'published', label: 'Veröffentlicht' }
     ];
 </script>
 

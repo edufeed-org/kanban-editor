@@ -38,7 +38,7 @@
 	let selectedAuthorPopover = $state<string | null>(null);
 	let editName = $state('');
 	let selectedColor = $state('slate');
-	let localPublishState = $state<'draft' | 'published' | 'archived'>('draft');
+	let localPublishState = $state<'draft' | 'published'>('draft');
 
 	// Subscription cleanup function
 	let unsubscribeComments: (() => void) | undefined;
@@ -123,7 +123,7 @@
 	$effect(() => {
 		editName = card.name;
 		selectedColor = card.color || 'slate';
-		localPublishState = (card.publishState || 'draft') as 'draft' | 'published' | 'archived';
+		localPublishState = (card.publishState || 'draft') as 'draft' | 'published';
 	});
 
 	const attendees = $derived(
@@ -272,10 +272,10 @@
 	}
 
 	/**
-	 * Toggle publish state: draft → published → archived → draft
+	 * Toggle publish state: draft → published → draft
 	 */
 	function handlePublishToggle() {
-		const states: ('draft' | 'published' | 'archived')[] = ['draft', 'published', 'archived'];
+		const states: ('draft' | 'published')[] = ['draft', 'published'];
 		const currentIndex = states.indexOf(localPublishState);
 		const nextIndex = (currentIndex + 1) % states.length;
 		localPublishState = states[nextIndex];

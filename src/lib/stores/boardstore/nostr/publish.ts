@@ -23,10 +23,7 @@ export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<
 	try {
 		const event = boardToNostrEvent(board, ndk);
 		const publishState = board.publishState || 'draft';
-		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
-			| 'published'
-			| 'draft'
-			| 'private';
+		const normalizedState = publishState as 'published' | 'draft' | 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -118,7 +115,7 @@ export async function publishCard(ndk: NDK | undefined, board: Board, cardId: st
 		);
 
 		const publishState = card.publishState || 'draft';
-		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+		const normalizedState = publishState as
 			| 'published'
 			| 'draft'
 			| 'private';
@@ -184,7 +181,7 @@ export async function publishComment(
 		// IMPORTANT: `e`-tag should reference the actual Nostr event id of the card (not the d-tag)
 		const event = createCommentEvent(comment.text, cardRef, card.eventId || '', ndk);
 		const publishState = card.publishState || 'draft';
-		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+		const normalizedState = publishState as
 			| 'published'
 			| 'draft'
 			| 'private';
@@ -263,7 +260,7 @@ export async function deleteComment(ndk: NDK | undefined, comment: Comment, card
 
 		// Bestimme Target-Relays basierend auf Card's publishState
 		const publishState = card.publishState || 'draft';
-		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+		const normalizedState = publishState as
 			| 'published'
 			| 'draft'
 			| 'private';
@@ -455,7 +452,7 @@ export async function deleteCard(ndk: NDK | undefined, card: Card): Promise<void
 
 		// 3. Bestimme Target-Relays basierend auf Card's publishState
 		const publishState = card.publishState || 'draft';
-		const normalizedState = (publishState === 'archived' ? 'private' : publishState) as
+		const normalizedState = publishState as
 			| 'published'
 			| 'draft'
 			| 'private';

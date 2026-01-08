@@ -1,16 +1,15 @@
 <script lang="ts">
 	interface Props {
-		value: 'draft' | 'published' | 'archived';
+		value: 'draft' | 'published';
 		onToggle: () => void;
 	}
 
 	let { value = 'draft', onToggle }: Props = $props();
 
-	const states: Array<'draft' | 'published' | 'archived'> = ['draft', 'published', 'archived'];
+	const states: Array<'draft' | 'published'> = ['draft', 'published'];
 	const labels = {
 		draft: 'Entwurf',
-		published: 'Veröffentlicht',
-		archived: 'Archiviert'
+		published: 'Veröffentlicht'
 	};
 </script>
 
@@ -18,7 +17,6 @@
 	class="publish-toggle"
 	class:draft={value === 'draft'}
 	class:published={value === 'published'}
-	class:archived={value === 'archived'}
 	onclick={(e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -67,13 +65,6 @@
 		background-color: #10b981; /* green */
 		border-radius: 50%;
 		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
-
-	.publish-toggle.archived .publish-indicator {
-		width: 0.5rem;
-		height: 0.5rem;
-		background-color: #ef4444; /* red */
-		border-radius: 50%;
 	}
 
 	@keyframes pulse {

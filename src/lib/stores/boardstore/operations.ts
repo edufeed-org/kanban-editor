@@ -523,7 +523,7 @@ export class BoardOperations {
     public static setCardPublishState(
         board: Board,
         cardId: string,
-        state: 'draft' | 'published' | 'archived'
+        state: 'draft' | 'published'
     ): boolean {
         const result = board.findCardAndColumn(cardId);
         if (!result) {
@@ -541,7 +541,7 @@ export class BoardOperations {
      */
     public static setBoardPublishState(
         board: Board,
-        state: 'draft' | 'published' | 'archived'
+        state: 'draft' | 'published'
     ): void {
         board.setPublishState(state);
         console.log(`✅ Board publishState gesetzt: ${state}`);

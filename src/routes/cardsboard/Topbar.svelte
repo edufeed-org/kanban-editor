@@ -56,7 +56,7 @@
         description: boardMeta?.description || '',
         tags: boardMeta?.tags?.join(', ') || '',
         license: 'cc-by-4.0',
-        publishState: 'draft' as 'draft' | 'published' | 'archived'
+        publishState: 'draft' as 'draft' | 'published'
     });
 
     let dialogOpen = $state(false);
@@ -681,10 +681,6 @@
                                 <div class="flex items-center space-x-2">
                                     <RadioGroup.Item value="published" id="state-published" />
                                     <Label for="state-published" class="font-normal">Veröffentlicht (Nostr)</Label>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <RadioGroup.Item value="archived" id="state-archived" />
-                                    <Label for="state-archived" class="font-normal">Archiviert</Label>
                                 </div>
                             </RadioGroup.Root>
                         </div>

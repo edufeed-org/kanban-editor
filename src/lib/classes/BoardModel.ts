@@ -7,7 +7,7 @@ import { BoardRole } from '../types/sharing.js';
 // INTERFACES UND TYPEN
 // ============================================================================
 
-export type PublishState = 'draft' | 'published' | 'archived';
+export type PublishState = 'draft' | 'published';
 
 // Basis-Interface für alle Elemente, die eine Nostr-d-tag-ID benötigen
 export interface NostrElement {
