@@ -1828,7 +1828,7 @@ export class BoardStore {
 
                 const now = Date.now();
                 if (now - this.lastDnDSyncAbortToastAt > 1200) {
-                    toast.error('Drag & Drop abgebrochen', {
+                    toast.warning('Drag & Drop abgebrochen', {
                         description:
                             'Der Board-Zustand war während des Verschiebens kurz inkonsistent. Bitte versuche den Move erneut. Wenn es wiederholt passiert: Seite neu laden (F5).'
                     });
