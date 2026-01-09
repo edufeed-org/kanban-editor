@@ -19,6 +19,14 @@ import { NDKEvent } from '@nostr-dev-kit/ndk';
 // MOCKS
 // ============================================================================
 
+// Mock authStore to simulate authenticated user
+vi.mock('./authStore.svelte', () => ({
+  authStore: {
+    isAuthenticated: true, // Default to authenticated for tests
+    currentUser: { pubkey: 'mock-pubkey' },
+  }
+}));
+
 const mockNDK = {
   signer: undefined,
   subscribe: vi.fn(),
@@ -210,6 +218,76 @@ describe('SyncManager', () => {
       // Should be queued as fallback
       expect(manager.status.queuedEvents).toBe(1);
       manager.dispose();
+    });
+  });
+
+  // ========== Authentication Tests ==========
+
+  describe('Authentication', () => {
+    it('should not queue event when user is not authenticated', async () => {
+      // Mock authStore to simulate unauthenticated user
+      const { authStore } = await import('./authStore.svelte');
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(false);
+
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+
+      const event = new NDKEvent(mockNDK);
+      event.kind = 30301;
+
+      const result = await syncManager.publishOrQueue(event, 'board');
+
+      expect(result).toBeUndefined();
+      expect(syncManager.status.queuedEvents).toBe(0);
+      
+      // Restore mock
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(true);
+    });
+
+    it('should not publish event when user is not authenticated', async () => {
+      // Mock authStore to simulate unauthenticated user
+      const { authStore } = await import('./authStore.svelte');
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(false);
+
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+
+      const event = new NDKEvent(mockNDK);
+      event.kind = 30301;
+
+      const result = await syncManager.publishOrQueue(event, 'board');
+
+      expect(result).toBeUndefined();
+      expect(syncManager.status.queuedEvents).toBe(0);
+      
+      // Restore mock
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(true);
+    });
+
+    it('should skip sync queue when user is not authenticated', async () => {
+      // Mock authStore to simulate unauthenticated user
+      const { authStore } = await import('./authStore.svelte');
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(false);
+
+      // Add an event to queue first (when authenticated)
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(true);
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      
+      const event = new NDKEvent(mockNDK);
+      event.kind = 30301;
+      await syncManager.publishOrQueue(event, 'board');
+      
+      expect(syncManager.status.queuedEvents).toBe(1);
+
+      // Now try to sync when not authenticated
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(false);
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+
+      await syncManager.syncQueue();
+
+      // Queue should not be processed
+      expect(syncManager.status.queuedEvents).toBe(1);
+      
+      // Restore mock
+      vi.spyOn(authStore, 'isAuthenticated', 'get').mockReturnValue(true);
     });
   });
 

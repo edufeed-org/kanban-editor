@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { flip } from 'svelte/animate';
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
@@ -47,15 +48,27 @@
         }));
         
         // Kombiniere beide Listen und entferne Duplikate
-        // ⚠️ WICHTIG: Shared Boards FIRST!
-        // getAllBoards() enthält auch Maintainer-Boards → die tauchen sonst doppelt auf.
-        // Wenn "own" zuerst kommt, überschreibt es isShared/userRole und Editor-Klicks würden fälschlich deleteBoard() auslösen.
-        const allBoards = [...sharedBoards, ...enrichedOwnBoards];
-        const uniqueBoards = allBoards.filter((board, index, self) => 
-            index === self.findIndex(b => b.id === board.id)
-        );
+        // ⚠️ WICHTIG: Bei Duplikaten (Board ist sowohl own als auch shared) bevorzuge shared-Metadaten
+        // Dies verhindert dass Editor-Klicks fälschlich deleteBoard() auslösen
+        const boardMap = new Map();
         
-        // console.log(`🔍 Filtered boards: ${uniqueBoards.length} (own: ${ownBoards.length}, shared: ${sharedBoards.length}, query: "${searchQuery}", trigger: ${trigger})`);
+        // Füge erst eigene Boards hinzu
+        for (const board of enrichedOwnBoards) {
+            boardMap.set(board.id, board);
+        }
+        
+        // Überschreibe mit shared boards (damit isShared/userRole korrekt sind)
+        for (const board of sharedBoards) {
+            boardMap.set(board.id, board);
+        }
+        
+        // Konvertiere zu Array und sortiere nach lastAccessed (neueste zuerst)
+        const uniqueBoards = Array.from(boardMap.values()).sort((a, b) => {
+            const timeA = a.lastAccessed || a.updatedAt || a.createdAt || 0;
+            const timeB = b.lastAccessed || b.updatedAt || b.createdAt || 0;
+            return timeB - timeA; // Neueste zuerst
+        });
+        
         return uniqueBoards;
     });
 
@@ -260,6 +273,7 @@
             {#each filteredBoards as board (board.id)}
                 {@const isActive = currentBoardId === board.id}
                 <div
+                    animate:flip={{ duration: 300 }}
                     class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
                         {isActive
                             ? 'active-board'

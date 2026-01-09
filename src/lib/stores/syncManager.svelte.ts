@@ -15,6 +15,7 @@ import { NDKEvent, NDKRelaySet } from '@nostr-dev-kit/ndk';
 import type { NDKSigner } from '@nostr-dev-kit/ndk';
 import type { PublishState } from '$lib/stores/settingsStore.svelte';
 import { settingsStore } from '$lib/stores/settingsStore.svelte';
+import { authStore } from '$lib/stores/authStore.svelte';
 
 // ============================================================================
 // TYPES
@@ -130,6 +131,12 @@ export class SyncManager {
 
   public async publishOrQueue(event: NDKEvent, type: 'board' | 'card' | 'comment', priority: 'high' | 'normal' | 'low' = 'normal', publishState?: PublishState, targetRelays?: string[]): Promise<NDKEvent | undefined> {
     try {
+      // ⚡ NEW: Check if user is authenticated before queuing
+      if (!authStore.isAuthenticated) {
+        console.log(`[SyncManager] ⛔ User not authenticated - skipping Nostr publishing/queueing for ${type} event`);
+        return undefined;
+      }
+      
       if (targetRelays !== undefined && targetRelays.length === 0) {
         console.log(`[SyncManager] Local-only mode - skipping Nostr publishing for ${type} event`);
         return undefined; // ← NEU: Return undefined for local-only
@@ -309,9 +316,9 @@ export class SyncManager {
   }
 
   public async syncQueue(): Promise<void> {
-    console.log(`[SyncManager] syncQueue called - isOnline: ${this.isOnline}, isSyncing: ${this.isSyncing}, hasSigner: ${!!this.signer}`);
-    if (this.isSyncing || !this.isOnline || !this.signer) {
-      const reason = this.isSyncing ? 'already syncing' : !this.isOnline ? 'offline' : 'no signer';
+    console.log(`[SyncManager] syncQueue called - isOnline: ${this.isOnline}, isSyncing: ${this.isSyncing}, hasSigner: ${!!this.signer}, isAuthenticated: ${authStore.isAuthenticated}`);
+    if (this.isSyncing || !this.isOnline || !this.signer || !authStore.isAuthenticated) {
+      const reason = this.isSyncing ? 'already syncing' : !this.isOnline ? 'offline' : !this.signer ? 'no signer' : 'user not authenticated';
       console.log(`[SyncManager] Sync skipped - ${reason}`);
       return;
     }

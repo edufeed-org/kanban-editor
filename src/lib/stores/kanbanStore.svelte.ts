@@ -398,24 +398,37 @@ export class BoardStore {
         }
         
         // ⚡ FIX: Aktuelles Board mit Live-Daten überschreiben (nicht cached localStorage!)
-        const currentBoardIndex = userBoards.findIndex(b => b.id === this.board.id);
-        if (currentBoardIndex !== -1) {
-            userBoards[currentBoardIndex] = {
-                id: this.board.id,
-                name: this.board.name,
-                description: this.board.description,
-                createdAt: new Date(this.board.createdAt).getTime(),
-                updatedAt: this.board.updatedAt 
-                    ? new Date(this.board.updatedAt).getTime() 
-                    : new Date(this.board.createdAt).getTime(),
-                lastAccessed: this.board.lastAccessedAt 
-                    ? new Date(this.board.lastAccessedAt).getTime() 
-                    : new Date(this.board.createdAt).getTime(),
-                hasUnseenChanges: this.board.hasUnseenChanges
-            };
-        }
+        // ⚡ ZUSÄTZLICH: Alle Boards mit frischem lastAccessedAt aktualisieren
+        const refreshedBoards = userBoards.map(board => {
+            if (board.id === this.board.id) {
+                // Aktuelles Board: Nutze Live-Daten
+                return {
+                    id: this.board.id,
+                    name: this.board.name,
+                    description: this.board.description,
+                    createdAt: new Date(this.board.createdAt).getTime(),
+                    updatedAt: this.board.updatedAt 
+                        ? new Date(this.board.updatedAt).getTime() 
+                        : new Date(this.board.createdAt).getTime(),
+                    lastAccessed: this.board.lastAccessedAt 
+                        ? new Date(this.board.lastAccessedAt).getTime() 
+                        : new Date(this.board.createdAt).getTime(),
+                    hasUnseenChanges: this.board.hasUnseenChanges
+                };
+            } else {
+                // Andere Boards: Lade frisches lastAccessedAt aus Storage
+                const storedBoard = BoardStorage.loadBoard(board.id);
+                if (storedBoard?.lastAccessedAt) {
+                    return {
+                        ...board,
+                        lastAccessed: new Date(storedBoard.lastAccessedAt).getTime()
+                    };
+                }
+                return board;
+            }
+        });
         
-        return userBoards;
+        return refreshedBoards;
     }
 
     public createBoard(name: string, description?: string): string {
@@ -1828,7 +1841,7 @@ export class BoardStore {
 
                 const now = Date.now();
                 if (now - this.lastDnDSyncAbortToastAt > 1200) {
-                    toast.error('Drag & Drop abgebrochen', {
+                    toast.warning('Drag & Drop abgebrochen', {
                         description:
                             'Der Board-Zustand war während des Verschiebens kurz inkonsistent. Bitte versuche den Move erneut. Wenn es wiederholt passiert: Seite neu laden (F5).'
                     });

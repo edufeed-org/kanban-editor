@@ -43,7 +43,7 @@
 		listEl?.addEventListener('card-click', (e: Event) => {
 			const customEvent = e as CustomEvent<OerCardClickEvent>;
 			const oer = customEvent.detail.oer;
-			const imageUrl = oer.images?.original || oer.images?.medium || oer.images?.small;
+			const imageUrl = oer.images?.original || oer.images?.medium || oer.images?.small || oer.url;
 			if (imageUrl) {
 				onSelect(imageUrl);
 			}
