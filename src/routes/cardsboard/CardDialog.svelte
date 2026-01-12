@@ -322,33 +322,35 @@
 							/>
 						{/if}
 
-						<!-- Image Preview (shown in both modes when image exists) -->
-						{#if previewCard?.image}
-							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted">
-								<img
-									src={previewCard.image}
-									alt="Kartenbild-Vorschau (gespeichert)"
-									class="w-full h-full object-cover"
-									onerror={(e) => {
-										(e.target as HTMLImageElement).style.display = 'none';
-									}}
-								/>
-								<div class="text-xs text-muted-foreground p-1 text-center bg-muted/50">
-									✓ Gespeichert
-								</div>
-							</div>
-						{:else if formData.image}
-							<div class="mt-2 rounded-md overflow-hidden max-h-32 bg-muted border-2 border-blue-400">
+						<!-- Image Preview - show unsaved changes when image differs from saved -->
+						{#if formData.image && formData.image !== previewCard?.image}
+							<!-- Unsaved preview (new selection from OER or URL input) -->
+							<div class="mt-2 rounded-md overflow-hidden bg-muted border-2 border-blue-400">
 								<img
 									src={formData.image}
 									alt="Kartenbild-Vorschau"
-									class="w-full h-full object-cover"
+									class="w-full h-auto max-h-48 object-contain"
 									onerror={(e) => {
 										(e.target as HTMLImageElement).style.display = 'none';
 									}}
 								/>
 								<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
 									(Vorschau - noch nicht gespeichert)
+								</div>
+							</div>
+						{:else if previewCard?.image}
+							<!-- Saved image -->
+							<div class="mt-2 rounded-md overflow-hidden bg-muted">
+								<img
+									src={previewCard.image}
+									alt="Kartenbild-Vorschau (gespeichert)"
+									class="w-full h-auto max-h-48 object-contain"
+									onerror={(e) => {
+										(e.target as HTMLImageElement).style.display = 'none';
+									}}
+								/>
+								<div class="text-xs text-muted-foreground p-1 text-center bg-muted/50">
+									✓ Gespeichert
 								</div>
 							</div>
 						{/if}
