@@ -17,6 +17,12 @@
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
+	const availableSources = [
+		{ value: 'nostr', label: 'Nostr' },
+		{ value: 'arasaac', label: 'ARASAAC' },
+		{ value: 'openverse', label: 'Openverse' }
+	];
+
 	let searchEl: OerSearchElement;
 	let listEl: OerListElement;
 	let paginationEl: PaginationElement;
@@ -39,11 +45,11 @@
 			listEl.error = customEvent.detail.error;
 		});
 
-		// Handle card selection - extract original image URL
+		// Handle card selection - extract image URL from new schema structure
 		listEl?.addEventListener('card-click', (e: Event) => {
 			const customEvent = e as CustomEvent<OerCardClickEvent>;
 			const oer = customEvent.detail.oer;
-			const imageUrl = oer.images?.original || oer.images?.medium || oer.images?.small || oer.url;
+			const imageUrl = oer.extensions?.images?.high || oer.extensions?.images?.medium || oer.extensions?.images?.small || oer.amb?.id;
 			if (imageUrl) {
 				onSelect(imageUrl);
 			}
@@ -64,6 +70,8 @@
 		language={language}
 		locked-type="image"
 		show-type-filter={false}
+		show-source-filter={true}
+		available-sources={JSON.stringify(availableSources)}
 		page-size={12}
 	>
 		<oer-list bind:this={listEl} {language}></oer-list>
