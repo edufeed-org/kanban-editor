@@ -5,6 +5,7 @@ playwright-report/
 
 # Node
 node_modules
+.pnpm-store
 
 # IDE
 ./vscode
