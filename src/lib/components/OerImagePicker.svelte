@@ -18,9 +18,9 @@
 	const { onSelect }: Props = $props();
 
 	const availableSources = [
-		{ value: 'nostr', label: 'Nostr' },
+		{ value: 'openverse', label: 'Openverse' },
 		{ value: 'arasaac', label: 'ARASAAC' },
-		{ value: 'openverse', label: 'Openverse' }
+		{ value: 'nostr', label: 'Nostr' }
 	];
 
 	let searchEl: OerSearchElement;
