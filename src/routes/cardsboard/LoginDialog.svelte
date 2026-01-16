@@ -20,6 +20,44 @@
 	let isLoading = $derived(authStore.isLoading);
 	let errorMessage = $derived(authStore.errorMessage);
 
+	// Browser detection
+	let browserType = $state<'chrome' | 'firefox' | 'safari' | 'edge' | 'opera' | 'brave' | 'unknown'>('unknown');
+	
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			const ua = navigator.userAgent.toLowerCase();
+			
+			// Check for specific browsers (order matters!)
+			if (ua.includes('edg/') || ua.includes('edge')) {
+				browserType = 'edge';
+			} else if (ua.includes('opr/') || ua.includes('opera')) {
+				browserType = 'opera';
+			} else if (ua.includes('brave')) {
+				browserType = 'brave';
+			} else if (ua.includes('firefox')) {
+				browserType = 'firefox';
+			} else if (ua.includes('safari') && !ua.includes('chrome')) {
+				browserType = 'safari';
+			} else {
+				browserType = 'chrome';
+			}
+		}
+	});
+
+	// Extension links based on browser
+	const extensionLinks = $derived({
+		alby: browserType === 'firefox' 
+			? 'https://addons.mozilla.org/firefox/addon/alby/'
+			: browserType === 'safari'
+			? 'https://apps.apple.com/app/alby/id6451892291'
+			: 'https://chrome.google.com/webstore/detail/alby/iokeahhehimjnekafflcihljlcjccdbe',
+		nos2x: browserType === 'firefox'
+			? 'https://addons.mozilla.org/firefox/addon/nos2x/'
+			: browserType === 'safari'
+			? null // nos2x not available on Safari
+			: 'https://chrome.google.com/webstore/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp'
+	});
+
 	async function handleNsecLogin() {
 		const success = await authStore.loginWithNsec(nsecInput);
 		if (success) {
@@ -58,15 +96,12 @@
 		<Tabs value="nip07" class="w-full">
 			<TabsList class="grid w-full grid-cols-3">
 				<TabsTrigger value="nip07" title="NIP07">
-					<LogInIcon class="h-4 w-4 mr-2" />
-					NIP-07
+					Browser-Extension
 				</TabsTrigger>
 				<TabsTrigger value="nsec" title="NSEC">
-					<KeyRoundIcon class="h-4 w-4 mr-2" />
 					nsec
 				</TabsTrigger>
 				<TabsTrigger value="oidc" title="OIDC">
-					<UserIcon class="h-4 w-4 mr-2" />
 					RPI-Login
 				</TabsTrigger>
 				<!-- 
@@ -81,7 +116,44 @@
 			<TabsContent value="nip07" class="space-y-4">
 				<div class="space-y-2">
 					<p class="text-sm text-muted-foreground">
-						Verbinde dich mit einer Browser-Extension wie Alby oder nos2x.
+						1. Schritt: Such dir eine Browser-Extension:
+					</p>
+					<div class="text-xs text-muted-foreground space-y-1 border-l-2 border-primary/20 pl-3 py-2">
+						<div class="flex flex-col gap-1">
+							<a 
+								href={extensionLinks.alby} 
+								target="_blank" 
+								rel="noopener noreferrer"
+								class="text-primary hover:underline flex items-center gap-1"
+							>
+								→ Alby Extension
+							</a>
+							{#if extensionLinks.nos2x}
+								<a 
+									href={extensionLinks.nos2x} 
+									target="_blank" 
+									rel="noopener noreferrer"
+									class="text-primary hover:underline flex items-center gap-1"
+								>
+									→ nos2x Extension
+								</a>
+							{/if}
+						</div>
+					</div>
+					<p class="text-sm text-muted-foreground">
+						2. Schritt: Konfiguriere die Extension mit deinem Nostr-Schlüssel-Paar. 
+						Falls du keine Nostr-Schlüssel hast, lass dich welche auf dem 
+						<a 
+							href="https://edufeed-org.github.io/onboarding-tool/" 
+							target="_blank" 
+							class="font-bold"
+						>
+							Onboarding-Tool
+						</a> 
+						generieren. 
+					</p>
+					<p class="text-sm text-muted-foreground">
+						3. Schritt: Klick auf Button unten und erlaube unsere App.
 					</p>
 				</div>
 
@@ -101,7 +173,7 @@
 						Wird geladen...
 					{:else}
 						<LogInIcon class="h-4 w-4 mr-2" />
-						Mit NIP-07 anmelden
+						Mit Nostr-Extension anmelden
 					{/if}
 				</Button>
 			</TabsContent>
