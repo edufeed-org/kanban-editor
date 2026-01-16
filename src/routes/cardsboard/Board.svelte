@@ -305,7 +305,7 @@
 	class="board" 
 	aria-label="Kanban Board mit Spalten"
 	bind:this={boardElement}
-	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: false, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}}} 
+	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: false, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, touchDelay: 300}} 
 	onconsider={handleDndConsiderColumns} 
 	onfinalize={handleDndFinalizeColumns}
 >
