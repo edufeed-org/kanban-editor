@@ -13,7 +13,7 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
-  import { authStore } from '$lib';
+import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
@@ -251,10 +251,6 @@ import { toast } from "svelte-sonner";
 		if (isMobile) {
 			leftSidebarOpen = false;
 			rightSidebarOpen = false;
-			
-			if (!authStore.isAuthenticated) {
-				leftSidebarOpen = true
-			}
 		}
 	});
 	
