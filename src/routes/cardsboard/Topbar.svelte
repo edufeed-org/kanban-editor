@@ -307,6 +307,7 @@
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
+    import ImportPopover from '$lib/components/ImportPopover.svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -716,6 +717,8 @@
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 <ExportButton />
                                 <LiaScriptExportButton />
+                                <!-- Import Button -->
+                                <ImportPopover />
                                 <!-- ShareLink Button -->
                                 <Button 
                                     variant="outline" 
