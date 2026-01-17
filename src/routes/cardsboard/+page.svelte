@@ -242,7 +242,7 @@ import { authStore } from '$lib';
 
 	// Sidebar states - jetzt mit Größen
 	let leftSidebarOpen = $state(true);
-	let rightSidebarOpen = $state(true);
+	let rightSidebarOpen = $state(false);
 	let leftSidebarSize = $state(15);
 	let rightSidebarSize = $state(15);
 	
@@ -250,7 +250,6 @@ import { authStore } from '$lib';
 	$effect(() => {
 		if (isMobile) {
 			leftSidebarOpen = false;
-			rightSidebarOpen = false;
 		}
 	});
 	
