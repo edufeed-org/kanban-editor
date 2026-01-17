@@ -209,16 +209,16 @@
         <Button
             onclick={handleCreateBoard}
             disabled={isCreating}
-            class="w-full gap-2"
+            class="w-full gap-2 h-auto py-2 whitespace-normal"
             variant="default"
             data-testid="create-board-button"
         >
             {#if isCreating}
-                <LoaderIcon class="h-4 w-4 animate-spin" />
+                <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
             {:else}
-                <SquarePlusIcon class="h-4 w-4" />
+                <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
             {/if}
-            Neues Board
+            <span class="break-words text-left">Neues Board</span>
         </Button>
 
         <Separator />
@@ -227,16 +227,16 @@
         <Button
             onclick={handleCreateDemoSession}
             disabled={isCreating}
-            class="w-full gap-2"
+            class="w-full gap-2 text-xs md:text-sm h-auto py-2 whitespace-normal"
             variant="outline"
             data-testid="demo-board-button"
         >
             {#if isCreating}
-                <LoaderIcon class="h-4 w-4 animate-spin" />
+                <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
             {:else}
-                <CircleIcon class="h-4 w-4" />
+                <CircleIcon class="h-4 w-4 flex-shrink-0" />
             {/if}
-            🎯 Demo ausprobieren
+            <span class="break-words text-left">🎯 Demo ausprobieren</span>
         </Button>
 
         <Separator />
@@ -273,7 +273,7 @@
                 {@const isActive = currentBoardId === board.id}
                 <div
                     animate:flip={{ duration: 300 }}
-                    class="w-full rounded-md px-3 py-2 text-sm transition-all group relative
+                    class="w-full rounded-md px-3 py-2.5 text-sm transition-all group relative
                         {isActive
                             ? 'active-board'
                             : ''}"
@@ -282,10 +282,10 @@
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
                         class="w-full text-left pr-10"
-                        title={isActive ? '✅ Aktives Board' : 'Board laden'}
+                        title={`${board.name}${isActive ? ' (✅ Aktives Board)' : ''}`}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
-                        <div class="font-medium truncate flex items-center gap-2 board-title">
+                        <div class="font-medium flex items-start gap-2 board-title text-sm md:text-base leading-snug">
                             {#if isActive}
                                 <!-- Active indicator icon -->
                                 <!-- <SquareArrowRight class="active-board-indicator"/> -->
@@ -309,7 +309,7 @@
                         
                         <!-- Description (optional) -->
                         {#if board.description}
-                            <div class="text-xs opacity-75 truncate">
+                            <div class="text-xs opacity-75 line-clamp-2 leading-snug">
                                 {board.description}
                             </div>
                         {/if}

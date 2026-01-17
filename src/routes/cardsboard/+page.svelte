@@ -243,7 +243,7 @@ import { authStore } from '$lib';
 	// Sidebar states - jetzt mit Größen
 	let leftSidebarOpen = $state(true);
 	let rightSidebarOpen = $state(false);
-	let leftSidebarSize = $state(15);
+	let leftSidebarSize = $state(20);
 	let rightSidebarSize = $state(15);
 	
 	// Auto-close sidebars on mobile
@@ -258,7 +258,7 @@ import { authStore } from '$lib';
 		if (leftSidebarOpen) {
 			leftSidebarSize = 0;
 		} else {
-			leftSidebarSize = 15;
+			leftSidebarSize = 20;
 		}
 		leftSidebarOpen = !leftSidebarOpen;
 	}
@@ -342,8 +342,8 @@ import { authStore } from '$lib';
 			<!-- Linke Sidebar - nur rendern wenn offen -->
 			{#if leftSidebarOpen}
 				<Resizable.Pane 
-					defaultSize={15} 
-					minSize={10} 
+					defaultSize={20} 
+					minSize={15} 
 					maxSize={40} 
 					class="border-r bg-muted/10 overflow-y-auto"
 					onResize={(size: number) => { leftSidebarSize = size; }}
