@@ -306,7 +306,7 @@
 				{#if showMenu}
 					<Popover.Root>
 						<Popover.Trigger
-								class="popover-trigger w-6 h-6 pl-1 bg-secondary btn text-center hover:bg-accent group btn"
+								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
 								onclick={(e) => {
 									e.stopPropagation();
 								}}
