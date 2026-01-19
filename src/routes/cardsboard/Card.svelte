@@ -40,6 +40,7 @@
 
 	let showModal = $state(false);
 	let showSidebar = $state(false);
+	let showPopover = $state(false);
 	
 	// 🔥 WICHTIG: showPublishToggle hängt vom Board-publishState ab!
 	let boardPublishState = $derived(boardStore.data?.publishState || 'draft');
@@ -240,6 +241,7 @@
 
 	function handleEditClick() {
 		showModal = true;
+		showPopover = false; // Close popover when opening edit dialog
 	}
 
 	function handleDeleteClick() {
@@ -304,7 +306,7 @@
 				{/if}
 
 				{#if showMenu}
-					<Popover.Root>
+					<Popover.Root bind:open={showPopover}>
 						<Popover.Trigger
 								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
 								onclick={(e) => {
