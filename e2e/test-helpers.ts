@@ -63,9 +63,7 @@ export async function mockNip07Extension(page: Page, options: {
  * need to be at /cardsboard first!
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
-  // assure demo settings are loaded, otherwise it will interfere clicking login
-  await expect(page.getByTestId('demo-board-button')).toBeVisible({timeout: 10000});
-  
+ 
   await page.getByRole('button', { name: 'Anmelden' }).click();
   
   const nsecTab = page.getByRole('tab', { name: 'nsec' });
@@ -84,9 +82,6 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
  */
 export async function loginWithNip07(page: Page) {
     await mockNip07Extension(page);
-    
-    // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Anmelden' }).click();
     

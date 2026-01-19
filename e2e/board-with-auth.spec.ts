@@ -20,13 +20,13 @@ test.describe('Authenticated Board Operations', () => {
   test.describe('Board Access Control', () => {
     test('should require authentication to create new boards', async ({ page }) => {
       await expect(page.getByText('Anmelden')).toBeVisible();
-      await expect(page.getByText('Neues Board')).not.toBeVisible();
+      await expect(page.getByText('Neues Board')).not.toBeEnabled();
     });
 
     test('should allow board creation after successful login', async ({ page }) => {
       await loginWithNip07(page);
       
-      await expect(page.getByText('Neues Board')).toBeVisible();
+      await expect(page.getByText('Neues Board')).toBeEnabled();
     });
   });
 

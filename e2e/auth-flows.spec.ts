@@ -17,8 +17,6 @@ test.describe('NIP-07 Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/cardsboard');
     await clearAuthState(page);
-    // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
   });
 
   test('should successfully authenticate with NIP-07 extension', async ({ page, context }) => {
@@ -81,8 +79,6 @@ test.describe('nsec Private Key Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/cardsboard');
     await clearAuthState(page);
-    // assure demo settings are loaded, otherwise it will interfere clicking login
-    await expect(page.getByRole('button', { name: 'Demo ausprobieren' })).toBeVisible();
   });
 
   test('should successfully authenticate with valid nsec', async ({ page }) => {
