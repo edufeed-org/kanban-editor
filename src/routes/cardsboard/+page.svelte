@@ -13,7 +13,7 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
-  import { authStore } from '$lib';
+import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
@@ -242,19 +242,14 @@ import { toast } from "svelte-sonner";
 
 	// Sidebar states - jetzt mit Größen
 	let leftSidebarOpen = $state(true);
-	let rightSidebarOpen = $state(true);
-	let leftSidebarSize = $state(15);
+	let rightSidebarOpen = $state(false);
+	let leftSidebarSize = $state(20);
 	let rightSidebarSize = $state(15);
 	
 	// Auto-close sidebars on mobile
 	$effect(() => {
 		if (isMobile) {
 			leftSidebarOpen = false;
-			rightSidebarOpen = false;
-			
-			if (!authStore.isAuthenticated) {
-				leftSidebarOpen = true
-			}
 		}
 	});
 	
@@ -263,7 +258,7 @@ import { toast } from "svelte-sonner";
 		if (leftSidebarOpen) {
 			leftSidebarSize = 0;
 		} else {
-			leftSidebarSize = 15;
+			leftSidebarSize = 20;
 		}
 		leftSidebarOpen = !leftSidebarOpen;
 	}
@@ -347,8 +342,8 @@ import { toast } from "svelte-sonner";
 			<!-- Linke Sidebar - nur rendern wenn offen -->
 			{#if leftSidebarOpen}
 				<Resizable.Pane 
-					defaultSize={15} 
-					minSize={10} 
+					defaultSize={20} 
+					minSize={15} 
 					maxSize={40} 
 					class="border-r bg-muted/10 overflow-y-auto"
 					onResize={(size: number) => { leftSidebarSize = size; }}

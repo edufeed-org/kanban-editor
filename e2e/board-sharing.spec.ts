@@ -115,7 +115,7 @@ test.describe('Board Sharing - Permission System', () => {
         
         // Warte explizit dass Board in Liste erscheint
         await expect(viewerPage.getByRole('button', { name: boardName })).toBeVisible({ timeout: 15000 });
-        await viewerPage.getByRole('button', { name: boardName }).click();
+        await viewerPage.getByRole('button', { name: boardName }).click({timeout: 2000});
 
         await viewerPage.waitForLoadState('networkidle');
 
@@ -192,7 +192,6 @@ test.describe('Board Sharing - Multi-User Collaboration', () => {
         // TODO: should not be necessary after bug fix
         await editor2Page.reload();
         await editor2Page.waitForLoadState('networkidle');
-        await editor2Page.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden
         
         await expect(editor2Page.locator(`text="${boardName}"`)).toBeVisible({ timeout: 20000 });
         await editor2Page.locator(`text="${boardName}"`).click();

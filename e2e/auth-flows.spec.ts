@@ -49,7 +49,7 @@ test.describe('NIP-07 Authentication Flow', () => {
   test('should handle NIP-07 extension not found', async ({ page }) => {
     page.getByRole('button', { name: 'Anmelden' }).click();
     
-    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
     await nip07Button.click();
   
     await expect(page.getByText('Nostr-Browser-Extension nicht gefunden')).toBeVisible();
@@ -65,7 +65,7 @@ test.describe('NIP-07 Authentication Flow', () => {
     });
     
     page.getByRole('button', { name: 'Anmelden' }).click();
-    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
     await nip07Button.click();
 
     // Should show user rejection error

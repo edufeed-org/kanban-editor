@@ -426,6 +426,12 @@
 									bind:value={newLabel}
 									disabled={isSubmitting}
 									class="flex-1"
+									onkeydown={(e) => {
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											addLabel();
+										}
+									}}
 								/>
 								<Button
 									type="button"
