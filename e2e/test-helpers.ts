@@ -90,7 +90,7 @@ export async function loginWithNip07(page: Page) {
 
     await page.getByRole('button', { name: 'Anmelden' }).click();
     
-    const nip07Button = page.getByText('Mit NIP-07 anmelden');
+    const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
     await expect(nip07Button).toBeVisible();
     await nip07Button.click();
 
