@@ -91,32 +91,6 @@
         }
     }
 
-    // Event: Demo-Session für anonyme Benutzer erstellen
-    async function handleCreateDemoSession() {
-        isCreating = true;
-        try {
-            // Demo-Session erstellen
-            authStore.createDemoSession();
-            console.log('✅ Demo-Session erstellt');
-            
-            // ⚡ FIX: Triggere Board-Migration und Liste-Update
-            boardStore.onAuthChanged();
-            
-            // Demo-Board sollte jetzt automatisch geladen werden
-            const demoBoards = boardStore.getAllBoards();
-            if (demoBoards.length > 0) {
-                const demoBoardId = demoBoards[0].id;
-                boardStore.loadBoard(demoBoardId);
-                currentBoardId = demoBoardId;
-                console.log('✅ Demo-Board geladen:', demoBoardId);
-            }
-        } catch (error) {
-            console.error('❌ Fehler beim Erstellen der Demo-Session:', error);
-        } finally {
-            isCreating = false;
-        }
-    }
-
     // Event: Board auswählen/laden
     async function handleSelectBoard(boardId: string) {
         if (boardId === currentBoardId) {
@@ -204,45 +178,22 @@
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden">
-    <!-- Neues Board Button für authentifizierte Benutzer -->
-    {#if authStore.isAuthenticated }
-        <Button
-            onclick={handleCreateBoard}
-            disabled={isCreating}
-            class="w-full gap-2 h-auto py-2 whitespace-normal"
-            variant="default"
-            data-testid="create-board-button"
-        >
-            {#if isCreating}
-                <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
-            {:else}
-                <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
-            {/if}
-            <span class="break-words text-left">Neues Board</span>
-        </Button>
+    <Button
+        onclick={authStore.isAuthenticated ? handleCreateBoard : null}
+        disabled={authStore.isAuthenticated ? false : true}
+        class="w-full gap-2 h-auto py-2 whitespace-normal"
+        variant="default"
+        data-testid="create-board-button"
+    >
+        {#if isCreating}
+            <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
+        {:else}
+            <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
+        {/if}
+        <span class="break-words text-left">Neues Board</span>
+    </Button>
 
-        <Separator />
-    {:else}
-        <!-- Demo-Board Button für anonyme Benutzer -->
-        <Button
-            onclick={handleCreateDemoSession}
-            disabled={isCreating}
-            class="w-full gap-2 text-xs md:text-sm h-auto py-2 whitespace-normal"
-            variant="outline"
-            data-testid="demo-board-button"
-        >
-            {#if isCreating}
-                <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
-            {:else}
-                <CircleIcon class="h-4 w-4 flex-shrink-0" />
-            {/if}
-            <span class="break-words text-left">🎯 Demo ausprobieren</span>
-        </Button>
-
-        <Separator />
-    {/if}
-
-    <!-- Suchfeld -->
+    <Separator />
     <div class="m-2 flex-shrink-0">
         <Input
             type="text"
