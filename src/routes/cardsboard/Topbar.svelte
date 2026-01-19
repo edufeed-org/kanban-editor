@@ -145,10 +145,6 @@
     async function handleReconnect() {
         try {
             const syncManager = getSyncManager();
-            toast.info('🔄 Verbindung wird wiederhergestellt...', {
-                description: 'Versuche Verbindung zu Relays herzustellen.',
-                duration: 2000
-            });
             await syncManager.forceReconnect();
         } catch (error) {
             console.error('[Topbar] Reconnect failed:', error);
@@ -188,43 +184,6 @@
             });
         }
     }
-    
-    
-    // 🔔 Toast-Benachrichtigungen für Relay-Verbindung
-    let previousConnectedRelays = $state<number | undefined>(undefined);
-    
-    $effect(() => {
-        const currentConnected = syncStatus.connectedRelays ?? 0;
-        const currentTotal = syncStatus.totalRelays ?? 0;
-        
-        // Nur benachrichtigen wenn sich der Status ändert (nicht beim ersten Load)
-        if (previousConnectedRelays !== undefined) {
-            // Von verbunden → getrennt
-            if (currentConnected === 0 && previousConnectedRelays > 0) {
-                toast.error('⚠️ Keine Verbindung zu Relays', {
-                    description: 'Deine Änderungen werden lokal gespeichert und später synchronisiert.',
-                    duration: 5000
-                });
-            }
-            // Von getrennt → verbunden
-            else if (currentConnected > 0 && previousConnectedRelays === 0) {
-                toast.success('✅ Verbindung wiederhergestellt', {
-                    description: `Verbunden mit ${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays.`,
-                    duration: 3000
-                });
-            }
-            // Partielle Wiederverbindung (einige Relays kommen online)
-            else if (currentConnected > previousConnectedRelays && previousConnectedRelays > 0) {
-                toast.info('🔄 Relay-Verbindung verbessert', {
-                    description: `${currentConnected} von ${syncStatus.totalRelays ?? currentConnected} Relays verbunden.`,
-                    duration: 2000
-                });
-            }
-        }
-        
-        // Update previous state für nächsten Vergleich
-        previousConnectedRelays = currentConnected;
-    });
     
     // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
     $effect(() => {
