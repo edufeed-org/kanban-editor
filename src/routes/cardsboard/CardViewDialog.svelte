@@ -310,7 +310,7 @@
 				<div class="flex items-center gap-2 flex-shrink-0">
 					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
 					<Popover.Root>
-						<Popover.Trigger class="mr-4 pl-1 w-6 h-6 btn bg-primary" type="button" title="Kartenoptionen" >
+						<Popover.Trigger class="mr-4 w-6 h-6 flex items-center justify-center btn bg-primary" type="button" title="Kartenoptionen" >
 							<EllipsisVerticalIcon class="h-4 w-4" />
 						</Popover.Trigger>
 					<Popover.Content align="end" side="bottom" class="w-72">

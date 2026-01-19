@@ -291,10 +291,10 @@
 			<span class="hidden sm:inline">Import</span>
 		</Button>
 	</Popover.Trigger>
-	<Popover.Content class="w-96 p-4" side="bottom">
-		<div class="space-y-4">
+	<Popover.Content class="w-[calc(100vw-2rem)] sm:w-96 p-3 sm:p-4 z-[100] max-h-[85vh] overflow-y-auto" side="bottom" align="start" sideOffset={5}>
+		<div class="space-y-3 sm:space-y-4">
 			<!-- Header -->
-			<h4 class="font-semibold leading-none">📥 Board importieren</h4>
+			<h4 class="font-semibold leading-none text-sm sm:text-base">📥 Board importieren</h4>
 
 			<!-- File Input -->
 			<div>
@@ -395,12 +395,12 @@
 			{/if}
 
 			<!-- Buttons -->
-			<div class="flex gap-2">
+			<div class="flex flex-col sm:flex-row gap-2">
 				<Button
 					type="button"
 					onclick={confirmImport}
 					disabled={!selectedFile || isLoading}
-					class="flex-1"
+					class="flex-1 w-full sm:w-auto"
 				>
 					{#if isLoading}
 						<span class="mr-2">⏳</span>
@@ -418,13 +418,14 @@
 						open = false;
 					}}
 					disabled={isLoading}
+					class="w-full sm:w-auto"
 				>
 					Abbrechen
 				</Button>
 			</div>
 
 			<!-- Help Text -->
-			<p class="text-xs text-slate-500 border-t pt-2">
+			<p class="text-[10px] sm:text-xs text-slate-500 border-t pt-2 leading-relaxed">
 				💡 <strong>Tipps:</strong>
 				<br/>
 				• Einzelnes Board: Mit "Merge" oder "Neu" importieren

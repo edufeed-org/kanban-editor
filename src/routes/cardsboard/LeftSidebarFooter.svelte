@@ -114,7 +114,7 @@
 		</Button>
 
 		<p class="text-xs text-muted-foreground mt-3 text-center">
-			Melde dich an um Karten zu erstellen
+			Melde dich an, um Boards zu erstellen
 		</p>
 
 		<!-- Demo-Button (nur wenn erlaubt) -->

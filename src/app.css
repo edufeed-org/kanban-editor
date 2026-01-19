@@ -250,3 +250,8 @@ button.bg-destructive:hover {
 
 /* Card styling now handled in Card.svelte with dynamic colors */
 
+/* Toast close button positioning - move to right side */
+[data-sonner-toast] [data-close-button] {
+  left: unset !important;
+  right: 0.5rem !important;
+}

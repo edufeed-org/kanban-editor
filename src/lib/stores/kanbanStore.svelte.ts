@@ -1633,6 +1633,8 @@ export class BoardStore {
     private lastDnDSyncAbortToastAt = 0;
     public dndSyncAbortToken = $state(0);
     private lastColumnOrderPatchAtMs = $state(0);
+    private syncRetryCount = 0;
+    private maxSyncRetries = 3;
 
     private async publishColumnOrderPatchAsync(columnIds: string[]): Promise<void> {
         await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
@@ -1770,7 +1772,7 @@ export class BoardStore {
         
         this.syncDebounceTimer = setTimeout(() => {
             this.executeSyncBoardState();
-        }, 150); // 150ms debounce
+        }, 600); // 600ms debounce - gives user time to finish changes
         
         return true;
     }
@@ -1832,20 +1834,34 @@ export class BoardStore {
             }
             
             console.log('✅ Sync complete');
+            this.syncRetryCount = 0; // Reset retry counter on success
         } catch (error) {
-            console.error('❌ Sync failed:', error);
+            console.error('❌ Sync failed (attempt ' + (this.syncRetryCount + 1) + '/' + this.maxSyncRetries + '):', error);
 
             const message = error instanceof Error ? error.message : String(error);
             if (message.includes('syncBoardState hard-fail')) {
                 this.dndSyncAbortToken++;
+                this.syncRetryCount++;
 
-                const now = Date.now();
-                if (now - this.lastDnDSyncAbortToastAt > 1200) {
-                    toast.warning('Drag & Drop abgebrochen', {
-                        description:
-                            'Der Board-Zustand war während des Verschiebens kurz inkonsistent. Bitte versuche den Move erneut. Wenn es wiederholt passiert: Seite neu laden (F5).'
-                    });
-                    this.lastDnDSyncAbortToastAt = now;
+                // Retry with exponential backoff if not exceeded max retries
+                if (this.syncRetryCount < this.maxSyncRetries && this.pendingSyncData) {
+                    const retryDelay = Math.min(1000 * Math.pow(2, this.syncRetryCount - 1), 4000);
+                    console.log(`⏳ Retrying sync in ${retryDelay}ms...`);
+                    
+                    setTimeout(() => {
+                        this.executeSyncBoardState();
+                    }, retryDelay);
+                } else if (this.syncRetryCount >= this.maxSyncRetries) {
+                    // Only show error after exhausting all retries
+                    const now = Date.now();
+                    if (now - this.lastDnDSyncAbortToastAt > 2000) {
+                        toast.error('Synchronisierung fehlgeschlagen', {
+                            description:
+                                'Die Änderungen konnten nicht gespeichert werden. Bitte lade die Seite neu (F5) und versuche es erneut.'
+                        });
+                        this.lastDnDSyncAbortToastAt = now;
+                    }
+                    this.syncRetryCount = 0; // Reset for next operation
                 }
             }
         } finally {

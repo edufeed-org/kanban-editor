@@ -72,12 +72,27 @@
 
     async function loadSnapshots() {
         isLoading = true;
+        
+        // Timeout wrapper to prevent infinite loading
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout: Versionen konnten nicht geladen werden')), 15000);
+        });
+        
         try {
-            snapshots = await boardStore.loadSnapshots();
+            // Race between loading snapshots and timeout
+            snapshots = await Promise.race([
+                boardStore.loadSnapshots(),
+                timeoutPromise
+            ]);
             console.log(`✅ Loaded ${snapshots.length} snapshots`);
         } catch (error) {
             console.error('Failed to load snapshots:', error);
-            toast.error('Versionen konnten nicht geladen werden');
+            const errorMessage = error instanceof Error ? error.message : 'Versionen konnten nicht geladen werden';
+            toast.error(errorMessage, {
+                description: 'Bitte versuche es später erneut oder prüfe die Nostr-Verbindung.'
+            });
+            // Ensure snapshots array is still accessible even on error
+            snapshots = [];
         } finally {
             isLoading = false;
         }

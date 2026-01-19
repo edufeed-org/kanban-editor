@@ -135,7 +135,7 @@ test.describe('Board Sharing - Permission System', () => {
         await clearAuthState(page);
         await clearBoardState(page);
         
-        await expect(page.getByTestId('demo-board-button')).toBeVisible();
+        await expect(page.getByTestId('create-board-button')).toBeVisible();
                 
         await page.getByText('Demo-Board - Testen Sie die App!').click();
         
