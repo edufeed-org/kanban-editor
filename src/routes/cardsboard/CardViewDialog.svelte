@@ -33,6 +33,7 @@
 	let commentText = $state('');
 	let isSubmitting = $state(false);
 	let isLoadingComments = $state(false);
+	let isCommentFieldFocused = $state(false);
 	let editName = $state('');
 	let selectedColor = $state('slate');
 	let localPublishState = $state<'draft' | 'published'>('draft');
@@ -605,6 +606,8 @@
 					bind:value={commentText}
 					disabled={isSubmitting}
 					class="min-h-20 resize-none"
+					onfocus={() => (isCommentFieldFocused = true)}
+					onblur={() => (isCommentFieldFocused = false)}
 				/>
 				<div class="flex justify-end gap-2">
 					<Button
@@ -612,7 +615,7 @@
 						size="sm"
 						class="gap-2 bg-secondary"
 						onclick={() => (commentText = '')}
-						disabled={isSubmitting || !commentText.trim()}
+						disabled={isSubmitting || (!isCommentFieldFocused && !commentText.trim())}
 					>
 						Abbrechen
 					</Button>
