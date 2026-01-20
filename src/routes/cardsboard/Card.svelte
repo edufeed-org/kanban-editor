@@ -14,7 +14,6 @@
 	import ColorSelector from "./ColorSelector.svelte";
 	import PublishStateToggle from "./PublishStateToggle.svelte";
 	import EditIcon from '@lucide/svelte/icons/edit';
-	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
@@ -257,20 +256,21 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
+	class="card p-1 transition-all duration-200 cursor-pointer {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 6px solid {getCardColor(localColor)};"
 	onclick={(e) => {
-		// Nur bei interaktiven Elementen blockieren (Button, Links, etc.)
+		// Nur bei interaktiven Elementen blockieren (Button, Input, Links, etc.)
 		// ABER NICHT auf der Root selbst!
 		const target = e.target as HTMLElement;
-		const isInteractive = target.closest('button:not([data-card-root]), [role="button"]:not([data-card-root]), a, [role="link"]');
+		const isInteractive = target.closest('button, input, [role="button"], a, [role="link"]');
 		if (isInteractive) {
 			return;
 		}
 		e.stopPropagation();
-		console.log('🖱️ Card.Root onclick - calling onSelect');
+		console.log('🖱️ Card.Root onclick - opening view dialog');
+		isDialogOpen = true;
 		onSelect?.();
 	}}
 >
@@ -430,7 +430,6 @@
 					<Badge 
 						variant="secondary" 
 						class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
 						>
 						<MessageSquareIcon class="h-3 w-3" />
 						{localComments.length>0?localComments.length:''}
@@ -444,16 +443,6 @@
 			
 			<!-- Rechts anorden -->
 			<div class="flex gap-2 scale-80">
-				<Button
-					variant="default"
-					size="icon"
-					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
-					aria-label="Anzeigen"
-					title="Anzeigen"
-				>
-					<FullscreenIcon />
-				</Button>
 				{#if authStore.isAuthenticated }
 				<Button
 					variant="default"
