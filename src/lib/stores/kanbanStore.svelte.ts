@@ -1070,12 +1070,6 @@ export class BoardStore {
         this.deleteCard(cardId);
     }
 
-    public setCardPublishState(cardId: string, state: 'draft' | 'published'): void {
-        BoardOperations.setCardPublishState(this.board, cardId, state);
-        this.triggerUpdate();
-        this.publishCardAsync(cardId);
-    }
-
     public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
         // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
         const userBoards = this.getAllBoards();

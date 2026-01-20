@@ -6,9 +6,8 @@
  	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
  	import { Button } from "$lib/components/ui/button/index.js";
  	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
- 	import { authStore } from '$lib/index.js';
  	import { toast } from "svelte-sonner";
- 	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem, PublishState } from "./types.js";
+ 	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem } from "./types.js";
 
  	const flipDurationMs = 300;
 
@@ -205,19 +204,6 @@
   		// Handle card actions like complete, edit, etc.
   	}
 
-  	function handlePublishStateChange(cardId: string, newState: PublishState) {
-  		console.log('Publish state change:', cardId, newState);
-  		// Find and update the card's publish state
-  		for (const column of columns) {
-  			const card = column.items.find(item => String(item.id) === cardId);
-  			if (card) {
-  				card.publishState = newState;
-  				onFinalUpdate([...columns]);
-  				break;
-  			}
-  		}
-  	}
-
   	function handleSidebarAction(cardId: string, action: string) {
   		console.log('Sidebar action:', cardId, action);
   		// Handle sidebar actions like delete, duplicate, etc.
@@ -325,7 +311,6 @@
 					onSelect={() => onSelectColumn?.(id)}
  						onDrop={(newItems) => handleItemFinalize(idx, newItems)}
  						onCardAction={handleCardAction}
- 						onPublishStateChange={handlePublishStateChange}
 					selectedCardId={selectedCard}
 					onSelectCard={(cardId) => onSelectCard?.(cardId)}
  						onSidebarAction={handleSidebarAction}

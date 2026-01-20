@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { boardStore, type CardItem } from "$lib/stores/kanbanStore.svelte.js";
-	import type { PublishState } from "$lib/classes/BoardModel.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -12,7 +11,6 @@
 	import CardSidebar from "./CardSidebar.svelte";
 	import AvatarStack from "./AvatarStack.svelte";
 	import ColorSelector from "./ColorSelector.svelte";
-	import PublishStateToggle from "./PublishStateToggle.svelte";
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import UserIcon from "@lucide/svelte/icons/user";
@@ -25,14 +23,12 @@
 		card,
 		isSelected = false,
 		onSelect,
-		onPublishStateChange,
 		onCardAction,
 		onSidebarAction
 	}: {
 		card: CardItem;
 		isSelected?: boolean;
 		onSelect?: () => void;
-		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 	} = $props();
@@ -40,10 +36,6 @@
 	let showModal = $state(false);
 	let showSidebar = $state(false);
 	let showPopover = $state(false);
-	
-	// 🔥 WICHTIG: showPublishToggle hängt vom Board-publishState ab!
-	let boardPublishState = $derived(boardStore.data?.publishState || 'draft');
-	let showPublishToggle = $derived(boardPublishState === 'published');
 	let showMenu = $state(true);
 	
 	// 🆕 VERHALT: CardViewDialog bleibt IMMER selected solange offen
@@ -54,7 +46,6 @@
 	let localName = $state(card.name);
 	let localColor = $state(card.color || 'slate');
 	let localImage = $state(card.image || '');
-	let localPublishState = $state(card.publishState);
 	
 	// Lokale Kommentare Anzahl State - wird von der $effect aktualisiert!
 	let localComments = $state(card.comments || []);
@@ -92,10 +83,6 @@
 				// Silent sync - card found
 				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
 				// Das verhindert ownership_invalid_mutation Warnungen
-				if (updatedCard.publishState !== localPublishState) {
-					// Silent sync
-					localPublishState = updatedCard.publishState;
-				}
 				
 				// Aktualisiere auch andere lokale Props die sich ändern können
 				if (updatedCard.name !== localName) {
@@ -157,16 +144,6 @@
 			}
 		}
 	});
-
-	function handlePublishToggle() {
-		const newState = localPublishState === 'draft' ? 'published' : 'draft';
-		
-		// ✅ WICHTIG: Speichere im BoardStore (PROP-UPDATE-GUIDE.md Schritt 1-2)
-		boardStore.setCardPublishState(String(card.id), newState);
-		
-		// Callback für zusätzliche UI-Logik (optional)
-		onPublishStateChange?.(String(card.id), newState);
-	}
 
 	function handleImageClick() {
 		if (card.link) {
@@ -301,10 +278,6 @@
 			</div>
 			
 			<div class="header-actions">
-				{#if showPublishToggle}
-					<PublishStateToggle value={localPublishState || 'draft'} onToggle={handlePublishToggle} />
-				{/if}
-
 				{#if showMenu}
 					<Popover.Root bind:open={showPopover}>
 						<Popover.Trigger
@@ -482,8 +455,7 @@
 			color: localColor,
 			comments: card.comments,
 			labels: card.labels,
-			attendees: card.attendees,
-			publishState: localPublishState
+			attendees: card.attendees
 		}}
 		isOpen={showModal}
 		onClose={closeModal}

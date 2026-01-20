@@ -9,7 +9,6 @@
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
-	import PublishStateToggle from './PublishStateToggle.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
@@ -36,7 +35,6 @@
 	let isCommentFieldFocused = $state(false);
 	let editName = $state('');
 	let selectedColor = $state('slate');
-	let localPublishState = $state<'draft' | 'published'>('draft');
 
 	// Subscription cleanup function
 	let unsubscribeComments: (() => void) | undefined;
@@ -112,16 +110,14 @@
 		attendees: [],
 		labels: [],
 		color: 'slate',
-		publishState: 'draft' as const,
 		author: '',
 		authorName: ''
 	});
 
-	// Sync localPublishState und editName mit Card
+	// Sync editName und selectedColor mit Card
 	$effect(() => {
 		editName = card.name;
 		selectedColor = card.color || 'slate';
-		localPublishState = (card.publishState || 'draft') as 'draft' | 'published';
 	});
 
 	const attendees = $derived(
@@ -270,17 +266,6 @@
 	}
 
 	/**
-	 * Toggle publish state: draft → published → draft
-	 */
-	function handlePublishToggle() {
-		const states: ('draft' | 'published')[] = ['draft', 'published'];
-		const currentIndex = states.indexOf(localPublishState);
-		const nextIndex = (currentIndex + 1) % states.length;
-		localPublishState = states[nextIndex];
-		boardStore.updateCard(card.id as string, { publishState: localPublishState });
-	}
-
-	/**
 	 * Handle card rename
 	 */
 	function handleRenameChange() {
@@ -323,9 +308,8 @@
 					{card.name}
 				</h2>
 				
-				<!-- Right: PublishToggle + Settings Popover (wie Card.svelte) -->
+				<!-- Right: Settings Popover -->
 				<div class="flex items-center gap-2 flex-shrink-0">
-					<PublishStateToggle value={localPublishState} onToggle={handlePublishToggle} />
 					<Popover.Root>
 						<Popover.Trigger class="mr-4 w-6 h-6 flex items-center justify-center btn bg-primary" type="button" title="Kartenoptionen" >
 							<EllipsisVerticalIcon class="h-4 w-4" />
