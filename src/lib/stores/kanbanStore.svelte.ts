@@ -1857,7 +1857,7 @@ export class BoardStore {
                     if (now - this.lastDnDSyncAbortToastAt > 2000) {
                         toast.error('Synchronisierung fehlgeschlagen', {
                             description:
-                                'Die Änderungen konnten nicht gespeichert werden. Bitte lade die Seite neu (F5) und versuche es erneut.'
+                                'Die Änderungen konnten nicht gespeichert werden.'
                         });
                         this.lastDnDSyncAbortToastAt = now;
                     }
