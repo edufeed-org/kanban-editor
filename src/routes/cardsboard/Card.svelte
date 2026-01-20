@@ -464,6 +464,10 @@
 	<CardViewDialog
 		cardId={card.id}
 		bind:open={isDialogOpen}
+		onEditMode={() => {
+			isDialogOpen = false;
+			showModal = true;
+		}}
 	/>
 	
 	<!-- Card Dialog (View & Edit with Tabs) -->
