@@ -333,7 +333,6 @@
  					/>
  			</div>
      {/each}
-	{#if authStore.isAuthenticated }
 	<!-- Add Column Button - ähnlich wie Column Footer -->
 	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
 		<Button
@@ -357,5 +356,4 @@
 			Neue Spalte hinzufügen
 		</Button>
 	</div>
-	{/if}
 </section>
