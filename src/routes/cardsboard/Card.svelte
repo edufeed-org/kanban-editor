@@ -354,16 +354,19 @@
 								
 								<Separator />
 								
-								{#if authStore.isAuthenticated }
 								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
 
-								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full btn">
+								<Button 
+									variant="destructive"
+									size="sm"
+									onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }}
+									class="w-full btn"
+								>
 									<TrashIcon class="h-4 w-4" />
 									Karte löschen
 								</Button>
-								{/if}
 							</div>
 						</Popover.Content>
 					</Popover.Root>
