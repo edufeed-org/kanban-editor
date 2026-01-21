@@ -7,7 +7,7 @@
  	import { Button } from "$lib/components/ui/button/index.js";
  	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
  	import { toast } from "svelte-sonner";
- 	import type { Column as ColumnType, BoardUpdateHandler, ColumnDropHandler, CardItem } from "./types.js";
+ 	import type { Column as ColumnType, BoardUpdateHandler, CardItem } from "./types.js";
 
  	const flipDurationMs = 300;
 
