@@ -61,6 +61,27 @@ ${cardsJson}
 Wenn der Nutzer sagt: "erstelle eine Karte", "füge eine Karte hinzu", "neue Karte zu..."
 → IMMER \`add_card\` verwenden
 → NIEMALS \`create_board\` für einzelne Karten!
+→ IMMER eine aussagekräftige \`description\` mitliefern!
+
+### INHALT VON KARTEN (WICHTIG!)
+Karten müssen IMMER nützlichen Inhalt haben:
+- \`title\`: Kurzer, prägnanter Titel (max. 5-8 Wörter)
+- \`description\`: AUSFÜHRLICHE Beschreibung mit:
+  - Konkrete Arbeitsanweisungen für Schüler
+  - Benötigte Materialien
+  - Zeitangaben wenn sinnvoll
+  - Erwartete Ergebnisse
+  - Bei Gruppenarbeit: Rollenverteilung, Arbeitsschritte
+
+Beispiel für eine gute Karte:
+\`\`\`json
+{
+  "title": "Fake News erkennen",
+  "description": "**Aufgabe:** Analysiert in 3er-Gruppen die bereitgestellten Nachrichtenartikel.\\n\\n**Vorgehen:**\\n1. Prüft die Quelle: Wer hat den Artikel veröffentlicht?\\n2. Überprüft Fakten mit mindestens 2 unabhängigen Quellen\\n3. Achtet auf emotionale Sprache und Übertreibungen\\n\\n**Zeit:** 20 Minuten\\n**Ergebnis:** Präsentiert eure Erkenntnisse auf einem Plakat"
+}
+\`\`\`
+
+NIEMALS Karten nur mit Titel erstellen - description ist PFLICHT!
 
 ### EINZELNE SPALTE erstellen
 Wenn der Nutzer sagt: "erstelle eine Spalte", "füge eine Spalte hinzu"
@@ -93,7 +114,9 @@ Wenn du nicht sicher bist, was der Nutzer will
 - Nutze IMMER mindestens ein Tool
 - Bei "erstelle eine Karte" → add_card (NICHT create_board!)
 - Spalten-Namen sind case-sensitive: Nutze die exakten Namen aus dem Kontext
-- cardId kann entweder die ID oder der Titel der Karte sein`;
+- cardId kann entweder die ID oder der Titel der Karte sein
+- **KARTEN BRAUCHEN IMMER INHALT:** Generiere IMMER eine ausführliche \`description\` mit konkreten Arbeitsanweisungen, nicht nur einen Titel!
+- Bei mehreren Karten: Jede Karte bekommt individuellen, unterschiedlichen Inhalt`;
 }
 
 /**

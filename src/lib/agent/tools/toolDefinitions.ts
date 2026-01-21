@@ -162,13 +162,13 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'add_card',
-            description: 'Erstellt eine EINZELNE neue Karte in einer Spalte. IMMER verwenden wenn der Nutzer "eine Karte erstellen" möchte - NIEMALS create_board!',
+            description: 'Erstellt eine EINZELNE neue Karte in einer Spalte. IMMER verwenden wenn der Nutzer "eine Karte erstellen" möchte - NIEMALS create_board! WICHTIG: Immer content/description mitliefern!',
             parameters: {
                 type: 'object',
                 properties: {
                     heading: {
                         type: 'string',
-                        description: 'Titel/Überschrift der Karte'
+                        description: 'Kurzer, prägnanter Titel der Karte (5-8 Wörter)'
                     },
                     columnName: {
                         type: 'string',
@@ -176,7 +176,7 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     content: {
                         type: 'string',
-                        description: 'Optionale Beschreibung/Inhalt der Karte'
+                        description: 'PFLICHT! Ausführliche Beschreibung mit konkreten Arbeitsanweisungen, Materialien, Zeitangaben, erwarteten Ergebnissen. Nutze Markdown-Formatierung (**, \\n, Listen).'
                     },
                     labels: {
                         type: 'array',
@@ -184,7 +184,7 @@ export const toolDefinitions: ToolDefinition[] = [
                         description: 'Optionale Labels/Tags für die Karte'
                     }
                 },
-                required: ['heading', 'columnName']
+                required: ['heading', 'columnName', 'content']
             }
         }
     },
