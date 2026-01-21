@@ -162,11 +162,6 @@
 
         try {
             const syncManager = getSyncManager();
-            toast.info('🔄 Board wird von Nostr neu geladen...', {
-                description: 'Lokaler Cache wird verworfen und das Board neu geladen.',
-                duration: 2000
-            });
-
             await boardStore.forceReloadCurrentBoardFromNostr({
                 clearLocalCache: true,
                 syncManager
@@ -418,24 +413,6 @@
         }
     }
 
-    function downloadAllBoardsAsJson() {
-        try {
-            const json = boardStore.exportAllBoardsAsJson();
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const now = new Date();
-            const timestamp = now.toISOString().split('T')[0];
-            link.href = url;
-            link.download = `boards-backup-${timestamp}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-            console.log('✅ Alle Boards heruntergeladen!');
-        } catch (error) {
-            console.error('❌ Fehler beim Herunterladen:', error);
-        }
-    }
-
     // ============================================================================
     // SHARE-LINK STATE & FUNCTIONS
     // ============================================================================
@@ -584,7 +561,7 @@
             <!-- 🔄 Reload current board from Nostr -->
             <Button
                 title={canReloadBoardFromNostr
-                    ? 'Aktuelles Board von Nostr neu laden'
+                    ? 'Aktuelles Board von den Servers neu laden'
                     : 'Reload nur möglich, wenn Nostr bereit ist und mindestens ein Relay verbunden ist'}
                 variant="ghost"
                 size="icon"
@@ -593,7 +570,7 @@
                 onclick={handleReloadBoardFromNostr}
             >
                 <RefreshCwIcon class="h-4 w-4" />
-                <span class="sr-only">Board von Nostr neu laden</span>
+                <span class="sr-only">Board von den Servers neu laden</span>
             </Button>
             
             <!-- Board Meta Settings Button (3 Punkte) -->
@@ -780,17 +757,6 @@
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
-
-            <!-- Backup All Boards Button -->
-            <Button 
-                variant="default"
-                size="icon"
-                onclick={downloadAllBoardsAsJson}
-                title="Alle Boards als Backup herunterladen"
-                class="h-8 w-8 bg-secondary btn"
-            >
-                <DownloadIcon class="h-4 w-4" />
-            </Button>
 
             <!-- Board Sharing -->
             <ShareButton />

@@ -2087,10 +2087,6 @@ export class BoardStore {
         return ExportImport.exportBoardAsJson(this.board, includeMetadata);
     }
 
-    public exportAllBoardsAsJson(): string {
-        return ExportImport.exportAllBoardsAsJson(this.boardIds);
-    }
-
     public importBoardFromJson(jsonString: string, mode: 'merge' | 'new' | 'overwrite' = 'merge') {
         return ExportImport.importBoardFromJson(jsonString, mode);
     }

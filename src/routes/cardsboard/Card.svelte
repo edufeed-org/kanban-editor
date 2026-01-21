@@ -506,7 +506,6 @@
 				>
 					<FullscreenIcon />
 				</Button>
-				{#if authStore.isAuthenticated }
 				<Button
 					variant="default"
 					size="sm"
@@ -518,7 +517,6 @@
 					<EditIcon class="mr-2 h-4 w-4" />
 					Bearbeiten
 				</Button>
-				{/if}
 			</div>
 		</div>
 	</Card.Footer>

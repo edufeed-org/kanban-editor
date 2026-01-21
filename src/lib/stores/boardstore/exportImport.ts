@@ -27,34 +27,6 @@ export class ExportImport {
         return JSON.stringify(data, null, 2);
     }
 
-    /**
-     * Exportiert alle Boards als Backup
-     */
-    public static exportAllBoardsAsJson(boardIds: string[]): string {
-        const allBoards: any[] = [];
-        
-        for (const boardId of boardIds) {
-            const storageKey = `kanban-${boardId}`;
-            const stored = localStorage.getItem(storageKey);
-            
-            if (stored) {
-                try {
-                    const data = JSON.parse(stored);
-                    allBoards.push(data);
-                } catch (error) {
-                    console.warn(`⚠️ Fehler beim Parsen von Board ${boardId}:`, error);
-                }
-            }
-        }
-        
-        return JSON.stringify({
-            version: '1.0',
-            exportedAt: generateTimestamp(),
-            exportedBy: 'kanban-editor',
-            boardCount: allBoards.length,
-            boards: allBoards
-        }, null, 2);
-    }
 
     /**
      * Importiert Board aus JSON
