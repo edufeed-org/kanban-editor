@@ -349,7 +349,9 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
     // Flexible Argument-Unterstützung: LLM kann verschiedene Namen verwenden
     const columnIdentifier = args.column_id || args.columnId || args.columnName || args.column;
     const title = args.title || args.heading || args.name;
-    const { description, labels, color } = args;
+    const description = args.description || args.content || args.body || args.text || '';
+    const labels = args.labels || args.tags || [];
+    const color = args.color;
     
     if (!columnIdentifier || !title) {
         return {
@@ -358,6 +360,11 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
             success: false,
             error: `column_id und title sind erforderlich (erhalten: column=${columnIdentifier}, title=${title})`
         };
+    }
+    
+    // Warnung wenn keine Beschreibung (für Debugging)
+    if (!description) {
+        console.warn('⚠️ add_card ohne description aufgerufen! Args:', JSON.stringify(args));
     }
     
     // resolveColumn kann sowohl ID als auch Name auflösen
@@ -494,17 +501,18 @@ function executeUpdateCard(args: any, ctx: ExecutionContext): ToolResult {
 }
 
 function executeMoveCard(args: any, ctx: ExecutionContext): ToolResult {
-    // Flexible Argument-Unterstützung
-    const cardIdentifier = args.card_id || args.cardId || args.card;
-    const targetColumnIdentifier = args.to_column_id || args.toColumnId || args.targetColumn || args.column;
+    // Flexible Argument-Unterstützung - LLM kann verschiedene Namen verwenden
+    const cardIdentifier = args.card_id || args.cardId || args.card || args.cardName || args.cardTitle || args.heading || args.title;
+    const targetColumnIdentifier = args.to_column_id || args.toColumnId || args.targetColumn || args.column || args.toColumn || args.columnName || args.target || args.destination;
     const { position } = args;
     
     if (!cardIdentifier || !targetColumnIdentifier) {
+        console.warn('⚠️ move_card fehlende Parameter. Erhalten:', JSON.stringify(args));
         return {
             tool_call_id: '',
             tool_name: 'move_card',
             success: false,
-            error: 'card_id und to_column_id sind erforderlich'
+            error: `card_id und to_column_id sind erforderlich (erhalten: card=${cardIdentifier}, target=${targetColumnIdentifier})`
         };
     }
     
@@ -709,8 +717,36 @@ export function executeToolCall(
     
     let args: any;
     try {
-        args = JSON.parse(toolCall.function.arguments);
+        // Versuche das JSON zu parsen
+        let argsStr = toolCall.function.arguments;
+        
+        // Manchmal sendet das LLM extra Zeichen nach dem JSON
+        // Versuche das erste vollständige JSON-Objekt zu extrahieren
+        if (argsStr && typeof argsStr === 'string') {
+            // Finde das Ende des JSON-Objekts (letzte schließende Klammer)
+            const lastBrace = argsStr.lastIndexOf('}');
+            if (lastBrace !== -1 && lastBrace < argsStr.length - 1) {
+                console.warn('⚠️ Tool arguments hatten extra Zeichen nach JSON, bereinigt');
+                argsStr = argsStr.substring(0, lastBrace + 1);
+            }
+            
+            // Falls das LLM Markdown-Codeblöcke verwendet
+            if (argsStr.includes('```json')) {
+                const match = argsStr.match(/```json\s*([\s\S]*?)\s*```/);
+                if (match) {
+                    argsStr = match[1];
+                }
+            } else if (argsStr.includes('```')) {
+                const match = argsStr.match(/```\s*([\s\S]*?)\s*```/);
+                if (match) {
+                    argsStr = match[1];
+                }
+            }
+        }
+        
+        args = JSON.parse(argsStr);
     } catch (error) {
+        console.error('❌ JSON parse error for tool arguments:', toolCall.function.arguments);
         return {
             tool_call_id: toolCall.id,
             tool_name: toolName,
