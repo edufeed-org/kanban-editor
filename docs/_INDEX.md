@@ -420,11 +420,12 @@ docs/
 | Datei | Zweck | Status |
 |-------|-------|--------|
 | [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
-| [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | KI-Chatbot Integration (Phase 3 Foundation) | ✅ Neu (03.11.) |
-| [`TWO-PHASE-AI-RESPONSE.md`](./FEATURE/TWO-PHASE-AI-RESPONSE.md) | 🆕 **NEU (06.11.)**: Phase 3.1 - 2-Phase Response Architecture (Content Proposal → Structure Generation) | ✅ Neu (06.11.) |
-| [`TWO-PHASE-AI-RESPONSE-INTEGRATION.md`](./FEATURE/TWO-PHASE-AI-RESPONSE-INTEGRATION.md) | 🆕 **NEU (06.11.)**: Phase 3.1 - Integration Guide für 2-Phase System in BoardStore | ✅ Neu (06.11.) |
-| [`LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) | 🆕 **NEU (06.11.)**: Phase 3.1 - Kontext-bewusste Intent-Erkennung via LLM | ✅ Neu (06.11.) |
-| [`INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) | 🆕 **NEU (06.11.)**: Phase 3.1 - Bestehende Spalten intelligent berücksichtigen | ✅ Neu (06.11.) |
+| [`TOOL-BASED-AI.md`](./FEATURE/TOOL-BASED-AI.md) | 🆕 **NEU (21.01.26)**: MCP-Style Tool-Based KI (ersetzt Phase 1/2 Ansatz) | ✅ Neu |
+| [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | ⚠️ **DEPRECATED**: KI-Chatbot (Phase 3 Foundation) - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
+| [`TWO-PHASE-AI-RESPONSE.md`](./FEATURE/TWO-PHASE-AI-RESPONSE.md) | ⚠️ **DEPRECATED**: 2-Phase Response - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
+| [`TWO-PHASE-AI-RESPONSE-INTEGRATION.md`](./FEATURE/TWO-PHASE-AI-RESPONSE-INTEGRATION.md) | ⚠️ **DEPRECATED**: 2-Phase Integration - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
+| [`LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) | ⚠️ **DEPRECATED**: Intent-Erkennung - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
+| [`INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) | ⚠️ **DEPRECATED**: Struktur-Analyse - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
 | [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | Phase 1.5 - Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
 | [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | Phase 1.5 - Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
 | [`SHARELINK.md`](./FEATURE/SHARELINK.md) | Phase 1.5 - URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |

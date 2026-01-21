@@ -31,11 +31,8 @@ export async function llmDetectIntention(
 	systemMessages: string[],
 	userMessage: string
 ): Promise<IntentDetectionResult> {
-	const systemPrompt = `Du bist ein Experte für Intent-Erkennung in Kanban-Board-Erstellungs-Anfragen.
-
-Deine Aufgabe ist es, die Intention des Benutzers zu erkennen basierend auf:
-1. Den letzten AI-Antworten (Kontext)
-2. Der aktuellen User-Nachricht
+	const systemPrompt = `Du bist ein Intent-Erkennungs-Agent für ein Kanban-Board-System.
+Analysiere User-Nachrichten und klassifiziere die Intention.
 
 **Intent-Typen:**
 
@@ -45,9 +42,10 @@ Deine Aufgabe ist es, die Intention des Benutzers zu erkennen basierend auf:
 
 2. **confirmation** - User bestätigt einen vorherigen Vorschlag ODER fordert Umsetzung an
    - Beispiele: 
-     * "ja", "ja bitte", "mach das", "los"
+     * "ja", "ja bitte", "mach das", "los", "ok"
      * "erstelle daraus das Board", "erstelle nun das Board"
      * "erstelle Karten für die Spalten", "fülle die Spalten"
+     * "generiere die Karten", "mach weiter"
    - Merkmale: Bezieht sich auf vorherigen Vorschlag ODER fordert direkte Umsetzung
 
 3. **vague** - User nennt nur ein Thema OHNE explizite Aufforderung
@@ -59,12 +57,18 @@ Deine Aufgabe ist es, die Intention des Benutzers zu erkennen basierend auf:
 - Wenn User direkt "erstelle das Board/Karten/Spalten" sagt → "confirmation"
 - Wenn User "erstelle EIN Board zu X" sagt → "explicit"
 
-Antworte NUR mit JSON (kein Markdown, keine Erklärung):
-{
-  "intent": "explicit" | "confirmation" | "vague",
-  "confidence": 0.0 - 1.0,
-  "reason": "kurze Begründung (1 Satz)"
-}`;
+**AUSGABE-FORMAT:**
+Antworte NUR mit einem JSON-Objekt. KEIN Markdown, KEINE Code-Blocks, KEINE Erklärungen!
+
+Beispiel-Antwort (direkt so, ohne Formatierung):
+{"intent": "confirmation", "confidence": 0.9, "reason": "User bestätigt mit ja"}
+
+FALSCH (nicht so antworten):
+\`\`\`json
+{"intent": "confirmation", ...}
+\`\`\`
+
+Deine Antwort muss EXAKT so aussehen (nur das JSON-Objekt):`;
 
 	const contextInfo = systemMessages.length > 0 
 		? `Kontext (letzte ${systemMessages.length} AI-Antworten):\n${systemMessages.map((msg, i) => `${i + 1}. ${msg.substring(0, 200)}`).join('\n')}\n\n`

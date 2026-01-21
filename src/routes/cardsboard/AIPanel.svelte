@@ -788,6 +788,35 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
             }
           }
         }
+      } else if ((lowerMessage.includes('karte') || lowerMessage.includes('card')) &&
+                 (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
+        // Single card creation in existing column
+        const headingMatch = userMessage.match(/karte\s+(?:zu|über|für|mit\s+titel|mit)?\s*["„”']?([^"”'\n]+?)["”']?(?:\s+in|\s+für|\s*$)/i);
+        const columnMatch = userMessage.match(/(?:spalte|column)\s+["„”']?([^"”'\n]+?)["”']?(?:\s|$)/i);
+
+        const heading = headingMatch?.[1]?.trim() || 'Neue Karte';
+        const columnName = columnMatch?.[1]?.trim();
+
+        const columns = boardStore.uiData;
+        let targetColumn = columnName
+          ? columns.find(c => c.name.toLowerCase() === columnName.toLowerCase())
+          : undefined;
+
+        if (!targetColumn && columns.length > 0) {
+          // Fallback: last column (häufig zuletzt erstellt) oder erste, falls leer
+          targetColumn = columns[columns.length - 1] || columns[0];
+        }
+
+        if (targetColumn) {
+          actions.push({
+            type: 'add_card',
+            columnId: targetColumn.id,
+            heading,
+            content: ''
+          });
+          actionDescription = `➕ Karte "${heading}" in "${targetColumn.name}"`;
+          console.log('🎯 FALLBACK Action: add_card', { heading, columnName: targetColumn.name });
+        }
       } else if ((lowerMessage.includes('spalte') || lowerMessage.includes('column')) && 
                  (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
         // Single column creation

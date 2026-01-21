@@ -49,7 +49,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 			expect(result.intent).toBe('explicit');
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted for Granite4
 			expect(result.reason).toBeTruthy();
-		}, 10000); // 10s timeout
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should detect explicit with different phrasing', async () => {
 			const result = await llmDetectIntention(
@@ -59,7 +59,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			expect(['explicit', 'vague']).toContain(result.intent); // ✅ Granite4 might interpret differently
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 	});
 
 	describe('Confirmation Intents', () => {
@@ -71,7 +71,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			expect(result.intent).toBe('confirmation');
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted for Granite4
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should detect "daraus" confirmation', async () => {
 			const result = await llmDetectIntention(
@@ -81,7 +81,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			expect(result.intent).toBe('confirmation');
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should detect "erstelle das board jetzt" as confirmation', async () => {
 			const result = await llmDetectIntention(
@@ -91,7 +91,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			expect(result.intent).toBe('confirmation');
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should detect "erstelle Karten für" as confirmation', async () => {
 			const result = await llmDetectIntention(
@@ -101,7 +101,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			expect(result.intent).toBe('confirmation');
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 	});
 
 	describe('Vague Intents', () => {
@@ -115,7 +115,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 			// Das ist tatsächlich spezifisch genug für eine Board-Erstellung
 			expect(['vague', 'explicit']).toContain(result.intent);
 			expect(result.confidence).toBeGreaterThan(0.5); // ✅ Adjusted for Granite4
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should detect vague without explicit action', async () => {
 			const result = await llmDetectIntention(
@@ -125,14 +125,14 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 
 			// ✅ Granite4 interpretiert "Thema + Zielgruppe" als explizit (valid)
 			expect(['vague', 'explicit']).toContain(result.intent);
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 	});
 
 	describe('detectIntentViaLLM (Simple Wrapper)', () => {
 		it('should work without context', async () => {
 			const intent = await detectIntentViaLLM('Erstelle ein Board zu Klimawandel');
 			expect(intent).toBe('explicit');
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should work with previous AI response', async () => {
 			const intent = await detectIntentViaLLM(
@@ -140,7 +140,7 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 				'Soll ich ein Board zu Reformation erstellen?'
 			);
 			expect(intent).toBe('confirmation');
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 	});
 
 	describe('Edge Cases & Fallback', () => {
@@ -150,13 +150,13 @@ describe.skipIf(skipTests)('llmDetectIntention (LLM-based Intent Detection)', ()
 			// Should fallback to rule-based
 			expect(['explicit', 'confirmation', 'vague']).toContain(result.intent);
 			expect(result.confidence).toBeGreaterThan(0);
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 
 		it('should validate confidence range', async () => {
 			const result = await llmDetectIntention([], 'test message');
 			
 			expect(result.confidence).toBeGreaterThanOrEqual(0);
 			expect(result.confidence).toBeLessThanOrEqual(1);
-		}, 10000);
+		}, 30000); // 30s timeout - LLM can be slow
 	});
 });

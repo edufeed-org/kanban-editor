@@ -85,7 +85,17 @@ export function detectUserIntent(userMessage: string): UserIntent {
 		'mache karten für',
 		'füge karten',
 		'erstelle cards',
-		'fülle die spalten'
+		'fülle die spalten',
+		// 🆕 Pattern für einzelne Karte ("erstelle eine Karte zu X")
+		'erstelle eine karte',
+		'erstell eine karte',
+		'mache eine karte',
+		'generiere eine karte',
+		'füge eine karte',
+		'neue karte zu',
+		'neue karte für',
+		'karte hinzufügen',
+		'karte erstellen'
 	].some((phrase) => lowerMsg.includes(phrase));
 
 	if (hasConfirmationVerb) {

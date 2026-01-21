@@ -5,7 +5,8 @@
 ❌ LLM Intent Detection failed: SyntaxError: JSON.parse: unexpected character at line 1 column 1
 ```
 
-**Status:** 🔴 **AKTIVES PROBLEM** (06.11.2025)
+**Status:** ✅ **GEFIXT** (21.01.2026)
+**Follow-up:** 🛠️ 21.01.2026 – Fallback in `AIPanel.svelte` erweitert: Wenn der User "Karte in Spalte X" schreibt, wird jetzt zuerst eine `add_card`-Aktion erzeugt (statt fälschlich eine neue Spalte anzulegen). Damit greift die JSON-Fallback-Logik sofort auf die richtige Aktion zu.
 
 ---
 
