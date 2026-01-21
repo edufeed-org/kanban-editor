@@ -1240,12 +1240,40 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         
         const toolResults = await executeToolCalls(toolCalls, executionContext);
         
-        // Step 6: Summarize and show results
-        const summary = summarizeResults(toolResults);
-        console.log('📊 [Tool-Based] Execution complete:', summary);
+        // Step 6: Handle results based on tool type
+        // Check for respond/ask_clarification tools - these should show their message directly
+        const responseResults = toolResults.filter(r => 
+          r.tool_name === 'respond' || r.tool_name === 'ask_clarification'
+        );
+        const actionResults = toolResults.filter(r => 
+          r.tool_name !== 'respond' && r.tool_name !== 'ask_clarification'
+        );
         
-        // Show results to user
-        chatStore.addMessage(summary, 'assistant');
+        // Show action results summary (if any actions were performed)
+        if (actionResults.length > 0) {
+          const summary = summarizeResults(actionResults);
+          console.log('📊 [Tool-Based] Action results:', summary);
+          if (summary.trim()) {
+            chatStore.addMessage(summary, 'assistant');
+          }
+        }
+        
+        // Show response messages (respond/ask_clarification tools)
+        for (const r of responseResults) {
+          if (r.success && r.result) {
+            if (r.tool_name === 'respond' && r.result.message) {
+              console.log('💬 [Tool-Based] Showing respond message');
+              chatStore.addMessage(r.result.message, 'assistant');
+            } else if (r.tool_name === 'ask_clarification' && r.result.question) {
+              console.log('❓ [Tool-Based] Showing clarification question');
+              let clarificationMsg = r.result.question;
+              if (r.result.options && r.result.options.length > 0) {
+                clarificationMsg += '\n\nOptionen:\n' + r.result.options.map((o: string) => `• ${o}`).join('\n');
+              }
+              chatStore.addMessage(clarificationMsg, 'assistant');
+            }
+          }
+        }
         
         // If there was a text response too, show it
         if (result.content && result.content.trim()) {
