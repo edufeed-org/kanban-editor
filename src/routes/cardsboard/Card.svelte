@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { boardStore, type CardItem } from "$lib/stores/kanbanStore.svelte.js";
-	import type { PublishState } from "$lib/classes/BoardModel.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -12,7 +11,6 @@
 	import CardSidebar from "./CardSidebar.svelte";
 	import AvatarStack from "./AvatarStack.svelte";
 	import ColorSelector from "./ColorSelector.svelte";
-	import PublishStateToggle from "./PublishStateToggle.svelte";
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -21,19 +19,19 @@
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 	import { authStore } from "$lib/index.js";
     import TrashIcon from "@lucide/svelte/icons/trash";
+	import PlusIcon from "@lucide/svelte/icons/plus";
+	import XIcon from "@lucide/svelte/icons/x";
 
 	let {
 		card,
 		isSelected = false,
 		onSelect,
-		onPublishStateChange,
 		onCardAction,
 		onSidebarAction
 	}: {
 		card: CardItem;
 		isSelected?: boolean;
 		onSelect?: () => void;
-		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 	} = $props();
@@ -41,10 +39,6 @@
 	let showModal = $state(false);
 	let showSidebar = $state(false);
 	let showPopover = $state(false);
-	
-	// 🔥 WICHTIG: showPublishToggle hängt vom Board-publishState ab!
-	let boardPublishState = $derived(boardStore.data?.publishState || 'draft');
-	let showPublishToggle = $derived(boardPublishState === 'published');
 	let showMenu = $state(true);
 	
 	// 🆕 VERHALT: CardViewDialog bleibt IMMER selected solange offen
@@ -55,7 +49,6 @@
 	let localName = $state(card.name);
 	let localColor = $state(card.color || 'slate');
 	let localImage = $state(card.image || '');
-	let localPublishState = $state(card.publishState);
 	
 	// Lokale Kommentare Anzahl State - wird von der $effect aktualisiert!
 	let localComments = $state(card.comments || []);
@@ -63,6 +56,8 @@
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
+	let newLabelInput = $state('');
+	let localLabels = $state(card.labels || []);
 	
 	// ✅ FIX: Lokale State für author-bezogene Felder (reaktiv!)
 	let localAuthor = $state(card.author);
@@ -93,10 +88,6 @@
 				// Silent sync - card found
 				// Aktualisiere LOKALE State-Variablen (nicht die Prop!)
 				// Das verhindert ownership_invalid_mutation Warnungen
-				if (updatedCard.publishState !== localPublishState) {
-					// Silent sync
-					localPublishState = updatedCard.publishState;
-				}
 				
 				// Aktualisiere auch andere lokale Props die sich ändern können
 				if (updatedCard.name !== localName) {
@@ -142,8 +133,14 @@
 				if (attendeesJSON !== localAttendeesJSON) {
 					console.log('🔄 Card attendees updated:', (updatedCard.attendees || []).length, 'attendees');
 					localAttendees = updatedCard.attendees || [];
-				}
+				}				
+				// Update labels
+				const labelsJSON = JSON.stringify(updatedCard.labels || []);
+				const localLabelsJSON = JSON.stringify(localLabels);
 				
+				if (labelsJSON !== localLabelsJSON) {
+					localLabels = updatedCard.labels || [];
+				}				
 				// ✅ FIX: Aktualisiere links für sofortige Reaktivität
 				const linksJSON = JSON.stringify(updatedCard.links || []);
 				const cardLinksJSON = JSON.stringify(card.links || []);
@@ -158,16 +155,6 @@
 			}
 		}
 	});
-
-	function handlePublishToggle() {
-		const newState = localPublishState === 'draft' ? 'published' : 'draft';
-		
-		// ✅ WICHTIG: Speichere im BoardStore (PROP-UPDATE-GUIDE.md Schritt 1-2)
-		boardStore.setCardPublishState(String(card.id), newState);
-		
-		// Callback für zusätzliche UI-Logik (optional)
-		onPublishStateChange?.(String(card.id), newState);
-	}
 
 	function handleImageClick() {
 		if (card.link) {
@@ -249,6 +236,30 @@
 			boardStore.removeCard(String(card.id));
 		}
 	}
+	
+	function handleAddLabel() {
+		const trimmedLabel = newLabelInput.trim();
+		if (trimmedLabel && !localLabels.includes(trimmedLabel)) {
+			const updatedLabels = [...localLabels, trimmedLabel];
+			localLabels = updatedLabels;
+			boardStore.editCard(String(card.id), { labels: updatedLabels });
+			newLabelInput = '';
+		}
+	}
+	
+	function handleRemoveLabel(labelToRemove: string) {
+		const updatedLabels = localLabels.filter(label => label !== labelToRemove);
+		localLabels = updatedLabels;
+		boardStore.editCard(String(card.id), { labels: updatedLabels });
+	}
+	
+	function handleLabelKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			handleAddLabel();
+		}
+	}
+	
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
 	}
@@ -262,10 +273,10 @@
 	data-card-root
 	style="border-bottom: 6px solid {getCardColor(localColor)};"
 	onclick={(e) => {
-		// Nur bei interaktiven Elementen blockieren (Button, Links, etc.)
+		// Nur bei interaktiven Elementen blockieren (Button, Input, Links, etc.)
 		// ABER NICHT auf der Root selbst!
 		const target = e.target as HTMLElement;
-		const isInteractive = target.closest('button:not([data-card-root]), [role="button"]:not([data-card-root]), a, [role="link"]');
+		const isInteractive = target.closest('button, input, [role="button"], a, [role="link"]');
 		if (isInteractive) {
 			return;
 		}
@@ -284,16 +295,16 @@
 					
 				</div>
 				
-				{#if card.labels && card.labels.length > 0}
+				{#if localLabels && localLabels.length > 0}
 					<div class="flex flex-wrap gap-1 mt-2 mb-0">
-						{#each card.labels.slice(0, 2) as label}
+						{#each localLabels.slice(0, 2) as label}
 							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
 								{label}
 							</Badge>
 						{/each}
-						{#if card.labels.length > 2}
+						{#if localLabels.length > 2}
 							<Badge variant="outline" class="text-xs px-1.5 py-0.5">
-								+{card.labels.length - 2}
+								+{localLabels.length - 2}
 							</Badge>
 						{/if}
 					</div>
@@ -301,10 +312,6 @@
 			</div>
 			
 			<div class="header-actions">
-				{#if showPublishToggle}
-					<PublishStateToggle value={localPublishState || 'draft'} onToggle={handlePublishToggle} />
-				{/if}
-
 				{#if showMenu}
 					<Popover.Root bind:open={showPopover}>
 						<Popover.Trigger
@@ -346,24 +353,69 @@
 							</div>
 							
 							<Separator />
-								
-								<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
+							
+							<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
 									selectedColor = colorValue;
 									boardStore.editCard(String(card.id), { color: colorValue });
-								}} />
+								}} 
+							/>
+
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Labels</h4>
+								<div class="flex gap-2">
+									<Input 
+										bind:value={newLabelInput} 
+										placeholder="Neues Label"
+										onkeydown={handleLabelKeyDown}
+										class="flex-1"
+									/>
+									<Button 
+										variant="outline" 
+										size="sm"
+										onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddLabel(); }}
+										disabled={!newLabelInput.trim()}
+									>
+										<PlusIcon class="h-4 w-4" />
+									</Button>
+								</div>
+								{#if localLabels.length > 0}
+									<div class="flex flex-wrap gap-1 mt-2">
+										{#each localLabels as label}
+											<Badge 
+												variant="secondary" 
+												class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1"
+											>
+												{label}
+												<button
+													onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveLabel(label); }}
+													class="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+													aria-label="Label entfernen"
+												>
+													<XIcon class="h-3 w-3" />
+												</button>
+											</Badge>
+										{/each}
+									</div>
+								{/if}
+							</div>
+							
+							<Separator />
 								
 								<Separator />
 								
-								{#if authStore.isAuthenticated }
 								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
 									Karte bearbeiten
 								</Button>
 
-								<Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }} class="w-full btn">
+								<Button 
+									variant="destructive"
+									size="sm"
+									onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }}
+									class="w-full btn"
+								>
 									<TrashIcon class="h-4 w-4" />
 									Karte löschen
 								</Button>
-								{/if}
 							</div>
 						</Popover.Content>
 					</Popover.Root>
@@ -475,6 +527,10 @@
 	<CardViewDialog
 		cardId={card.id}
 		bind:open={isDialogOpen}
+		onEditMode={() => {
+			isDialogOpen = false;
+			showModal = true;
+		}}
 	/>
 	
 	<!-- Card Dialog (View & Edit with Tabs) -->
@@ -486,8 +542,7 @@
 			color: localColor,
 			comments: card.comments,
 			labels: card.labels,
-			attendees: card.attendees,
-			publishState: localPublishState
+			attendees: card.attendees
 		}}
 		isOpen={showModal}
 		onClose={closeModal}

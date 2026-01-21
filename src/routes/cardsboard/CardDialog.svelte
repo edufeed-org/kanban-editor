@@ -10,7 +10,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import type { CardProps, PublishState } from '../../lib/classes/BoardModel.js';
-  import OerImagePicker from '$lib/components/OerImagePicker.svelte';
+  	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 
 	interface Props {
@@ -71,8 +71,7 @@
 				url: z.string().url('Ungültige URL'),
 				title: z.string().min(1, 'Link-Titel erforderlich')
 			})
-		),
-		publishState: z.enum(['draft', 'published'] as const)
+		)
 	});
 
 	let formData = $state<{
@@ -81,19 +80,17 @@
 		image: string;
 		labels: string[];
 		links: { id: string; url: string; title: string }[];
-		publishState: 'draft' | 'published';
 	}>({
 		heading: '',
 		content: '',
 		image: '',
 		labels: [],
-		links: [],
-		publishState: 'draft'
+		links: []
 	});
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
-	let activeTab = $state<'content' | 'settings'>('content');
+	let activeTab = $state<'content'>('content');
 	let isUserEditing = $state(false); // Guard gegen $effect Überschreibung während Editing
 	let imageMode = $state<'url' | 'oer'>('url');
 
@@ -126,8 +123,7 @@
 				content: content || '',
 				image: currentCard.image || '',
 				labels: [...(currentCard.labels || [])],
-				links: linksWithIds,
-				publishState: currentCard.publishState || 'draft'
+				links: linksWithIds
 			};
 			errors = {};
 			newLabel = '';
@@ -177,8 +173,7 @@
 				content: formData.content,
 				image: formData.image,
 				labels: formData.labels,
-				links: formData.links,
-				publishState: formData.publishState as PublishState
+				links: formData.links
 			});
 			
 			// 🔥 KRITISCH: Gib der Reaktivität Zeit, sich zu aktualisieren
@@ -235,265 +230,223 @@
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<form onsubmit={handleSubmit} class="w-full">
-			<Tabs.Root bind:value={activeTab} class="w-full">
-				<Tabs.List class="bg-muted text-muted-foreground h-9 items-center justify-center rounded-lg p-[3px] text-muted-foreground grid w-full grid-cols-2">
-					<Tabs.Trigger value="content">Inhalt</Tabs.Trigger>
-					<Tabs.Trigger value="settings">Einstellungen</Tabs.Trigger>
-				</Tabs.List>
+		<form onsubmit={handleSubmit} class="w-full space-y-4">
+			<Field>
+				<FieldLabel for="title">Titel <span class="text-destructive">*</span></FieldLabel>
+				<FieldContent>
+					<Input
+						id="title"
+						bind:value={formData.heading}
+						placeholder="Kartentitel eingeben"
+						disabled={isSubmitting}
+						aria-invalid={!!errors.heading}
+					/>
+				</FieldContent>
+				{#if errors.heading}
+					<FieldError errors={[{ message: errors.heading }]} />
+				{/if}
+			</Field>
 
-				<!-- Content Tab -->
-				<Tabs.Content value="content" class="space-y-4 py-4">
-					<Field>
-						<FieldLabel for="title">Titel <span class="text-destructive">*</span></FieldLabel>
-						<FieldContent>
-							<Input
-								id="title"
-								bind:value={formData.heading}
-								placeholder="Kartentitel eingeben"
-								disabled={isSubmitting}
-								aria-invalid={!!errors.heading}
-							/>
-						</FieldContent>
-						{#if errors.heading}
-							<FieldError errors={[{ message: errors.heading }]} />
-						{/if}
-					</Field>
+			<Field>
+				<FieldLabel for="description">Beschreibung</FieldLabel>
+				<FieldContent>
+					<MarkdownEditor 
+						value={formData.content || ''}
+						onchange={(content) => formData.content = content}
+						placeholder="Kartenbeschreibung eingeben..."
+						disabled={isSubmitting}
+					/>
+				</FieldContent>
+				{#if errors.content}
+					<FieldError errors={[{ message: errors.content }]} />
+				{/if}
+			</Field>
 
-					<Field>
-						<FieldLabel for="description">Beschreibung</FieldLabel>
-						<FieldContent>
-							<MarkdownEditor 
-								value={formData.content || ''}
-								onchange={(content) => formData.content = content}
-								placeholder="Kartenbeschreibung eingeben..."
-								disabled={isSubmitting}
-							/>
-						</FieldContent>
-						{#if errors.content}
-							<FieldError errors={[{ message: errors.content }]} />
-						{/if}
-					</Field>
+			<Field>
+				<FieldLabel for="image">Kartenbild</FieldLabel>
 
-					<Field>
-						<FieldLabel for="image">Kartenbild</FieldLabel>
+				<!-- Mode Toggle -->
+				<div class="flex gap-1 mb-2">
+					<Button
+						type="button"
+						variant={imageMode === 'url' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (imageMode = 'url')}
+						disabled={isSubmitting}
+					>
+						URL eingeben
+					</Button>
+					<Button
+						type="button"
+						variant={imageMode === 'oer' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (imageMode = 'oer')}
+						disabled={isSubmitting}
+					>
+						OER suchen
+					</Button>
+				</div>
 
-						<!-- Mode Toggle -->
-						<div class="flex gap-1 mb-2">
-							<Button
-								type="button"
-								variant={imageMode === 'url' ? 'default' : 'outline'}
-								size="sm"
-								onclick={() => (imageMode = 'url')}
-								disabled={isSubmitting}
-							>
-								URL eingeben
-							</Button>
-							<Button
-								type="button"
-								variant={imageMode === 'oer' ? 'default' : 'outline'}
-								size="sm"
-								onclick={() => (imageMode = 'oer')}
-								disabled={isSubmitting}
-							>
-								OER suchen
-							</Button>
+				{#if imageMode === 'url'}
+					<FieldContent>
+						<Input
+							id="image"
+							bind:value={formData.image}
+							placeholder="https://example.com/image.jpg"
+							disabled={isSubmitting}
+							aria-invalid={!!errors.image}
+						/>
+					</FieldContent>
+					{#if errors.image}
+						<FieldError errors={[{ message: errors.image }]} />
+					{/if}
+				{:else}
+					<OerImagePicker
+						onSelect={(url) => {
+							formData.image = url;
+							imageMode = 'url';
+						}}
+					/>
+				{/if}
+
+				<!-- Image Preview - show unsaved changes when image differs from saved -->
+				{#if formData.image && formData.image !== previewCard?.image}
+					<!-- Unsaved preview (new selection from OER or URL input) -->
+					<div class="mt-2 rounded-md overflow-hidden bg-muted border-2 border-blue-400">
+						<img
+							src={formData.image}
+							alt="Kartenbild-Vorschau"
+							class="w-full h-auto max-h-48 object-contain"
+							onerror={(e) => {
+								(e.target as HTMLImageElement).style.display = 'none';
+							}}
+						/>
+						<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
+							(Vorschau - noch nicht gespeichert)
 						</div>
+					</div>
+				{:else if previewCard?.image}
+					<!-- Saved image -->
+					<div class="mt-2 rounded-md overflow-hidden bg-muted">
+						<img
+							src={previewCard.image}
+							alt="Kartenbild-Vorschau (gespeichert)"
+							class="w-full h-auto max-h-48 object-contain"
+							onerror={(e) => {
+								(e.target as HTMLImageElement).style.display = 'none';
+							}}
+						/>
+						<div class="text-xs text-muted-foreground p-1 text-center bg-muted/50">
+							✓ Gespeichert
+						</div>
+					</div>
+				{/if}
+			</Field>
+			<Field>
+				<FieldLabel>Labels</FieldLabel>
+				<FieldContent class="space-y-3">
+					<!-- Label Input -->
+					<div class="flex gap-2">
+						<Input
+							placeholder="Label eingeben"
+							bind:value={newLabel}
+							disabled={isSubmitting}
+							class="flex-1"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									addLabel();
+								}
+							}}
+						/>
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							onclick={addLabel}
+							disabled={isSubmitting || !newLabel.trim()}
+						>
+							Hinzufügen
+						</Button>
+					</div>
 
-						{#if imageMode === 'url'}
-							<FieldContent>
-								<Input
-									id="image"
-									bind:value={formData.image}
-									placeholder="https://example.com/image.jpg"
-									disabled={isSubmitting}
-									aria-invalid={!!errors.image}
-								/>
-							</FieldContent>
-							{#if errors.image}
-								<FieldError errors={[{ message: errors.image }]} />
-							{/if}
-						{:else}
-							<OerImagePicker
-								onSelect={(url) => {
-									formData.image = url;
-									imageMode = 'url';
-								}}
-							/>
-						{/if}
+					<!-- Labels List -->
+					{#if formData.labels && formData.labels.length > 0}
+						<div class="flex flex-wrap gap-2">
+							{#each formData.labels as label (label)}
+								<Badge variant="secondary" class="cursor-pointer">
+									{label}
+									<button
+										type="button"
+										onclick={() => removeLabel(label)}
+										disabled={isSubmitting}
+										class="ml-1 hover:text-destructive"
+									>
+										✕
+									</button>
+								</Badge>
+							{/each}
+						</div>
+					{/if}
+				</FieldContent>
+			</Field>
+			<!-- Links Section -->
+			<Field>
+				<FieldLabel>Links</FieldLabel>
+				<FieldContent class="space-y-3">
+					<!-- Link Input -->
+					<div class="flex gap-2">
+						<Input
+							placeholder="Link-Titel"
+							bind:value={newLinkTitle}
+							disabled={isSubmitting}
+							class="flex-1"
+						/>
+						<Input
+							placeholder="https://..."
+							bind:value={newLinkUrl}
+							disabled={isSubmitting}
+							class="flex-1"
+						/>
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							onclick={addLink}
+							disabled={isSubmitting || !newLinkTitle.trim() || !newLinkUrl.trim()}
+						>
+							Hinzufügen
+						</Button>
+					</div>
 
-						<!-- Image Preview - show unsaved changes when image differs from saved -->
-						{#if formData.image && formData.image !== previewCard?.image}
-							<!-- Unsaved preview (new selection from OER or URL input) -->
-							<div class="mt-2 rounded-md overflow-hidden bg-muted border-2 border-blue-400">
-								<img
-									src={formData.image}
-									alt="Kartenbild-Vorschau"
-									class="w-full h-auto max-h-48 object-contain"
-									onerror={(e) => {
-										(e.target as HTMLImageElement).style.display = 'none';
-									}}
-								/>
-								<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
-									(Vorschau - noch nicht gespeichert)
-								</div>
-							</div>
-						{:else if previewCard?.image}
-							<!-- Saved image -->
-							<div class="mt-2 rounded-md overflow-hidden bg-muted">
-								<img
-									src={previewCard.image}
-									alt="Kartenbild-Vorschau (gespeichert)"
-									class="w-full h-auto max-h-48 object-contain"
-									onerror={(e) => {
-										(e.target as HTMLImageElement).style.display = 'none';
-									}}
-								/>
-								<div class="text-xs text-muted-foreground p-1 text-center bg-muted/50">
-									✓ Gespeichert
-								</div>
-							</div>
-						{/if}
-					</Field>
-
-					<!-- Links Section -->
-					<Field>
-						<FieldLabel>Links</FieldLabel>
-						<FieldContent class="space-y-3">
-							<!-- Link Input -->
-							<div class="flex gap-2">
-								<Input
-									placeholder="Link-Titel"
-									bind:value={newLinkTitle}
-									disabled={isSubmitting}
-									class="flex-1"
-								/>
-								<Input
-									placeholder="https://..."
-									bind:value={newLinkUrl}
-									disabled={isSubmitting}
-									class="flex-1"
-								/>
-								<Button
-									type="button"
-									variant="secondary"
-									size="sm"
-									onclick={addLink}
-									disabled={isSubmitting || !newLinkTitle.trim() || !newLinkUrl.trim()}
+					<!-- Links List -->
+					{#if formData.links && formData.links.length > 0}
+						<div class="space-y-2">
+							{#each formData.links as link, index (link.id || `link-${index}`)}
+								<div
+									class="flex items-center justify-between rounded border border-border bg-background p-2"
 								>
-									Hinzufügen
-								</Button>
-							</div>
-
-							<!-- Links List -->
-							{#if formData.links && formData.links.length > 0}
-								<div class="space-y-2">
-									{#each formData.links as link, index (link.id || `link-${index}`)}
-										<div
-											class="flex items-center justify-between rounded border border-border bg-background p-2"
-										>
-											<div>
-												<p class="font-medium text-primary">{link.title}</p>
-												<p class="text-xs text-muted-foreground">{link.url}</p>
-											</div>
-											<Button
-												type="button"
-												variant="ghost"
-												size="sm"
-												onclick={() => removeLink(link.id)}
-												disabled={isSubmitting}
-											>
-												✕
-											</Button>
-										</div>
-									{/each}
+									<div>
+										<p class="font-medium text-primary">{link.title}</p>
+										<p class="text-xs text-muted-foreground">{link.url}</p>
+									</div>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onclick={() => removeLink(link.id)}
+										disabled={isSubmitting}
+									>
+										✕
+									</Button>
 								</div>
-							{/if}
-						</FieldContent>
-					</Field>
-				</Tabs.Content>
+							{/each}
+						</div>
+					{/if}
+				</FieldContent>
+			</Field>
 
-				<!-- Settings Tab -->
-				<Tabs.Content value="settings" class="space-y-4 py-4">
-					<!-- Labels Section -->
-					<Field>
-						<FieldLabel>Labels</FieldLabel>
-						<FieldContent class="space-y-3">
-							<!-- Label Input -->
-							<div class="flex gap-2">
-								<Input
-									placeholder="Label eingeben"
-									bind:value={newLabel}
-									disabled={isSubmitting}
-									class="flex-1"
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											addLabel();
-										}
-									}}
-								/>
-								<Button
-									type="button"
-									variant="secondary"
-									size="sm"
-									onclick={addLabel}
-									disabled={isSubmitting || !newLabel.trim()}
-								>
-									Hinzufügen
-								</Button>
-							</div>
-
-							<!-- Labels List -->
-							{#if formData.labels && formData.labels.length > 0}
-								<div class="flex flex-wrap gap-2">
-									{#each formData.labels as label (label)}
-										<Badge variant="secondary" class="cursor-pointer">
-											{label}
-											<button
-												type="button"
-												onclick={() => removeLabel(label)}
-												disabled={isSubmitting}
-												class="ml-1 hover:text-destructive"
-											>
-												✕
-											</button>
-										</Badge>
-									{/each}
-								</div>
-							{/if}
-						</FieldContent>
-					</Field>
-
-					<Separator />
-
-					<!-- Publish State -->
-					<Field>
-						<FieldLabel>Veröffentlichungsstatus</FieldLabel>
-						<FieldContent class="space-y-2">
-							<label class="flex items-center gap-2">
-								<input
-									type="radio"
-									bind:group={formData.publishState}
-									value="draft"
-									disabled={isSubmitting}
-								/>
-								<span>Entwurf</span>
-							</label>
-							<label class="flex items-center gap-2">
-								<input
-									type="radio"
-									bind:group={formData.publishState}
-									value="published"
-									disabled={isSubmitting}
-								/>
-								<span>Veröffentlicht</span>
-							</label>
-
-						</FieldContent>
-					</Field>
-				</Tabs.Content>
-			</Tabs.Root>			<Dialog.Footer class="mt-6">
+			<Dialog.Footer class="mt-6">
 				<Button type="button" variant="outline" onclick={onClose} disabled={isSubmitting}>
 					Abbrechen
 				</Button>

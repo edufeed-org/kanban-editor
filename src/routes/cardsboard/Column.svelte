@@ -6,7 +6,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
- 	import type { CardItem, ColumnDropHandler, PublishState } from "./types.js";
+ 	import type { CardItem, ColumnDropHandler } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { toast } from "svelte-sonner";
@@ -42,7 +42,6 @@
 		onSelect,
 		onDrop,
 		onCardAction,
-		onPublishStateChange,
 		onSidebarAction,
 		selectedCardId,
 		onSelectCard
@@ -56,7 +55,6 @@
 		onSelect?: () => void;
 		onDrop: ColumnDropHandler;
 		onCardAction?: (cardId: string, action: string) => void;
-		onPublishStateChange?: (cardId: string, newState: PublishState) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 		selectedCardId?: string | null;
 		onSelectCard?: (cardId: string) => void;
@@ -494,7 +492,6 @@
 						onSelectCard?.(String(item.id));
 					}}
 					{onCardAction}
-					{onPublishStateChange}
 					{onSidebarAction}
 				/>
 			</div>

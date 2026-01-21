@@ -88,7 +88,7 @@
 				<LogInIcon class="h-5 w-5" />
 				Login
 			</Dialog.Title>
-			<Dialog.Description>
+			<Dialog.Description class="text-left">
 				Wähle eine Authentifizierungsmethode für dein Kanban-Board
 			</Dialog.Description>
 		</Dialog.Header>

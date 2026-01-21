@@ -221,7 +221,7 @@
                 <HistoryIcon class="h-5 w-5" />
                 Versionshistorie
             </Dialog.Title>
-            <Dialog.Description>
+            <Dialog.Description class="text-left">
                 Speichere Versionen deines Boards und stelle frühere Zustände wieder her.
             </Dialog.Description>
         </Dialog.Header>

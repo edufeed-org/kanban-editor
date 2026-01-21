@@ -514,9 +514,9 @@
 </script>
 
 <header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0 overflow-x-auto">
-    <div class="flex h-14 items-center justify-between gap-2 px-4 min-w-max">
+    <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-0.5 sm:gap-2">
             <!-- Left Sidebar Trigger -->
             <Button title="Linke Sidebar ein-/ausblenden"
                 variant="default"
@@ -532,14 +532,14 @@
                 <span class="sr-only">Toggle Left Sidebar</span>
             </Button>
             
-            <Separator orientation="vertical" class="min-w-4" />
+            <Separator orientation="vertical" class="min-w-4 hidden sm:block" />
             
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
-            <span class="font-semibold text-lg hidden sm:inline-block">{currentBoardTitle}</span>
+            <span class="font-semibold text-lg hidden md:inline-block">{currentBoardTitle}</span>
             
             <!-- 🟢 Sync Status Indicator -->
             <div 
-                class="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary/50 hover:bg-secondary"
+                class="flex items-center gap-0.5 px-1 sm:px-2 py-0.5 sm:py-1 text-xs rounded bg-secondary/50 hover:bg-secondary"
                 class:cursor-pointer={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing}
                 title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
                 role="button"
@@ -555,29 +555,29 @@
                 {#if syncStatus.connectedRelays === 0 && syncStatus.isSyncing === false}
                     <!-- No relays connected: Show error + clickable reconnect -->
                     <WifiOffIcon class="h-3 w-3 text-red-500" />
-                    <span class="text-red-600 font-semibold">Offline</span>
-                    <RefreshCwIcon class="h-3 w-3 text-red-500 ml-1" />
-                    <span class="text-red-500 text-[10px]">Reconnect</span>
+                    <span class="text-red-600 font-semibold hidden sm:inline">Offline</span>
+                    <RefreshCwIcon class="h-3 w-3 text-red-500 ml-1 hidden sm:block" />
+                    <span class="text-red-500 text-[10px] hidden sm:inline">Reconnect</span>
                 {:else if syncStatus.isSyncing}
                     <!-- Syncing: Show spinner -->
                     <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />
-                    <span class="text-muted-foreground">Syncing...</span>
+                    <span class="text-muted-foreground hidden sm:inline">Syncing...</span>
                 {:else if syncStatus.queuedEvents > 0}
                     <!-- Queued: Show queued count -->
                     <div class="h-2 w-2 rounded-full bg-amber-500"></div>
-                    <span class="text-muted-foreground">{syncStatus.queuedEvents} queued</span>
+                    <span class="text-muted-foreground hidden sm:inline">{syncStatus.queuedEvents} queued</span>
                 {:else if syncStatus.totalRelays > 0 && syncStatus.connectedRelays < syncStatus.totalRelays}
                     <!-- Partially connected: Show warning (only if we know total relay count) -->
                     <WifiIcon class="h-3 w-3 text-amber-500" />
-                    <span class="text-amber-600">{syncStatus.connectedRelays}/{syncStatus.totalRelays}</span>
+                    <span class="text-amber-600 hidden sm:inline">{syncStatus.connectedRelays}/{syncStatus.totalRelays}</span>
                 {:else if syncStatus.connectedRelays > 0}
                     <!-- At least one relay connected: Show online -->
                     <CheckCircle2Icon class="h-3 w-3 text-green-500" />
-                    <span class="text-muted-foreground">Online</span>
+                    <span class="text-muted-foreground hidden sm:inline">Online</span>
                 {:else}
                     <!-- Fallback: Unknown state -->
                     <WifiIcon class="h-3 w-3 text-gray-400" />
-                    <span class="text-muted-foreground">Syncing...</span>
+                    <span class="text-muted-foreground hidden sm:inline">Syncing...</span>
                 {/if}
             </div>
 
@@ -676,7 +676,6 @@
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
                                 <ExportButton />
                                 <LiaScriptExportButton />
-                                <!-- Import Button -->
                                 <ImportPopover />
                                 <!-- ShareLink Button -->
                                 <Button 
@@ -688,7 +687,7 @@
                                     disabled={isGeneratingShareLink}
                                 >
                                     <LinkIcon class="h-4 w-4" />
-                                    <span class="hidden sm:inline">Share</span>
+                                    <span>Share</span>
                                 </Button>
                                 <!-- Publish to Edufeed Button -->
                                 <Button 
@@ -705,7 +704,7 @@
                             </div>
                             
                             <!-- Second row: Delete, Cancel, Save -->
-                            <div class="flex justify-between w-full gap-2">
+                            <div class="flex flex-wrap justify-between w-full gap-2">
                                 <Button 
                                     variant="outline" 
                                     size="sm"
@@ -713,9 +712,9 @@
                                     class="h-9 gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                     <TrashIcon class="h-4 w-4" />
-                                    <span class="hidden sm:inline">Löschen</span>
+                                    <span>Löschen</span>
                                 </Button>
-                                <div class="flex gap-2">
+                                <div class="flex flex-wrap gap-2">
                                     <Button 
                                         variant="outline" 
                                         size="sm"
@@ -741,10 +740,10 @@
             </Dialog.Root>
         
 
-            <!-- AI Summary Button (BotIcon) -->
+            <!-- AI Summary Button (BotIcon) - Hidden on small screens -->
             <Drawer.Root>
                 <Drawer.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
+                    class="hidden md:inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
                     title="KI-Zusammenfassung"
                 >
                     <SquareSigmaIcon class="h-4 w-4" />
@@ -763,7 +762,7 @@
         </div>
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-0.5 sm:gap-2">
             <!-- Settings Dialog -->
             <Dialog.Root>
                 <Dialog.Trigger
@@ -808,7 +807,7 @@
                 {/if}
             </Button>
             
-            <Separator orientation="vertical" class="min-w-3" />
+            <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
             <!-- Right Sidebar Trigger -->
             <Button

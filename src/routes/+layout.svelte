@@ -118,7 +118,7 @@
   richColors 
   position="top-right" 
   closeButton={true}
-  duration={3000}
+  duration={5000}
 />
 
 <div class="container viewport w-full h-full max-w-full mx-auto p-0">
