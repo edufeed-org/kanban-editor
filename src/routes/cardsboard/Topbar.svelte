@@ -674,16 +674,9 @@
                         <div class="flex flex-col gap-3 w-full">
                             <!-- First row: Action buttons (Export, Share, Publish) -->
                             <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
-                                <div class="hidden sm:block">
-                                    <ExportButton />
-                                </div>
-                                <div class="hidden sm:block">
-                                    <LiaScriptExportButton />
-                                </div>
-                                <!-- Import Button - Hidden on mobile -->
-                                <div class="hidden sm:block">
-                                    <ImportPopover />
-                                </div>
+                                <ExportButton />
+                                <LiaScriptExportButton />
+                                <ImportPopover />
                                 <!-- ShareLink Button -->
                                 <Button 
                                     variant="outline" 
@@ -694,7 +687,7 @@
                                     disabled={isGeneratingShareLink}
                                 >
                                     <LinkIcon class="h-4 w-4" />
-                                    <span class="hidden sm:inline">Share</span>
+                                    <span>Share</span>
                                 </Button>
                                 <!-- Publish to Edufeed Button -->
                                 <Button 
@@ -711,7 +704,7 @@
                             </div>
                             
                             <!-- Second row: Delete, Cancel, Save -->
-                            <div class="flex justify-between w-full gap-2">
+                            <div class="flex flex-wrap justify-between w-full gap-2">
                                 <Button 
                                     variant="outline" 
                                     size="sm"
@@ -719,9 +712,9 @@
                                     class="h-9 gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                     <TrashIcon class="h-4 w-4" />
-                                    <span class="hidden sm:inline">Löschen</span>
+                                    <span>Löschen</span>
                                 </Button>
-                                <div class="flex gap-2">
+                                <div class="flex flex-wrap gap-2">
                                     <Button 
                                         variant="outline" 
                                         size="sm"
