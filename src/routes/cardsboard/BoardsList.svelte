@@ -236,7 +236,7 @@
                     <button
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
-                        class="w-full text-left pr-10"
+                        class="w-full text-left pr-10 p-1.5"
                         title={`${board.name}${isActive ? ' (✅ Aktives Board)' : ''}`}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
