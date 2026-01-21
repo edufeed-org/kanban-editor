@@ -18,6 +18,8 @@
 	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
 	import { authStore } from "$lib/index.js";
     import TrashIcon from "@lucide/svelte/icons/trash";
+	import PlusIcon from "@lucide/svelte/icons/plus";
+	import XIcon from "@lucide/svelte/icons/x";
 
 	let {
 		card,
@@ -53,6 +55,8 @@
 	// Card editing state (lokale Kopie für Formulare)
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
+	let newLabelInput = $state('');
+	let localLabels = $state(card.labels || []);
 	
 	// ✅ FIX: Lokale State für author-bezogene Felder (reaktiv!)
 	let localAuthor = $state(card.author);
@@ -128,8 +132,14 @@
 				if (attendeesJSON !== localAttendeesJSON) {
 					console.log('🔄 Card attendees updated:', (updatedCard.attendees || []).length, 'attendees');
 					localAttendees = updatedCard.attendees || [];
-				}
+				}				
+				// Update labels
+				const labelsJSON = JSON.stringify(updatedCard.labels || []);
+				const localLabelsJSON = JSON.stringify(localLabels);
 				
+				if (labelsJSON !== localLabelsJSON) {
+					localLabels = updatedCard.labels || [];
+				}				
 				// ✅ FIX: Aktualisiere links für sofortige Reaktivität
 				const linksJSON = JSON.stringify(updatedCard.links || []);
 				const cardLinksJSON = JSON.stringify(card.links || []);
@@ -225,6 +235,30 @@
 			boardStore.removeCard(String(card.id));
 		}
 	}
+	
+	function handleAddLabel() {
+		const trimmedLabel = newLabelInput.trim();
+		if (trimmedLabel && !localLabels.includes(trimmedLabel)) {
+			const updatedLabels = [...localLabels, trimmedLabel];
+			localLabels = updatedLabels;
+			boardStore.editCard(String(card.id), { labels: updatedLabels });
+			newLabelInput = '';
+		}
+	}
+	
+	function handleRemoveLabel(labelToRemove: string) {
+		const updatedLabels = localLabels.filter(label => label !== labelToRemove);
+		localLabels = updatedLabels;
+		boardStore.editCard(String(card.id), { labels: updatedLabels });
+	}
+	
+	function handleLabelKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			handleAddLabel();
+		}
+	}
+	
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
 	}
@@ -261,16 +295,16 @@
 					
 				</div>
 				
-				{#if card.labels && card.labels.length > 0}
+				{#if localLabels && localLabels.length > 0}
 					<div class="flex flex-wrap gap-1 mt-2 mb-0">
-						{#each card.labels.slice(0, 2) as label}
+						{#each localLabels.slice(0, 2) as label}
 							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
 								{label}
 							</Badge>
 						{/each}
-						{#if card.labels.length > 2}
+						{#if localLabels.length > 2}
 							<Badge variant="outline" class="text-xs px-1.5 py-0.5">
-								+{card.labels.length - 2}
+								+{localLabels.length - 2}
 							</Badge>
 						{/if}
 					</div>
@@ -319,11 +353,53 @@
 							</div>
 							
 							<Separator />
-								
-								<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
+							
+							<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
 									selectedColor = colorValue;
 									boardStore.editCard(String(card.id), { color: colorValue });
-								}} />
+								}} 
+							/>
+
+							<div class="space-y-2">
+								<h4 class="font-medium text-sm">Labels</h4>
+								<div class="flex gap-2">
+									<Input 
+										bind:value={newLabelInput} 
+										placeholder="Neues Label"
+										onkeydown={handleLabelKeyDown}
+										class="flex-1"
+									/>
+									<Button 
+										variant="outline" 
+										size="sm"
+										onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddLabel(); }}
+										disabled={!newLabelInput.trim()}
+									>
+										<PlusIcon class="h-4 w-4" />
+									</Button>
+								</div>
+								{#if localLabels.length > 0}
+									<div class="flex flex-wrap gap-1 mt-2">
+										{#each localLabels as label}
+											<Badge 
+												variant="secondary" 
+												class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1"
+											>
+												{label}
+												<button
+													onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveLabel(label); }}
+													class="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+													aria-label="Label entfernen"
+												>
+													<XIcon class="h-3 w-3" />
+												</button>
+											</Badge>
+										{/each}
+									</div>
+								{/if}
+							</div>
+							
+							<Separator />
 								
 								<Separator />
 								

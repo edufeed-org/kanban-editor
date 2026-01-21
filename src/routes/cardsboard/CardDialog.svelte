@@ -10,7 +10,7 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import type { CardProps, PublishState } from '../../lib/classes/BoardModel.js';
-  import OerImagePicker from '$lib/components/OerImagePicker.svelte';
+  	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 
 	interface Props {
