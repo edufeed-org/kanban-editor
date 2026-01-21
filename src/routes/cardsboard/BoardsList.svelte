@@ -10,6 +10,7 @@
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
     import CircleIcon from '@lucide/svelte/icons/circle';
+    import SearchIcon from '@lucide/svelte/icons/search';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -195,12 +196,15 @@
 
     <Separator />
     <div class="m-2 flex-shrink-0">
-        <Input
-            type="text"
-            placeholder="Boards suchen..."
-            bind:value={searchQuery}
-            class="h-9"
-        />
+        <div class="relative">
+            <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+                type="text"
+                placeholder="Boards suchen..."
+                bind:value={searchQuery}
+                class="h-9 pl-9"
+            />
+        </div>
     </div>
 
     <!-- Boards-Liste -->
