@@ -658,6 +658,168 @@ export class ChatStore {
 			};
 		}
 	}
+
+	// ============================================================================
+	// Tool-Based LLM Integration (OpenAI Function Calling)
+	// ============================================================================
+
+	/**
+	 * Sendet eine Nachricht an das LLM mit Tool-Definitionen
+	 * Nutzt OpenAI Function Calling Format
+	 * 
+	 * @param userMessage - Die Nachricht des Users
+	 * @param systemPrompt - System-Prompt mit Kontext
+	 * @param tools - Tool-Definitionen im OpenAI Format
+	 * @returns AI Response mit potentiellen Tool-Calls
+	 */
+	public async sendToLLMWithTools(
+		userMessage: string,
+		systemPrompt: string,
+		tools: Array<{
+			type: 'function';
+			function: {
+				name: string;
+				description: string;
+				parameters: any;
+			};
+		}>
+	): Promise<{
+		content: string | null;
+		tool_calls?: Array<{
+			id: string;
+			type: 'function';
+			function: {
+				name: string;
+				arguments: string;
+			};
+		}>;
+		error?: string;
+	}> {
+		const settings = settingsStore.settings;
+
+		// Check if LLM is configured
+		if (!settings.llmModel || !settings.llmBaseUrl) {
+			return {
+				content: null,
+				error: '❌ LLM nicht konfiguriert. Bitte in Settings LLM-Model und Base URL eintragen.'
+			};
+		}
+
+		try {
+			// Prepare messages for OpenAI-compatible API
+			const messages = [
+				{
+					role: 'system',
+					content: systemPrompt
+				},
+				// Add previous messages for context (last 5)
+				...this.messages
+					.slice(-5)
+					.map((msg) => ({
+						role: msg.role === 'user' ? 'user' : 'assistant',
+						content: msg.content
+					})),
+				{
+					role: 'user',
+					content: userMessage
+				}
+			];
+
+			console.log('🔧 Sending to LLM with tools:', settings.llmBaseUrl, settings.llmModel);
+			console.log('📋 Available tools:', tools.map(t => t.function.name).join(', '));
+
+			// Detect if using OpenRouter (check base URL)
+			const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+			const isOllama = settings.llmBaseUrl.includes('localhost') || settings.llmBaseUrl.includes('127.0.0.1');
+			
+			// Build API endpoint URL
+			const apiUrl = isOpenRouter 
+				? `${settings.llmBaseUrl}/chat/completions`
+				: `${settings.llmBaseUrl}/v1/chat/completions`;
+
+			// Request body mit Tools
+			const requestBody: any = {
+				model: settings.llmModel,
+				messages,
+				temperature: 0.1, // Sehr niedrig für konsistente Tool-Calls
+				max_tokens: 2000
+			};
+
+			// Tool-Support je nach Provider
+			if (isOllama) {
+				// Ollama unterstützt tools ab Version 0.4.0
+				// Falls nicht unterstützt, Fallback auf JSON-Generierung
+				requestBody.tools = tools;
+				requestBody.tool_choice = 'auto';
+			} else {
+				// OpenAI/OpenRouter - Standard Tool Format
+				requestBody.tools = tools;
+				requestBody.tool_choice = 'auto';
+			}
+
+			// Call API
+			const response = await fetch(apiUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
+					...(isOpenRouter ? {
+						'HTTP-Referer': 'https://kanban-editor.nostr.tools',
+						'X-Title': 'Nostr Kanban Editor'
+					} : {})
+				},
+				body: JSON.stringify(requestBody)
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error('❌ LLM Tool API Error:', response.status, errorText);
+				
+				// Fallback: Wenn Tool-Calling nicht unterstützt, versuche ohne Tools
+				if (response.status === 400 && errorText.includes('tool')) {
+					console.warn('⚠️ Tool-Calling nicht unterstützt, Fallback auf Standard-Modus');
+					// Hier könnte ein Fallback implementiert werden
+				}
+				
+				return {
+					content: null,
+					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+				};
+			}
+
+			const data = await response.json();
+			const choice = data.choices?.[0];
+			
+			if (!choice) {
+				return {
+					content: null,
+					error: 'LLM returned empty response'
+				};
+			}
+
+			const message = choice.message;
+			const toolCalls = message.tool_calls;
+			const content = message.content;
+
+			if (toolCalls && toolCalls.length > 0) {
+				console.log('🔧 LLM returned tool calls:', toolCalls.map((t: any) => t.function.name).join(', '));
+				return {
+					content,
+					tool_calls: toolCalls
+				};
+			}
+
+			console.log('💬 LLM returned text response:', content?.substring(0, 100));
+			return { content };
+
+		} catch (error) {
+			console.error('❌ LLM Tool Error:', error);
+			return {
+				content: null,
+				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+			};
+		}
+	}
 }
 
 // ============================================================================

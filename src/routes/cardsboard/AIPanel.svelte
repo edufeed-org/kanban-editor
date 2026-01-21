@@ -50,6 +50,17 @@
     type BoardPreview
   } from '$lib/agent';
   
+  // 🆕 Tool-Based AI System (MCP-Style)
+  import {
+    toolDefinitions,
+    getToolDefinitions,
+    buildToolSystemPrompt,
+    executeToolCalls,
+    summarizeResults,
+    type ToolCall,
+    type ToolResult
+  } from '$lib/agent/tools';
+  
   // Props
   let {
     boardId
@@ -60,6 +71,10 @@
   // Chat State
   let userInput = $state('');
   let isProcessing = $state(false);
+  
+  // 🆕 Tool-Based AI Mode (MCP-Style, can be toggled via settings later)
+  // Default to Tool-Based mode for better single-action support
+  let useToolBasedMode = $state(true);
   
   // 🆕 2-Phase System State
   let currentContentProposal = $state<ContentProposal | null>(null);
@@ -532,23 +547,30 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     
     const message = userInput.trim();
     userInput = '';
-    isProcessing = true;
     
-    try {
-      // Add user message
-      chatStore.addMessage(message, 'user');
-      
-      // Send to AI (simulated - in real app, this would call your AI API)
-      await simulateAIResponse(message);
-      
-    } catch (error) {
-      console.error('AI Error:', error);
-      chatStore.addMessage(
-        'Entschuldigung, es gab einen Fehler bei der Verarbeitung.',
-        'assistant'
-      );
-    } finally {
-      isProcessing = false;
+    // 🆕 Route to appropriate AI system
+    if (useToolBasedMode) {
+      // New Tool-Based System (MCP-Style)
+      await handleToolBasedMessage(message);
+    } else {
+      // Legacy Phase 1/Phase 2 System
+      isProcessing = true;
+      try {
+        // Add user message
+        chatStore.addMessage(message, 'user');
+        
+        // Send to AI (simulated - in real app, this would call your AI API)
+        await simulateAIResponse(message);
+        
+      } catch (error) {
+        console.error('AI Error:', error);
+        chatStore.addMessage(
+          'Entschuldigung, es gab einen Fehler bei der Verarbeitung.',
+          'assistant'
+        );
+      } finally {
+        isProcessing = false;
+      }
     }
   }
   
@@ -1133,6 +1155,126 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     
     pendingAction = null;
     showConfirmDialog = false;
+  }
+
+  // ============================================================================
+  // 🆕 Tool-Based AI System (MCP-Style)
+  // ============================================================================
+
+  /**
+   * Handle message using Tool-Based Architecture (OpenAI Function Calling)
+   * This is the new, cleaner approach that properly handles single actions
+   * like "erstelle eine Karte" without generating full board structures.
+   */
+  async function handleToolBasedMessage(message: string) {
+    console.log('🔧 [Tool-Based] Processing message:', message);
+    
+    // Add user message to chat
+    chatStore.addMessage(message, 'user');
+    isProcessing = true;
+    
+    try {
+      // Step 1: Build board context for system prompt
+      const boardContext = boardStore.getContextData(true);
+      console.log('📋 [Tool-Based] Board context:', {
+        columns: boardContext.columns?.length || 0,
+        cards: boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0
+      });
+      
+      // Step 2: Build system prompt with full card context
+      const systemPrompt = buildToolSystemPrompt(boardContext);
+      
+      // Step 3: Get tool definitions in OpenAI format
+      const tools = getToolDefinitions();
+      
+      // Step 4: Send to LLM with tools
+      console.log('🚀 [Tool-Based] Sending to LLM with', tools.length, 'tools');
+      const result = await chatStore.sendToLLMWithTools(message, systemPrompt, tools);
+      
+      if (result.error) {
+        console.error('❌ [Tool-Based] LLM Error:', result.error);
+        chatStore.addMessage(result.error, 'assistant');
+        isProcessing = false;
+        return;
+      }
+      
+      // Step 5: Process response
+      if (result.tool_calls && result.tool_calls.length > 0) {
+        // LLM wants to use tools
+        console.log('🔧 [Tool-Based] Executing', result.tool_calls.length, 'tool calls');
+        
+        // Show processing message if multiple tools
+        if (result.tool_calls.length > 1) {
+          chatStore.addMessage(
+            `🔧 Führe ${result.tool_calls.length} Aktionen aus...`,
+            'assistant'
+          );
+        }
+        
+        // Build execution context with boardStore API reference
+        const executionContext = {
+          board: boardStore.data,
+          currentUserPubkey: null, // TODO: Get from authStore when available
+          currentUserName: null,   // TODO: Get from authStore when available
+          boardStore: {
+            createColumn: (name: string, color?: string) => boardStore.createColumn(name, color),
+            updateColumn: (columnId: string, updates: any) => boardStore.updateColumn(columnId, updates),
+            deleteColumn: (columnId: string) => boardStore.deleteColumn(columnId),
+            createCard: (columnId: string, heading: string, content?: string) => boardStore.createCard(columnId, heading, content),
+            editCard: (cardId: string, updates: any) => boardStore.editCard(cardId, updates),
+            deleteCard: (cardId: string) => boardStore.deleteCard(cardId),
+            moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId)
+          },
+          triggerUpdate: () => {} // Not needed when using boardStore API
+        };
+        
+        // Execute tool calls
+        const toolCalls: ToolCall[] = result.tool_calls.map(tc => ({
+          id: tc.id,
+          type: tc.type,
+          function: {
+            name: tc.function.name,
+            arguments: tc.function.arguments
+          }
+        }));
+        
+        const toolResults = await executeToolCalls(toolCalls, executionContext);
+        
+        // Step 6: Summarize and show results
+        const summary = summarizeResults(toolResults);
+        console.log('📊 [Tool-Based] Execution complete:', summary);
+        
+        // Show results to user
+        chatStore.addMessage(summary, 'assistant');
+        
+        // If there was a text response too, show it
+        if (result.content && result.content.trim()) {
+          chatStore.addMessage(result.content, 'assistant');
+        }
+        
+      } else if (result.content) {
+        // LLM responded with text only (used respond/ask_clarification tools, or no tool needed)
+        console.log('💬 [Tool-Based] Text response received');
+        chatStore.addMessage(result.content, 'assistant');
+        
+      } else {
+        // Empty response
+        console.warn('⚠️ [Tool-Based] Empty response from LLM');
+        chatStore.addMessage(
+          '🤔 Ich konnte keine passende Antwort generieren. Bitte formulieren Sie Ihre Anfrage anders.',
+          'assistant'
+        );
+      }
+      
+    } catch (error) {
+      console.error('❌ [Tool-Based] Error:', error);
+      chatStore.addMessage(
+        `❌ Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        'assistant'
+      );
+    } finally {
+      isProcessing = false;
+    }
   }
   
   /**
