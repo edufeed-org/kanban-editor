@@ -490,7 +490,7 @@
     
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0 overflow-x-auto">
+<header class="sticky top-0 z-50 w-full max-w-full border-b-4 shrink-0 overflow-x-auto">
     <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-0.5 sm:gap-2">
