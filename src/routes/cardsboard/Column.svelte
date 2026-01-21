@@ -65,6 +65,9 @@
 	let editName = $state(name);
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
+	
+	// Global popover state management - ensures only one popover is open at a time
+	const popoverId = `column-popover-${columnId}`;
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -74,6 +77,40 @@
 		{ value: 'red', label: 'Rot', cssVar: '--color-red' },
 		{ value: 'purple', label: 'Lila', cssVar: '--color-purple' }
 	];
+
+	// ============================================================================
+	// POPOVER MANAGEMENT: Ensure only one popover is open at a time
+	// ============================================================================
+	function handlePopoverOpenChange(open: boolean) {
+		if (open) {
+			// Close any other open popover (columns and cards)
+			const event = new CustomEvent('closeOtherPopovers', {
+				detail: { popoverId },
+				bubbles: true,
+				composed: true
+			});
+			window.dispatchEvent(event);
+			popoverOpen = true;
+		} else {
+			popoverOpen = false;
+		}
+	}
+	
+	// Listen for close events from other popovers
+	$effect(() => {
+		const handleClose = (event: Event) => {
+			const customEvent = event as CustomEvent<{ popoverId: string }>;
+			if (customEvent.detail.popoverId !== popoverId && popoverOpen) {
+				popoverOpen = false;
+			}
+		};
+		
+		window.addEventListener('closeOtherPopovers', handleClose);
+		
+		return () => {
+			window.removeEventListener('closeOtherPopovers', handleClose);
+		};
+	});
 
 	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
 	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
@@ -406,10 +443,7 @@
 					<SquarePlusIcon class="h-4 w-4" />
 				</Button>
 				<!-- Spalten-Aktionen Popover -->
-				<Popover.Root bind:open={popoverOpen} onOpenChange={(open) => {
-					console.log('🔍 Popover open state changed:', open);
-					popoverOpen = open;
-				}}>
+				<Popover.Root bind:open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
 					<Popover.Trigger 
 						title="Spalten-Optionen"
 						class="popover-trigger-ignore inline-flex items-center justify-center h-8 w-8 btn transition-all"

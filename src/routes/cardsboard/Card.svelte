@@ -41,6 +41,10 @@
 	let showPopover = $state(false);
 	let showMenu = $state(true);
 	
+	// Global popover state management - ensures only one popover is open at a time
+	let currentOpenPopover = $state<string | null>(null);
+	const popoverId = `popover-${card.id}`;
+	
 	// 🆕 VERHALT: CardViewDialog bleibt IMMER selected solange offen
 	// Der Dialog wird von Card.svelte gesteuert, nicht vom User-Click
 	let isDialogOpen = $state(false);
@@ -73,6 +77,40 @@
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components
 	let authors = $derived(localAuthor ? [localAuthor] : []);
+
+	// ============================================================================
+	// POPOVER MANAGEMENT: Ensure only one popover is open at a time
+	// ============================================================================
+	function handlePopoverOpenChange(open: boolean) {
+		if (open) {
+			// Close any other open popover
+			const event = new CustomEvent('closeOtherPopovers', {
+				detail: { popoverId },
+				bubbles: true,
+				composed: true
+			});
+			window.dispatchEvent(event);
+			showPopover = true;
+		} else {
+			showPopover = false;
+		}
+	}
+	
+	// Listen for close events from other popovers
+	$effect(() => {
+		const handleClose = (event: Event) => {
+			const customEvent = event as CustomEvent<{ popoverId: string }>;
+			if (customEvent.detail.popoverId !== popoverId && showPopover) {
+				showPopover = false;
+			}
+		};
+		
+		window.addEventListener('closeOtherPopovers', handleClose);
+		
+		return () => {
+			window.removeEventListener('closeOtherPopovers', handleClose);
+		};
+	});
 
 	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
@@ -313,7 +351,7 @@
 			
 			<div class="header-actions">
 				{#if showMenu}
-					<Popover.Root bind:open={showPopover}>
+					<Popover.Root bind:open={showPopover} onOpenChange={handlePopoverOpenChange}>
 						<Popover.Trigger
 								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
 								onclick={(e) => {
