@@ -27,9 +27,7 @@
     "baseUrl": "http://localhost:11434",
     "apiKey": "",
     "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
-    "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben.",
-    "useLlmIntent": false,
-    "$comment_useLlmIntent": "LLM-basierte Intent Detection (experimentell). false = regelbasiert (schneller, offline), true = LLM-basiert (flexibler, benötigt API)"
+    "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben."
   },
 
   "oidc": {

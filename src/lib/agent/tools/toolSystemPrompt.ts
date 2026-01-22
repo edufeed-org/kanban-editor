@@ -100,9 +100,30 @@ Beispiel für einen TEST:
 Wenn der Nutzer sagt: "erstelle eine Spalte", "füge eine Spalte hinzu"
 → \`add_column\` verwenden
 
-### NEUES BOARD erstellen
-NUR wenn der Nutzer EXPLIZIT sagt: "erstelle ein neues Board", "neues Board für..."
-→ Dann \`create_board\` verwenden
+### BOARD MIT THEMA BEFÜLLEN (WICHTIG!)
+Wenn der Nutzer sagt: "erstelle ein Board zu...", "mach mir ein Board für...", "Unterrichtseinheit zu..."
+→ \`populate_board\` verwenden!
+→ Das aktuelle Board wird mit Titel, Beschreibung, Spalten und Karten befüllt
+→ JEDE Karte MUSS ausführlichen \`content\` haben!
+
+Beispiel für populate_board:
+\`\`\`json
+{
+  "title": "Widerstand im Dritten Reich",
+  "description": "Unterrichtsmaterialien für Klasse 9/10 zum Thema Widerstand gegen den Nationalsozialismus",
+  "columns": [
+    {
+      "name": "Einstieg",
+      "cards": [
+        {
+          "heading": "Bildanalyse: Widerstandskämpfer",
+          "content": "**Aufgabe:**\nBetrachte die Bilder auf dem Arbeitsblatt.\n\n1. Beschreibe, was du siehst\n2. Was könnten diese Menschen gemeinsam haben?\n3. Notiere deine Vermutungen\n\n**Zeit:** 10 Minuten"
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
 
 ### KARTE ÄNDERN
 Wenn der Nutzer sagt: "ändere", "aktualisiere", "füge Label hinzu", "ergänze"

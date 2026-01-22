@@ -10,6 +10,123 @@ import { BoardOperations } from '$lib/stores/boardstore/operations';
 import type { NostrIntegration } from '$lib/stores/boardstore/nostr';
 
 // ============================================================================
+// JSON Repair Utilities
+// ============================================================================
+
+/**
+ * Versucht fehlerhaftes JSON zu reparieren
+ * Häufige LLM-Fehler:
+ * - Extra Zeichen nach dem JSON
+ * - Fehlende schließende Klammern
+ * - Doppelt escapte Zeilenumbrüche (\\n statt \n)
+ * - Unescapte Sonderzeichen in Strings
+ */
+function attemptJsonRepair(jsonStr: string): string {
+    let repaired = jsonStr.trim();
+    
+    // 0. Korrigiere doppelt escapte Zeilenumbrüche/Tabs
+    // LLMs erzeugen manchmal \\n statt \n in JSON-Strings
+    // Wir müssen vorsichtig sein: nur innerhalb von String-Werten korrigieren
+    repaired = repaired.replace(/\\\\n/g, '\\n');
+    repaired = repaired.replace(/\\\\t/g, '\\t');
+    repaired = repaired.replace(/\\\\r/g, '\\r');
+    
+    // 1. Entferne Markdown-Codeblöcke
+    if (repaired.includes('```json')) {
+        const match = repaired.match(/```json\s*([\s\S]*?)\s*```/);
+        if (match) {
+            repaired = match[1];
+        }
+    } else if (repaired.includes('```')) {
+        const match = repaired.match(/```\s*([\s\S]*?)\s*```/);
+        if (match) {
+            repaired = match[1];
+        }
+    }
+    
+    // 2. Finde das erste { und letzte passende }
+    const firstBrace = repaired.indexOf('{');
+    if (firstBrace === -1) return repaired;
+    
+    // Zähle Klammern um das Ende des JSON-Objekts zu finden
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+    let lastValidEnd = -1;
+    
+    for (let i = firstBrace; i < repaired.length; i++) {
+        const char = repaired[i];
+        
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+        
+        if (char === '\\' && inString) {
+            escapeNext = true;
+            continue;
+        }
+        
+        if (char === '"' && !escapeNext) {
+            inString = !inString;
+            continue;
+        }
+        
+        if (inString) continue;
+        
+        if (char === '{' || char === '[') {
+            depth++;
+        } else if (char === '}' || char === ']') {
+            depth--;
+            if (depth === 0) {
+                lastValidEnd = i;
+                break; // Erstes vollständiges Objekt gefunden
+            }
+        }
+    }
+    
+    // 3. Schneide nach dem ersten vollständigen JSON-Objekt ab
+    if (lastValidEnd !== -1 && lastValidEnd < repaired.length - 1) {
+        const afterJson = repaired.substring(lastValidEnd + 1).trim();
+        if (afterJson.length > 0) {
+            console.warn('⚠️ JSON hatte extra Zeichen nach Ende, bereinigt:', afterJson.substring(0, 50));
+            repaired = repaired.substring(firstBrace, lastValidEnd + 1);
+        }
+    }
+    
+    // 4. Falls Klammern nicht balanciert sind, versuche zu reparieren
+    if (depth > 0) {
+        console.warn(`⚠️ JSON hat ${depth} fehlende schließende Klammern, ergänze...`);
+        // Analysiere welche Klammern fehlen
+        let bracketStack: string[] = [];
+        inString = false;
+        escapeNext = false;
+        
+        for (let i = 0; i < repaired.length; i++) {
+            const char = repaired[i];
+            
+            if (escapeNext) { escapeNext = false; continue; }
+            if (char === '\\' && inString) { escapeNext = true; continue; }
+            if (char === '"' && !escapeNext) { inString = !inString; continue; }
+            if (inString) continue;
+            
+            if (char === '{') bracketStack.push('}');
+            else if (char === '[') bracketStack.push(']');
+            else if (char === '}' || char === ']') bracketStack.pop();
+        }
+        
+        // Füge fehlende Klammern in umgekehrter Reihenfolge hinzu
+        const missingBrackets = bracketStack.reverse().join('');
+        if (missingBrackets) {
+            console.warn('⚠️ Ergänze fehlende Klammern:', missingBrackets);
+            repaired += missingBrackets;
+        }
+    }
+    
+    return repaired;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -121,14 +238,101 @@ function resolveCard(board: Board, cardRef: string): { card: Card; column: Colum
 // ============================================================================
 
 function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
-    // Board existiert bereits - wir können nur das aktuelle Board aktualisieren
-    // In der aktuellen Architektur wird ein neues Board über den Store erstellt
-    return {
-        tool_call_id: '',
-        tool_name: 'create_board',
-        success: false,
-        error: 'Board-Erstellung nicht im Chat-Kontext möglich. Bitte nutze die Board-Verwaltung in der Sidebar.'
-    };
+    // create_board ist deprecated - verwende populate_board stattdessen
+    console.warn('⚠️ create_board aufgerufen - leite zu populate_board um');
+    return executePopulateBoard(args, ctx);
+}
+
+/**
+ * Befüllt das aktuelle Board mit Inhalt zu einem Thema
+ * - Setzt Titel und Beschreibung
+ * - Erstellt/nutzt Spalten
+ * - Fügt Karten mit Inhalt hinzu
+ */
+function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
+    const { title, description, columns } = args;
+    
+    console.log('🎨 populate_board:', { title, columnCount: columns?.length });
+    
+    try {
+        // 1. Board-Metadaten aktualisieren
+        if (title) ctx.board.name = title;
+        if (description) ctx.board.description = description;
+        
+        const createdColumns: string[] = [];
+        const createdCards: { column: string; heading: string }[] = [];
+        
+        // 2. Spalten und Karten erstellen
+        if (columns && Array.isArray(columns)) {
+            for (const colDef of columns) {
+                if (!colDef.name) continue;
+                
+                // Prüfe ob Spalte bereits existiert
+                let column = ctx.board.columns.find(
+                    c => c.name.toLowerCase().trim() === colDef.name.toLowerCase().trim()
+                );
+                
+                // Spalte erstellen falls nicht vorhanden
+                if (!column) {
+                    if (ctx.boardStore?.createColumn) {
+                        const colId = ctx.boardStore.createColumn(colDef.name);
+                        column = ctx.board.findColumn(colId);
+                    } else {
+                        const colId = BoardOperations.createColumn(ctx.board, colDef.name);
+                        column = colId ? ctx.board.findColumn(colId) : undefined;
+                    }
+                    if (column) createdColumns.push(column.name);
+                }
+                
+                // Karten zur Spalte hinzufügen
+                if (column && colDef.cards && Array.isArray(colDef.cards)) {
+                    for (const cardDef of colDef.cards) {
+                        if (!cardDef.heading) continue;
+                        
+                        if (ctx.boardStore?.createCard) {
+                            ctx.boardStore.createCard(
+                                column.id, 
+                                cardDef.heading, 
+                                cardDef.content || ''
+                            );
+                        } else {
+                            BoardOperations.createCard(
+                                ctx.board, 
+                                column.id, 
+                                cardDef.heading, 
+                                cardDef.content || ''
+                            );
+                        }
+                        createdCards.push({ column: column.name, heading: cardDef.heading });
+                    }
+                }
+            }
+        }
+        
+        // 3. Änderungen persistieren
+        ctx.triggerUpdate();
+        
+        return {
+            tool_call_id: '',
+            tool_name: 'populate_board',
+            success: true,
+            result: {
+                boardTitle: title || ctx.board.name,
+                boardDescription: description || ctx.board.description,
+                columnsCreated: createdColumns,
+                cardsCreated: createdCards.length,
+                cardDetails: createdCards
+            }
+        };
+    } catch (error) {
+        console.error('❌ populate_board Fehler:', error);
+        return {
+            tool_call_id: '',
+            tool_name: 'populate_board',
+            success: false,
+            error: `Fehler beim Befüllen des Boards: ${error}`
+        };
+    }
 }
 
 function executeUpdateBoard(args: any, ctx: ExecutionContext): ToolResult {
@@ -720,28 +924,9 @@ export function executeToolCall(
         // Versuche das JSON zu parsen
         let argsStr = toolCall.function.arguments;
         
-        // Manchmal sendet das LLM extra Zeichen nach dem JSON
-        // Versuche das erste vollständige JSON-Objekt zu extrahieren
         if (argsStr && typeof argsStr === 'string') {
-            // Finde das Ende des JSON-Objekts (letzte schließende Klammer)
-            const lastBrace = argsStr.lastIndexOf('}');
-            if (lastBrace !== -1 && lastBrace < argsStr.length - 1) {
-                console.warn('⚠️ Tool arguments hatten extra Zeichen nach JSON, bereinigt');
-                argsStr = argsStr.substring(0, lastBrace + 1);
-            }
-            
-            // Falls das LLM Markdown-Codeblöcke verwendet
-            if (argsStr.includes('```json')) {
-                const match = argsStr.match(/```json\s*([\s\S]*?)\s*```/);
-                if (match) {
-                    argsStr = match[1];
-                }
-            } else if (argsStr.includes('```')) {
-                const match = argsStr.match(/```\s*([\s\S]*?)\s*```/);
-                if (match) {
-                    argsStr = match[1];
-                }
-            }
+            // Verwende die robuste JSON-Reparatur-Funktion
+            argsStr = attemptJsonRepair(argsStr);
         }
         
         args = JSON.parse(argsStr);
@@ -760,6 +945,9 @@ export function executeToolCall(
     let result: ToolResult;
     
     switch (toolName) {
+        case 'populate_board':
+            result = executePopulateBoard(args, ctx);
+            break;
         case 'create_board':
             result = executeCreateBoard(args, ctx);
             break;

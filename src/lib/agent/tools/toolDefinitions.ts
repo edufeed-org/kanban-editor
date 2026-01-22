@@ -28,35 +28,45 @@ export const toolDefinitions: ToolDefinition[] = [
     {
         type: 'function',
         function: {
-            name: 'create_board',
-            description: 'Erstellt ein komplett neues Kanban-Board mit optionalen Spalten und Karten. NUR verwenden wenn der Nutzer explizit ein NEUES BOARD möchte.',
+            name: 'populate_board',
+            description: 'Befüllt das aktuelle Board mit Inhalt zu einem Thema. Setzt Titel, Beschreibung, erstellt passende Spalten und fügt Karten mit ausführlichem Inhalt hinzu. VERWENDEN wenn der Nutzer sagt: "erstelle ein Board zu...", "mach mir ein Board für...", "Board zum Thema...", "Unterrichtseinheit zu..."',
             parameters: {
                 type: 'object',
                 properties: {
                     title: {
                         type: 'string',
-                        description: 'Titel des neuen Boards'
+                        description: 'Neuer Titel für das Board'
                     },
                     description: {
                         type: 'string',
-                        description: 'Optionale Beschreibung des Boards'
+                        description: 'Beschreibung des Boards (Thema, Zielgruppe, Lernziele)'
                     },
                     columns: {
                         type: 'array',
-                        description: 'Optionale Spalten mit Karten',
+                        description: 'Spalten mit Karten. Nutze vorhandene Spalten-Namen wenn passend, oder erstelle neue.',
                         items: {
                             type: 'object',
                             properties: {
-                                name: { type: 'string', description: 'Spaltenname' },
+                                name: { 
+                                    type: 'string', 
+                                    description: 'Spaltenname (z.B. "Einstieg", "Erarbeitung", "Material")' 
+                                },
                                 cards: {
                                     type: 'array',
+                                    description: 'Karten für diese Spalte',
                                     items: {
                                         type: 'object',
                                         properties: {
-                                            heading: { type: 'string' },
-                                            content: { type: 'string' }
+                                            heading: { 
+                                                type: 'string',
+                                                description: 'Kurzer Titel der Karte (5-10 Wörter)'
+                                            },
+                                            content: { 
+                                                type: 'string',
+                                                description: 'AUSFÜHRLICHER Inhalt mit Arbeitsanweisungen, Fragen, Materialien. PFLICHTFELD!'
+                                            }
                                         },
-                                        required: ['heading']
+                                        required: ['heading', 'content']
                                     }
                                 }
                             },
@@ -64,7 +74,7 @@ export const toolDefinitions: ToolDefinition[] = [
                         }
                     }
                 },
-                required: ['title']
+                required: ['title', 'columns']
             }
         }
     },
@@ -72,7 +82,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'update_board',
-            description: 'Aktualisiert die Metadaten des aktuellen Boards (Beschreibung, Tags)',
+            description: 'Aktualisiert NUR die Metadaten des aktuellen Boards (Beschreibung, Tags). NICHT verwenden um Inhalt hinzuzufügen - dafür populate_board nutzen!',
             parameters: {
                 type: 'object',
                 properties: {
