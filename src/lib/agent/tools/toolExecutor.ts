@@ -248,11 +248,12 @@ function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
  * - Setzt Titel und Beschreibung
  * - Erstellt/nutzt Spalten
  * - Fügt Karten mit Inhalt hinzu
+ * - Optional: Löscht unpassende Spalten (removeUnusedColumns)
  */
 function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
-    const { title, description, columns } = args;
+    const { title, description, columns, removeUnusedColumns } = args;
     
-    console.log('🎨 populate_board:', { title, columnCount: columns?.length });
+    console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns });
     
     try {
         // 1. Board-Metadaten aktualisieren
@@ -261,15 +262,19 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
         
         const createdColumns: string[] = [];
         const createdCards: { column: string; heading: string }[] = [];
+        const usedColumnNames: string[] = []; // Track welche Spalten genutzt werden
         
         // 2. Spalten und Karten erstellen
         if (columns && Array.isArray(columns)) {
             for (const colDef of columns) {
                 if (!colDef.name) continue;
                 
+                const normalizedName = colDef.name.toLowerCase().trim();
+                usedColumnNames.push(normalizedName);
+                
                 // Prüfe ob Spalte bereits existiert
                 let column = ctx.board.columns.find(
-                    c => c.name.toLowerCase().trim() === colDef.name.toLowerCase().trim()
+                    c => c.name.toLowerCase().trim() === normalizedName
                 );
                 
                 // Spalte erstellen falls nicht vorhanden
@@ -309,7 +314,26 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
             }
         }
         
-        // 3. Änderungen persistieren
+        // 3. Ungenutzte Spalten löschen (wenn angefordert)
+        const deletedColumns: string[] = [];
+        if (removeUnusedColumns && usedColumnNames.length > 0) {
+            // Sammle Spalten die nicht in usedColumnNames sind
+            const columnsToDelete = ctx.board.columns.filter(
+                col => !usedColumnNames.includes(col.name.toLowerCase().trim())
+            );
+            
+            for (const col of columnsToDelete) {
+                console.log(`🗑️ Lösche ungenutzte Spalte: ${col.name}`);
+                if (ctx.boardStore?.deleteColumn) {
+                    ctx.boardStore.deleteColumn(col.id);
+                } else {
+                    BoardOperations.deleteColumn(ctx.board, col.id);
+                }
+                deletedColumns.push(col.name);
+            }
+        }
+        
+        // 4. Änderungen persistieren
         ctx.triggerUpdate();
         
         return {
@@ -320,6 +344,7 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                 boardTitle: title || ctx.board.name,
                 boardDescription: description || ctx.board.description,
                 columnsCreated: createdColumns,
+                columnsDeleted: deletedColumns,
                 cardsCreated: createdCards.length,
                 cardDetails: createdCards
             }

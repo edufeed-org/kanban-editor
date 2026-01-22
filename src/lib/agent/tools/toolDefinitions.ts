@@ -72,6 +72,10 @@ export const toolDefinitions: ToolDefinition[] = [
                             },
                             required: ['name']
                         }
+                    },
+                    removeUnusedColumns: {
+                        type: 'boolean',
+                        description: 'Wenn true: Löscht alle Spalten die NICHT in columns[] genannt sind (inklusive Standard-Spalten wie "To Do"). Standardmäßig false.'
                     }
                 },
                 required: ['title', 'columns']
