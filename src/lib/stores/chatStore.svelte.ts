@@ -9,9 +9,7 @@ import {
 	type Memory,
 	type ConversationSummary
 } from '../classes/ChatModel.js';
-import type { AIAction } from '../classes/BoardModel.js';
 import { settingsStore } from './settingsStore.svelte.js';
-// userPreferencesStore removed - Learning System no longer used
 
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
@@ -299,109 +297,6 @@ export class ChatStore {
 		const summaries = this.session.summaries.map((s: ConversationSummary) => s.getContextData());
 
 		return { messages, memories, summaries };
-	}
-
-	// ============================================================================
-	// Learning System - Pattern Hashing & Confidence Management
-	// ============================================================================
-
-	/**
-	 * Generiert einen Pattern-Hash für eine AI-Action
-	 * Format: "type:cardCount_theme"
-	 * 
-	 * Beispiele:
-	 * - "split_card:1_task_breakdown"
-	 * - "add_card:0_brainstorming"
-	 * - "update_card:1_bug_fix"
-	 */
-	private generatePatternHash(action: AIAction): string {
-		const type = action.type;
-		
-		// Card Count (wenn vorhanden)
-		const cardCount = (action as any).newCards?.length 
-			|| (action as any).cards?.length 
-			|| (action as any).cardId ? 1 : 0;
-		
-		// Theme Detection (einfache Keyword-Analyse)
-		const theme = this.detectTheme(action);
-		
-		return `${type}:${cardCount}_${theme}`;
-	}
-
-	/**
-	 * Detektiert Theme/Kategorie einer Action basierend auf Content
-	 * Nutzt einfache Keyword-Matching
-	 */
-	private detectTheme(action: AIAction): string {
-		// Content zusammenfassen (aus allen relevanten Feldern)
-		const content = [
-			(action as any).heading || '',
-			(action as any).content || '',
-			(action as any).newCards?.map((c: any) => c.heading).join(' ') || '',
-			(action as any).cards?.map((c: any) => c.heading).join(' ') || ''
-		].join(' ').toLowerCase();
-
-		// Theme-Kategorien (erweiterbar)
-		const themes = {
-			task_breakdown: ['aufteilen', 'split', 'subtask', 'breakdown', 'teil'],
-			brainstorming: ['idee', 'brainstorm', 'sammeln', 'finden'],
-			bug_fix: ['bug', 'fehler', 'fix', 'problem', 'issue'],
-			feature_add: ['feature', 'funktion', 'add', 'neu', 'new'],
-			refactor: ['refactor', 'umstruktur', 'optimier'],
-			documentation: ['doku', 'documentation', 'readme', 'erkl'],
-			planning: ['plan', 'strategie', 'roadmap', 'meilenstein'],
-			research: ['research', 'recherche', 'analyse', 'untersuch']
-		};
-
-		// Finde passendes Theme
-		for (const [theme, keywords] of Object.entries(themes)) {
-			if (keywords.some(keyword => content.includes(keyword))) {
-				return theme;
-			}
-		}
-
-		return 'general';
-	}
-
-	/**
-	 * Verarbeitet eine AI-Action (Vereinfachte Version ohne Learning)
-	 * Alle Aktionen erfordern User-Confirmation
-	 * 
-	 * @returns { shouldAutoExecute: false, patternHash: string }
-	 */
-	public async checkActionConfidence(action: AIAction): Promise<{
-		shouldAutoExecute: boolean;
-		patternHash: string;
-		confidence: number;
-		usageCount: number;
-	}> {
-		// Pattern Hash generieren (für Tracking)
-		const patternHash = this.generatePatternHash(action);
-
-		// Learning System removed - always require confirmation
-		return {
-			shouldAutoExecute: false,
-			patternHash,
-			confidence: 0,
-			usageCount: 0
-		};
-	}
-
-	/**
-	 * Registriert eine erfolgreiche Action-Ausführung
-	 * (Vereinfachte Version ohne Learning)
-	 */
-	public recordActionSuccess(patternHash: string, isAutoExecute: boolean = false): void {
-		// Learning System removed - no-op
-		console.log(`Action executed: ${patternHash}`);
-	}
-
-	/**
-	 * Registriert eine abgelehnte Action
-	 * (Vereinfachte Version ohne Learning)
-	 */
-	public recordActionRejection(patternHash: string): void {
-		console.log(`Action rejected: ${patternHash}`);
 	}
 
 	// ============================================================================
