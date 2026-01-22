@@ -17,6 +17,7 @@
   import BrainIcon from '@lucide/svelte/icons/brain';
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
+  import LoaderIcon from '@lucide/svelte/icons/loader';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -42,6 +43,27 @@
   
   // Chat Messages (derived from chatStore)
   let messages = $derived(chatStore.messages);
+  
+  // Chat Container Referenz für Auto-Scroll
+  let chatContainer: HTMLDivElement | null = $state(null);
+  
+  // Auto-Scroll zur letzten Nachricht bei neuen Messages oder wenn Processing startet
+  $effect(() => {
+    // Dependency tracking: messages und isProcessing
+    const _messages = messages;
+    const _isProcessing = isProcessing;
+    
+    // Scroll zum Ende des Chat-Containers
+    if (chatContainer) {
+      // Timeout um sicherzustellen, dass DOM aktualisiert wurde
+      setTimeout(() => {
+        chatContainer?.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 50);
+    }
+  });
   
   // ?? WICHTIG: Lade Chat-Session wenn boardId sich �ndert
   // Guard: Verhindere Endlosschleife durch Tracking der letzten geladenen ID
@@ -244,7 +266,7 @@
   <Separator />
   
   <!-- Chat Messages (native scroll) -->
-  <div class="flex-1 overflow-y-auto p-4">
+  <div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4">
     <div class="space-y-4">
       {#if messages.length === 0}
         <!-- Empty State -->
@@ -277,6 +299,20 @@
             </div>
           </div>
         {/each}
+        
+        <!-- Thinking Indicator während LLM Processing -->
+        {#if isProcessing}
+          <div class="flex gap-2 justify-start">
+            <div class="max-w-[85%] rounded-lg px-3 py-2 bg-muted">
+              <div class="flex items-center gap-2">
+                <LoaderIcon class="h-3 w-3 animate-spin text-muted-foreground" />
+                <p class="text-xs text-muted-foreground italic">
+                  Denke nach...
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
   </div>
@@ -299,7 +335,11 @@
         size="icon"
         class="shrink-0"
       >
-        <SendIcon class="h-4 w-4" />
+        {#if isProcessing}
+          <LoaderIcon class="h-4 w-4 animate-spin" />
+        {:else}
+          <SendIcon class="h-4 w-4" />
+        {/if}
       </Button>
     </div>
     <p class="text-[10px] text-muted-foreground mt-2">
