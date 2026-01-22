@@ -6,7 +6,7 @@ describe('BoardStore.upsertBoardFromNostr() tombstone guard', () => {
 	let store: BoardStore;
 
 	beforeEach(() => {
-		// Minimaler SSR/Config Guard: verhindert noisy fetch Fehler aus initializeLearningManagerIfEnabled()
+		// Mock fetch für config.json Laden
 		(globalThis as any).fetch = vi.fn(async () => ({ ok: false, json: async () => ({}) }));
 
 		localStorage.clear();

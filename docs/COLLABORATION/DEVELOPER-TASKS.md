@@ -17,7 +17,6 @@ Diese Liste enthält **NUR tatsächlich fehlende Aufgaben**, basierend auf syste
 - ❌ settingsStore (✅ existiert - 971 Zeilen)
 - ❌ authStore (✅ existiert - authStore.svelte.ts)
 - ❌ syncManager (✅ existiert - syncManager.svelte.ts)
-- ❌ boardLearningManager (✅ vollständig implementiert)
 - ❌ Dark Mode (✅ funktioniert via settingsStore.theme)
 - ❌ MCP Configuration (✅ vollständig in settingsStore)
 - ❌ **SoftLockManager** (✅ existiert - 160 Zeilen!)

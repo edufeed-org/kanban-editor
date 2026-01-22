@@ -362,7 +362,6 @@ docs/
 | [`STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | Offline-Sync Manager (TODO Phase 1.2) | ✅ Neu (08.11.) |
 | [`STORES/BASESTORES.md`](./ARCHITECTURE/STORES/BASESTORES.md) | Base Class Abstraktion für neue, einfache Stores | ✅ Neu (08.11.) |
 | [`STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) | 🆕 **NEU (06.11.)**: Chat-Session Persistence per Board mit Memory & Summaries (Phase 3.0) | ✅ Neu (06.11.) |
-| [`STORES/USERPREFERENCESSTORE.md`](./ARCHITECTURE/STORES/USERPREFERENCESSTORE.md) | 🆕 **NEU (06.11.)**: Cross-Board Learning & User-Präferenzen (Phase 3.0) | ✅ Neu (06.11.) |
 | **NOSTR/** | **Nostr-spezifische Dokumentation (Reorganisiert 10.11.)** | |
 | [`NOSTR/_INDEX.md`](./ARCHITECTURE/NOSTR/_INDEX.md) | 🆕 **NEU (10.11.)**: NOSTR Folder Navigation & "Wer nutzt was?" | ✅ Neu (10.11.) |
 | [`NOSTR/EVENT-HANDLING-AND-SYNC.md`](./ARCHITECTURE/NOSTR/EVENT-HANDLING-AND-SYNC.md) | ✅ **UPDATED (10.11.)**: Single Source of Truth für Nostr Sync, LWW, Echo-Prävention, DnD-Fixes | ✅ Neu (10.11.) |
@@ -550,9 +549,9 @@ docs/
 
 **🎉 PHASE 3.0 MILESTONE ACHIEVED:**
 - ✅ 4 AGENT-Dateien (Collaborative Generation Framework)
-- ✅ 3 neue STORES-Dateien (ChatStore, UserPreferencesStore)
+- ✅ 2 neue STORES-Dateien (ChatStore)
 - ✅ 5 neue FEATURE-Dateien (2-Phase Processing, Intent Detection, Structure Analysis)
-- ✅ Total: +12 neue Dateien, +15.000 LOC Dokumentation
+- ✅ Total: +11 neue Dateien, +14.000 LOC Dokumentation
 - ✅ 150+ Agent-Tests mit 98%+ Pass Rate
 - ✅ 0 Breaking Changes
 

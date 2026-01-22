@@ -31,6 +31,8 @@
     import { toast } from 'svelte-sonner';
     import { ShareButton, VersionHistory } from '$lib/components/board';
     import { publishBoardToEdufeed } from '$lib/utils/ambPublisher';
+    import { chatStore } from '$lib/stores/chatStore.svelte.js';
+    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	
     
 
@@ -487,6 +489,102 @@
     let isSizeWarning = $derived(shareLinkPercent >= 80 && shareLinkPercent < 100);
     let isSizeError = $derived(shareLinkPercent >= 100);
     
+    // ============================================================================
+    // 🤖 AI SUMMARY STATE & FUNCTIONS
+    // ============================================================================
+    
+    let aiSummary = $state<string | null>(null);
+    let isGeneratingAiSummary = $state(false);
+    let aiSummaryError = $state<string | null>(null);
+    
+    /**
+     * Generiert eine KI-Zusammenfassung des Boards
+     * - Erster Absatz: Ein Satz als Kurzbeschreibung
+     * - Zweiter Teil: Detaillierte Beschreibung der Inhalte und des Anliegens
+     */
+    async function generateAiSummary() {
+        if (isGeneratingAiSummary) return;
+        
+        const settings = settingsStore.settings;
+        if (!settings.llmModel || !settings.llmBaseUrl) {
+            aiSummaryError = '❌ LLM nicht konfiguriert. Bitte in Settings LLM-Model und Base URL eintragen.';
+            return;
+        }
+        
+        isGeneratingAiSummary = true;
+        aiSummaryError = null;
+        aiSummary = null;
+        
+        try {
+            // Get board context
+            const boardContext = boardStore.getContextData(true);
+            const columnCount = boardContext.columns?.length || 0;
+            const cardCount = boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0;
+            
+            // Build a detailed board description for the prompt
+            let boardDetails = `Board: "${boardContext.name || 'Unbenannt'}"\n`;
+            boardDetails += `Beschreibung: ${boardContext.description || 'Keine'}\n`;
+            boardDetails += `Spalten: ${columnCount}, Karten: ${cardCount}\n\n`;
+            
+            if (boardContext.columns && boardContext.columns.length > 0) {
+                boardDetails += 'Struktur:\n';
+                for (const column of boardContext.columns) {
+                    boardDetails += `\n## ${column.name} (${column.cards?.length || 0} Karten)\n`;
+                    if (column.cards && column.cards.length > 0) {
+                        for (const card of column.cards) {
+                            boardDetails += `- ${card.heading}`;
+                            if (card.content) boardDetails += `: ${card.content.substring(0, 100)}${card.content.length > 100 ? '...' : ''}`;
+                            boardDetails += '\n';
+                        }
+                    }
+                }
+            }
+            
+            const systemPrompt = `Du bist ein Assistent, der Kanban-Boards zusammenfasst.
+
+Deine Aufgabe ist es, eine prägnante Zusammenfassung in Markdown zu erstellen:
+
+1. **Erster Absatz**: EIN einziger Satz, der das Board kurz und prägnant beschreibt.
+
+2. **Zweiter Teil**: Eine detaillierte Beschreibung der Inhalte, der Struktur und des Anliegens des Boards. Erkläre die Spalten, wichtige Karten und den Gesamtzweck.
+
+Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
+            
+            const userMessage = `Erstelle eine Zusammenfassung für folgendes Board:\n\n${boardDetails}`;
+            
+            // Use chatStore's LLM method (without tools for simple text generation)
+            const result = await chatStore.sendToLLMWithTools(userMessage, systemPrompt, []);
+            
+            if (result.error) {
+                aiSummaryError = result.error;
+            } else if (result.content) {
+                aiSummary = result.content;
+                
+                // Speichere die KI-Zusammenfassung als Board-Beschreibung
+                boardStore.updateCurrentBoardMeta({
+                    description: result.content
+                });
+                
+                // Aktualisiere auch das lokale Form-Feld
+                metaForm.description = result.content;
+                
+                console.log('✅ KI-Zusammenfassung als Board-Beschreibung gespeichert');
+                toast.success('✅ Zusammenfassung gespeichert', {
+                    description: 'Die KI-Zusammenfassung wurde als Board-Beschreibung übernommen.',
+                    duration: 3000
+                });
+            } else {
+                aiSummaryError = '❌ Keine Antwort vom LLM erhalten.';
+            }
+            
+        } catch (error) {
+            console.error('❌ Error generating AI summary:', error);
+            aiSummaryError = error instanceof Error ? error.message : 'Unbekannter Fehler';
+        } finally {
+            isGeneratingAiSummary = false;
+        }
+    }
+    
 </script>
 
 <header class="sticky top-0 z-50 w-full max-w-full border-b-4 shrink-0 overflow-x-auto">
@@ -725,13 +823,69 @@
                     <SquareSigmaIcon class="h-4 w-4" />
                 </Drawer.Trigger>
                 <Drawer.Content>
-                    <Drawer.Header>
+                    <Drawer.Header class="flex items-center justify-between pr-4">
                         <Drawer.Title>Board-Zusammenfassung</Drawer.Title>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onclick={generateAiSummary}
+                            disabled={isGeneratingAiSummary}
+                            title="KI-Zusammenfassung generieren"
+                            class="h-8 gap-2"
+                        >
+                            {#if isGeneratingAiSummary}
+                                <Loader2Icon class="h-4 w-4 animate-spin" />
+                            {:else}
+                                <BotIcon class="h-4 w-4" />
+                            {/if}
+                            <span class="hidden sm:inline">KI generieren</span>
+                        </Button>
                     </Drawer.Header>
-                    <div class="p-4">
-                        <p class="text-sm text-muted-foreground">
-                            Hier erscheint die KI-gestützte Zusammenfassung des Boards...
-                        </p>
+                    <div class="p-4 space-y-4">
+                        <!-- Manuelle Beschreibung -->
+                        <div>
+                            <h3 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Beschreibung</h3>
+                            {#if currentBoardDescription}
+                                <div class="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+                                    {@html currentBoardDescription
+                                        .replace(/\n\n/g, '</p><p class="mt-2">')
+                                        .replace(/\n/g, '<br />')
+                                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                                        .replace(/^## (.+)$/gm, '<h4 class="font-semibold text-foreground mt-3 mb-1">$1</h4>')
+                                        .replace(/^### (.+)$/gm, '<h5 class="font-medium text-foreground mt-2 mb-1">$1</h5>')
+                                        .replace(/^- (.+)$/gm, '<li class="ml-4">• $1</li>')
+                                    }
+                                </div>
+                            {:else}
+                                <p class="text-sm text-muted-foreground">Keine Beschreibung vorhanden</p>
+                            {/if}
+                        </div>
+                        
+                        <!-- AI Summary Section -->
+                        {#if aiSummaryError}
+                            <div class="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+                                <p class="text-sm text-destructive">{aiSummaryError}</p>
+                            </div>
+                        {/if}
+                        
+                        {#if isGeneratingAiSummary}
+                            <div class="rounded-lg bg-muted p-4">
+                                <div class="flex items-center gap-2">
+                                    <Loader2Icon class="h-4 w-4 animate-spin text-muted-foreground" />
+                                    <p class="text-sm text-muted-foreground italic">KI generiert Zusammenfassung...</p>
+                                </div>
+                            </div>
+                        {:else if aiSummary}
+                            <div class="rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3">
+                                <div class="flex items-center gap-2">
+                                    <CheckCircle2Icon class="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    <p class="text-sm text-green-700 dark:text-green-300">
+                                        Die Zusammenfassung wurde erfolgreich erstellt und als Beschreibung gespeichert.
+                                    </p>
+                                </div>
+                            </div>
+                        {/if}
                     </div>
                 </Drawer.Content>
             </Drawer.Root>

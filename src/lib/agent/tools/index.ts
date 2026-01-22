@@ -16,7 +16,8 @@ export {
 // System Prompt Builder
 export {
     buildToolSystemPrompt,
-    buildMinimalSystemPrompt
+    buildMinimalSystemPrompt,
+    type SelectedCardContext
 } from './toolSystemPrompt';
 
 // Tool Executor

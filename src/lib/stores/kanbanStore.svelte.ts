@@ -3,7 +3,6 @@
 
 import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../types/sharing.js';
-import { initializeLearningManager } from './boardLearningManager.svelte.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
@@ -17,7 +16,6 @@ import {
     NostrIntegration,
     BoardOperations,
     ExportImport,
-    BoardLearning,
     PasteHandler,
     ChatIntegration,
     BoardSharingOperations,
@@ -75,7 +73,6 @@ export class BoardStore {
         if (typeof window !== 'undefined') {
             this.initializeBoard();
             this.exposeCurrentBoardIdToWindow();
-            this.initializeLearningManagerIfEnabled();
         }
     }
     
@@ -86,23 +83,6 @@ export class BoardStore {
             this.boardIds = [...this.boardIds, currentBoardId];
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
-        }
-    }
-    
-    private async initializeLearningManagerIfEnabled(): Promise<void> {
-        try {
-            const response = await fetch('/config.json');
-            if (!response.ok) return;
-            
-            const config = await response.json();
-            const useLearning = config.learning?.useLearningManager ?? false;
-            
-            if (useLearning) {
-                initializeLearningManager(this);
-                console.log('✅ BoardLearningManager aktiviert');
-            }
-        } catch (error) {
-            console.warn('⚠️ Fehler beim Laden von config.json:', error);
         }
     }
     
@@ -2179,22 +2159,6 @@ export class BoardStore {
                 error: error instanceof Error ? error.message : String(error)
             };
         }
-    }
-
-    // ============================================================================
-    // LEARNING METHODS (delegiert zu BoardLearning)
-    // ============================================================================
-    
-    public learnColumnStructure(columnId: string): any {
-        return BoardLearning.learnColumnStructure(this.board, columnId);
-    }
-
-    public learnBoardStructure(): any {
-        return BoardLearning.learnBoardStructure(this.board);
-    }
-
-    public createColumnWithTemplate(templateName: string): any {
-        return BoardLearning.createColumnWithTemplate(this.board, templateName);
     }
 
     // ============================================================================

@@ -18,6 +18,8 @@
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import LoaderIcon from '@lucide/svelte/icons/loader';
+  import XIcon from '@lucide/svelte/icons/x';
+  import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -27,14 +29,24 @@
     executeToolCalls,
     summarizeResults,
     type ToolCall,
-    type ToolResult
+    type ToolResult,
+    type SelectedCardContext
   } from '$lib/agent/tools';
   
   // Props
   let {
-    boardId
+    boardId,
+    selectedCard = null,
+    onClearSelection
   }: {
     boardId: string;
+    selectedCard?: {
+      cardId: string;
+      cardName: string;
+      columnId: string;
+      columnName: string;
+    } | null;
+    onClearSelection?: () => void;
   } = $props();
   
   // Chat State
@@ -114,24 +126,41 @@
         cards: boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0
       });
       
-      // Step 2: Build system prompt with full card context
-      const systemPrompt = buildToolSystemPrompt(boardContext);
+      // Step 2: Build selected card context if available
+      let selectedCardContext: SelectedCardContext | null = null;
+      if (selectedCard) {
+        // Find the full card data from board context
+        const column = boardContext.columns?.find((c: { id: string }) => c.id === selectedCard.columnId);
+        const card = column?.cards?.find((c: { id: string }) => c.id === selectedCard.cardId);
+        selectedCardContext = {
+          cardId: selectedCard.cardId,
+          cardName: selectedCard.cardName,
+          columnId: selectedCard.columnId,
+          columnName: selectedCard.columnName,
+          content: card?.content,
+          labels: card?.labels
+        };
+        console.log('🎯 [Tool-Based] Selected card context:', selectedCardContext);
+      }
       
-      // Step 3: Get tool definitions in OpenAI format
+      // Step 3: Build system prompt with full card context and selected card
+      const systemPrompt = buildToolSystemPrompt(boardContext, selectedCardContext);
+      
+      // Step 4: Get tool definitions in OpenAI format
       const tools = getToolDefinitions();
       
-      // Step 4: Send to LLM with tools
-      console.log('?? [Tool-Based] Sending to LLM with', tools.length, 'tools');
+      // Step 5: Send to LLM with tools
+      console.log('🚀 [Tool-Based] Sending to LLM with', tools.length, 'tools');
       const result = await chatStore.sendToLLMWithTools(message, systemPrompt, tools);
       
       if (result.error) {
-        console.error('? [Tool-Based] LLM Error:', result.error);
+        console.error('❌ [Tool-Based] LLM Error:', result.error);
         chatStore.addMessage(result.error, 'assistant');
         isProcessing = false;
         return;
       }
       
-      // Step 5: Process response
+      // Step 6: Process response
       if (result.tool_calls && result.tool_calls.length > 0) {
         // LLM wants to use tools
         console.log('?? [Tool-Based] Executing', result.tool_calls.length, 'tool calls');
@@ -173,7 +202,7 @@
         
         const toolResults = await executeToolCalls(toolCalls, executionContext);
         
-        // Step 6: Handle results based on tool type
+        // Step 7: Handle results based on tool type
         // Check for respond/ask_clarification tools - these should show their message directly
         const responseResults = toolResults.filter(r => 
           r.tool_name === 'respond' || r.tool_name === 'ask_clarification'
@@ -247,6 +276,42 @@
       handleSendMessage();
     }
   }
+  
+  /**
+   * Retry a message - finds the user message before the given assistant message index
+   * and re-sends it, replacing all messages from that point onwards
+   */
+  async function retryMessage(messageIndex: number) {
+    if (isProcessing) return;
+    
+    // Find the user message before this assistant message
+    let userMessageIndex = -1;
+    let userMessageContent = '';
+    
+    for (let i = messageIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userMessageIndex = i;
+        userMessageContent = messages[i].content;
+        break;
+      }
+    }
+    
+    if (userMessageIndex === -1 || !userMessageContent) {
+      console.warn('🔄 No user message found to retry');
+      return;
+    }
+    
+    console.log('🔄 Retrying message:', userMessageContent);
+    
+    // Delete all messages from userMessageIndex onwards
+    const messagesToDelete = messages.slice(userMessageIndex).map(m => m.id);
+    for (const id of messagesToDelete) {
+      chatStore.deleteMessage(id);
+    }
+    
+    // Re-send the user message
+    await handleToolBasedMessage(userMessageContent);
+  }
 </script>
 
 <!-- AI Panel Container -->
@@ -254,13 +319,33 @@
   
   <!-- Header -->
   <div class="p-4 border-b">
-    <div class="flex items-center gap-2 mb-2">
+    <div class="flex items-center gap-2 mb-1">
       <BrainIcon class="h-5 w-5 text-primary" />
       <h2 class="text-sm font-semibold">KI-Agent</h2>
     </div>
     <p class="text-xs text-muted-foreground">
       Intelligente Board-Assistenz
     </p>
+    {#if selectedCard}
+      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-b-[var(--destructive)] border-primary/20 relative">
+        <button
+          type="button"
+          onclick={() => onClearSelection?.()}
+          class="absolute top-1 right-1 p-0.5 rounded hover:bg-primary/20 transition-colors"
+          aria-label="Auswahl aufheben"
+          title="Auswahl aufheben"
+        >
+          <XIcon class="h-3 w-3 text-muted-foreground hover:text-foreground" />
+        </button>
+        <p class="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Ausgewählter Kontext:</p>
+        <p class="text-xs font-medium text-primary truncate pr-4" title={selectedCard.cardName}>
+          {selectedCard.cardName}
+        </p>
+        <p class="text-[10px] text-muted-foreground">
+          in "{selectedCard.columnName}"
+        </p>
+      </div>
+    {/if}
   </div>
   
   <Separator />
@@ -280,22 +365,36 @@
           </p>
         </div>
       {:else}
-        {#each messages as message}
-          <div class="flex gap-2 {message.role === 'user' ? 'justify-end' : 'justify-start'}">
-            <div class="max-w-[85%] rounded-lg px-3 py-2 {
-              message.role === 'user' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted'
-            }">
-              <p class="text-xs whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-              <p class="text-[10px] mt-1 opacity-70">
-                {new Date(message.timestamp).toLocaleTimeString('de-DE', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </p>
+        {#each messages as message, index}
+          <div class="chat-message {message.role === 'user' ? 'user-msg' : 'agent-msg'} flex gap-2 {message.role === 'user' ? 'justify-end' : 'justify-start'}">
+            <div class="message-wrapper max-w-[85%]">
+              <div class="message-bubble rounded-lg px-3 py-2 {
+                message.role === 'user' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted'
+              }">
+                <p class="message-content text-xs whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+                <p class="message-timestamp text-[10px] mt-1 opacity-70">
+                  {new Date(message.timestamp).toLocaleTimeString('de-DE', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </p>
+              </div>
+              <!-- Retry Button für Assistant-Nachrichten -->
+              {#if message.role === 'assistant' && !isProcessing}
+                <button
+                  type="button"
+                  onclick={() => retryMessage(index)}
+                  class="message-retry flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                  title="Anfrage wiederholen"
+                >
+                  <RefreshCwIcon class="h-3 w-3" />
+                  Wiederholen
+                </button>
+              {/if}
             </div>
           </div>
         {/each}

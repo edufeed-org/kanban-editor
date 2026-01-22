@@ -229,6 +229,18 @@ button.bg-destructive:hover {
   border: 2px solid var(--ring);
   border-radius: var(--radius);
 }
+.user-msg div {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-md);
+
+}
+
+.agent-msg div{
+  background-color: var(--muted);
+  color: var(--foreground);
+  border-radius: var(--radius-md);
+}
 
 @layer base {
   * {

@@ -209,6 +209,11 @@ import { authStore } from '$lib';
 		selectedColumn = null; // Clear column selection when selecting card
 		console.log('✅ selectedCard now:', selectedCard);
 	}
+	
+	function clearSelectedCard() {
+		console.log('🗑️ clearSelectedCard called, was:', selectedCard);
+		selectedCard = null;
+	}
 
 	// Helper-Funktion: Findet die vollständige Hierarchie einer Karte
 	function getCardHierarchy(cardId: string | null) {
@@ -221,7 +226,7 @@ import { authStore } from '$lib';
 					boardId: card.boardId || "board-1",
 					columnId: card.columnId || column.id,
 					columnName: column.name,
-					cardId: card.id,
+					cardId: String(card.id),
 					cardName: card.name
 				};
 			}
@@ -332,7 +337,7 @@ import { authStore } from '$lib';
 				<Sheet.Header class="p-4 border-b">
 					<Sheet.Title>KI-Assistent</Sheet.Title>
 				</Sheet.Header>
-				<AIPanel boardId={currentBoardId} />
+				<AIPanel boardId={currentBoardId} selectedCard={selectedCardHierarchy} onClearSelection={clearSelectedCard} />
 			</Sheet.Content>
 		</Sheet.Root>
 		
@@ -402,7 +407,7 @@ import { authStore } from '$lib';
 					class="border-l bg-background"
 					onResize={(size: number) => { rightSidebarSize = size; }}
 				>
-					<AIPanel boardId={currentBoardId} />
+					<AIPanel boardId={currentBoardId} selectedCard={selectedCardHierarchy} onClearSelection={clearSelectedCard} />
 				</Resizable.Pane>
 			{/if}
 		</Resizable.PaneGroup>

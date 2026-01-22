@@ -15,6 +15,7 @@
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import EditIcon from '@lucide/svelte/icons/edit';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
@@ -300,14 +301,19 @@
 		<!-- Header: Title + Settings Popover (PublishToggle rechts wie auf Card) -->
 		<div class="px-6 py-4 border-b bg-background">
 			<div class="flex items-start justify-between gap-4 mb-2">
-				<!-- Left: Title (clickable for editing) -->
-				<h2 
-					class="text-xl font-semibold flex-1 cursor-pointer hover:text-primary transition-colors"
-					onclick={switchToEditMode}
-					title="Klicken zum Bearbeiten"
-				>
-					{card.name}
-				</h2>
+				<!-- Left: Title (selectable) with Edit Button -->
+				<div class="flex items-center gap-2 flex-1 min-w-0">
+					<h2 class="text-xl font-semibold truncate">{card.name}</h2>
+					<!-- <Button
+						variant="ghost"
+						size="sm"
+						onclick={switchToEditMode}
+						class="h-6 w-6 p-0 flex-shrink-0"
+						title="Bearbeiten"
+					>
+						<PencilIcon class="h-3.5 w-3.5" />
+					</Button> -->
+				</div>
 				
 				<!-- Right: Settings Popover -->
 				<div class="flex items-center gap-2 flex-shrink-0">
@@ -364,31 +370,45 @@
 		<div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 			<!-- Image Section -->
 			{#if card.image}
-				<div 
-					class="rounded-md overflow-hidden max-h-96 bg-muted border cursor-pointer hover:opacity-90 transition-opacity"
-					onclick={switchToEditMode}
-					title="Klicken zum Bearbeiten"
-				>
-					<img
-						src={card.image}
-						alt="Kartenbild"
-						class="w-full h-full object-cover"
-						onerror={(e) => {
-							(e.target as HTMLImageElement).style.display = 'none';
-						}}
-					/>
+				<div class="relative group">
+					<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
+						<img
+							src={card.image}
+							alt="Kartenbild"
+							class="w-full h-full object-cover"
+							onerror={(e) => {
+								(e.target as HTMLImageElement).style.display = 'none';
+							}}
+						/>
+					</div>
+					<Button
+						variant="secondary"
+						size="sm"
+						onclick={switchToEditMode}
+						class="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+						title="Bild bearbeiten"
+					>
+						<PencilIcon class="h-3.5 w-3.5" />
+					</Button>
 				</div>
 			{/if}
 
 			<!-- Full Description (NICHT 2-line clamp wie in Card!) -->
 			{#if card.description}
 				<div class="space-y-2">
-					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
-					<div 
-						class="p-3 bg-muted/50 rounded-md text-sm border cursor-pointer hover:bg-muted/70 transition-colors"
-						onclick={switchToEditMode}
-						title="Klicken zum Bearbeiten"
-					>
+					<div class="flex items-center justify-between">
+						<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={switchToEditMode}
+							class="h-6 w-30 p-4 opacity-60 hover:opacity-100 transition-opacity text-xs"
+							title="Beschreibung bearbeiten"
+						>
+							<PencilIcon class="h-3.5 w-3.5 mr-1" /> Bearbeiten
+						</Button>
+					</div>
+					<div class="p-3 bg-muted/50 rounded-md text-sm border">
 						<MarkdownRenderer content={card.description} />
 					</div>
 				</div>
@@ -620,7 +640,7 @@
 		</div>
 
 		<!-- Footer: Edit Button (statt Schließen, da Dialog selbst Close hat) -->
-		<div class="px-6 py-4 border-t bg-muted/20 flex gap-2">
+		<!-- <div class="px-6 py-4 border-t bg-muted/20 flex gap-2">
 			<Button 
 				variant="outline" 
 				size="sm"
@@ -630,6 +650,6 @@
 				<EditIcon class="h-4 w-4" />
 				<span>Bearbeiten</span>
 			</Button>
-		</div>
+		</div> -->
 	</Dialog.Content>
 </Dialog.Root>

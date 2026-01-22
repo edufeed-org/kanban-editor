@@ -308,7 +308,7 @@
 	{/if}
 	
 	<!-- Editor Content -->
-	<div bind:this={element} class="prose prose-sm max-w-none p-4 min-h-[200px] max-h-[400px] overflow-y-auto focus:outline-none"></div>
+	<div bind:this={element} class="prose prose-sm max-w-none p-4 min-h-[200px] max-h-[400px] overflow-y-hidden" aria-label="Beschreibungfocus:outline-none"></div>
 </div>
 
 <style>
