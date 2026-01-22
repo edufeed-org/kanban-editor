@@ -501,7 +501,7 @@
 					variant="default"
 					size="icon"
 					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
+					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; onSelect?.(); }}
 					aria-label="Anzeigen"
 					title="Anzeigen"
 				>
@@ -512,7 +512,7 @@
 					variant="default"
 					size="sm"
 					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; }}
+					onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; onSelect?.(); }}
 					aria-label="Bearbeiten"
 					title="Bearbeiten"
 				>

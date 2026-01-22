@@ -18,6 +18,7 @@
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import LoaderIcon from '@lucide/svelte/icons/loader';
+  import XIcon from '@lucide/svelte/icons/x';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -27,14 +28,24 @@
     executeToolCalls,
     summarizeResults,
     type ToolCall,
-    type ToolResult
+    type ToolResult,
+    type SelectedCardContext
   } from '$lib/agent/tools';
   
   // Props
   let {
-    boardId
+    boardId,
+    selectedCard = null,
+    onClearSelection
   }: {
     boardId: string;
+    selectedCard?: {
+      cardId: string;
+      cardName: string;
+      columnId: string;
+      columnName: string;
+    } | null;
+    onClearSelection?: () => void;
   } = $props();
   
   // Chat State
@@ -114,24 +125,41 @@
         cards: boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0
       });
       
-      // Step 2: Build system prompt with full card context
-      const systemPrompt = buildToolSystemPrompt(boardContext);
+      // Step 2: Build selected card context if available
+      let selectedCardContext: SelectedCardContext | null = null;
+      if (selectedCard) {
+        // Find the full card data from board context
+        const column = boardContext.columns?.find((c: { id: string }) => c.id === selectedCard.columnId);
+        const card = column?.cards?.find((c: { id: string }) => c.id === selectedCard.cardId);
+        selectedCardContext = {
+          cardId: selectedCard.cardId,
+          cardName: selectedCard.cardName,
+          columnId: selectedCard.columnId,
+          columnName: selectedCard.columnName,
+          content: card?.content,
+          labels: card?.labels
+        };
+        console.log('🎯 [Tool-Based] Selected card context:', selectedCardContext);
+      }
       
-      // Step 3: Get tool definitions in OpenAI format
+      // Step 3: Build system prompt with full card context and selected card
+      const systemPrompt = buildToolSystemPrompt(boardContext, selectedCardContext);
+      
+      // Step 4: Get tool definitions in OpenAI format
       const tools = getToolDefinitions();
       
-      // Step 4: Send to LLM with tools
-      console.log('?? [Tool-Based] Sending to LLM with', tools.length, 'tools');
+      // Step 5: Send to LLM with tools
+      console.log('🚀 [Tool-Based] Sending to LLM with', tools.length, 'tools');
       const result = await chatStore.sendToLLMWithTools(message, systemPrompt, tools);
       
       if (result.error) {
-        console.error('? [Tool-Based] LLM Error:', result.error);
+        console.error('❌ [Tool-Based] LLM Error:', result.error);
         chatStore.addMessage(result.error, 'assistant');
         isProcessing = false;
         return;
       }
       
-      // Step 5: Process response
+      // Step 6: Process response
       if (result.tool_calls && result.tool_calls.length > 0) {
         // LLM wants to use tools
         console.log('?? [Tool-Based] Executing', result.tool_calls.length, 'tool calls');
@@ -173,7 +201,7 @@
         
         const toolResults = await executeToolCalls(toolCalls, executionContext);
         
-        // Step 6: Handle results based on tool type
+        // Step 7: Handle results based on tool type
         // Check for respond/ask_clarification tools - these should show their message directly
         const responseResults = toolResults.filter(r => 
           r.tool_name === 'respond' || r.tool_name === 'ask_clarification'
@@ -254,13 +282,33 @@
   
   <!-- Header -->
   <div class="p-4 border-b">
-    <div class="flex items-center gap-2 mb-2">
+    <div class="flex items-center gap-2 mb-1">
       <BrainIcon class="h-5 w-5 text-primary" />
       <h2 class="text-sm font-semibold">KI-Agent</h2>
     </div>
     <p class="text-xs text-muted-foreground">
       Intelligente Board-Assistenz
     </p>
+    {#if selectedCard}
+      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-primary/20 relative">
+        <button
+          type="button"
+          onclick={() => onClearSelection?.()}
+          class="absolute top-1 right-1 p-0.5 rounded hover:bg-primary/20 transition-colors"
+          aria-label="Auswahl aufheben"
+          title="Auswahl aufheben"
+        >
+          <XIcon class="h-3 w-3 text-muted-foreground hover:text-foreground" />
+        </button>
+        <p class="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Selektiert</p>
+        <p class="text-xs font-medium text-primary truncate pr-4" title={selectedCard.cardName}>
+          {selectedCard.cardName}
+        </p>
+        <p class="text-[10px] text-muted-foreground">
+          in "{selectedCard.columnName}"
+        </p>
+      </div>
+    {/if}
   </div>
   
   <Separator />

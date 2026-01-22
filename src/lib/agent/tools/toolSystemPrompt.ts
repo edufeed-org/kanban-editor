@@ -22,14 +22,29 @@ export interface BoardContext {
 }
 
 /**
- * Baut den System Prompt mit aktuellem Board-Kontext
+ * Informationen über die aktuell selektierte Karte
+ * Wird verwendet, um Befehle wie "korrigiere den Inhalt" zu verstehen
  */
-export function buildToolSystemPrompt(boardContext: BoardContext): string {
+export interface SelectedCardContext {
+    cardId: string;
+    cardName: string;
+    columnId: string;
+    columnName: string;
+    content?: string;
+    labels?: string[];
+}
+
+/**
+ * Baut den System Prompt mit aktuellem Board-Kontext
+ * @param boardContext - Der aktuelle Board-Kontext
+ * @param selectedCard - Optional: Die aktuell selektierte Karte (für kontextbezogene Befehle)
+ */
+export function buildToolSystemPrompt(boardContext: BoardContext, selectedCard?: SelectedCardContext | null): string {
     // Spalten-Namen extrahieren
-    const columnNames = boardContext.columns?.map(c => c.name).join(', ') || 'Keine Spalten vorhanden';
+    const columnNames = boardContext.columns?.map((c: { name: string }) => c.name).join(', ') || 'Keine Spalten vorhanden';
     
     // Alle Karten mit Details für Analyse-Aufgaben
-    const allCards = boardContext.columns?.flatMap(col => 
+    const allCards = boardContext.columns?.flatMap((col: { id: string; name: string; cards?: Array<{ id: string; heading: string; content?: string; labels?: string[] }> }) => 
         col.cards?.map(card => ({
             column: col.name,
             id: card.id,
@@ -43,6 +58,22 @@ export function buildToolSystemPrompt(boardContext: BoardContext): string {
         ? JSON.stringify(allCards, null, 2)
         : 'Keine Karten vorhanden';
 
+    // Selektierte Karte Kontext erstellen
+    const selectedCardSection = selectedCard ? `
+
+## 🎯 AKTUELL SELEKTIERTE KARTE (WICHTIG!)
+Der Nutzer hat folgende Karte ausgewählt/geöffnet:
+- **Titel:** ${selectedCard.cardName}
+- **ID:** ${selectedCard.cardId}
+- **Spalte:** ${selectedCard.columnName}
+- **Inhalt:** ${selectedCard.content || '(leer)'}
+- **Labels:** ${selectedCard.labels?.join(', ') || '(keine)'}
+
+⚠️ Wenn der Nutzer sagt "korrigiere", "ändere", "verbessere", "aktualisiere den Inhalt", 
+"füge hinzu", "ergänze" OHNE eine spezifische Karte zu nennen,
+bezieht sich das auf DIESE selektierte Karte (ID: ${selectedCard.cardId})!
+Verwende dann \`update_card\` mit dieser cardId.` : '';
+
     return `Du bist ein KI-Assistent für ein Kanban-Board zur Unterrichtsplanung.
 Du hilfst Lehrkräften bei der Organisation ihrer Unterrichtsmaterialien.
 
@@ -50,7 +81,7 @@ Du hilfst Lehrkräften bei der Organisation ihrer Unterrichtsmaterialien.
 - Board: "${boardContext.name || 'Unbenannt'}"
 - Beschreibung: ${boardContext.description || '(keine)'}
 - Vorhandene Spalten: ${columnNames}
-- Anzahl Karten: ${allCards.length}
+- Anzahl Karten: ${allCards.length}${selectedCardSection}
 
 ## Alle Karten im Board
 ${cardsJson}
