@@ -26,7 +26,6 @@
     import { BoardRole } from '$lib/types/sharing';
     import { authStore } from '$lib/index.js';
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
-    import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
