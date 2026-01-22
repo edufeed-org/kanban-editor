@@ -266,8 +266,8 @@
 		opacity: 0.8;
 	}
 
-	.column-header:focus {
-		outline: 2px solid var(--primary);
+	.column-header:focus-visible {
+		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 		border-radius: 4px;
 	}
@@ -318,9 +318,9 @@
 	
 
 	.add-card-button:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-		background: var(--primary)/10;
+		border-color: var(--accent);
+		color: var(--accent);
+		background: var(--accent)/10;
 	}
 
 	
@@ -389,7 +389,7 @@
 </style>
 
 <div 
-	class="column-wrapper {isSelected ? 'border-2 border-ring rounded-sm p-1' : ''}" 
+	class="column-wrapper {isSelected ? 'border-2 border-accent rounded-sm p-1' : ''}" 
 >
 	<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
 		if (e.key === 'Enter' || e.key === ' ') {

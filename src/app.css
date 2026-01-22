@@ -156,9 +156,6 @@
     background-color: var(--color-green);
     border: 1px solid black;
   }
-  button:active, button:focus-visible, button:hover {
-    background-color: var(--accent);
-  }
 
 }
 
@@ -181,7 +178,14 @@ button.btn, .menu-item{
 
 button.btn:hover{
   border: 2px solid var(--border);
-  border-color: var(--ring);
+  border-color: var(--accent);
+}
+
+button.btn:focus-visible,
+.menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
 }
 /* Primary Button Hover */
 button.bg-primary:hover {
@@ -266,4 +270,14 @@ button.bg-destructive:hover {
 [data-sonner-toast] [data-close-button] {
   left: unset !important;
   right: 0.5rem !important;
+}
+
+* {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
 }

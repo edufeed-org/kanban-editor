@@ -307,7 +307,7 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-primary shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
+	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-accent shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 6px solid {getCardColor(localColor)};"
@@ -633,8 +633,7 @@
 		}
 
 		.card-image:focus {
-			outline: 2px solid var(--ring);
-			outline-offset: 2px;
+			outline: 2px solid var(--accent);
 		}
 
 		.card-description {
