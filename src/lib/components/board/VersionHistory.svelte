@@ -230,7 +230,7 @@
 
 <!-- Trigger Button -->
 <Button 
-    variant="ghost" 
+    variant="default" 
     size="sm" 
     class="gap-2"
     onclick={() => dialogOpen = true}

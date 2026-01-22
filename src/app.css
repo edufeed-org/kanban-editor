@@ -161,14 +161,13 @@
 
 /* Button Hover Effects - Specific to shadcn-svelte variants */
 button:hover {
-  transition: background-color 0.2s ease, color 0.2s ease;
-  
+  transition: background-color 0.2s ease, color 0.2s ease; 
 }
+
 button.btn, .menu-item{
   background: var(--background);  
   color: var(--foreground);
   border-radius: var(--radius-md);
-  
 }
 .menu-item:hover{
   background-color: var(--accent) !important;
