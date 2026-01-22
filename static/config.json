@@ -24,7 +24,7 @@
   },
 
   "llm": {
-    "model": "ollama/mistral",
+    "model": "mistral",
     "baseUrl": "http://localhost:11434",
     "apiKey": "",
     "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
