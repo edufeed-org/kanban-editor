@@ -9,6 +9,7 @@
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
+	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
@@ -295,7 +296,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+	<Dialog.Content class="w-full max-w-3xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
 		<!-- Header: Title + Settings Popover (PublishToggle rechts wie auf Card) -->
 		<div class="px-6 py-4 border-b bg-background">
 			<div class="flex items-start justify-between gap-4 mb-2">
@@ -388,10 +389,7 @@
 						onclick={switchToEditMode}
 						title="Klicken zum Bearbeiten"
 					>
-						<MarkdownEditor 
-							value={card.description}
-							disabled={true}
-						/>
+						<MarkdownRenderer content={card.description} />
 					</div>
 				</div>
 			{/if}

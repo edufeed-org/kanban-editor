@@ -1,35 +1,23 @@
 /**
  * Agent Module - Zentrale Exports
- * Konsolidiert alle Agent-bezogenen Funktionen
+ * 
+ *  ARCHITEKTUR: Tool-Based AI (MCP-Style OpenAI Function Calling)
+ * Das alte Phase 1/2 System (Intent Detection, Content Proposal, Structure Generation)
+ * wurde entfernt und archiviert. Alle AI-Interaktionen laufen jetzt über Tool-Based Function Calling.
  */
-
-// Types
-export type { UserIntent, ContentProposal, StructureProposal, BoardPreview, AIAction, ValidationResult } from './types';
-
-// Intent Detection
-export { detectUserIntent, getIntentAwareSystemPrompt } from './intentDetection';
-
-// LLM-basierte Intent Detection (Alternative - kontext-bewusst)
-export { llmDetectIntention, detectIntentViaLLM } from './llmIntentDetection';
-export type { IntentDetectionResult } from './llmIntentDetection';
 
 // LLM Request Utilities
 export { llmRequest } from './llmRequest';
 export type { LLMRequestOptions, LLMReturnType } from './llmRequest';
 
-// Content Proposal (Phase 1)
-export { parseContentProposal } from './contentProposal';
+// Tool-Based AI Types (aktiv genutzt)
+export type {
+ToolDefinition,
+ToolCall,
+ToolResult,
+LLMToolResponse,
+ToolChatMessage
+} from './types';
 
-// Structure Generation (Phase 2)
-export {
-	STRUCTURE_GENERATION_SYSTEM_PROMPT,
-	analyzeExistingStructure,
-	generateStructurePrompt,
-	validateStructureJSON,
-	validateColumnAlignment,
-	parseStructureProposal,
-	structureToActions
-} from './structureGeneration';
-
-// Action Processing
-export { createBoardPreview, executeActions } from './actionProcessing';
+// Re-export AIAction from BoardModel for convenience
+export type { AIAction } from '$lib/classes/BoardModel';

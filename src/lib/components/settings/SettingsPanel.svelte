@@ -35,11 +35,7 @@
   let localLlmApiKey = $state(settingsStore.settings.llmApiKey);
   let localSystemPrompt = $state(settingsStore.settings.llmSystemPrompt);
   
-  // Learning System local state - for Sliders (type="single" expects number)
-  let localConfidenceThreshold = $state(settingsStore.settings.learningConfidenceThreshold);
-  let localInitialConfidence = $state(settingsStore.settings.learningInitialConfidence);
-  let localConfidenceIncrement = $state(settingsStore.settings.learningConfidenceIncrement);
-  let localMinUsageCount = $state(settingsStore.settings.learningMinUsageCount);
+
   
   // Relays
   let localRelaysPublic = $state(settingsStore.settings.relaysPublic.join('\n'));
@@ -88,30 +84,7 @@
     settingsStore.setDefaultColumns(columns);
   }
   
-  // Learning System $effect - sync Slider changes to store (bind:value auto-updates local vars)
-  $effect(() => {
-    if (localConfidenceThreshold !== settings.learningConfidenceThreshold) {
-      settingsStore.setLearningConfidenceThreshold(localConfidenceThreshold);
-    }
-  });
-  
-  $effect(() => {
-    if (localInitialConfidence !== settings.learningInitialConfidence) {
-      settingsStore.setLearningInitialConfidence(localInitialConfidence);
-    }
-  });
-  
-  $effect(() => {
-    if (localConfidenceIncrement !== settings.learningConfidenceIncrement) {
-      settingsStore.setLearningConfidenceIncrement(localConfidenceIncrement);
-    }
-  });
-  
-  $effect(() => {
-    if (localMinUsageCount !== settings.learningMinUsageCount) {
-      settingsStore.setLearningMinUsageCount(localMinUsageCount);
-    }
-  });
+
   
   // Reset alle Settings
   function handleReset() {
@@ -128,10 +101,6 @@
       localRelaysPublic = settings.relaysPublic.join('\n');
       localRelaysPrivate = settings.relaysPrivate.join('\n');
       localDefaultColumns = settings.defaultColumns.join(', ');
-      localConfidenceThreshold = settings.learningConfidenceThreshold;
-      localInitialConfidence = settings.learningInitialConfidence;
-      localConfidenceIncrement = settings.learningConfidenceIncrement;
-      localMinUsageCount = settings.learningMinUsageCount;
     }
   }
 </script>
@@ -150,9 +119,8 @@
   
   <!-- Tabbed Settings -->
   <Tabs.Root value="ui" class="w-full">
-    <Tabs.List class="grid w-full grid-cols-5">
+    <Tabs.List class="grid w-full grid-cols-4">
       <Tabs.Trigger value="ui">UI/UX</Tabs.Trigger>
-      <Tabs.Trigger value="learning">Learning</Tabs.Trigger>
       <Tabs.Trigger value="llm">LLM</Tabs.Trigger>
       <Tabs.Trigger value="nostr">Nostr</Tabs.Trigger>
       <Tabs.Trigger value="defaults">Defaults</Tabs.Trigger>
@@ -304,157 +272,7 @@
       </Card.Root>
     </Tabs.Content>
     
-    <!-- TAB 2: Learning System -->
-    <Tabs.Content value="learning" class="space-y-4">
-      <Card.Root>
-        <Card.Header>
-          <Card.Title>🧠 Learning System</Card.Title>
-          <Card.Description>
-            KI-Assistenz lernt aus Ihren Mustern und automatisiert wiederkehrende Aktionen
-          </Card.Description>
-        </Card.Header>
-        <Card.Content class="space-y-6">
-          
-          <!-- Enable Learning Manager -->
-          <div class="flex items-center justify-between">
-            <div class="space-y-0.5">
-              <Label>Learning System aktivieren</Label>
-              <p class="text-sm text-muted-foreground">
-                Cross-Board Learning für Spalten-Strukturen, Labels, etc.
-              </p>
-            </div>
-            <Switch 
-              checked={settings.useLearningManager}
-              onCheckedChange={(checked) => settingsStore.setUseLearningManager(checked)}
-            />
-          </div>
-          
-          {#if settings.useLearningManager}
-            <Separator />
-            
-            <!-- Confidence Threshold -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <Label>Confidence Threshold</Label>
-                <span class="text-sm font-mono bg-muted px-2 py-1 rounded">
-                  {localConfidenceThreshold.toFixed(2)}
-                </span>
-              </div>
-              <Slider 
-                type="single"
-                bind:value={localConfidenceThreshold}
-                min={0}
-                max={1}
-                step={0.05}
-                class="w-full"
-              />
-              <p class="text-xs text-muted-foreground">
-                Ab diesem Wert (0.0-1.0) werden KI-Aktionen automatisch ausgeführt ohne User-Confirmation.
-                <strong>Empfohlen: 0.7</strong>
-              </p>
-            </div>
-            
-            <!-- Initial Confidence -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <Label>Initial Confidence (neue Patterns)</Label>
-                <span class="text-sm font-mono bg-muted px-2 py-1 rounded">
-                  {localInitialConfidence.toFixed(2)}
-                </span>
-              </div>
-              <Slider 
-                type="single"
-                bind:value={localInitialConfidence}
-                min={0}
-                max={1}
-                step={0.05}
-                class="w-full"
-              />
-              <p class="text-xs text-muted-foreground">
-                Startwert für neu gelernte Patterns. <strong>Empfohlen: 0.3</strong>
-              </p>
-            </div>
-            
-            <!-- Confidence Increment -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <Label>Confidence Increment (pro Nutzung)</Label>
-                <span class="text-sm font-mono bg-muted px-2 py-1 rounded">
-                  +{localConfidenceIncrement.toFixed(2)}
-                </span>
-              </div>
-              <Slider 
-                type="single"
-                bind:value={localConfidenceIncrement}
-                min={0.05}
-                max={0.3}
-                step={0.05}
-                class="w-full"
-              />
-              <p class="text-xs text-muted-foreground">
-                Um wie viel steigt Confidence bei jeder erfolgreichen Nutzung. <strong>Empfohlen: 0.15</strong>
-              </p>
-            </div>
-            
-            <!-- Min Usage Count -->
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <Label>Mindest-Nutzungen für "Gelernt"</Label>
-                <span class="text-sm font-mono bg-muted px-2 py-1 rounded">
-                  {localMinUsageCount}x
-                </span>
-              </div>
-              <Slider 
-                type="single"
-                bind:value={localMinUsageCount}
-                min={1}
-                max={10}
-                step={1}
-                class="w-full"
-              />
-              <p class="text-xs text-muted-foreground">
-                Nach wie vielen Nutzungen gilt ein Pattern als "gelernt"? <strong>Empfohlen: 3</strong>
-              </p>
-            </div>
-            
-            <Separator />
-            
-            <!-- Learning Progress Visualization -->
-            <div class="space-y-2">
-              <Label>Learning Progress (Beispiel)</Label>
-              <div class="bg-muted p-4 rounded-lg space-y-2 text-xs font-mono">
-                <div class="flex justify-between">
-                  <span>Use 1:</span>
-                  <span class="text-orange-500">Confidence {localInitialConfidence.toFixed(2)} (Confirmation nötig)</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Use 2:</span>
-                  <span class="text-orange-500">Confidence {(localInitialConfidence + localConfidenceIncrement).toFixed(2)} (Confirmation nötig)</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Use 3:</span>
-                  <span class={
-                    (localInitialConfidence + localConfidenceIncrement * 2) >= localConfidenceThreshold 
-                      ? 'text-green-500' 
-                      : 'text-orange-500'
-                  }>
-                    Confidence {(localInitialConfidence + localConfidenceIncrement * 2).toFixed(2)} 
-                    {(localInitialConfidence + localConfidenceIncrement * 2) >= localConfidenceThreshold 
-                      ? '✓ Auto-Execute!' 
-                      : '(Confirmation nötig)'
-                    }
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-          {/if}
-          
-        </Card.Content>
-      </Card.Root>
-    </Tabs.Content>
-    
-    <!-- TAB 3: LLM Configuration -->
+    <!-- TAB 2: LLM Configuration -->
     <Tabs.Content value="llm" class="space-y-4">
       <Card.Root>
         <Card.Header>
@@ -548,7 +366,7 @@
       </Card.Root>
     </Tabs.Content>
     
-    <!-- TAB 4: Nostr Relays -->
+    <!-- TAB 3: Nostr Relays -->
     <Tabs.Content value="nostr" class="space-y-4">
       <Card.Root>
         <Card.Header>
@@ -593,7 +411,7 @@
       </Card.Root>
     </Tabs.Content>
     
-    <!-- TAB 5: Board Defaults -->
+    <!-- TAB 4: Board Defaults -->
     <Tabs.Content value="defaults" class="space-y-4">
       <Card.Root>
         <Card.Header>
