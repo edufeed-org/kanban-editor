@@ -518,25 +518,6 @@ export class BoardOperations {
     }
 
     /**
-     * Setzt publishState für Card
-     */
-    public static setCardPublishState(
-        board: Board,
-        cardId: string,
-        state: 'draft' | 'published'
-    ): boolean {
-        const result = board.findCardAndColumn(cardId);
-        if (!result) {
-            console.error(`❌ Karte ${cardId} nicht gefunden`);
-            return false;
-        }
-
-        result.card.setPublishState(state);
-        console.log(`✅ Card publishState gesetzt: ${state}`);
-        return true;
-    }
-
-    /**
      * Setzt publishState für Board
      */
     public static setBoardPublishState(

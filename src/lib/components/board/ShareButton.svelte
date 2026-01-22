@@ -56,7 +56,6 @@
             data-testid="share-button"
         >
             <ShareIcon class="h-4 w-4" />
-            Teilen
         </Button>
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
