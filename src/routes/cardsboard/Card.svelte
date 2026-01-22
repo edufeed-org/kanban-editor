@@ -11,6 +11,7 @@
 	import CardSidebar from "./CardSidebar.svelte";
 	import AvatarStack from "./AvatarStack.svelte";
 	import ColorSelector from "./ColorSelector.svelte";
+	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
 	import EditIcon from '@lucide/svelte/icons/edit';
 	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -441,8 +442,8 @@
 
 		<!-- Description Section (Markdown Content) -->
 		{#if card.description}
-			<div class="card-description prose prose-sm max-w-none line-clamp-3">
-				{@html card.description}
+			<div class="card-description line-clamp-3">
+				<MarkdownRenderer content={card.description} class="prose-sm" />
 			</div>
 		{/if}
 

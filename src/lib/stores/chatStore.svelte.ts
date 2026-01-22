@@ -9,10 +9,7 @@ import {
 	type Memory,
 	type ConversationSummary
 } from '../classes/ChatModel.js';
-import type { AIAction } from '../classes/BoardModel.js';
 import { settingsStore } from './settingsStore.svelte.js';
-import { userPreferencesStore } from './userPreferencesStore.svelte.js';
-import { toast } from 'svelte-sonner';
 
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
@@ -303,159 +300,6 @@ export class ChatStore {
 	}
 
 	// ============================================================================
-	// Learning System - Pattern Hashing & Confidence Management
-	// ============================================================================
-
-	/**
-	 * Generiert einen Pattern-Hash für eine AI-Action
-	 * Format: "type:cardCount_theme"
-	 * 
-	 * Beispiele:
-	 * - "split_card:1_task_breakdown"
-	 * - "add_card:0_brainstorming"
-	 * - "update_card:1_bug_fix"
-	 */
-	private generatePatternHash(action: AIAction): string {
-		const type = action.type;
-		
-		// Card Count (wenn vorhanden)
-		const cardCount = (action as any).newCards?.length 
-			|| (action as any).cards?.length 
-			|| (action as any).cardId ? 1 : 0;
-		
-		// Theme Detection (einfache Keyword-Analyse)
-		const theme = this.detectTheme(action);
-		
-		return `${type}:${cardCount}_${theme}`;
-	}
-
-	/**
-	 * Detektiert Theme/Kategorie einer Action basierend auf Content
-	 * Nutzt einfache Keyword-Matching
-	 */
-	private detectTheme(action: AIAction): string {
-		// Content zusammenfassen (aus allen relevanten Feldern)
-		const content = [
-			(action as any).heading || '',
-			(action as any).content || '',
-			(action as any).newCards?.map((c: any) => c.heading).join(' ') || '',
-			(action as any).cards?.map((c: any) => c.heading).join(' ') || ''
-		].join(' ').toLowerCase();
-
-		// Theme-Kategorien (erweiterbar)
-		const themes = {
-			task_breakdown: ['aufteilen', 'split', 'subtask', 'breakdown', 'teil'],
-			brainstorming: ['idee', 'brainstorm', 'sammeln', 'finden'],
-			bug_fix: ['bug', 'fehler', 'fix', 'problem', 'issue'],
-			feature_add: ['feature', 'funktion', 'add', 'neu', 'new'],
-			refactor: ['refactor', 'umstruktur', 'optimier'],
-			documentation: ['doku', 'documentation', 'readme', 'erkl'],
-			planning: ['plan', 'strategie', 'roadmap', 'meilenstein'],
-			research: ['research', 'recherche', 'analyse', 'untersuch']
-		};
-
-		// Finde passendes Theme
-		for (const [theme, keywords] of Object.entries(themes)) {
-			if (keywords.some(keyword => content.includes(keyword))) {
-				return theme;
-			}
-		}
-
-		return 'general';
-	}
-
-	/**
-	 * Verarbeitet eine AI-Action mit Learning System
-	 * Entscheidet ob Auto-Execute oder User-Confirmation nötig
-	 * 
-	 * @returns { shouldAutoExecute: boolean, patternHash: string, confidence: number }
-	 */
-	public async checkActionConfidence(action: AIAction): Promise<{
-		shouldAutoExecute: boolean;
-		patternHash: string;
-		confidence: number;
-		usageCount: number;
-	}> {
-		// Pattern Hash generieren
-		const patternHash = this.generatePatternHash(action);
-
-		// Confidence Threshold aus Settings
-		const threshold = settingsStore.settings.learningConfidenceThreshold;
-
-		// Gelernte Pattern-Daten holen
-		const learned = userPreferencesStore.getLearnedPattern(patternHash);
-
-		if (learned) {
-			// Pattern bekannt: Confidence prüfen
-			const shouldAutoExecute = learned.confidence >= threshold;
-
-			return {
-				shouldAutoExecute,
-				patternHash,
-				confidence: learned.confidence,
-				usageCount: learned.usageCount
-			};
-		} else {
-			// Pattern unbekannt: Initial Confidence
-			const initialConfidence = settingsStore.settings.learningInitialConfidence;
-
-			return {
-				shouldAutoExecute: initialConfidence >= threshold, // Sehr unwahrscheinlich bei Default 0.3
-				patternHash,
-				confidence: initialConfidence,
-				usageCount: 0
-			};
-		}
-	}
-
-	/**
-	 * Registriert eine erfolgreiche Action-Ausführung
-	 * Erhöht Confidence für das Pattern
-	 * Zeigt Toast-Notification
-	 */
-	public recordActionSuccess(patternHash: string, isAutoExecute: boolean = false): void {
-		const before = userPreferencesStore.getLearnedPattern(patternHash);
-		userPreferencesStore.recordPatternSuccess(patternHash);
-		const after = userPreferencesStore.getLearnedPattern(patternHash);
-		
-		if (isAutoExecute) {
-			// Auto-Execute Toast
-			toast.success('✅ Auto-Execute', {
-				description: `Aktion wurde automatisch basierend auf gelernten Präferenzen ausgeführt.`,
-				duration: 4000,
-			});
-		} else if (after) {
-			// Pattern Learning Toast
-			const threshold = settingsStore.settings.learningConfidenceThreshold;
-			
-			toast.info('📚 Pattern gelernt', {
-				description: `Confidence: ${after.confidence.toFixed(2)} nach ${after.usageCount} Nutzungen`,
-				duration: 3000,
-			});
-			
-			// Threshold erreicht?
-			if (before && before.confidence < threshold && after.confidence >= threshold) {
-				toast.success('🎯 Threshold erreicht!', {
-					description: `Diese Aktion wird ab jetzt automatisch ausgeführt.`,
-					duration: 5000,
-				});
-			}
-		}
-	}
-
-	/**
-	 * Registriert eine abgelehnte Action
-	 * Reduziert Confidence für das Pattern (optional)
-	 */
-	public recordActionRejection(patternHash: string): void {
-		// Optional: Confidence reduzieren bei Ablehnung
-		// userPreferencesStore.decreasePatternConfidence(patternHash);
-		
-		// Aktuell: Keine Aktion (nur Erfolge werden gelernt)
-		console.log(`Action rejected: ${patternHash}`);
-	}
-
-	// ============================================================================
 	// LLM Integration (OpenAI-kompatible API)
 	// ============================================================================
 
@@ -654,6 +498,168 @@ export class ChatStore {
 			console.error('❌ LLM Error:', error);
 			return {
 				content: '',
+				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+			};
+		}
+	}
+
+	// ============================================================================
+	// Tool-Based LLM Integration (OpenAI Function Calling)
+	// ============================================================================
+
+	/**
+	 * Sendet eine Nachricht an das LLM mit Tool-Definitionen
+	 * Nutzt OpenAI Function Calling Format
+	 * 
+	 * @param userMessage - Die Nachricht des Users
+	 * @param systemPrompt - System-Prompt mit Kontext
+	 * @param tools - Tool-Definitionen im OpenAI Format
+	 * @returns AI Response mit potentiellen Tool-Calls
+	 */
+	public async sendToLLMWithTools(
+		userMessage: string,
+		systemPrompt: string,
+		tools: Array<{
+			type: 'function';
+			function: {
+				name: string;
+				description: string;
+				parameters: any;
+			};
+		}>
+	): Promise<{
+		content: string | null;
+		tool_calls?: Array<{
+			id: string;
+			type: 'function';
+			function: {
+				name: string;
+				arguments: string;
+			};
+		}>;
+		error?: string;
+	}> {
+		const settings = settingsStore.settings;
+
+		// Check if LLM is configured
+		if (!settings.llmModel || !settings.llmBaseUrl) {
+			return {
+				content: null,
+				error: '❌ LLM nicht konfiguriert. Bitte in Settings LLM-Model und Base URL eintragen.'
+			};
+		}
+
+		try {
+			// Prepare messages for OpenAI-compatible API
+			const messages = [
+				{
+					role: 'system',
+					content: systemPrompt
+				},
+				// Add previous messages for context (last 5)
+				...this.messages
+					.slice(-5)
+					.map((msg) => ({
+						role: msg.role === 'user' ? 'user' : 'assistant',
+						content: msg.content
+					})),
+				{
+					role: 'user',
+					content: userMessage
+				}
+			];
+
+			console.log('🔧 Sending to LLM with tools:', settings.llmBaseUrl, settings.llmModel);
+			console.log('📋 Available tools:', tools.map(t => t.function.name).join(', '));
+
+			// Detect if using OpenRouter (check base URL)
+			const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+			const isOllama = settings.llmBaseUrl.includes('localhost') || settings.llmBaseUrl.includes('127.0.0.1');
+			
+			// Build API endpoint URL
+			const apiUrl = isOpenRouter 
+				? `${settings.llmBaseUrl}/chat/completions`
+				: `${settings.llmBaseUrl}/v1/chat/completions`;
+
+			// Request body mit Tools
+			const requestBody: any = {
+				model: settings.llmModel,
+				messages,
+				temperature: 0.1, // Sehr niedrig für konsistente Tool-Calls
+				max_tokens: 2000
+			};
+
+			// Tool-Support je nach Provider
+			if (isOllama) {
+				// Ollama unterstützt tools ab Version 0.4.0
+				// Falls nicht unterstützt, Fallback auf JSON-Generierung
+				requestBody.tools = tools;
+				requestBody.tool_choice = 'auto';
+			} else {
+				// OpenAI/OpenRouter - Standard Tool Format
+				requestBody.tools = tools;
+				requestBody.tool_choice = 'auto';
+			}
+
+			// Call API
+			const response = await fetch(apiUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
+					...(isOpenRouter ? {
+						'HTTP-Referer': 'https://kanban-editor.nostr.tools',
+						'X-Title': 'Nostr Kanban Editor'
+					} : {})
+				},
+				body: JSON.stringify(requestBody)
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error('❌ LLM Tool API Error:', response.status, errorText);
+				
+				// Fallback: Wenn Tool-Calling nicht unterstützt, versuche ohne Tools
+				if (response.status === 400 && errorText.includes('tool')) {
+					console.warn('⚠️ Tool-Calling nicht unterstützt, Fallback auf Standard-Modus');
+					// Hier könnte ein Fallback implementiert werden
+				}
+				
+				return {
+					content: null,
+					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+				};
+			}
+
+			const data = await response.json();
+			const choice = data.choices?.[0];
+			
+			if (!choice) {
+				return {
+					content: null,
+					error: 'LLM returned empty response'
+				};
+			}
+
+			const message = choice.message;
+			const toolCalls = message.tool_calls;
+			const content = message.content;
+
+			if (toolCalls && toolCalls.length > 0) {
+				console.log('🔧 LLM returned tool calls:', toolCalls.map((t: any) => t.function.name).join(', '));
+				return {
+					content,
+					tool_calls: toolCalls
+				};
+			}
+
+			console.log('💬 LLM returned text response:', content?.substring(0, 100));
+			return { content };
+
+		} catch (error) {
+			console.error('❌ LLM Tool Error:', error);
+			return {
+				content: null,
 				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
 			};
 		}

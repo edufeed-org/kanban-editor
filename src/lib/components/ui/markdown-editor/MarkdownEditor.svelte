@@ -5,6 +5,8 @@
 	import Link from '@tiptap/extension-link';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Image from '@tiptap/extension-image';
+	import MarkdownIt from 'markdown-it';
+	import TurndownService from 'turndown';
 	
 	// Icons
 	import BoldIcon from '@lucide/svelte/icons/bold';
@@ -36,7 +38,54 @@
 	let editor = $state<Editor | null>(null);
 	let isEditorReady = $state(false);
 	
+	// Markdown-it Instanz für die Konvertierung von Markdown zu HTML (beim Laden)
+	const md = new MarkdownIt({
+		html: true,
+		linkify: true,
+		typographer: true,
+		breaks: true
+	});
+	
+	// Turndown Instanz für die Konvertierung von HTML zu Markdown (beim Speichern)
+	const turndownService = new TurndownService({
+		headingStyle: 'atx',      // # Heading statt Heading\n===
+		bulletListMarker: '-',    // - statt *
+		codeBlockStyle: 'fenced', // ``` statt Einrückung
+		emDelimiter: '*',         // *italic* statt _italic_
+		strongDelimiter: '**'     // **bold**
+	});
+	
+	// Prüfe ob der Inhalt Markdown ist (nicht bereits HTML)
+	function isMarkdown(content: string): boolean {
+		if (!content) return false;
+		// Wenn es mit < beginnt und HTML-Tags enthält, ist es wahrscheinlich HTML
+		if (content.trim().startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(content)) {
+			return false;
+		}
+		// Markdown-Indikatoren: #, *, -, ```, [], etc.
+		const markdownPatterns = /^#{1,6}\s|\*\*|__|\*[^*]+\*|_[^_]+_|^\s*[-*+]\s|^\s*\d+\.\s|```|\[.+\]\(.+\)|^>\s/m;
+		return markdownPatterns.test(content);
+	}
+	
+	// Konvertiere Markdown zu HTML (für Editor-Anzeige)
+	function markdownToHtml(content: string): string {
+		if (!content) return '';
+		if (isMarkdown(content)) {
+			return md.render(content);
+		}
+		return content;
+	}
+	
+	// Konvertiere HTML zu Markdown (für Speicherung)
+	function htmlToMarkdown(html: string): string {
+		if (!html || html === '<p></p>') return '';
+		return turndownService.turndown(html);
+	}
+	
 	onMount(() => {
+		// Konvertiere initialen Wert von Markdown zu HTML für den Editor
+		const initialContent = markdownToHtml(value);
+		
 		editor = new Editor({
 			element,
 			extensions: [
@@ -60,16 +109,18 @@
 					}
 				})
 			],
-			content: value,
+			content: initialContent,
 			editable: !disabled,
 			onTransaction: () => {
 				// Force re-render für reactive updates
 				editor = editor;
 			},
 			onUpdate: ({ editor }) => {
+				// Konvertiere HTML zu Markdown beim Speichern!
 				const html = editor.getHTML();
+				const markdown = htmlToMarkdown(html);
 				if (onchange) {
-					onchange(html);
+					onchange(markdown);
 				}
 			}
 		});
@@ -85,8 +136,11 @@
 	
 	// Update content wenn value von außen ändert
 	$effect(() => {
-		if (editor && value !== editor.getHTML() && !editor.isFocused) {
-			editor.commands.setContent(value);
+		if (editor && !editor.isFocused) {
+			const htmlContent = markdownToHtml(value);
+			if (htmlContent !== editor.getHTML()) {
+				editor.commands.setContent(htmlContent);
+			}
 		}
 	});
 	

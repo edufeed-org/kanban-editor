@@ -141,10 +141,43 @@ export async function llmRequest<T = any>(
 
 	if (returnType === 'json') {
 		try {
+			// Versuch 1: Direktes JSON-Parsing
 			return JSON.parse(content) as T;
-		} catch (err) {
-			console.error('❌ JSON Parse Error:', (err as Error).message);
-			throw new Error(`LLM returned invalid JSON: ${content.substring(0, 100)}`);
+		} catch (parseError) {
+			console.warn('⚠️ Direct JSON parse failed, trying extraction...', {
+				content: content.substring(0, 200),
+				error: parseError instanceof Error ? parseError.message : 'Unknown'
+			});
+
+			// Versuch 2: JSON aus Markdown Code Block extrahieren (```json ... ```)
+			const markdownMatch = content.match(/```json\s*\n?([\s\S]*?)\n?```/);
+			if (markdownMatch) {
+				try {
+					const extracted = markdownMatch[1].trim();
+					console.log('✓ Extracted JSON from markdown block:', extracted.substring(0, 100));
+					return JSON.parse(extracted) as T;
+				} catch (mdErr) {
+					console.warn('⚠️ Markdown extraction failed:', mdErr);
+				}
+			}
+
+			// Versuch 3: Erstes JSON-Objekt im Text finden
+			const jsonMatch = content.match(/\{[\s\S]*\}/);
+			if (jsonMatch) {
+				try {
+					const extracted = jsonMatch[0];
+					console.log('✓ Extracted JSON from text:', extracted.substring(0, 100));
+					return JSON.parse(extracted) as T;
+				} catch (textErr) {
+					console.warn('⚠️ Text JSON extraction failed:', textErr);
+				}
+			}
+
+			// Alle Fallbacks gescheitert
+			console.error('❌ All JSON extraction attempts failed');
+			throw new Error(
+				`LLM returned invalid JSON. Content: ${content.substring(0, 200)}...`
+			);
 		}
 	}
 

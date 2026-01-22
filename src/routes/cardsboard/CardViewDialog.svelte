@@ -9,6 +9,7 @@
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
+	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
