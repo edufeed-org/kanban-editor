@@ -19,6 +19,7 @@
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import LoaderIcon from '@lucide/svelte/icons/loader';
   import XIcon from '@lucide/svelte/icons/x';
+  import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -275,6 +276,42 @@
       handleSendMessage();
     }
   }
+  
+  /**
+   * Retry a message - finds the user message before the given assistant message index
+   * and re-sends it, replacing all messages from that point onwards
+   */
+  async function retryMessage(messageIndex: number) {
+    if (isProcessing) return;
+    
+    // Find the user message before this assistant message
+    let userMessageIndex = -1;
+    let userMessageContent = '';
+    
+    for (let i = messageIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userMessageIndex = i;
+        userMessageContent = messages[i].content;
+        break;
+      }
+    }
+    
+    if (userMessageIndex === -1 || !userMessageContent) {
+      console.warn('🔄 No user message found to retry');
+      return;
+    }
+    
+    console.log('🔄 Retrying message:', userMessageContent);
+    
+    // Delete all messages from userMessageIndex onwards
+    const messagesToDelete = messages.slice(userMessageIndex).map(m => m.id);
+    for (const id of messagesToDelete) {
+      chatStore.deleteMessage(id);
+    }
+    
+    // Re-send the user message
+    await handleToolBasedMessage(userMessageContent);
+  }
 </script>
 
 <!-- AI Panel Container -->
@@ -290,7 +327,7 @@
       Intelligente Board-Assistenz
     </p>
     {#if selectedCard}
-      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-primary/20 relative">
+      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-b-[var(--destructive)] border-primary/20 relative">
         <button
           type="button"
           onclick={() => onClearSelection?.()}
@@ -300,7 +337,7 @@
         >
           <XIcon class="h-3 w-3 text-muted-foreground hover:text-foreground" />
         </button>
-        <p class="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Selektiert</p>
+        <p class="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Ausgewählter Kontext:</p>
         <p class="text-xs font-medium text-primary truncate pr-4" title={selectedCard.cardName}>
           {selectedCard.cardName}
         </p>
@@ -328,22 +365,36 @@
           </p>
         </div>
       {:else}
-        {#each messages as message}
-          <div class="flex gap-2 {message.role === 'user' ? 'justify-end' : 'justify-start'}">
-            <div class="max-w-[85%] rounded-lg px-3 py-2 {
-              message.role === 'user' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted'
-            }">
-              <p class="text-xs whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-              <p class="text-[10px] mt-1 opacity-70">
-                {new Date(message.timestamp).toLocaleTimeString('de-DE', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </p>
+        {#each messages as message, index}
+          <div class="chat-message {message.role === 'user' ? 'user-msg' : 'agent-msg'} flex gap-2 {message.role === 'user' ? 'justify-end' : 'justify-start'}">
+            <div class="message-wrapper max-w-[85%]">
+              <div class="message-bubble rounded-lg px-3 py-2 {
+                message.role === 'user' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted'
+              }">
+                <p class="message-content text-xs whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+                <p class="message-timestamp text-[10px] mt-1 opacity-70">
+                  {new Date(message.timestamp).toLocaleTimeString('de-DE', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </p>
+              </div>
+              <!-- Retry Button für Assistant-Nachrichten -->
+              {#if message.role === 'assistant' && !isProcessing}
+                <button
+                  type="button"
+                  onclick={() => retryMessage(index)}
+                  class="message-retry flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                  title="Anfrage wiederholen"
+                >
+                  <RefreshCwIcon class="h-3 w-3" />
+                  Wiederholen
+                </button>
+              {/if}
             </div>
           </div>
         {/each}
