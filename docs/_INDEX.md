@@ -148,38 +148,26 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. Wäh
 ### 🧠 KI / ML Developer
 **Ziel:** KI-Integration, Chat-Klasse, Kontext-Serialisierung
 
-**Learning Path (Phase 3.0 ✅ COMPLETE):**
-1. **🆕 AI Foundation Overview:** [`FEATURE/AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) (Vollständige Spezifikation, Phase 3.0)
-2. **🆕 2-Phase Response System:** [`FEATURE/TWO-PHASE-AI-RESPONSE.md`](./FEATURE/TWO-PHASE-AI-RESPONSE.md) (Content Proposal → Structure Generation)
-3. **🆕 LLM Intent Detection:** [`FEATURE/LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) (Intelligente Intent-Erkennung mit Fallbacks)
-4. **🆕 Intelligent Structure Analysis:** [`FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) (Board-Struktur erkennen & Strategien)
-5. **🆕 Agent System Architecture:** [`ARCHITECTURE/AGENT/README.md`](./ARCHITECTURE/AGENT/README.md) (System-Übersicht & Module)
-6. **🆕 AI Actions Reference:** [`ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md`](./ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md) (Board-Manipulation API)
-7. **🆕 AI Collaborative Generation:** [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) (Multi-Phase Flows)
-8. **ChatStore API:** [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) (Persistent Chat Sessions)
-9. **ChatBotStore Design:** [`ARCHITECTURE/STORES/CHATBOTSTORE.md`](./ARCHITECTURE/STORES/CHATBOTSTORE.md) (Phase 3.1+ Preview)
-10. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Section V: Chat-Klasse, getContextData)
-11. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
+**Learning Path (Tool-Based Architecture):**
+1. **✅ Tool-Based AI (Active):** [`FEATURE/TOOL-BASED-AI.md`](./FEATURE/TOOL-BASED-AI.md) (MCP-Style OpenAI Function Calling - Einzige Architektur)
+2. **Agent System Architecture:** [`ARCHITECTURE/AGENT/README.md`](./ARCHITECTURE/AGENT/README.md) (System-Übersicht & Module)
+3. **AI Actions Reference:** [`ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md`](./ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md) (Board-Manipulation API)
+4. **ChatStore API:** [`ARCHITECTURE/STORES/CHATSTORE.md`](./ARCHITECTURE/STORES/CHATSTORE.md) (Persistent Chat Sessions)
+5. **Tech Spezifikation:** [`AGENTS.md`](../AGENTS.md) (Section V: Chat-Klasse, getContextData)
+6. **State Management:** [`ARCHITECTURE/STORES/README.md`](./ARCHITECTURE/STORES/README.md)
 
-**Neue Module in Phase 3.0:**
-- **contentProposal.ts** — Phase 1: Content Parsing & User Preview
-- **structureGeneration.ts** — Phase 2: JSON Structure Generation & Validation
-- **intentDetection.ts** — Rule-based Intent Recognition
-- **llmIntentDetection.ts** — LLM-based Intent Detection (context-aware)
+**Aktive Module (Tool-Based):**
+- **toolDefinitions.ts** — 12 Tool-Definitionen (OpenAI Function Calling Schema)
+- **toolExecutor.ts** — Tool-Ausführung & Response-Handling
 - **actionProcessing.ts** — Board Action Execution & Validation
-- **learningManager.ts** — Pattern Recognition & Confidence Scoring
-- **structureAnalysis.ts** — Board Structure Analysis & Strategy Selection
 - **llmRequest.ts** — LLM API Integration (OpenAI-compatible)
 
 **Kritische Methoden:**
 - `Card.getContextData()` — KI-Kontext serialisieren
 - `Chat.sendPromptToAI()` — Payload für KI vorbereiten
 - `Chat.processAIAction()` — KI-Antworten verarbeiten
-- **`llmRequest(prompt, context?)`** — LLM API Calls
-- **`contentProposal(llmResponse)`** — Phase 1 Content Parsing
-- **`structureGeneration(content, boardContext)`** — Phase 2 Structure JSON
-- **`llmDetectIntention(userText, context)`** — LLM Intent Recognition
-- **`analyzeExistingStructure(columns)`** — Board Pattern Analysis
+- **`llmRequest(prompt, context?)`** — LLM API Calls mit Tool-Definitionen
+- **`executeToolCall(toolName, params)`** — Tool-Ausführung
 
 ---
 

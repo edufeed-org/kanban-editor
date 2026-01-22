@@ -11,8 +11,7 @@ import {
 } from '../classes/ChatModel.js';
 import type { AIAction } from '../classes/BoardModel.js';
 import { settingsStore } from './settingsStore.svelte.js';
-import { userPreferencesStore } from './userPreferencesStore.svelte.js';
-import { toast } from 'svelte-sonner';
+// userPreferencesStore removed - Learning System no longer used
 
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
@@ -365,10 +364,10 @@ export class ChatStore {
 	}
 
 	/**
-	 * Verarbeitet eine AI-Action mit Learning System
-	 * Entscheidet ob Auto-Execute oder User-Confirmation nötig
+	 * Verarbeitet eine AI-Action (Vereinfachte Version ohne Learning)
+	 * Alle Aktionen erfordern User-Confirmation
 	 * 
-	 * @returns { shouldAutoExecute: boolean, patternHash: string, confidence: number }
+	 * @returns { shouldAutoExecute: false, patternHash: string }
 	 */
 	public async checkActionConfidence(action: AIAction): Promise<{
 		shouldAutoExecute: boolean;
@@ -376,82 +375,32 @@ export class ChatStore {
 		confidence: number;
 		usageCount: number;
 	}> {
-		// Pattern Hash generieren
+		// Pattern Hash generieren (für Tracking)
 		const patternHash = this.generatePatternHash(action);
 
-		// Confidence Threshold aus Settings
-		const threshold = settingsStore.settings.learningConfidenceThreshold;
-
-		// Gelernte Pattern-Daten holen
-		const learned = userPreferencesStore.getLearnedPattern(patternHash);
-
-		if (learned) {
-			// Pattern bekannt: Confidence prüfen
-			const shouldAutoExecute = learned.confidence >= threshold;
-
-			return {
-				shouldAutoExecute,
-				patternHash,
-				confidence: learned.confidence,
-				usageCount: learned.usageCount
-			};
-		} else {
-			// Pattern unbekannt: Initial Confidence
-			const initialConfidence = settingsStore.settings.learningInitialConfidence;
-
-			return {
-				shouldAutoExecute: initialConfidence >= threshold, // Sehr unwahrscheinlich bei Default 0.3
-				patternHash,
-				confidence: initialConfidence,
-				usageCount: 0
-			};
-		}
+		// Learning System removed - always require confirmation
+		return {
+			shouldAutoExecute: false,
+			patternHash,
+			confidence: 0,
+			usageCount: 0
+		};
 	}
 
 	/**
 	 * Registriert eine erfolgreiche Action-Ausführung
-	 * Erhöht Confidence für das Pattern
-	 * Zeigt Toast-Notification
+	 * (Vereinfachte Version ohne Learning)
 	 */
 	public recordActionSuccess(patternHash: string, isAutoExecute: boolean = false): void {
-		const before = userPreferencesStore.getLearnedPattern(patternHash);
-		userPreferencesStore.recordPatternSuccess(patternHash);
-		const after = userPreferencesStore.getLearnedPattern(patternHash);
-		
-		if (isAutoExecute) {
-			// Auto-Execute Toast
-			toast.success('✅ Auto-Execute', {
-				description: `Aktion wurde automatisch basierend auf gelernten Präferenzen ausgeführt.`,
-				duration: 4000,
-			});
-		} else if (after) {
-			// Pattern Learning Toast
-			const threshold = settingsStore.settings.learningConfidenceThreshold;
-			
-			toast.info('📚 Pattern gelernt', {
-				description: `Confidence: ${after.confidence.toFixed(2)} nach ${after.usageCount} Nutzungen`,
-				duration: 3000,
-			});
-			
-			// Threshold erreicht?
-			if (before && before.confidence < threshold && after.confidence >= threshold) {
-				toast.success('🎯 Threshold erreicht!', {
-					description: `Diese Aktion wird ab jetzt automatisch ausgeführt.`,
-					duration: 5000,
-				});
-			}
-		}
+		// Learning System removed - no-op
+		console.log(`Action executed: ${patternHash}`);
 	}
 
 	/**
 	 * Registriert eine abgelehnte Action
-	 * Reduziert Confidence für das Pattern (optional)
+	 * (Vereinfachte Version ohne Learning)
 	 */
 	public recordActionRejection(patternHash: string): void {
-		// Optional: Confidence reduzieren bei Ablehnung
-		// userPreferencesStore.decreasePatternConfidence(patternHash);
-		
-		// Aktuell: Keine Aktion (nur Erfolge werden gelernt)
 		console.log(`Action rejected: ${patternHash}`);
 	}
 

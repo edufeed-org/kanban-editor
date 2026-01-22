@@ -1,9 +1,9 @@
-﻿<!--
-  🤖 AIPanel.svelte - AI-Agent Interface in rechter Sidebar
+<!--
+  ?? AIPanel.svelte - AI-Agent Interface in rechter Sidebar
   
   Features:
-  - Chat-Interface für AI-Interaktion
-  - Zeigt AI-Action-Vorschläge
+  - Chat-Interface f�r AI-Interaktion
+  - Zeigt AI-Action-Vorschl�ge
   - Integriert ActionConfirmationDialog
   - Zeigt Learned Patterns Status
 -->
@@ -16,7 +16,6 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import ActionConfirmationDialog from '$lib/components/ui/ActionConfirmationDialog.svelte';
   import { chatStore } from '$lib/stores/chatStore.svelte.js';
-  import { userPreferencesStore } from '$lib/stores/userPreferencesStore.svelte.js';
   import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
   import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
   import BrainIcon from '@lucide/svelte/icons/brain';
@@ -28,12 +27,8 @@
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
   import type { AIAction } from '$lib/classes/BoardModel.js';
   
-  // 🆕 Agent Modules (refactored)
+  // ?? Agent Modules (refactored) - Legacy Phase 1/2 (kept for backward compatibility)
   import {
-    detectUserIntent,
-    llmDetectIntention,
-    detectIntentViaLLM,
-    getIntentAwareSystemPrompt,
     parseContentProposal,
     analyzeExistingStructure,
     generateStructurePrompt,
@@ -44,13 +39,12 @@
     createBoardPreview,
     executeActions,
     STRUCTURE_GENERATION_SYSTEM_PROMPT,
-    type UserIntent,
     type ContentProposal,
     type StructureProposal,
     type BoardPreview
   } from '$lib/agent';
   
-  // 🆕 Tool-Based AI System (MCP-Style)
+  // ?? Tool-Based AI System (MCP-Style)
   import {
     toolDefinitions,
     getToolDefinitions,
@@ -72,29 +66,24 @@
   let userInput = $state('');
   let isProcessing = $state(false);
   
-  // 🆕 Tool-Based AI Mode (MCP-Style, can be toggled via settings later)
-  // Default to Tool-Based mode for better single-action support
-  let useToolBasedMode = $state(true);
-  
-  // 🆕 2-Phase System State
+  // ?? 2-Phase System State
   let currentContentProposal = $state<ContentProposal | null>(null);
   let showContentDialog = $state(false);
   let isGeneratingStructure = $state(false);
   let structureRetries = $state(0);
   let structureGenerationError = $state('');
-  let phase1MarkdownContent = $state<string>(''); // 🆕 Phase 1 Markdown anzeigen
-  let isPhase2Running = $state(false); // 🆕 Phase 2 läuft
-  let phase2Toast = $state<string>(''); // 🆕 Toast Nachricht
+  let phase1MarkdownContent = $state<string>(''); // ?? Phase 1 Markdown anzeigen
+  let isPhase2Running = $state(false); // ?? Phase 2 l�uft
+  let phase2Toast = $state<string>(''); // ?? Toast Nachricht
   const MAX_STRUCTURE_RETRIES = 3;
   
-  // 🆕 Intent Detection State
-  let awaitingUserConfirmation = $state(false); // Wartet auf explizite Bestätigung
-  let lastProposalContent = $state<string>(''); // Letzte LLM-Antwort für Retry
-  let pendingProposal = $state<ContentProposal | null>(null); // Proposal wartet auf Bestätigung
-  let waitingForConfirmation = $state(false); // Flag: Wartet auf User-Bestätigung
-  let userIntent = $state<'explicit' | 'confirmation' | 'vague' | null>(null); // Detected intent
+  // Legacy state (kept for backward compatibility with Phase 1/2 system)
+  let awaitingUserConfirmation = $state(false);
+  let lastProposalContent = $state<string>('');
+  let pendingProposal = $state<ContentProposal | null>(null);
+  let waitingForConfirmation = $state(false);
   
-  // 🆕 Board Confirmation State
+  // ?? Board Confirmation State
   let showBoardConfirmationDialog = $state(false);
   let pendingBoardActions = $state<AIAction[]>([]);
   let pendingBoardPreview = $state<{
@@ -112,103 +101,25 @@
   // Chat Messages (derived from chatStore)
   let messages = $derived(chatStore.messages);
   
-  // 🔥 WICHTIG: Lade Chat-Session wenn boardId sich ändert
+  // ?? WICHTIG: Lade Chat-Session wenn boardId sich �ndert
   // Guard: Verhindere Endlosschleife durch Tracking der letzten geladenen ID
   let lastLoadedBoardId = $state<string | null>(null);
   
   $effect(() => {
     if (boardId !== lastLoadedBoardId) {
-      console.log('🤖 AIPanel: Lade Chat-Session für Board:', boardId);
+      console.log('?? AIPanel: Lade Chat-Session f�r Board:', boardId);
       chatStore.loadSession(boardId);
       lastLoadedBoardId = boardId;
     }
   });
   
-  // Learning Stats (echte Werte von UserPreferencesStore)
-  let learnedPatternsCount = $derived(userPreferencesStore.getAllLearnedPatterns().size);
-  
-  let confidenceThreshold = $derived(
-    settingsStore.settings.learningConfidenceThreshold
-  );
-  
-  // Auto-Executable Patterns Count (Patterns mit confidence >= threshold)
-  let autoExecutableCount = $derived.by(() => {
-    let count = 0;
-    for (const [_, pattern] of userPreferencesStore.getAllLearnedPatterns()) {
-      if (pattern.confidence >= confidenceThreshold) {
-        count++;
-      }
-    }
-    return count;
-  })
-  
-  /**
-   * Phase 1: Parse KI-Antwort als Content-Vorschlag
-   * 🆕 MIT Intent-Detection: Nur bei explizitem Intent oder Bestätigung → Phase 2
-   * 
-   * WICHTIG: chatStore.addMessage() wurde bereits in simulateAIResponse() aufgerufen!
-   */
-  async function handlePhase1Response(responseText: string, intent: UserIntent) {
-    console.log('🔄 Phase 1: Parsing content proposal... (Intent:', intent, ')');
-    
-    const proposal = await parseContentProposal(responseText);
-    currentContentProposal = proposal;
-    
-    // 🆕 Phase 1 Markdown speichern (bereits im Chat sichtbar von simulateAIResponse!)
-    phase1MarkdownContent = proposal.content;
-    lastProposalContent = responseText; // Für Retry speichern
-    console.log('📝 Phase 1 Markdown gespeichert und bereits im Chat sichtbar');
-    
-    // 🆕 DECISION: Wann Phase 2 starten?
-    
-    // Fall 1: User hat expliziten Intent → Direkt Phase 2 starten
-    if (intent === 'explicit' && proposal.canGenerate) {
-      console.log('✅ Expliziter Intent erkannt → Starte Phase 2 direkt');
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      isGeneratingStructure = true;
-      structureRetries = 0;
-      structureGenerationError = '';
-      awaitingUserConfirmation = false;
-      
-      await generateBoardStructure();
-      return;
-    }
-    
-    // Fall 2: User bestätigt vorherigen Vorschlag ODER gibt Confirmation-Intent → Phase 2 starten
-    // 🆕 FIX: Auch wenn KEIN vorheriger Vorschlag existiert (awaitingUserConfirmation=false),
-    //         aber User sagt "erstelle Karten für..." mit JSON → Phase 2 starten!
-    if (userIntent === 'confirmation' && proposal.canGenerate) {
-      console.log('✅ User-Bestätigung erhalten → Starte Phase 2');
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      isGeneratingStructure = true;
-      structureRetries = 0;
-      structureGenerationError = '';
-      awaitingUserConfirmation = false;
-      
-      await generateBoardStructure();
-      return;
-    }
-    
-    // Fall 3: Vage Anfrage → LLM hat bereits geantwortet, warten auf Bestätigung
-    if (userIntent === 'vague') {
-      console.log('⏸️ Vage Anfrage → Warte auf User-Bestätigung für Phase 2');
-      awaitingUserConfirmation = true;
-      // Phase 2 wird NICHT gestartet! User muss bestätigen.
-      return;
-    }
-    
-    // Fall 4: Andere Fälle (z.B. kann nicht generieren)
-    console.log('ℹ️ Phase 2 wird nicht gestartet (canGenerate:', proposal.canGenerate, ')');
-    awaitingUserConfirmation = false;
-  }
+
+  // ?? handlePhase1Response() - REMOVED (Tool-Based is now the only architecture)
+  // Legacy Phase 1/2 system has been archived. See archive/AI-INTEGRATION.md
   
   /**
    * Phase 2: Generiere Struktur aus Proposal
-   * 🆕 Mit Toast-Notification & Spinner
+   * ?? Mit Toast-Notification & Spinner
    */
   async function handleApproveProposal() {
     if (!currentContentProposal) return;
@@ -219,7 +130,7 @@
     structureGenerationError = '';
     
     chatStore.addMessage(
-      '⏳ Generiere Board-Struktur als JSON...',
+      '? Generiere Board-Struktur als JSON...',
       'assistant'
     );
     
@@ -237,7 +148,7 @@
     
     if (structureRetries >= MAX_STRUCTURE_RETRIES) {
       chatStore.addMessage(
-        `❌ Struktur-Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen. Bitte versuchen Sie es später erneut.`,
+        `? Struktur-Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen. Bitte versuchen Sie es sp�ter erneut.`,
         'assistant'
       );
       isGeneratingStructure = false;
@@ -247,17 +158,17 @@
     }
     
     try {
-      // 🆕 Zeige Spinner für Phase 2 (JSON-Generierung)
+      // ?? Zeige Spinner f�r Phase 2 (JSON-Generierung)
       isPhase2Running = true;
-      phase2Toast = '🔄 Generiere Board-Struktur (JSON)...';
+      phase2Toast = '?? Generiere Board-Struktur (JSON)...';
       
       // Get existing columns for structure prompt
       const existingColumns = boardStore.uiData.map(col => col.name);
       
-      // 🆕 Analyze existing structure to get strategy
+      // ?? Analyze existing structure to get strategy
       const structureAnalysis = analyzeExistingStructure(existingColumns);
       
-      // Generate ONLY user prompt (system prompt wird separat übergeben!)
+      // Generate ONLY user prompt (system prompt wird separat �bergeben!)
       const userPrompt = generateStructurePrompt(
         currentContentProposal.content,
         {
@@ -271,7 +182,7 @@
       // Append user context to prompt
       const fullUserPrompt = `${userPrompt}
 
-Jetzt generiere JSON für den Lerninhalt:`;
+Jetzt generiere JSON f�r den Lerninhalt:`;
 
       // Send to LLM with CUSTOM system prompt!
       const { content: jsonResponse, error } = await chatStore.sendToLLMWithSystem(
@@ -283,8 +194,8 @@ Jetzt generiere JSON für den Lerninhalt:`;
         throw new Error(error);
       }
 
-      // Log für Debugging
-      console.log('📋 Raw JSON Response:', jsonResponse);
+      // Log f�r Debugging
+      console.log('?? Raw JSON Response:', jsonResponse);
       
       // Validate JSON structure
       const validation = validateStructureJSON(jsonResponse);
@@ -293,16 +204,16 @@ Jetzt generiere JSON für den Lerninhalt:`;
         structureRetries++;
         structureGenerationError = validation.error || 'Unbekannter Fehler';
         
-        console.log(`⚠️ Validation failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, validation.error);
-        console.log('📋 Response was:', jsonResponse.substring(0, 200));
+        console.log(`?? Validation failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, validation.error);
+        console.log('?? Response was:', jsonResponse.substring(0, 200));
         
-        // 🆕 Reset Spinner bei Validation-Fehler
+        // ?? Reset Spinner bei Validation-Fehler
         isPhase2Running = false;
         phase2Toast = '';
         
-        const formattedError = `❌ Struktur-Validierung fehlgeschlagen:\n${validation.error || 'Unbekannter Fehler'}\n\nBitte versuchen Sie erneut.`;
+        const formattedError = `? Struktur-Validierung fehlgeschlagen:\n${validation.error || 'Unbekannter Fehler'}\n\nBitte versuchen Sie erneut.`;
         chatStore.addMessage(
-          `⚠️ Versuch ${structureRetries}: ${formattedError}`,
+          `?? Versuch ${structureRetries}: ${formattedError}`,
           'assistant'
         );
         
@@ -311,7 +222,7 @@ Jetzt generiere JSON für den Lerninhalt:`;
         return;
       }
       
-      // 🆕 Validate column alignment with detected strategy
+      // ?? Validate column alignment with detected strategy
       const columnValidation = validateColumnAlignment(
         validation.data.columns,
         existingColumns,
@@ -322,18 +233,18 @@ Jetzt generiere JSON für den Lerninhalt:`;
         structureRetries++;
         structureGenerationError = columnValidation.error || 'Spalten-Alignment fehlgeschlagen';
         
-        console.log(`⚠️ Column alignment failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, columnValidation.error);
-        console.log('📋 Generated columns:', validation.data.columns.map((c: any) => c.name));
-        console.log('📋 Existing columns:', existingColumns);
-        console.log('📋 Expected strategy:', structureAnalysis.strategy);
+        console.log(`?? Column alignment failed (Attempt ${structureRetries}/${MAX_STRUCTURE_RETRIES}):`, columnValidation.error);
+        console.log('?? Generated columns:', validation.data.columns.map((c: any) => c.name));
+        console.log('?? Existing columns:', existingColumns);
+        console.log('?? Expected strategy:', structureAnalysis.strategy);
         
         // Reset Spinner
         isPhase2Running = false;
         phase2Toast = '';
         
-        const formattedError = `❌ Spalten-Validierung fehlgeschlagen:\n${columnValidation.error}\n\nBitte versuchen Sie erneut.`;
+        const formattedError = `? Spalten-Validierung fehlgeschlagen:\n${columnValidation.error}\n\nBitte versuchen Sie erneut.`;
         chatStore.addMessage(
-          `⚠️ Versuch ${structureRetries}: ${formattedError}`,
+          `?? Versuch ${structureRetries}: ${formattedError}`,
           'assistant'
         );
         
@@ -349,7 +260,7 @@ Jetzt generiere JSON für den Lerninhalt:`;
       }
       
       chatStore.addMessage(
-        `✅ Struktur generiert! Erstelle ${proposal.columns.length} Spalten mit ${proposal.columns.reduce((sum, c) => sum + c.cards.length, 0)} Karten...`,
+        `? Struktur generiert! Erstelle ${proposal.columns.length} Spalten mit ${proposal.columns.reduce((sum, c) => sum + c.cards.length, 0)} Karten...`,
         'assistant'
       );
       
@@ -360,21 +271,21 @@ Jetzt generiere JSON für den Lerninhalt:`;
       const errorMsg = err instanceof Error ? err.message : 'Unbekannter Fehler';
       structureGenerationError = errorMsg;
       
-      console.error(`❌ Generation error (Attempt ${structureRetries}):`, err);
+      console.error(`? Generation error (Attempt ${structureRetries}):`, err);
       
-      // 🆕 Reset Spinner bei Fehler
+      // ?? Reset Spinner bei Fehler
       isPhase2Running = false;
       phase2Toast = '';
       
       if (structureRetries < MAX_STRUCTURE_RETRIES) {
         chatStore.addMessage(
-          `⚠️ Fehler bei Versuch ${structureRetries}: ${errorMsg}\nWiederhole...`,
+          `?? Fehler bei Versuch ${structureRetries}: ${errorMsg}\nWiederhole...`,
           'assistant'
         );
         await generateBoardStructure();
       } else {
         chatStore.addMessage(
-          `❌ Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen: ${errorMsg}`,
+          `? Generierung fehlgeschlagen nach ${MAX_STRUCTURE_RETRIES} Versuchen: ${errorMsg}`,
           'assistant'
         );
         isGeneratingStructure = false;
@@ -383,20 +294,20 @@ Jetzt generiere JSON für den Lerninhalt:`;
   }
   
   /**
-   * Konvertiere Struktur zu Aktionen und führe sie aus
-   * 🆕 Mit Phase 2 Toast & Spinner
-   * 🆕🆕 Mit Confirmation Dialog STATT direkter Ausführung
+   * Konvertiere Struktur zu Aktionen und f�hre sie aus
+   * ?? Mit Phase 2 Toast & Spinner
+   * ???? Mit Confirmation Dialog STATT direkter Ausf�hrung
    */
   async function processStructureAndCreateActions(proposal: any) {
     try {
       const actions = structureToActions(proposal);
-      console.log(`🎯 Generated ${actions.length} actions for preview...`);
+      console.log(`?? Generated ${actions.length} actions for preview...`);
       
-      // 🆕 Phase 2 starten - Toast zeigen
+      // ?? Phase 2 starten - Toast zeigen
       isPhase2Running = true;
-      phase2Toast = `✅ Board-Struktur wird generiert... (${actions.length} Aktionen)`;
+      phase2Toast = `? Board-Struktur wird generiert... (${actions.length} Aktionen)`;
       
-      // 🆕🆕 STATT: Direkt ausführen → Erstelle Preview
+      // ???? STATT: Direkt ausf�hren ? Erstelle Preview
       // for (const action of actions) {
       //   await executeAction(action);
       // }
@@ -404,11 +315,11 @@ Jetzt generiere JSON für den Lerninhalt:`;
       // Erstelle Board-Preview aus Actions
       const preview = createBoardPreview(actions);
       
-      // Speichere Actions für spätere Ausführung
+      // Speichere Actions f�r sp�tere Ausf�hrung
       pendingBoardActions = actions;
       pendingBoardPreview = preview;
       
-      // 🆕 Phase 2 erfolgreich - zeige Confirmation Dialog
+      // ?? Phase 2 erfolgreich - zeige Confirmation Dialog
       isPhase2Running = false;
       phase2Toast = '';
       
@@ -416,16 +327,16 @@ Jetzt generiere JSON für den Lerninhalt:`;
       showBoardConfirmationDialog = true;
       
       chatStore.addMessage(
-        `✅ Board-Struktur generiert! ${preview.columns.length} Spalten mit ${preview.totalCards} Karten. Bitte bestätigen.`,
+        `? Board-Struktur generiert! ${preview.columns.length} Spalten mit ${preview.totalCards} Karten. Bitte best�tigen.`,
         'assistant'
       );
       
     } catch (err) {
-      console.error('❌ Action generation error:', err);
+      console.error('? Action generation error:', err);
       phase2Toast = '';
       isPhase2Running = false;
       chatStore.addMessage(
-        `❌ Fehler bei Board-Generierung: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+        `? Fehler bei Board-Generierung: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
         'assistant'
       );
     } finally {
@@ -434,42 +345,42 @@ Jetzt generiere JSON für den Lerninhalt:`;
   }
   
   /**
-   * 🆕 Handler für Board Confirmation Dialog
+   * ?? Handler f�r Board Confirmation Dialog
    * 
    * @param action - 'confirm' | 'reject' | 'adjust'
    */
   async function handleBoardConfirmation(action: 'confirm' | 'reject' | 'adjust') {
     switch (action) {
       case 'confirm':
-        // ✅ BESTÄTIGEN: Board speichern + Learning aktivieren
-        console.log('✅ User bestätigt Board-Struktur');
+        // ? BEST�TIGEN: Board speichern + Learning aktivieren
+        console.log('? User best�tigt Board-Struktur');
         
         try {
-          // Führe alle Actions aus
+          // F�hre alle Actions aus
           for (const act of pendingBoardActions) {
             await executeAction(act);
           }
           
           chatStore.addMessage(
-            `✅ Board erfolgreich erstellt! ${pendingBoardActions.length} Aktionen ausgeführt.`,
+            `? Board erfolgreich erstellt! ${pendingBoardActions.length} Aktionen ausgef�hrt.`,
             'assistant'
           );
           
-          // 🆕 LearningManager: Lerne von diesem Board!
+          // ?? LearningManager: Lerne von diesem Board!
           // TODO Phase 2: boardLearningManager Integration
           // if (boardLearningManager?.isEnabled) {
           //   const results = boardLearningManager.learnBoardStructure();
-          //   console.log('✨ Patterns gelernt:', results);
+          //   console.log('? Patterns gelernt:', results);
           //   chatStore.addMessage(
-          //     `✨ Pattern gelernt! Beim nächsten Mal kann ich ähnliche Boards schneller erstellen.`,
+          //     `? Pattern gelernt! Beim n�chsten Mal kann ich �hnliche Boards schneller erstellen.`,
           //     'assistant'
           //   );
           // }
           
         } catch (err) {
-          console.error('❌ Board creation error:', err);
+          console.error('? Board creation error:', err);
           chatStore.addMessage(
-            `❌ Fehler beim Erstellen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+            `? Fehler beim Erstellen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
             'assistant'
           );
         } finally {
@@ -481,11 +392,11 @@ Jetzt generiere JSON für den Lerninhalt:`;
         break;
         
       case 'reject':
-        // ❌ ABLEHNEN: Verwerfen und zurück zu Input
-        console.log('❌ User lehnt Board-Struktur ab');
+        // ? ABLEHNEN: Verwerfen und zur�ck zu Input
+        console.log('? User lehnt Board-Struktur ab');
         
         chatStore.addMessage(
-          '❌ Board-Struktur abgelehnt. Was möchtest du anders haben?',
+          '? Board-Struktur abgelehnt. Was m�chtest du anders haben?',
           'assistant'
         );
         
@@ -496,33 +407,33 @@ Jetzt generiere JSON für den Lerninhalt:`;
         break;
         
       case 'adjust':
-        // 🔄 ANPASSEN: Neue Phase 1 mit Context
-        console.log('🔄 User möchte Board-Struktur anpassen');
+        // ?? ANPASSEN: Neue Phase 1 mit Context
+        console.log('?? User m�chte Board-Struktur anpassen');
         
         // Erstelle Anpassungs-Kontext
         const adjustmentContext = `
 Der Benutzer hat folgende Board-Struktur erhalten:
 
 ${pendingBoardPreview?.columns.map(col => 
-  `- Spalte "${col.name}" mit ${col.cardCount} Karten:\n  ${col.cards.map(c => `  • ${c}`).join('\n')}`
+  `- Spalte "${col.name}" mit ${col.cardCount} Karten:\n  ${col.cards.map(c => `  � ${c}`).join('\n')}`
 ).join('\n')}
 
-Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktur, basierend auf den folgenden Wünschen:
+Der Benutzer m�chte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktur, basierend auf den folgenden W�nschen:
 `;
         
         chatStore.addMessage(
-          '🔄 Was möchtest du an der Struktur ändern? (Spalten umbenennen, Karten hinzufügen/entfernen, etc.)',
+          '?? Was m�chtest du an der Struktur �ndern? (Spalten umbenennen, Karten hinzuf�gen/entfernen, etc.)',
           'assistant'
         );
         
-        // Setze Input mit Context vor (User kann ergänzen)
-        userInput = ''; // User muss eigene Wünsche eingeben
+        // Setze Input mit Context vor (User kann erg�nzen)
+        userInput = ''; // User muss eigene W�nsche eingeben
         
-        // Speichere Context für nächste LLM-Anfrage
-        // TODO: Context in chatStore speichern für nächste Anfrage
+        // Speichere Context f�r n�chste LLM-Anfrage
+        // TODO: Context in chatStore speichern f�r n�chste Anfrage
         
         showBoardConfirmationDialog = false;
-        // Behalte pendingBoardActions/Preview für Vergleich (optional)
+        // Behalte pendingBoardActions/Preview f�r Vergleich (optional)
         break;
     }
   }
@@ -540,7 +451,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   }
   
   /**
-   * Handle user message send
+   * Handle user message send - Uses Tool-Based AI System (MCP-Style)
    */
   async function handleSendMessage() {
     if (!userInput.trim() || isProcessing) return;
@@ -548,391 +459,13 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     const message = userInput.trim();
     userInput = '';
     
-    // 🆕 Route to appropriate AI system
-    if (useToolBasedMode) {
-      // New Tool-Based System (MCP-Style)
-      await handleToolBasedMessage(message);
-    } else {
-      // Legacy Phase 1/Phase 2 System
-      isProcessing = true;
-      try {
-        // Add user message
-        chatStore.addMessage(message, 'user');
-        
-        // Send to AI (simulated - in real app, this would call your AI API)
-        await simulateAIResponse(message);
-        
-      } catch (error) {
-        console.error('AI Error:', error);
-        chatStore.addMessage(
-          'Entschuldigung, es gab einen Fehler bei der Verarbeitung.',
-          'assistant'
-        );
-      } finally {
-        isProcessing = false;
-      }
-    }
+    // Always use Tool-Based System (MCP-Style)
+    await handleToolBasedMessage(message);
   }
   
-  /**
-   * Send message to LLM and process response
-   */
-  async function simulateAIResponse(userMessage: string) {
-    console.log('🔍 User Message:', userMessage);
-    
-    // 🆕 Step 1: Detect User Intent (with LLM toggle)
-    const useLlmIntent = settingsStore.settings.llmUseLlmIntent;
-    let intent: UserIntent;
-    
-    if (useLlmIntent) {
-      try {
-        // 🧪 LLM-basierte Intent Detection (Beta)
-        console.log('🤖 Using LLM-based intent detection...');
-        const aiMessages = chatStore.messages
-          .filter(m => m.role === 'assistant')
-          .map(m => m.content)
-          .slice(-2); // Letzte 2 AI-Antworten für Kontext
-        
-        const result = await llmDetectIntention(aiMessages, userMessage);
-        intent = result.intent;
-        console.log('🎯 LLM Intent:', result.intent, '| Confidence:', result.confidence, '| Reason:', result.reason);
-      } catch (err) {
-        console.warn('⚠️ LLM intent detection failed, fallback to rule-based:', err);
-        intent = detectUserIntent(userMessage);
-        console.log('🎯 Fallback Intent (rule-based):', intent);
-      }
-    } else {
-      // 📏 Regelbasierte Intent Detection (Standard)
-      intent = detectUserIntent(userMessage);
-      console.log('🎯 Intent (rule-based):', intent);
-    }
-    
-    userIntent = intent;
-    
-    // 🆕 Step 2: Get intent-aware system prompt
-    const systemPrompt = getIntentAwareSystemPrompt(intent);
-    console.log('📋 System Prompt Type:', intent);
-    
-    // Step 3: Get board context for AI
-    const boardContext = boardStore.getContextData(false);
-    
-    // 🆕 Step 4: Send to LLM with CUSTOM system prompt (intent-aware)
-    // Signature: sendToLLMWithSystem(userMessage, systemPrompt, boardContext?)
-    const { content, error } = await chatStore.sendToLLMWithSystem(
-      userMessage,
-      systemPrompt,  // ← Intent-aware prompt!
-      boardContext
-    );
-    
-    if (error) {
-      chatStore.addMessage(error, 'assistant');
-      return;
-    }
-    
-    // Step 5: Add LLM response text
-    chatStore.addMessage(content, 'assistant');
-    
-    // 🆕 Step 6: Phase 1 Handler with Intent
-    await handlePhase1Response(content, intent);
-    
-    // 🆕 (Old fallback kept for backward compatibility)
-    // Try to parse JSON response from LLM (supports multiple actions)
-    let actions: AIAction[] = [];
-    let responseText = content;
-    let actionDescription = '';
-    
-    try {
-      // Check if response is JSON
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        console.log('📦 Parsed JSON from LLM:', parsed);
-        
-        // Extract response text
-        if (parsed.response) {
-          responseText = parsed.response;
-        }
-        
-        // 🆕 Support for multiple actions (array) or single action
-        const actionData = parsed.actions || (parsed.action ? [parsed.action] : []);
-        
-        for (const actionItem of actionData) {
-          if (!actionItem || !actionItem.type) continue;
-          
-          let action: AIAction | null = null;
-          const actionType = actionItem.type;
-          const details = actionItem.details || {};
-          
-          switch (actionType) {
-            case 'add_column':
-              action = {
-                type: 'add_column',
-                columnName: details.columnName || 'Neue Spalte'
-                // Note: color is not used - boardStore.createColumn() always uses 'slate'
-              };
-              console.log('🎯 Action: add_column', details);
-              break;
-              
-            case 'add_card':
-              // 🆕 Smart column selection: Use columnName if provided, otherwise last created column, otherwise first column
-              let targetColumnId = details.columnId;
-              
-              if (!targetColumnId && details.columnName) {
-                // Find column by name
-                const columns = boardStore.uiData;
-                const foundColumn = columns.find(c => c.name === details.columnName);
-                targetColumnId = foundColumn?.id;
-              }
-              
-              if (!targetColumnId) {
-                // Use last created column (likely from previous action in sequence)
-                const columns = boardStore.uiData;
-                targetColumnId = columns.length > 0 ? columns[columns.length - 1].id : null;
-              }
-              
-              if (targetColumnId) {
-                action = {
-                  type: 'add_card',
-                  columnId: targetColumnId,
-                  heading: details.heading || 'Neue Karte',
-                  content: details.content || ''
-                };
-                console.log('🎯 Action: add_card', details);
-              }
-              break;
-              
-            case 'split_card':
-              action = {
-                type: 'split_card',
-                sourceCardId: details.sourceCardId || 'mock-card-id',
-                columnId: details.columnId || 'mock-column-id',
-                newCards: details.newCards || [
-                  { heading: 'Subtask 1' },
-                  { heading: 'Subtask 2' },
-                  { heading: 'Subtask 3' }
-                ]
-              };
-              console.log('🎯 Action: split_card', details);
-              break;
-              
-            case 'move_card':
-              action = {
-                type: 'move_card',
-                cardId: details.cardId,
-                fromColumnId: details.fromColumnId,
-                toColumnId: details.toColumnId
-              };
-              console.log('🎯 Action: move_card', details);
-              break;
-          }
-          
-          if (action) {
-            actions.push(action);
-          }
-        }
-      }
-    } catch (e) {
-      console.log('⚠️ No JSON in LLM response, using plain text');
-      
-      // 🔄 FALLBACK: Try keyword-based detection if no JSON
-      const lowerMessage = responseText.toLowerCase();
-      const lowerUserMessage = userMessage.toLowerCase();
-      
-      // Check if user requested board creation
-      const userRequestsCreation = (lowerUserMessage.includes('erstell') || 
-                                   lowerUserMessage.includes('create') ||
-                                   lowerUserMessage.includes('leg') ||
-                                   lowerUserMessage.includes('anlegen'));
-      
-      // Check if this is a multi-column creation (LLM listed columns in RESPONSE)
-      // Format 1: **Kolumne X: Name**
-      let columnMatches = responseText.match(/\*\*Kolumne \d+: (.+?)\*\*/gi);
-      
-      // Format 2: **Spalte X: Name**
-      if (!columnMatches || columnMatches.length === 0) {
-        columnMatches = responseText.match(/\*\*Spalte \d+: (.+?)\*\*/gi);
-      }
-      
-      // Format 3: ### **Spalte X: Name** (with heading)
-      if (!columnMatches || columnMatches.length === 0) {
-        columnMatches = responseText.match(/###\s+\*\*Spalte \d+: (.+?)\*\*/gi);
-      }
-      
-      // Only auto-create if user explicitly requested it
-      if (columnMatches && columnMatches.length > 0 && userRequestsCreation) {
-        // Extract all column names from markdown format
-        console.log('🎯 FALLBACK: User requested creation, detected multiple columns from list', columnMatches);
-        
-        for (const match of columnMatches) {
-          const nameMatch = match.match(/(?:Kolumne|Spalte) \d+: (.+?)\*\*/i);
-          if (nameMatch && nameMatch[1]) {
-            const columnName = nameMatch[1].trim();
-            actions.push({
-              type: 'add_column',
-              columnName: columnName
-            });
-            console.log('🎯 FALLBACK Action: add_column', { columnName });
-            
-            // Try to extract cards for this column (lines starting with - after the column)
-            const columnIndex = responseText.indexOf(match);
-            const nextColumnIndex = responseText.indexOf('**Spalte', columnIndex + match.length);
-            const columnSection = nextColumnIndex > 0 
-              ? responseText.substring(columnIndex, nextColumnIndex)
-              : responseText.substring(columnIndex);
-            
-            // Match lines starting with - (with optional emoji and **bold**)
-            const cardLines = columnSection.match(/^-\s+(.+)$/gm);
-            if (cardLines && cardLines.length > 0) {
-              console.log('🎯 FALLBACK: Found', cardLines.length, 'cards for column', columnName);
-              
-              for (const cardLine of cardLines) {
-                let cardText = cardLine.substring(1).trim(); // Remove "-"
-                
-                // Remove emoji if present (emoji at start)
-                cardText = cardText.replace(/^[^\w\s]+\s*/, '');
-                
-                // Remove **bold** markdown
-                cardText = cardText.replace(/\*\*(.+?)\*\*/g, '$1');
-                
-                // Remove any remaining markdown or special chars
-                cardText = cardText.trim();
-                
-                if (cardText && cardText.length > 3) {
-                  actions.push({
-                    type: 'add_card',
-                    heading: cardText,
-                    content: '',
-                    columnName: columnName
-                  });
-                  console.log('🎯 FALLBACK Action: add_card', { heading: cardText, columnName });
-                }
-              }
-            }
-          }
-        }
-      } else if ((lowerMessage.includes('karte') || lowerMessage.includes('card')) &&
-                 (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
-        // Single card creation in existing column
-        const headingMatch = userMessage.match(/karte\s+(?:zu|über|für|mit\s+titel|mit)?\s*["„”']?([^"”'\n]+?)["”']?(?:\s+in|\s+für|\s*$)/i);
-        const columnMatch = userMessage.match(/(?:spalte|column)\s+["„”']?([^"”'\n]+?)["”']?(?:\s|$)/i);
-
-        const heading = headingMatch?.[1]?.trim() || 'Neue Karte';
-        const columnName = columnMatch?.[1]?.trim();
-
-        const columns = boardStore.uiData;
-        let targetColumn = columnName
-          ? columns.find(c => c.name.toLowerCase() === columnName.toLowerCase())
-          : undefined;
-
-        if (!targetColumn && columns.length > 0) {
-          // Fallback: last column (häufig zuletzt erstellt) oder erste, falls leer
-          targetColumn = columns[columns.length - 1] || columns[0];
-        }
-
-        if (targetColumn) {
-          actions.push({
-            type: 'add_card',
-            columnId: targetColumn.id,
-            heading,
-            content: ''
-          });
-          actionDescription = `➕ Karte "${heading}" in "${targetColumn.name}"`;
-          console.log('🎯 FALLBACK Action: add_card', { heading, columnName: targetColumn.name });
-        }
-      } else if ((lowerMessage.includes('spalte') || lowerMessage.includes('column')) && 
-                 (lowerMessage.includes('erstell') || lowerMessage.includes('create'))) {
-        // Single column creation
-        let columnName = 'Neue Spalte';
-        
-        const quotesMatch = userMessage.match(/"([^"]+)"|'([^']+)'|„([^"]+)"|"([^"]+)"/);
-        if (quotesMatch) {
-          columnName = quotesMatch[1] || quotesMatch[2] || quotesMatch[3] || quotesMatch[4];
-        } else {
-          // Try to extract after "Spalte" or "namens"
-          const afterMatch = userMessage.match(/(?:spalte|column)\s+["']?(\w+)["']?/i) ||
-                            userMessage.match(/namens\s+["']?(\w+)["']?/i);
-          if (afterMatch) {
-            columnName = afterMatch[1];
-          }
-        }
-        
-        actions.push({
-          type: 'add_column',
-          columnName: columnName
-        });
-        actionDescription = `➕ Spalte hinzufügen: "${columnName}"`;
-        console.log('🎯 FALLBACK Action: add_column', { columnName });
-      }
-      
-    }
-    
-    // 🆕 Process multiple actions sequentially
-    if (actions.length > 0) {
-      console.log(`🎯 Processing ${actions.length} action(s)`);
-      
-      // If multiple actions, show summary message
-      if (actions.length > 1) {
-        chatStore.addMessage(
-          `📋 Ich führe ${actions.length} Aktionen aus: ${actions.map((a, i) => `${i + 1}. ${getActionDescription(a)}`).join(', ')}`,
-          'assistant'
-        );
-      }
-      
-      // Process first action with confidence check
-      const firstAction = actions[0];
-      const result = await chatStore.checkActionConfidence(firstAction);
-      console.log('🎯 Confidence check result:', result);
-      
-      // Store remaining actions for sequential execution
-      const remainingActions = actions.slice(1);
-      
-      if (result.shouldAutoExecute && remainingActions.length === 0) {
-        // Auto-execute single action
-        const desc = getActionDescription(firstAction);
-        chatStore.addMessage(
-          `✅ Aktion wird automatisch ausgeführt (Confidence: ${Math.round(result.confidence * 100)}%): ${desc}`,
-          'assistant'
-        );
-        
-        await executeAction(firstAction);
-        chatStore.recordActionSuccess(result.patternHash, true);
-      } else if (result.shouldAutoExecute && remainingActions.length > 0) {
-        // Auto-execute first, then process remaining
-        await executeAction(firstAction);
-        chatStore.recordActionSuccess(result.patternHash, true);
-        
-        // Process remaining actions
-        for (const action of remainingActions) {
-          await executeAction(action);
-        }
-        
-        chatStore.addMessage(
-          `✅ Alle ${actions.length} Aktionen erfolgreich ausgeführt!`,
-          'assistant'
-        );
-      } else {
-        // Show confirmation dialog
-        const desc = getActionDescription(firstAction);
-        chatStore.addMessage(
-          `🤔 Ich schlage vor: ${desc}. Confidence: ${Math.round(result.confidence * 100)}%. Möchten Sie bestätigen?`,
-          'assistant'
-        );
-        
-        pendingAction = firstAction;
-        pendingPatternHash = result.patternHash;
-        pendingConfidence = result.confidence;
-        pendingUsageCount = result.usageCount;
-        showConfirmDialog = true;
-        
-        // Store remaining actions for later
-        if (remainingActions.length > 0) {
-          (pendingAction as any)._remainingActions = remainingActions;
-        }
-        
-        console.log('🎯 Confirmation dialog prepared, showing...');
-      }
-    }
-  }
+  //  simulateAIResponse() - REMOVED (Tool-Based is now the only architecture)
+  // Legacy Phase 1/2 system has been archived. See archive/AI-INTEGRATION.md
+  // handleSendMessage() now always uses handleToolBasedMessage()
   
   /**
    * Get human-readable description of action
@@ -940,17 +473,17 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   function getActionDescription(action: AIAction): string {
     switch (action.type) {
       case 'add_column':
-        return `➕ Spalte "${(action as any).columnName}"`;
+        return `? Spalte "${(action as any).columnName}"`;
       case 'add_card':
-        return `➕ Karte "${(action as any).heading}"`;
+        return `? Karte "${(action as any).heading}"`;
       case 'split_card':
-        return `📋 Karte aufteilen`;
+        return `?? Karte aufteilen`;
       case 'move_card':
-        return `🔄 Karte verschieben`;
+        return `?? Karte verschieben`;
       case 'update_card':
-        return `✏️ Karte bearbeiten`;
+        return `?? Karte bearbeiten`;
       default:
-        return `🤖 ${action.type}`;
+        return `?? ${action.type}`;
     }
   }
   
@@ -962,34 +495,34 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   
   /**
    * Execute AI action via boardStore
-   * 🆕 FIXED: Unterstützt jetzt details-Struktur UND flache Struktur (Backward Compatibility)
+   * ?? FIXED: Unterst�tzt jetzt details-Struktur UND flache Struktur (Backward Compatibility)
    */
   function executeAction(action: AIAction) {
-    console.log('🤖 Executing action:', action);
+    console.log('?? Executing action:', action);
     
     try {
       switch (action.type) {
         case 'add_column': {
-          // 🆕 Support both: action.details.name AND action.columnName (backward compat)
+          // ?? Support both: action.details.name AND action.columnName (backward compat)
           const colName = (action as any).details?.name || (action as any).columnName || 'Neue Spalte';
           // Note: boardStore.createColumn() only accepts name parameter
           // color is always set to 'slate' internally
           const colId = boardStore.createColumn(colName);
-          console.log('✅ Column created:', colId);
+          console.log('? Column created:', colId);
           
           // Store the mapping for add_card actions
           columnNameToIdMap[colName] = colId;
-          console.log('📌 Column name→ID mapping:', columnNameToIdMap);
+          console.log('?? Column name?ID mapping:', columnNameToIdMap);
           
           chatStore.addMessage(
-            `✅ Spalte "${colName}" erfolgreich erstellt!`,
+            `? Spalte "${colName}" erfolgreich erstellt!`,
             'assistant'
           );
           break;
         }
         
         case 'add_card': {
-          // 🆕 Support both: action.details.heading AND action.heading (backward compat)
+          // ?? Support both: action.details.heading AND action.heading (backward compat)
           const heading = (action as any).details?.heading || (action as any).heading || 'Neue Karte';
           const content = (action as any).details?.content || (action as any).content || '';
           
@@ -1004,12 +537,12 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           
           if (!columnId && columnNameFromDetails) {
             columnId = columnNameToIdMap[columnNameFromDetails];
-            console.log(`📌 Column ID gefunden via details.columnName: ${columnNameFromDetails} → ${columnId}`);
+            console.log(`?? Column ID gefunden via details.columnName: ${columnNameFromDetails} ? ${columnId}`);
           }
           
           if (!columnId && columnNameDirect) {
             columnId = columnNameToIdMap[columnNameDirect];
-            console.log(`📌 Column ID gefunden via columnName: ${columnNameDirect} → ${columnId}`);
+            console.log(`?? Column ID gefunden via columnName: ${columnNameDirect} ? ${columnId}`);
           }
           
           if (!columnId) {
@@ -1018,9 +551,9 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           }
           
           const cardId = boardStore.createCard(columnId, heading, content);
-          console.log('✅ Card created:', cardId);
+          console.log('? Card created:', cardId);
           chatStore.addMessage(
-            `✅ Karte "${heading}" erfolgreich erstellt!`,
+            `? Karte "${heading}" erfolgreich erstellt!`,
             'assistant'
           );
           break;
@@ -1028,9 +561,9 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         
         case 'split_card': {
           // TODO: Implement split_card when boardStore has this method
-          console.log('⚠️ split_card not yet implemented in boardStore');
+          console.log('?? split_card not yet implemented in boardStore');
           chatStore.addMessage(
-            '⚠️ Karte aufteilen ist noch nicht implementiert.',
+            '?? Karte aufteilen ist noch nicht implementiert.',
             'assistant'
           );
           break;
@@ -1045,9 +578,9 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           }
           
           boardStore.editCard(cardId, updates);
-          console.log('✅ Card updated:', cardId);
+          console.log('? Card updated:', cardId);
           chatStore.addMessage(
-            '✅ Karte erfolgreich aktualisiert!',
+            '? Karte erfolgreich aktualisiert!',
             'assistant'
           );
           break;
@@ -1063,26 +596,26 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           }
           
           boardStore.moveCard(cardId, fromColId, toColId);
-          console.log('✅ Card moved:', cardId);
+          console.log('? Card moved:', cardId);
           chatStore.addMessage(
-            '✅ Karte erfolgreich verschoben!',
+            '? Karte erfolgreich verschoben!',
             'assistant'
           );
           break;
         }
         
         default:
-          console.warn('⚠️ Unknown action type:', action.type);
+          console.warn('?? Unknown action type:', action.type);
           chatStore.addMessage(
-            `⚠️ Aktion "${action.type}" ist nicht implementiert.`,
+            `?? Aktion "${action.type}" ist nicht implementiert.`,
             'assistant'
           );
       }
       
     } catch (error) {
-      console.error('❌ Action execution failed:', error);
+      console.error('? Action execution failed:', error);
       chatStore.addMessage(
-        `❌ Fehler beim Ausführen der Aktion: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        `? Fehler beim Ausf�hren der Aktion: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
         'assistant'
       );
     }
@@ -1100,11 +633,11 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     // Record success (triggers toast)
     chatStore.recordActionSuccess(pendingPatternHash, false);
     
-    // 🆕 Process remaining actions if any
+    // ?? Process remaining actions if any
     const remainingActions = (pendingAction as any)._remainingActions || [];
     if (remainingActions.length > 0) {
       chatStore.addMessage(
-        `⏳ Führe ${remainingActions.length} weitere Aktion(en) aus...`,
+        `? F�hre ${remainingActions.length} weitere Aktion(en) aus...`,
         'assistant'
       );
       
@@ -1113,7 +646,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
       }
       
       chatStore.addMessage(
-        `✅ Alle ${remainingActions.length + 1} Aktionen erfolgreich ausgeführt!`,
+        `? Alle ${remainingActions.length + 1} Aktionen erfolgreich ausgef�hrt!`,
         'assistant'
       );
     }
@@ -1149,7 +682,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     executeAction(pendingAction);
     
     chatStore.addMessage(
-      'Aktion einmalig ausgeführt (ohne Learning).',
+      'Aktion einmalig ausgef�hrt (ohne Learning).',
       'assistant'
     );
     
@@ -1158,7 +691,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   }
 
   // ============================================================================
-  // 🆕 Tool-Based AI System (MCP-Style)
+  // ?? Tool-Based AI System (MCP-Style)
   // ============================================================================
 
   /**
@@ -1167,7 +700,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
    * like "erstelle eine Karte" without generating full board structures.
    */
   async function handleToolBasedMessage(message: string) {
-    console.log('🔧 [Tool-Based] Processing message:', message);
+    console.log('?? [Tool-Based] Processing message:', message);
     
     // Add user message to chat
     chatStore.addMessage(message, 'user');
@@ -1176,7 +709,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     try {
       // Step 1: Build board context for system prompt
       const boardContext = boardStore.getContextData(true);
-      console.log('📋 [Tool-Based] Board context:', {
+      console.log('?? [Tool-Based] Board context:', {
         columns: boardContext.columns?.length || 0,
         cards: boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0
       });
@@ -1188,11 +721,11 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
       const tools = getToolDefinitions();
       
       // Step 4: Send to LLM with tools
-      console.log('🚀 [Tool-Based] Sending to LLM with', tools.length, 'tools');
+      console.log('?? [Tool-Based] Sending to LLM with', tools.length, 'tools');
       const result = await chatStore.sendToLLMWithTools(message, systemPrompt, tools);
       
       if (result.error) {
-        console.error('❌ [Tool-Based] LLM Error:', result.error);
+        console.error('? [Tool-Based] LLM Error:', result.error);
         chatStore.addMessage(result.error, 'assistant');
         isProcessing = false;
         return;
@@ -1201,12 +734,12 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
       // Step 5: Process response
       if (result.tool_calls && result.tool_calls.length > 0) {
         // LLM wants to use tools
-        console.log('🔧 [Tool-Based] Executing', result.tool_calls.length, 'tool calls');
+        console.log('?? [Tool-Based] Executing', result.tool_calls.length, 'tool calls');
         
         // Show processing message if multiple tools
         if (result.tool_calls.length > 1) {
           chatStore.addMessage(
-            `🔧 Führe ${result.tool_calls.length} Aktionen aus...`,
+            `?? F�hre ${result.tool_calls.length} Aktionen aus...`,
             'assistant'
           );
         }
@@ -1252,7 +785,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         // Show action results summary (if any actions were performed)
         if (actionResults.length > 0) {
           const summary = summarizeResults(actionResults);
-          console.log('📊 [Tool-Based] Action results:', summary);
+          console.log('?? [Tool-Based] Action results:', summary);
           if (summary.trim()) {
             chatStore.addMessage(summary, 'assistant');
           }
@@ -1262,13 +795,13 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         for (const r of responseResults) {
           if (r.success && r.result) {
             if (r.tool_name === 'respond' && r.result.message) {
-              console.log('💬 [Tool-Based] Showing respond message');
+              console.log('?? [Tool-Based] Showing respond message');
               chatStore.addMessage(r.result.message, 'assistant');
             } else if (r.tool_name === 'ask_clarification' && r.result.question) {
-              console.log('❓ [Tool-Based] Showing clarification question');
+              console.log('? [Tool-Based] Showing clarification question');
               let clarificationMsg = r.result.question;
               if (r.result.options && r.result.options.length > 0) {
-                clarificationMsg += '\n\nOptionen:\n' + r.result.options.map((o: string) => `• ${o}`).join('\n');
+                clarificationMsg += '\n\nOptionen:\n' + r.result.options.map((o: string) => `� ${o}`).join('\n');
               }
               chatStore.addMessage(clarificationMsg, 'assistant');
             }
@@ -1282,22 +815,22 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         
       } else if (result.content) {
         // LLM responded with text only (used respond/ask_clarification tools, or no tool needed)
-        console.log('💬 [Tool-Based] Text response received');
+        console.log('?? [Tool-Based] Text response received');
         chatStore.addMessage(result.content, 'assistant');
         
       } else {
         // Empty response
-        console.warn('⚠️ [Tool-Based] Empty response from LLM');
+        console.warn('?? [Tool-Based] Empty response from LLM');
         chatStore.addMessage(
-          '🤔 Ich konnte keine passende Antwort generieren. Bitte formulieren Sie Ihre Anfrage anders.',
+          '?? Ich konnte keine passende Antwort generieren. Bitte formulieren Sie Ihre Anfrage anders.',
           'assistant'
         );
       }
       
     } catch (error) {
-      console.error('❌ [Tool-Based] Error:', error);
+      console.error('? [Tool-Based] Error:', error);
       chatStore.addMessage(
-        `❌ Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        `? Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
         'assistant'
       );
     } finally {
@@ -1326,30 +859,8 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
       <h2 class="text-sm font-semibold">KI-Agent</h2>
     </div>
     <p class="text-xs text-muted-foreground">
-      Intelligente Assistenz mit adaptivem Lernsystem
+      Intelligente Board-Assistenz
     </p>
-  </div>
-  
-  <!-- Learning Stats -->
-  <div class="px-4 py-3 bg-muted/30 border-b space-y-2">
-    <div class="flex items-center justify-between text-xs">
-      <span class="text-muted-foreground">Gelernte Patterns:</span>
-      <Badge variant="secondary" class="text-xs">
-        {learnedPatternsCount}
-      </Badge>
-    </div>
-    <div class="flex items-center justify-between text-xs">
-      <span class="text-muted-foreground">Auto-Execute bereit:</span>
-      <Badge variant={autoExecutableCount > 0 ? 'default' : 'outline'} class="text-xs">
-        {autoExecutableCount}
-      </Badge>
-    </div>
-    <div class="flex items-center justify-between text-xs">
-      <span class="text-muted-foreground">Confidence Threshold:</span>
-      <span class="font-mono text-foreground">
-        {Math.round(confidenceThreshold * 100)}%
-      </span>
-    </div>
   </div>
   
   <Separator />
@@ -1389,7 +900,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           </div>
         {/each}
         
-        <!-- 🆕 Phase 2 Spinner (unter Markdown) -->
+        <!-- ?? Phase 2 Spinner (unter Markdown) -->
         {#if isPhase2Running}
           <div class="flex gap-2 justify-start">
             <div class="rounded-lg px-3 py-2 bg-blue-50 border border-blue-200">
@@ -1404,7 +915,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     </div>
   </div>
   
-  <!-- 🆕 Toast Notification (oben rechts, überlagert) -->
+  <!-- ?? Toast Notification (oben rechts, �berlagert) -->
   {#if phase2Toast}
     <div class="fixed top-20 right-4 max-w-xs animate-in fade-in slide-in-from-right-4">
       <div class="rounded-lg bg-green-50 border border-green-200 px-4 py-3 shadow-lg">
@@ -1444,12 +955,12 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   
 </div>
 
-<!-- 🆕 Content Proposal Dialog (Phase 1) -->
+<!-- ?? Content Proposal Dialog (Phase 1) -->
 {#if currentContentProposal}
   <Dialog.Root bind:open={showContentDialog}>
     <Dialog.Content class="max-w-md">
       <Dialog.Header>
-        <Dialog.Title>📋 Board-Struktur generieren?</Dialog.Title>
+        <Dialog.Title>?? Board-Struktur generieren?</Dialog.Title>
       </Dialog.Header>
       
       <div class="space-y-4 py-4">
@@ -1462,7 +973,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         
         {#if !currentContentProposal.canGenerate}
           <div class="rounded-md bg-yellow-50 p-3 text-sm text-yellow-900">
-            <p class="font-medium mb-1">⚠️ Struktur-Generierung nicht möglich</p>
+            <p class="font-medium mb-1">?? Struktur-Generierung nicht möglich</p>
             <p class="text-xs">{currentContentProposal.reason || 'Keine klare Struktur erkannt'}</p>
           </div>
         {/if}
@@ -1500,7 +1011,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
             Generiere...
           {:else}
             <SparklesIcon class="h-4 w-4" />
-            ✨ Generieren
+            ? Generieren
           {/if}
         </Button>
       </Dialog.Footer>
@@ -1508,12 +1019,12 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
   </Dialog.Root>
 {/if}
 
-<!-- 🆕🆕 Board Confirmation Dialog (Phase 2 Complete) -->
+<!-- ???? Board Confirmation Dialog (Phase 2 Complete) -->
 {#if showBoardConfirmationDialog && pendingBoardPreview}
   <Dialog.Root bind:open={showBoardConfirmationDialog}>
     <Dialog.Content class="max-w-2xl max-h-[80vh] overflow-y-auto">
       <Dialog.Header>
-        <Dialog.Title>✨ Board-Struktur bestätigen?</Dialog.Title>
+        <Dialog.Title>? Board-Struktur bestätigen?</Dialog.Title>
         <Dialog.Description>
           Das Board wurde generiert. Bitte überprüfen Sie die Struktur.
         </Dialog.Description>
@@ -1547,7 +1058,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
                 <div class="space-y-1 mt-2">
                   {#each column.cards as card}
                     <div class="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
-                      • {card}
+                      � {card}
                     </div>
                   {/each}
                 </div>
@@ -1561,13 +1072,13 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
         <!-- Info Box -->
         <div class="rounded-md bg-blue-50 p-3">
           <p class="text-xs text-blue-900 mb-2">
-            <strong>✅ Bestätigen:</strong> Board wird gespeichert und das System lernt von dieser Struktur.
+            <strong>? Best�tigen:</strong> Board wird gespeichert und das System lernt von dieser Struktur.
           </p>
           <p class="text-xs text-blue-900 mb-2">
-            <strong>🔄 Anpassen:</strong> Sie können Änderungswünsche äußern und eine neue Struktur erhalten.
+            <strong>?? Anpassen:</strong> Sie können Änderungswünsche äußern und eine neue Struktur erhalten.
           </p>
           <p class="text-xs text-blue-900">
-            <strong>❌ Ablehnen:</strong> Board wird verworfen, keine Speicherung.
+            <strong>? Ablehnen:</strong> Board wird verworfen, keine Speicherung.
           </p>
         </div>
       </div>
@@ -1596,7 +1107,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
           class="gap-2"
         >
           <CheckCircleIcon class="h-4 w-4" />
-          ✅ Bestätigen
+          ? Best�tigen
         </Button>
       </Dialog.Footer>
     </Dialog.Content>
@@ -1610,7 +1121,7 @@ Der Benutzer möchte Anpassungen vornehmen. Bitte zeige eine VERBESSERTE Struktu
     action={pendingAction}
     patternHash={pendingPatternHash}
     currentConfidence={pendingConfidence}
-    threshold={confidenceThreshold}
+    threshold={0.8}
     usageCount={pendingUsageCount}
     onConfirm={handleConfirm}
     onCancel={handleCancel}

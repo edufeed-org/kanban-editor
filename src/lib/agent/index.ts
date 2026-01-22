@@ -1,17 +1,14 @@
 /**
  * Agent Module - Zentrale Exports
  * Konsolidiert alle Agent-bezogenen Funktionen
+ * 
+ * 🔧 ARCHITEKTUR: Tool-Based AI (MCP-Style OpenAI Function Calling)
+ * Das Intent Detection und Learning System wurden entfernt (archiviert).
+ * Alle AI-Interaktionen laufen jetzt über Tool-Based Function Calling.
  */
 
 // Types
 export type { UserIntent, ContentProposal, StructureProposal, BoardPreview, AIAction, ValidationResult } from './types';
-
-// Intent Detection
-export { detectUserIntent, getIntentAwareSystemPrompt } from './intentDetection';
-
-// LLM-basierte Intent Detection (Alternative - kontext-bewusst)
-export { llmDetectIntention, detectIntentViaLLM } from './llmIntentDetection';
-export type { IntentDetectionResult } from './llmIntentDetection';
 
 // LLM Request Utilities
 export { llmRequest } from './llmRequest';

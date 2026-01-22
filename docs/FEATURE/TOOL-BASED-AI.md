@@ -1,13 +1,13 @@
 # 🧠 Tool-Based KI-Integration (MCP-Style)
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Datum:** 21. Januar 2026  
-**Status:** Implementation  
+**Status:** ✅ Active (Einzige KI-Architektur)  
 **Framework:** Svelte 5 Runes  
 **Architektur:** Tool-Based (OpenAI Function Calling)
 
-> **⚠️ Diese Dokumentation ersetzt [AI-INTEGRATION.md](./AI-INTEGRATION.md) (Version 2.0)**  
-> Der alte Ansatz mit Intent Detection + Phase 1/Phase 2 ist **deprecated**.
+> **✅ Dies ist die aktive und einzige KI-Architektur im Projekt.**  
+> Die alten Ansätze (Intent Detection, 2-Phase System, Learning) wurden entfernt.
 
 ---
 
