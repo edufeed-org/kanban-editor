@@ -75,6 +75,11 @@ export class ExportImport {
             }
 
             let newBoard: Board;
+            
+            // WICHTIG: Share-Link Import ist IMMER ein FORK, kein echtes Sharing!
+            // Der aktuelle Benutzer wird IMMER zum Owner der importierten Kopie.
+            // Für echtes "Board folgen" ohne Kopie gibt es den Watch-Modus.
+            const currentUserPubkey = BoardStorage.getSafeAuthor();
 
             if (mode === 'merge' || mode === 'new') {
                 newBoard = new Board({
@@ -84,8 +89,9 @@ export class ExportImport {
                         : boardData.name,
                     description: boardData.description,
                     publishState: boardData.publishState || 'draft',
-                    author: boardData.author || 'anonymous',
-                    maintainers: boardData.maintainers || [boardData.author || 'anonymous'],
+                    // Share-Link = Fork: Aktueller Benutzer wird Owner
+                    author: currentUserPubkey,
+                    maintainers: [], // Keine Maintainer bei Fork
                     tags: boardData.tags || [],
                     ccLicense: boardData.ccLicense || 'cc-by-4.0',
                     columns: []
@@ -119,11 +125,15 @@ export class ExportImport {
                     return newCol;
                 });
                 
-                console.log(`✅ Board importiert im '${mode}'-Modus:`, newBoard.name);
+                console.log(`✅ Board importiert im '${mode}'-Modus (Fork, Owner: ${currentUserPubkey}):`, newBoard.name);
                 
             } else if (mode === 'overwrite') {
+                // Auch bei Overwrite: Fork-Semantik - aktueller User wird Owner
                 newBoard = BoardStorage.reconstructBoard(boardData);
-                console.log('✅ Board importiert im "overwrite"-Modus:', newBoard.name);
+                // Override author/maintainers für Fork
+                newBoard.author = currentUserPubkey;
+                newBoard.maintainers = [];
+                console.log(`✅ Board importiert im "overwrite"-Modus (Fork, Owner: ${currentUserPubkey}):`, newBoard.name);
             } else {
                 return { success: false, error: 'Unknown import mode' };
             }

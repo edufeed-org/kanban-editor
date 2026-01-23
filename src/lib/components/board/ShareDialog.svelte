@@ -32,16 +32,44 @@
     // Cache for display names
     let displayNameCache = $state<Record<string, string>>({});
     
-    // Share-Link generieren
-    function generateShareLink(): string {
+    // Share-Link generieren (Token-basiert mit allen Board-Daten inkl. Karten)
+    let isGeneratingLink = $state(false);
+    let tokenSize = $state(0);
+    let maxTokenSize = $state(200000); // Standard-Maximum
+    
+    // Berechnete Werte für Token-Größe-Anzeige
+    let tokenSizePercent = $derived((tokenSize / maxTokenSize) * 100);
+    let tokenSizeKB = $derived((tokenSize / 1024).toFixed(1));
+    let maxTokenSizeKB = $derived((maxTokenSize / 1024).toFixed(0));
+    let isSizeSafe = $derived(tokenSizePercent < 80);
+    let isSizeWarning = $derived(tokenSizePercent >= 80 && tokenSizePercent < 100);
+    let isSizeError = $derived(tokenSizePercent >= 100);
+    
+    async function generateShareLinkAsync(): Promise<string> {
         const boardId = boardStore.data?.id;
-        const boardAuthor = boardStore.data?.author;
+        if (!boardId) return '';
         
-        if (!boardId || !boardAuthor) return '';
-        
-        const baseUrl = window.location.origin;
-        // Format: /board?id=xxx&author=yyy
-        return `${baseUrl}/cardsboard?share=${boardId}&author=${boardAuthor}`;
+        isGeneratingLink = true;
+        try {
+            const result = await boardStore.generateShareLink(boardId, true);
+            tokenSize = result.tokenSize;
+            
+            // Config laden für dynamisches Maximum
+            try {
+                const config = await fetch('/config.json').then(r => r.json()).catch(() => ({}));
+                if (config?.shareTokenMaxSize) {
+                    maxTokenSize = config.shareTokenMaxSize;
+                }
+            } catch { /* ignore */ }
+            
+            return result.url;
+        } catch (error) {
+            console.error('Fehler beim Generieren des Share-Links:', error);
+            toast.error('Link konnte nicht generiert werden');
+            return '';
+        } finally {
+            isGeneratingLink = false;
+        }
     }
     
     // Link kopieren
@@ -201,7 +229,10 @@
         if (open) {
             loadParticipants();
             loadUserRole();
-            shareLink = generateShareLink();
+            // Share-Link async generieren (Token-basiert mit allen Daten)
+            generateShareLinkAsync().then(url => {
+                shareLink = url;
+            });
         }
     });
 
@@ -243,39 +274,85 @@
             <Tabs.Content value="share-link" class="mt-4 space-y-4">
                 <div class="space-y-2">
                     <p class="text-sm text-muted-foreground">
-                        Teile diesen Link mit anderen Nutzern. Sie können dann selbst entscheiden, 
-                        ob sie das Board abonnieren möchten.
+                        Teile diesen Link mit anderen Nutzern. Der Link enthält alle Board-Daten 
+                        - der Empfänger kann das Board forken (eigene Kopie) oder folgen.
                     </p>
                     
                     <div class="flex gap-2">
-                        <Input 
-                            value={shareLink}
-                            readonly
-                            class="flex-1 font-mono text-xs"
-                            data-testid="share-link-input"
-                        />
-                        <Button 
-                            onclick={copyShareLink}
-                            variant="outline"
-                            class="gap-2"
-                        >
-                            {#if linkCopied}
-                                <CheckIcon class="h-4 w-4" />
-                                Kopiert
-                            {:else}
-                                <CopyIcon class="h-4 w-4" />
-                                Kopieren
-                            {/if}
-                        </Button>
+                        {#if isGeneratingLink}
+                            <Input 
+                                value="Link wird generiert..."
+                                readonly
+                                class="flex-1 font-mono text-xs"
+                                disabled
+                            />
+                            <Button variant="outline" disabled class="gap-2">
+                                <span class="animate-spin">⏳</span>
+                            </Button>
+                        {:else}
+                            <Input 
+                                value={shareLink}
+                                readonly
+                                class="flex-1 font-mono text-xs"
+                                data-testid="share-link-input"
+                            />
+                            <Button 
+                                onclick={copyShareLink}
+                                variant="outline"
+                                class="gap-2"
+                                disabled={!shareLink}
+                            >
+                                {#if linkCopied}
+                                    <CheckIcon class="h-4 w-4" />
+                                    Kopiert
+                                {:else}
+                                    <CopyIcon class="h-4 w-4" />
+                                    Kopieren
+                                {/if}
+                            </Button>
+                        {/if}
                     </div>
+                    
+                    <!-- Token-Größe Progress-Anzeige -->
+                    {#if tokenSize > 0}
+                        <div class="space-y-2 mt-3">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span>Token-Größe</span>
+                                <span 
+                                    class:text-green-600={isSizeSafe} 
+                                    class:text-yellow-600={isSizeWarning} 
+                                    class:text-red-600={isSizeError}
+                                >
+                                    {tokenSizeKB} KB / {maxTokenSizeKB} KB ({tokenSizePercent.toFixed(1)}%)
+                                </span>
+                            </div>
+                            <div class="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                    class="h-full transition-all"
+                                    class:bg-green-500={isSizeSafe}
+                                    class:bg-yellow-500={isSizeWarning}
+                                    class:bg-red-500={isSizeError}
+                                    style="width: {Math.min(tokenSizePercent, 100)}%"
+                                ></div>
+                            </div>
+                            {#if isSizeError}
+                                <p class="text-xs text-red-600 font-semibold">
+                                    ⚠️ Token zu groß! Board hat zu viele Daten für einen Share-Link.
+                                </p>
+                            {:else if isSizeWarning}
+                                <p class="text-xs text-yellow-600">
+                                    ⚠️ Token nähert sich dem Limit - Link könnte in manchen Browsern nicht funktionieren.
+                                </p>
+                            {/if}
+                        </div>
+                    {/if}
                     
                     <div class="mt-4 p-3 bg-muted rounded-md">
                         <p class="text-sm font-medium mb-2">ℹ️ Wie funktioniert das Teilen?</p>
                         <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                            <li>Nutzer öffnet den Link und sieht eine Vorschau des Boards</li>
-                            <li>Mit einem Klick auf "Board folgen" wird es zu ihrer Liste hinzugefügt</li>
-                            <li>Sie können das Board jederzeit wieder deabonnieren</li>
-                            <li>Nur Editoren (siehe nächster Tab) können das Board bearbeiten</li>
+                            <li><strong>Fork:</strong> Eigene Kopie erstellen und unabhängig bearbeiten</li>
+                            <li><strong>Folgen:</strong> Änderungen des Originals mitverfolgen (nur lesen)</li>
+                            <li>Nur Editoren (siehe nächster Tab) können das Original bearbeiten</li>
                         </ul>
                     </div>
                 </div>
