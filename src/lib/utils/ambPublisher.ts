@@ -132,7 +132,6 @@ export async function publishBoardToEdufeed(
         let ndk: NDK | null = null;
         try {
             // Try to access NDK through syncManager's public interface
-            // @ts-expect-error - accessing private property for now
             ndk = syncManager.ndk;
         } catch {
             return {

@@ -15,6 +15,7 @@
     import AlertTriangleIcon from "@lucide/svelte/icons/alert-triangle";
     import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { authStore } from '$lib/stores/authStore.svelte.js';
     import { toast } from 'svelte-sonner';
 
     // ========================================================================
@@ -41,6 +42,7 @@
     let isRestoring = $state(false);
     let snapshotLabel = $state('');
     let confirmRestoreId = $state<string | null>(null);
+    let loadError = $state<string | null>(null);
 
     let snapshots = $state<Array<{
         id: string;
@@ -71,11 +73,18 @@
     // ========================================================================
 
     async function loadSnapshots() {
+        // Check if board is connected to relays first
+        if (!boardStore.ndkReady) {
+            loadError = 'Nostr-Verbindung noch nicht bereit. Bitte warte einen Moment.';
+            return;
+        }
+        
         isLoading = true;
+        loadError = null;
         
         // Timeout wrapper to prevent infinite loading
         const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Timeout: Versionen konnten nicht geladen werden')), 15000);
+            setTimeout(() => reject(new Error('Versionen wurden nicht gefunden')), 7000);
         });
         
         try {
@@ -85,12 +94,12 @@
                 timeoutPromise
             ]);
             console.log(`✅ Loaded ${snapshots.length} snapshots`);
+            loadError = null;
         } catch (error) {
             console.error('Failed to load snapshots:', error);
             const errorMessage = error instanceof Error ? error.message : 'Versionen konnten nicht geladen werden';
-            toast.error(errorMessage, {
-                description: 'Bitte versuche es später erneut oder prüfe die Nostr-Verbindung.'
-            });
+            // Show error inline instead of toast
+            loadError = `${errorMessage}. Bitte versuche es später erneut oder prüfe die Nostr-Verbindung.`;
             // Ensure snapshots array is still accessible even on error
             snapshots = [];
         } finally {
@@ -200,11 +209,28 @@
         if (!pubkey || pubkey.length < 12) return pubkey || 'Unbekannt';
         return `${pubkey.slice(0, 6)}...${pubkey.slice(-4)}`;
     }
+
+    function canRestoreSnapshot(snapshotCreator: string): boolean {
+        const currentUser = authStore.getPubkey();
+        
+        // Both anonymous (or no creator info)
+        if ((!currentUser || currentUser === 'anonymous') && 
+            (!snapshotCreator || snapshotCreator === 'anonymous')) {
+            return true;
+        }
+        
+        // Same user
+        if (currentUser && snapshotCreator && currentUser === snapshotCreator) {
+            return true;
+        }
+        
+        return false;
+    }
 </script>
 
 <!-- Trigger Button -->
 <Button 
-    variant="ghost" 
+    variant="default" 
     size="sm" 
     class="gap-2"
     onclick={() => dialogOpen = true}
@@ -290,6 +316,20 @@
                         <Spinner size="lg" />
                         <span class="ml-2 text-muted-foreground">Lade Versionen...</span>
                     </div>
+                {:else if loadError}
+                    <div class="flex flex-col items-center justify-center py-8 text-destructive">
+                        <AlertTriangleIcon class="h-12 w-12 mb-4 opacity-50" />
+                        <p class="text-center font-medium">Fehler beim Laden</p>
+                        <p class="text-center text-sm mt-2 max-w-md">{loadError}</p>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onclick={loadSnapshots}
+                            class="mt-4"
+                        >
+                            Erneut versuchen
+                        </Button>
+                    </div>
                 {:else if snapshots.length === 0}
                     <div class="flex flex-col items-center justify-center py-8 text-muted-foreground">
                         <HistoryIcon class="h-12 w-12 mb-4 opacity-50" />
@@ -298,7 +338,7 @@
                     </div>
                 {:else}
                     <div class="space-y-2">
-                        {#each snapshots as snapshot (snapshot.id)}
+                        {#each snapshots.filter(s => canRestoreSnapshot(s.createdBy)) as snapshot (snapshot.id)}
                             {@const badge = getReasonBadge(snapshot.reason)}
                             <div class="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                                 <div class="flex items-start justify-between gap-2">

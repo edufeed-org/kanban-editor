@@ -11,7 +11,7 @@
  */
 
 import type NDK from '@nostr-dev-kit/ndk';
-import { NDKEvent, NDKRelaySet } from '@nostr-dev-kit/ndk';
+import { NDKEvent, NDKRelaySet, NDKRelayStatus } from '@nostr-dev-kit/ndk';
 import type { NDKSigner } from '@nostr-dev-kit/ndk';
 import type { PublishState } from '$lib/stores/settingsStore.svelte';
 import { settingsStore } from '$lib/stores/settingsStore.svelte';
@@ -98,7 +98,7 @@ export class SyncManager {
     };
   });
 
-  constructor(private ndk: NDK, initialSigner: NDKSigner | undefined, config: SyncConfig = {}) {
+  constructor(public ndk: NDK, initialSigner: NDKSigner | undefined, config: SyncConfig = {}) {
     this.signer = initialSigner;
     this.config = {
       maxRetries: config.maxRetries ?? 3,
@@ -237,11 +237,19 @@ export class SyncManager {
                 const relay = this.ndk.pool.getRelay(url);
                 if (relay) {
                   // Wait for connection if not connected
-                  if (relay.status !== 1) { // 1 = CONNECTED
+                  if (relay.status !== NDKRelayStatus.CONNECTED) {
                     console.log(`[SyncManager] Waiting for relay connection: ${url}`);
                     await relay.connect();
                   }
-                  connectedRelays.add(relay);
+                  
+                  // ✅ CRITICAL: Verify relay is ACTUALLY connected after connect() call
+                  // Don't trust the status flag alone - check WebSocket connection
+                  if (relay.status === NDKRelayStatus.CONNECTED && relay.connectivity?.status === NDKRelayStatus.CONNECTED) {
+                    connectedRelays.add(relay);
+                    console.log(`[SyncManager] ✅ Relay verified connected: ${url}`);
+                  } else {
+                    console.warn(`[SyncManager] ⚠️ Relay NOT connected after connect() call: ${url} (status: ${relay.status}, connectivity: ${relay.connectivity?.status})`);
+                  }
                 } else {
                   console.warn(`[SyncManager] Relay not in pool: ${url} - was it added in +layout.svelte?`);
                 }
@@ -398,20 +406,11 @@ export class SyncManager {
     // Listen to relay connect events
     this.ndk.pool?.on('relay:connect', (relay: any) => {
       console.log(`🟢 [NDK Pool] Relay CONNECTED: ${relay.url}`);
-      console.log('  Status:', relay.status, 'Connectivity:', relay.connectivity);
     });
     
     // Listen to relay disconnect events
     this.ndk.pool?.on('relay:disconnect', (relay: any) => {
       console.log(`🔴 [NDK Pool] Relay DISCONNECTED: ${relay.url}`);
-      console.log('  Status:', relay.status, 'Connectivity:', relay.connectivity);
-    });
-    
-    // Listen to relay connection failures
-    this.ndk.pool?.on('relay:disconnect', (relay) => {
-      console.warn(`⚠️ [NDK Pool] Relay CONNECTION ERROR: ${relay.url}`);
-      console.warn('  Debug:', relay.debug);
-      console.warn('  Status:', relay.status, 'Connectivity:', relay.connectivity);
     });
   }
 
@@ -460,9 +459,12 @@ export class SyncManager {
         // 🔥 FALLBACK: Manual relay iteration (wenn pool.stats() nicht existiert)
         const allRelays = Array.from(this.ndk.pool?.relays?.values() || []);
         
-        // Count relays with ACTIVE WebSocket connection
+        // ✅ IMPROVED: Count relays with VERIFIED active connection
+        // Check both status flag AND connectivity status for accuracy
         const connectedRelays = allRelays.filter(r => {
-          return r.status === 1; // NDKRelayStatus.CONNECTED
+          const hasCorrectStatus = r.status === NDKRelayStatus.CONNECTED;
+          const hasActiveConnection = r.connectivity?.status === NDKRelayStatus.CONNECTED;
+          return hasCorrectStatus && hasActiveConnection;
         });
         
         currentConnected = connectedRelays.length;
@@ -472,14 +474,20 @@ export class SyncManager {
         if (this.lastConnectedCount === -1 || this.lastConnectedCount !== currentConnected) {
           console.log('📊 [Relay Details]:');
           allRelays.forEach(r => {
-            const statusName = r.status === 0 ? 'DISCONNECTED' : 
-                              r.status === 1 ? 'CONNECTED' : 
-                              r.status === 2 ? 'CONNECTING' : 
-                              r.status === 3 ? 'DISCONNECTING' : 'UNKNOWN';
+            const statusName = r.status === NDKRelayStatus.DISCONNECTED ? 'DISCONNECTED' : 
+                              r.status === NDKRelayStatus.CONNECTED ? 'CONNECTED' : 
+                              r.status === NDKRelayStatus.CONNECTING ? 'CONNECTING' : 
+                              r.status === NDKRelayStatus.DISCONNECTING ? 'DISCONNECTING' : 'UNKNOWN';
             const connectivityObj = r.connectivity || {};
+            const connectivityStatus = connectivityObj.status;
+            const connectivityStatusName = connectivityStatus === NDKRelayStatus.DISCONNECTED ? 'DISCONNECTED' :
+                                           connectivityStatus === NDKRelayStatus.CONNECTED ? 'CONNECTED' :
+                                           connectivityStatus === NDKRelayStatus.CONNECTING ? 'CONNECTING' : 'UNKNOWN';
+            
             console.log(`  ${r.url}:`, {
               status: `${r.status} (${statusName})`,
-              connectivity: connectivityObj
+              connectivity: `${connectivityStatus} (${connectivityStatusName})`,
+              isActuallyConnected: r.status === NDKRelayStatus.CONNECTED && connectivityStatus === NDKRelayStatus.CONNECTED
             });
           });
         }
@@ -520,10 +528,10 @@ export class SyncManager {
       // Log current relay states BEFORE disconnect
       console.log('📊 Relay status BEFORE disconnect:');
       allRelays.forEach(r => {
-        const statusName = r.status === 0 ? 'DISCONNECTED' : 
-                          r.status === 1 ? 'CONNECTED' : 
-                          r.status === 2 ? 'CONNECTING' : 
-                          r.status === 3 ? 'DISCONNECTING' : 'UNKNOWN';
+        const statusName = r.status === NDKRelayStatus.DISCONNECTED ? 'DISCONNECTED' : 
+                          r.status === NDKRelayStatus.CONNECTED ? 'CONNECTED' : 
+                          r.status === NDKRelayStatus.CONNECTING ? 'CONNECTING' : 
+                          r.status === NDKRelayStatus.DISCONNECTING ? 'DISCONNECTING' : 'UNKNOWN';
         console.log(`  ${r.url}: ${statusName} (${r.status})`);
       });
       
@@ -553,10 +561,10 @@ export class SyncManager {
       console.log('📊 Relay status AFTER reconnect:');
       const updatedRelays = Array.from(this.ndk.pool?.relays?.values() || []);
       updatedRelays.forEach(r => {
-        const statusName = r.status === 0 ? 'DISCONNECTED' : 
-                          r.status === 1 ? 'CONNECTED' : 
-                          r.status === 2 ? 'CONNECTING' : 
-                          r.status === 3 ? 'DISCONNECTING' : 'UNKNOWN';
+        const statusName = r.status === NDKRelayStatus.DISCONNECTED ? 'DISCONNECTED' : 
+                          r.status === NDKRelayStatus.CONNECTED ? 'CONNECTED' : 
+                          r.status === NDKRelayStatus.CONNECTING ? 'CONNECTING' : 
+                          r.status === NDKRelayStatus.DISCONNECTING ? 'DISCONNECTING' : 'UNKNOWN';
         console.log(`  ${r.url}: ${statusName} (${r.status})`);
       });
       
@@ -676,19 +684,19 @@ export class SyncManager {
         const currentStatus = r.status;
         
         // Detect auto-reconnect: status changed from DISCONNECTED to CONNECTING
-        if (previousStatus === 0 && currentStatus === 2) {
+        if (previousStatus === NDKRelayStatus.DISCONNECTED && currentStatus === NDKRelayStatus.CONNECTING) {
           console.log(`🔄 [Auto-Reconnect] NDK automatically reconnecting to: ${r.url}`);
           autoReconnectDetected = true;
         }
         
         // Detect successful auto-reconnect: CONNECTING → CONNECTED
-        if (previousStatus === 2 && currentStatus === 1) {
+        if (previousStatus === NDKRelayStatus.CONNECTING && currentStatus === NDKRelayStatus.CONNECTED) {
           console.log(`✅ [Auto-Reconnect] NDK successfully reconnected to: ${r.url}`);
           autoReconnectDetected = true;
         }
         
         // Detect failed auto-reconnect: CONNECTING → DISCONNECTED
-        if (previousStatus === 2 && currentStatus === 0) {
+        if (previousStatus === NDKRelayStatus.CONNECTING && currentStatus === NDKRelayStatus.DISCONNECTED) {
           console.warn(`❌ [Auto-Reconnect] NDK failed to reconnect to: ${r.url}`);
           autoReconnectDetected = true;
         }
@@ -699,10 +707,10 @@ export class SyncManager {
       if (autoReconnectDetected) {
         console.log('📊 Current relay states:');
         relays.forEach(r => {
-          const statusName = r.status === 0 ? 'DISCONNECTED' : 
-                            r.status === 1 ? 'CONNECTED' : 
-                            r.status === 2 ? 'CONNECTING' : 
-                            r.status === 3 ? 'DISCONNECTING' : 'UNKNOWN';
+          const statusName = r.status === NDKRelayStatus.DISCONNECTED ? 'DISCONNECTED' : 
+                            r.status === NDKRelayStatus.CONNECTED ? 'CONNECTED' : 
+                            r.status === NDKRelayStatus.CONNECTING ? 'CONNECTING' : 
+                            r.status === NDKRelayStatus.DISCONNECTING ? 'DISCONNECTING' : 'UNKNOWN';
           console.log(`  ${r.url}: ${statusName}`);
         });
       }
