@@ -4,8 +4,9 @@
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { BoardRole } from "$lib/types/sharing";
     import { toast } from "svelte-sonner";
-    import ShareIcon from "@lucide/svelte/icons/share";
+    import ShareIcon2 from "@lucide/svelte/icons/share-2";
     import HeartIcon from "@lucide/svelte/icons/heart";
+    import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import HeartOffIcon from "@lucide/svelte/icons/heart-off";
     
     // State
@@ -55,7 +56,7 @@
             class="gap-2"
             data-testid="share-button"
         >
-            <ShareIcon class="h-4 w-4" />
+            <ShareIcon2 class="h-4 w-4" />
         </Button>
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
@@ -67,8 +68,8 @@
             class="gap-2"
             data-testid="unfollow-button"
         >
-            <HeartOffIcon class="h-4 w-4" />
-            {isLoading ? 'Lädt...' : 'Entfolgen'}
+            <EyeOffIcon class="h-4 w-4" />
+            {isLoading ? 'Lädt...' : 'Ausblenden'}
         </Button>
     {:else}
         <!-- Non-participant sehen Follow-Button -->
@@ -81,7 +82,7 @@
             data-testid="follow-button"
         >
             <HeartIcon class="h-4 w-4" />
-            {isLoading ? 'Lädt...' : 'Folgen'}
+            {isLoading ? 'Lädt...' : 'Beobachten'}
         </Button>
     {/if}
 </div>
