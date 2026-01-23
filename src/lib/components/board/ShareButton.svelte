@@ -49,7 +49,7 @@
     {#if isOwnerOrEditor}
         <!-- Owner/Editor sehen Share-Button -->
         <Button 
-            variant="ghost" 
+            variant="default" 
             size="sm" 
             onclick={() => showShareDialog = true}
             class="gap-2"
@@ -60,7 +60,7 @@
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
         <Button 
-            variant="ghost" 
+            variant="default" 
             size="sm" 
             onclick={handleToggleFollow}
             disabled={isLoading}
@@ -73,7 +73,7 @@
     {:else}
         <!-- Non-participant sehen Follow-Button -->
         <Button 
-            variant="ghost" 
+            variant="default" 
             size="sm" 
             onclick={handleToggleFollow}
             disabled={isLoading}

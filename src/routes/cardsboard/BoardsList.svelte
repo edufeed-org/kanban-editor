@@ -178,7 +178,7 @@
     }
 </script>
 
-<div class="flex flex-col gap-3 h-full overflow-hidden">
+<div class="flex flex-col gap-3 h-full overflow-hidden p-2">
     <Button
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}

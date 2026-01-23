@@ -14,19 +14,11 @@
     import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
     import MoonIcon from "@lucide/svelte/icons/moon";
     import SunIcon from "@lucide/svelte/icons/sun";
-    import SquareSigmaIcon from "@lucide/svelte/icons/square-sigma";
-    import TrashIcon from "@lucide/svelte/icons/trash";
-    import WifiOffIcon from "@lucide/svelte/icons/wifi-off";
-    import WifiIcon from "@lucide/svelte/icons/wifi";
-    import Loader2Icon from "@lucide/svelte/icons/loader-2";
-    import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-    import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
+    import RelayStatusInfo from './RelayStatusInfo.svelte';
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { BoardRole } from '$lib/types/sharing';
     import { authStore } from '$lib/index.js';
-    import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
-    import DownloadIcon from '@lucide/svelte/icons/download';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
@@ -73,102 +65,14 @@
     // 🔐 Permissions (Owner-only Board Meta)
     let currentUserRole = $derived(boardStore.getCurrentUserRole());
     let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
-    
-    // 🔥 Sync Status - reactive derived from SyncManager
-    // ✅ ALTERNATIVE APPROACH: Poll SyncManager directly from component with $effect
-    // This works better than setInterval in the store because $effect is in component context
-    let syncStatus = $state({
-        isOnline: true,
-        isSyncing: true,
-        queuedEvents: 0,
-        connectedRelays: 0,
-        totalRelays: 0,
-        hasRelaySigner: false
-    });
-    
-    // 🔥 NEW: Poll relay status with $effect + setInterval
-    // This runs in component context, so Svelte can track state changes properly
-    let pollIntervalId: NodeJS.Timeout | undefined;
-    
-    onMount(() => {
-        // ✅ Initial status read - sofort starten ohne Delay!
-        try {
-            const syncManager = getSyncManager();
-            syncStatus = {
-                isOnline: syncManager.status.isOnline,
-                isSyncing: syncManager.status.isSyncing,
-                queuedEvents: syncManager.status.queuedEvents,
-                connectedRelays: syncManager.lastConnectedCount,
-                totalRelays: syncManager.lastTotalCount,
-                hasRelaySigner: syncManager.status.hasRelaySigner
-            };
-            console.log('[Topbar] Initial sync status:', syncStatus);
-        } catch (error) {
-            console.warn('[Topbar] SyncManager not ready on mount (will retry)');
-        }
-    
-        // ✅ Poll every 1 second for reactive status updates
-        pollIntervalId = setInterval(() => {
-            try {
-                const syncManager = getSyncManager();
-                
-                const newStatus = {
-                    isOnline: syncManager.status.isOnline,
-                    isSyncing: syncManager.status.isSyncing,
-                    queuedEvents: syncManager.status.queuedEvents,
-                    connectedRelays: syncManager.lastConnectedCount,
-                    totalRelays: syncManager.lastTotalCount,
-                    hasRelaySigner: syncManager.status.hasRelaySigner
-                };
-                
-                // Log if status changed
-                if (newStatus.connectedRelays !== syncStatus.connectedRelays || 
-                    newStatus.totalRelays !== syncStatus.totalRelays) {
-                    console.log('[Topbar] 🔄 Status updated:', {
-                        old: `${syncStatus.connectedRelays}/${syncStatus.totalRelays}`,
-                        new: `${newStatus.connectedRelays}/${newStatus.totalRelays}`
-                    });
-                }
-                
-                // ✅ CRITICAL: Reassign entire object to trigger reactivity!
-                syncStatus = newStatus;
-            } catch (error) {
-                // SyncManager not initialized yet
-            }
-        }, 1000); // ← Poll every 1 second for faster UI updates
-         
-        // ✅ Cleanup on unmount
-        return () => {
-            if (pollIntervalId) clearInterval(pollIntervalId);
-        };
-    });
-    
-    // 🔄 Manual reconnect handler
-    async function handleReconnect() {
-        try {
-            const syncManager = getSyncManager();
-            await syncManager.forceReconnect();
-        } catch (error) {
-            console.error('[Topbar] Reconnect failed:', error);
-            toast.error('❌ Reconnect fehlgeschlagen', {
-                description: 'Konnte keine Verbindung zu Relays herstellen.',
-                duration: 3000
-            });
-        }
-    }
 
-    let canReloadBoardFromNostr = $derived(boardStore.ndkReady && (syncStatus.connectedRelays ?? 0) > 0);
+    let canReloadBoardFromNostr = $derived(boardStore.ndkReady);
 
     async function handleReloadBoardFromNostr() {
         if (!canReloadBoardFromNostr) return;
 
         try {
             const syncManager = getSyncManager();
-            toast.info('🔄 Board wird von Nostr neu geladen...', {
-                description: 'Lokaler Cache wird verworfen und das Board neu geladen.',
-                duration: 2000
-            });
-
             await boardStore.forceReloadCurrentBoardFromNostr({
                 clearLocalCache: true,
                 syncManager
@@ -269,6 +173,8 @@
     import CheckIcon from "@lucide/svelte/icons/check";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     import ImportPopover from '$lib/components/ImportPopover.svelte';
+  import { getSyncManager } from '$lib/stores/syncManager.svelte';
+  import { RefreshCwIcon, TrashIcon, SquareSigmaIcon, Loader2Icon, CheckCircle2Icon } from 'lucide-svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -417,24 +323,6 @@
         if (confirm('🚪 Willst du dieses geteilte Board verlassen? Es wird für dich ausgeblendet und kann später wieder durch Folgen/Einladung sichtbar werden.')) {
             console.log('🚪 Leaving shared board');
             await boardStore.leaveBoard(boardId);
-        }
-    }
-
-    function downloadAllBoardsAsJson() {
-        try {
-            const json = boardStore.exportAllBoardsAsJson();
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const now = new Date();
-            const timestamp = now.toISOString().split('T')[0];
-            link.href = url;
-            link.download = `boards-backup-${timestamp}.json`;
-            link.click();
-            URL.revokeObjectURL(url);
-            console.log('✅ Alle Boards heruntergeladen!');
-        } catch (error) {
-            console.error('❌ Fehler beim Herunterladen:', error);
         }
     }
 
@@ -611,7 +499,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
     
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b shrink-0 overflow-x-auto">
+<header class="sticky top-0 z-50 w-full max-w-full border-b-4 shrink-0 overflow-x-auto">
     <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-0.5 sm:gap-2">
@@ -635,54 +523,13 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
             <span class="font-semibold text-lg hidden md:inline-block">{currentBoardTitle}</span>
             
-            <!-- 🟢 Sync Status Indicator -->
-            <div 
-                class="flex items-center gap-0.5 px-1 sm:px-2 py-0.5 sm:py-1 text-xs rounded bg-secondary/50 hover:bg-secondary"
-                class:cursor-pointer={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing}
-                title="Relay-Status: {syncStatus.connectedRelays}/{syncStatus.totalRelays} verbunden"
-                role="button"
-                tabindex={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing ? 0 : -1}
-                onclick={syncStatus.connectedRelays === 0 && !syncStatus.isSyncing ? handleReconnect : undefined}
-                onkeydown={(e) => {
-                    if (syncStatus.connectedRelays === 0 && !syncStatus.isSyncing && (e.key === 'Enter' || e.key === ' ')) {
-                        e.preventDefault();
-                        handleReconnect();
-                    }
-                }}
-            >
-                {#if syncStatus.connectedRelays === 0 && syncStatus.isSyncing === false}
-                    <!-- No relays connected: Show error + clickable reconnect -->
-                    <WifiOffIcon class="h-3 w-3 text-red-500" />
-                    <span class="text-red-600 font-semibold hidden sm:inline">Offline</span>
-                    <RefreshCwIcon class="h-3 w-3 text-red-500 ml-1 hidden sm:block" />
-                    <span class="text-red-500 text-[10px] hidden sm:inline">Reconnect</span>
-                {:else if syncStatus.isSyncing}
-                    <!-- Syncing: Show spinner -->
-                    <Loader2Icon class="h-3 w-3 animate-spin text-blue-500" />
-                    <span class="text-muted-foreground hidden sm:inline">Syncing...</span>
-                {:else if syncStatus.queuedEvents > 0}
-                    <!-- Queued: Show queued count -->
-                    <div class="h-2 w-2 rounded-full bg-amber-500"></div>
-                    <span class="text-muted-foreground hidden sm:inline">{syncStatus.queuedEvents} queued</span>
-                {:else if syncStatus.totalRelays > 0 && syncStatus.connectedRelays < syncStatus.totalRelays}
-                    <!-- Partially connected: Show warning (only if we know total relay count) -->
-                    <WifiIcon class="h-3 w-3 text-amber-500" />
-                    <span class="text-amber-600 hidden sm:inline">{syncStatus.connectedRelays}/{syncStatus.totalRelays}</span>
-                {:else if syncStatus.connectedRelays > 0}
-                    <!-- At least one relay connected: Show online -->
-                    <CheckCircle2Icon class="h-3 w-3 text-green-500" />
-                    <span class="text-muted-foreground hidden sm:inline">Online</span>
-                {:else}
-                    <!-- Fallback: Unknown state -->
-                    <WifiIcon class="h-3 w-3 text-gray-400" />
-                    <span class="text-muted-foreground hidden sm:inline">Syncing...</span>
-                {/if}
-            </div>
+            <!-- 🟢 Relay Status Component -->
+            <RelayStatusInfo />
 
             <!-- 🔄 Reload current board from Nostr -->
             <Button
                 title={canReloadBoardFromNostr
-                    ? 'Aktuelles Board von Nostr neu laden'
+                    ? 'Aktuelles Board von den Servers neu laden'
                     : 'Reload nur möglich, wenn Nostr bereit ist und mindestens ein Relay verbunden ist'}
                 variant="ghost"
                 size="icon"
@@ -691,14 +538,14 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 onclick={handleReloadBoardFromNostr}
             >
                 <RefreshCwIcon class="h-4 w-4" />
-                <span class="sr-only">Board von Nostr neu laden</span>
+                <span class="sr-only">Board von den Servers neu laden</span>
             </Button>
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>
                 {#if authStore.isAuthenticated }
                 <Dialog.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground" 
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-transparent btn transition hover:border-foreground hover:bg-accent hover:text-accent-foreground" 
                     title="Board-Einstellungen"
                 >
                     <EllipsisVerticalIcon class="h-4 w-4" />
@@ -759,7 +606,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                                 id="cc-license" 
                                 bind:value={metaForm.license}
                                 disabled={!canEditBoardMeta}
-                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {#each ccLicenses as license}
                                     <option value={license.value}>{license.label}</option>
@@ -920,12 +767,12 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             <!-- Settings Dialog -->
             <Dialog.Root>
                 <Dialog.Trigger
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent hover:text-accent-foreground"
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-transparent btn transition hover:border-foreground hover:bg-accent hover:text-accent-foreground"
                     title="Einstellungen"
                 >
                     <SlidersHorizontalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
-                <Dialog.Content class="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+                <Dialog.Content>
                     <Dialog.Header>
                         <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
                     </Dialog.Header>
@@ -934,17 +781,6 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
-
-            <!-- Backup All Boards Button -->
-            <Button 
-                variant="default"
-                size="icon"
-                onclick={downloadAllBoardsAsJson}
-                title="Alle Boards als Backup herunterladen"
-                class="h-8 w-8 bg-secondary btn"
-            >
-                <DownloadIcon class="h-4 w-4" />
-            </Button>
 
             <!-- Board Sharing -->
             <ShareButton />
