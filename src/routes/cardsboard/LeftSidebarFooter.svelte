@@ -108,6 +108,7 @@
 			variant="outline"
 			class="w-full gap-2"
 			size="sm"
+			data-testid="login-button"
 		>
 			<LogInIcon class="h-4 w-4" />
 			<span>Anmelden</span>

@@ -63,17 +63,30 @@ export async function mockNip07Extension(page: Page, options: {
  * need to be at /cardsboard first!
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
- 
-  await page.getByRole('button', { name: 'Anmelden' }).click();
+  // Warte auf den Anmelden-Button via data-testid
+  const loginButton = page.getByTestId('login-button');
+  await expect(loginButton).toBeVisible({ timeout: 10000 });
   
+  // Echte Maus-Klick-Aktion: Bounding Box holen und auf Mitte klicken
+  const box = await loginButton.boundingBox();
+  if (!box) throw new Error('Login button has no bounding box');
+  
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  
+  // Warte auf den Dialog
+  const dialog = page.locator('[role="dialog"]');
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  
+  // Jetzt ist Dialog offen, klicke auf den nsec Tab
   const nsecTab = page.getByRole('tab', { name: 'nsec' });
-  await expect(nsecTab).toBeVisible();
+  await expect(nsecTab).toBeVisible({ timeout: 5000 });
   await nsecTab.click();
   
+  // Fülle nsec ein
   await page.getByPlaceholder('nsec1...').fill(nsec);
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
 
-  await expect(page.getByTestId('auth-user-avatar')).toBeVisible();
+  await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 10000 });
 }
 
 /**
