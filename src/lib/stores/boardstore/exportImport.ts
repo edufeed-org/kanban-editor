@@ -5,6 +5,7 @@ import { Board, Column, Card } from '../../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../../utils/idGenerator.js';
 import { BoardStorage } from './storage.js';
 import jsoncrush from 'jsoncrush';
+import { base } from '$app/paths';
 
 export class ExportImport {
     /**
@@ -230,7 +231,8 @@ export class ExportImport {
 
         let maxTokenSize = 200000;
         try {
-            const resp = await fetch('/config.json');
+            // Use base path for GitHub Pages compatibility
+            const resp = await fetch(`${base}/config.json`);
             if (resp.ok) {
                 const cfg = await resp.json();
                 if (cfg?.shareTokenMaxSize) maxTokenSize = Number(cfg.shareTokenMaxSize) || maxTokenSize;
@@ -243,7 +245,8 @@ export class ExportImport {
             throw new Error(`Share token too large (${token.length} > ${maxTokenSize}). Use Export/Backup instead.`);
         }
 
-        const url = `${window.location.origin}/cardsboard?import=${token}`;
+        // Use SvelteKit base path for GitHub Pages compatibility
+        const url = `${window.location.origin}${base}/cardsboard?import=${token}`;
         return { url, tokenSize: token.length };
     }
 
@@ -252,7 +255,23 @@ export class ExportImport {
      */
     public static parseShareToken(token: string): any {
         try {
-            const json = jsoncrush.uncrush(token);
+            // Decode URL-encoded token first (may be double-encoded)
+            let decodedToken = token;
+            try {
+                // Try to decode - if already decoded, this might throw or return the same string
+                decodedToken = decodeURIComponent(token);
+            } catch {
+                // Token was not URL-encoded, use as-is
+                decodedToken = token;
+            }
+            
+            console.log('🔍 Token-Parsing Debug:', {
+                originalLength: token.length,
+                decodedLength: decodedToken.length,
+                preview: decodedToken.substring(0, 50) + '...'
+            });
+            
+            const json = jsoncrush.uncrush(decodedToken);
             const parsed = JSON.parse(json);
             
             console.log('✅ Token erfolgreich geparst:', {

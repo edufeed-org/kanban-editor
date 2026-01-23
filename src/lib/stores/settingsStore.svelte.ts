@@ -854,15 +854,10 @@ export class SettingsStore {
       //    In Development: Vite serviert automatisch aus /public/
       //    In Production: static/ Ordner wird in /build/ kopiert
 
-      // Hack to get base path because in Github pages it starts with /kanban-board/
-      let basePath = ''
+      // Use SvelteKit base path from $app/paths (configured in svelte.config.js)
+      const { base } = await import('$app/paths');
 
-      if (window.location.host.includes('github.io') &&
-        window.location.pathname.startsWith('/kanban-editor/')) {
-        basePath = '/kanban-editor';
-      }
-
-      const response = await fetch(`${basePath}/config.json`);
+      const response = await fetch(`${base}/config.json`);
       if (!response.ok) {
         console.warn(`⚠️ config.json not found (${response.status}), using defaults`);
         return null;
