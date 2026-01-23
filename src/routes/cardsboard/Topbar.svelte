@@ -61,6 +61,7 @@
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+    let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
 
     // 🔐 Permissions (Owner-only Board Meta)
     let currentUserRole = $derived(boardStore.getCurrentUserRole());
@@ -135,6 +136,56 @@
         { value: 'cc-by-nc-sa-4.0', label: 'CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike)' },
         { value: 'cc-by-nc-nd-4.0', label: 'CC BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivs)' }
     ];
+
+    // CC License Badge Helper with proper symbols
+    function getLicenseInfo(license: string) {
+        const licenses: Record<string, { symbol: string; name: string; color: string; url: string }> = {
+            'cc0': { 
+                symbol: 'CC0',
+                name: 'Public Domain Dedication',
+                color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700',
+                url: 'https://creativecommons.org/publicdomain/zero/1.0/'
+            },
+            'cc-by-4.0': { 
+                symbol: 'CC BY',
+                name: 'Attribution 4.0',
+                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                url: 'https://creativecommons.org/licenses/by/4.0/'
+            },
+            'cc-by-sa-4.0': { 
+                symbol: 'CC BY-SA',
+                name: 'Attribution-ShareAlike 4.0',
+                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                url: 'https://creativecommons.org/licenses/by-sa/4.0/'
+            },
+            'cc-by-nc-4.0': { 
+                symbol: 'CC BY-NC',
+                name: 'Attribution-NonCommercial 4.0',
+                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                url: 'https://creativecommons.org/licenses/by-nc/4.0/'
+            },
+            'cc-by-nd-4.0': { 
+                symbol: 'CC BY-ND',
+                name: 'Attribution-NoDerivatives 4.0',
+                color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700',
+                url: 'https://creativecommons.org/licenses/by-nd/4.0/'
+            },
+            'cc-by-nc-sa-4.0': { 
+                symbol: 'CC BY-NC-SA',
+                name: 'Attribution-NonCommercial-ShareAlike 4.0',
+                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
+            },
+            'cc-by-nc-nd-4.0': { 
+                symbol: 'CC BY-NC-ND',
+                name: 'Attribution-NonCommercial-NoDerivatives 4.0',
+                color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-300 dark:border-red-700',
+                url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/'
+            }
+        };
+        
+        return licenses[license] || licenses['cc-by-4.0'];
+    }
 
     function toggleTheme() {
         const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark'];
@@ -521,7 +572,26 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             <Separator orientation="vertical" class="min-w-4 hidden sm:block" />
             
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
-            <span class="font-semibold text-lg hidden md:inline-block">{currentBoardTitle}</span>
+            <div class="flex items-baseline gap-1 hidden md:flex">
+                <span class="font-semibold text-lg">{currentBoardTitle}</span>
+                
+                <!-- CC License Badge (superscript style) -->
+                {#if currentBoardLicense}
+                    {@const licenseInfo = getLicenseInfo(currentBoardLicense)}
+                    <a 
+                        href={licenseInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative -top-1 {licenseInfo.color}"
+                        title="{licenseInfo.name} - Klicken für Details"
+                    >
+                        <svg class="h-2 w-2" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                        </svg>
+                        <span class="leading-none">{licenseInfo.symbol}</span>
+                    </a>
+                {/if}
+            </div>
             
             <!-- 🟢 Relay Status Component -->
             <RelayStatusInfo />
