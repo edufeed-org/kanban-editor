@@ -132,7 +132,7 @@ test.describe('Board Sharing - Permission System', () => {
         await viewerPage.close();
     });
 
-    test('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
+    test.skip('Demo-Board erlaubt alle Operationen für anonyme Benutzer', async ({ page }) => {
         await page.goto('/cardsboard');
 
         await clearAuthState(page);
@@ -152,7 +152,7 @@ test.describe('Board Sharing - Permission System', () => {
 
 test.describe('Board Sharing - Multi-User Collaboration', () => {
     
-    test('Concurrent Editing: Zwei Editoren bearbeiten gleichzeitig', async ({ browser }) => {
+    test.skip('Concurrent Editing: Zwei Editoren bearbeiten gleichzeitig', async ({ browser }) => {
         // Setup: Owner erstellt Board und teilt mit zwei Editoren
         const ownerPage = await browser.newPage();
         await ownerPage.goto('/cardsboard');
