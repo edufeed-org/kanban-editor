@@ -17,6 +17,7 @@
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 	import PlayIcon from "@lucide/svelte/icons/play";
+	import GithubIcon from "@lucide/svelte/icons/github";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -65,53 +66,71 @@
 
 <!-- User Section - sticky unten in der Sidebar -->
 <div class="mt-auto pt-4 border-t border-border/40">
-	{#if isAuthenticated && currentUser}
-		<!-- User ist angemeldet -->
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger class="bg-secondary rounded-md">
-				<div class="px-3 py-3 flex items-center gap-2" data-testid="auth-user-avatar">
-					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Image src="" alt={authStore.getDisplayName()} />
-						<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
-							{authStore.getUserInitials()}
-						</Avatar.Fallback>
-					</Avatar.Root>
-					<div>
-						<p class="text-sm font-semibold">{authStore.getDisplayName()}</p>
-						<p class="text-xs text-muted-foreground font-mono">
-							{formatPubkey(currentUser.pubkey)}
-						</p>
-					</div>
-				</div>
-				
-			</DropdownMenu.Trigger>
+	<div class="flex items-center gap-2">
+		<div class="flex-1">
+			{#if isAuthenticated && currentUser}
+				<!-- User ist angemeldet -->
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger class="bg-secondary rounded-md w-full">
+						<div class="px-3 py-3 flex items-center gap-2" data-testid="auth-user-avatar">
+							<Avatar.Root class="h-8 w-8 flex-shrink-0">
+								<Avatar.Image src="" alt={authStore.getDisplayName()} />
+								<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
+									{authStore.getUserInitials()}
+								</Avatar.Fallback>
+							</Avatar.Root>
+							<div>
+								<p class="text-sm font-semibold">{authStore.getDisplayName()}</p>
+								<p class="text-xs text-muted-foreground font-mono">
+									{formatPubkey(currentUser.pubkey)}
+								</p>
+							</div>
+						</div>
+						
+					</DropdownMenu.Trigger>
 
-			<DropdownMenu.Content align="start" class="w-56">
-				
-				<!-- Settings Option -->
-				<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2 menu-item">
-					<SettingsIcon class="h-4 w-4" />
-					<span>Einstellungen</span>
-				</DropdownMenu.Item>
+					<DropdownMenu.Content align="start" class="w-56">
+						
+						<!-- Settings Option -->
+						<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2 menu-item">
+							<SettingsIcon class="h-4 w-4" />
+							<span>Einstellungen</span>
+						</DropdownMenu.Item>
 
-				<!-- Logout -->
-				<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
-					<LogOutIcon class="h-4 w-4" />
-					<span>Abmelden</span>
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-	{:else}
-		<!-- User ist nicht angemeldet - Login Button + Demo Option -->
-		<Button
-			onclick={() => (loginDialogOpen = true)}
-			variant="outline"
-			class="w-full gap-2"
-			size="sm"
+						<!-- Logout -->
+						<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
+							<LogOutIcon class="h-4 w-4" />
+							<span>Abmelden</span>
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			{:else}
+				<!-- User ist nicht angemeldet - Login Button -->
+				<Button
+					onclick={() => (loginDialogOpen = true)}
+					variant="outline"
+					class="w-full gap-2"
+					size="sm"
+				>
+					<LogInIcon class="h-4 w-4" />
+					<span>Anmelden</span>
+				</Button>
+			{/if}
+		</div>
+		
+		<!-- GitHub Repository Link (always visible) -->
+		<a
+			href="https://github.com/edufeed-org/kanban-editor?tab=readme-ov-file#%EF%B8%8F-documentation-map-f%C3%BCr-entwickler"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="inline-flex items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9 transition-colors flex-shrink-0"
+			title="Siehe den Source Code"
 		>
-			<LogInIcon class="h-4 w-4" />
-			<span>Anmelden</span>
-		</Button>
+			<GithubIcon class="h-4 w-4" />
+		</a>
+	</div>
+	
+	{#if !isAuthenticated}
 
 		<p class="text-xs text-muted-foreground mt-3 text-center">
 			Melde dich an, um Boards zu erstellen
