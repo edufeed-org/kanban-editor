@@ -236,8 +236,9 @@ export class BoardStorage {
 
     /**
      * Gibt Author sicher zurück (auch wenn authStore noch nicht initialisiert)
+     * Wird von exportImport.ts für Fork-Semantik verwendet.
      */
-    private static getSafeAuthor(): string {
+    public static getSafeAuthor(): string {
         try {
             if (typeof window === 'undefined') {
                 return 'anonymous';

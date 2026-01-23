@@ -1,8 +1,11 @@
 <script lang="ts">
     import * as Dialog from "$lib/components/ui/dialog";
     import * as Card from "$lib/components/ui/card";
+    import * as RadioGroup from "$lib/components/ui/radio-group";
     import { Button } from "$lib/components/ui/button";
     import { Badge } from "$lib/components/ui/badge";
+    import { Label } from "$lib/components/ui/label";
+    import { Separator } from "$lib/components/ui/separator";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardSharingOperations } from "$lib/stores/boardstore/sharing";
@@ -14,6 +17,8 @@
     import EyeIcon from "@lucide/svelte/icons/eye";
     import CalendarIcon from "@lucide/svelte/icons/calendar";
     import UserIcon from "@lucide/svelte/icons/user";
+    import CopyIcon from "@lucide/svelte/icons/copy";
+    import CopyPlusIcon from "@lucide/svelte/icons/copy-plus";
     import { resolve } from "$app/paths";
     
     // Get NDK from context (set in +layout.svelte)
@@ -29,6 +34,10 @@
         boardId: string;
         boardAuthor: string;
     } = $props();
+    
+    // Import-Modus: 'watch' = folgen ohne Kopie, 'fork' = eigene Kopie erstellen
+    type ImportMode = 'watch' | 'fork';
+    let selectedMode = $state<ImportMode>('fork');
     
     // State
     let isLoading = $state(false);
@@ -78,8 +87,8 @@
         }
     }
     
-    // Board folgen
-    async function handleFollowBoard() {
+    // Board folgen ODER forken
+    async function handleAction() {
         if (!boardId || !boardAuthor) {
             toast.error('Fehler', { description: 'Board-Daten unvollständig' });
             return;
@@ -89,7 +98,7 @@
         const currentUser = authStore.getPubkey();
         if (!currentUser) {
             toast.error('Nicht eingeloggt', {
-                description: 'Bitte zuerst einloggen um dem Board zu folgen'
+                description: 'Bitte zuerst einloggen'
             });
             return;
         }
@@ -98,25 +107,48 @@
         errorMessage = '';
         
         try {
-            // Board folgen UND laden (in einem Schritt)
-            const success = await boardStore.followAndLoadBoard(boardId, boardAuthor);
-            
-            if (!success) {
-                throw new Error('Board konnte nicht geladen werden');
+            if (selectedMode === 'watch') {
+                // Board folgen UND laden (in einem Schritt)
+                const success = await boardStore.followAndLoadBoard(boardId, boardAuthor);
+                
+                if (!success) {
+                    throw new Error('Board konnte nicht geladen werden');
+                }
+                
+                toast.success('Board gefolgt!', {
+                    description: 'Das Board wurde geöffnet'
+                });
+            } else {
+                // Fork: Eigene Kopie erstellen
+                if (!boardPreview) {
+                    throw new Error('Board-Vorschau nicht geladen');
+                }
+                
+                // Board als JSON serialisieren und mit 'new' Modus importieren
+                // Das setzt automatisch den aktuellen User als Owner
+                const boardJson = JSON.stringify(boardPreview.getContextData(true));
+                const result = boardStore.importBoardFromJson(boardJson, 'new');
+                
+                if (!result.success || !result.board) {
+                    throw new Error(result.error || 'Fehler beim Erstellen der Kopie');
+                }
+                
+                // Board speichern
+                boardStore.saveImportedBoard(result.board, false);
+                
+                toast.success('Board geforkt!', {
+                    description: 'Eine eigene Kopie wurde erstellt'
+                });
             }
             
-            toast.success('Board gefolgt!', {
-                description: 'Das Board wurde geöffnet'
-            });
-            
-            // Zum Board navigieren (Board ist bereits geladen!)
+            // Zum Board navigieren
             open = false;
             goto(resolve('/cardsboard', {}));
             
         } catch (error: any) {
-            errorMessage = error.message || 'Fehler beim Folgen des Boards';
+            errorMessage = error.message || 'Fehler';
             toast.error('Fehler', { description: errorMessage });
-            console.error('❌ Fehler beim Folgen:', error);
+            console.error('❌ Fehler:', error);
         } finally {
             isLoading = false;
         }
@@ -133,9 +165,9 @@
 <Dialog.Root bind:open>
     <Dialog.Content class="max-w-2xl">
         <Dialog.Header>
-            <Dialog.Title>Board folgen</Dialog.Title>
+            <Dialog.Title>Board importieren</Dialog.Title>
             <Dialog.Description>
-                Möchtest du diesem Board folgen? Es wird dann in deiner Board-Liste erscheinen.
+                Wähle wie du mit diesem Board arbeiten möchtest.
             </Dialog.Description>
         </Dialog.Header>
         
@@ -162,7 +194,7 @@
                     <div class="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <div class="flex items-center gap-2">
                             <UserIcon class="h-4 w-4" />
-                            <span>Erstellt von: {authStore.getDisplayNameForPubkey?.(boardAuthor) || boardAuthor.slice(0, 8) + '...'}</span>
+                            <span>Erstellt von: {authStore.getDisplayNameForPubkey?.(boardAuthor) || boardAuthor.slice(0, 8) + '...' + boardAuthor.slice(-4)}</span>
                         </div>
                         
                         {#if boardPreview.columns}
@@ -193,6 +225,42 @@
                     {/if}
                 </Card.Content>
             </Card.Root>
+            
+            <!-- Import-Modus Auswahl -->
+            <div class="mt-4 space-y-3">
+                <Label class="text-sm font-medium">Import-Modus:</Label>
+                <RadioGroup.Root bind:value={selectedMode} class="space-y-2">
+                    <!-- Fork Option (Standard) -->
+                    <label for="mode-fork" class="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                        <RadioGroup.Item value="fork" id="mode-fork" class="mt-0.5" />
+                        <div class="flex-1">
+                            <span class="font-medium flex items-center gap-2">
+                                <CopyPlusIcon class="h-4 w-4" />
+                                Eigene Kopie erstellen (Fork)
+                            </span>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Erstellt eine vollständige Kopie. Du wirst Owner und kannst frei bearbeiten.
+                            </p>
+                        </div>
+                    </label>
+                    
+                    <Separator class="my-2" />
+                    
+                    <!-- Watch Option -->
+                    <label for="mode-watch" class="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                        <RadioGroup.Item value="watch" id="mode-watch" class="mt-0.5" />
+                        <div class="flex-1">
+                            <span class="font-medium flex items-center gap-2">
+                                <EyeIcon class="h-4 w-4" />
+                                Nur Beobachten
+                            </span>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Board folgen (read-only). Änderungen des Owners erscheinen automatisch.
+                            </p>
+                        </div>
+                    </label>
+                </RadioGroup.Root>
+            </div>
         {:else}
             <div class="p-8 text-center text-muted-foreground">
                 <p>Board-Vorschau wird geladen...</p>
@@ -203,8 +271,14 @@
             <Button variant="outline" onclick={() => open = false} disabled={isLoading}>
                 Abbrechen
             </Button>
-            <Button onclick={handleFollowBoard} disabled={isLoading || !!errorMessage}>
-                {isLoading ? 'Folge...' : 'Board folgen'}
+            <Button onclick={handleAction} disabled={isLoading || !!errorMessage || !boardPreview}>
+                {#if isLoading}
+                    Verarbeite...
+                {:else if selectedMode === 'fork'}
+                    Board forken
+                {:else}
+                    Board folgen
+                {/if}
             </Button>
         </Dialog.Footer>
     </Dialog.Content>
