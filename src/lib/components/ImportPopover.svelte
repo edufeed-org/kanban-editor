@@ -200,7 +200,7 @@
 			
 			// Get max size from config
 			try {
-				const config = await fetch('/config.json').then(r => r.json());
+				const config = await fetch(`${import.meta.env.BASE_URL}config.json`).then(r => r.json());
 				maxShareLinkSize = config.shareTokenMaxSize || 200000;
 			} catch {
 				maxShareLinkSize = 200000;
@@ -219,7 +219,7 @@
 		}
 	}
 
-	async function handleShareLinkImport(mode: 'merge' | 'new' | 'overwrite') {
+	async function handleShareLinkImport(mode: 'merge' | 'new' | 'overwrite' | 'watch') {
 		console.log(`📥 Importiere Share-Link im ${mode}-Modus`);
 		console.log('📦 Share-Link Daten (Typ):', typeof shareLinkData, Array.isArray(shareLinkData));
 		
@@ -231,12 +231,42 @@
 		isLoading = true;
 		
 		try {
+			// 🆕 Watch-Modus: Board folgen statt importieren
+			if (mode === 'watch') {
+				const boardId = shareLinkData.id;
+				const boardAuthor = shareLinkData.author;
+				
+				if (!boardId || !boardAuthor) {
+					errorMsg = 'Board-Daten unvollständig (ID oder Author fehlt)';
+					isLoading = false;
+					return;
+				}
+				
+				console.log('👁️ Watch-Modus: Folge Board statt Import', { boardId, boardAuthor });
+				
+				// Follow-And-Load: Fügt zu Follow-Set hinzu + lädt das Board
+				await boardStore.followAndLoadBoard(boardId, boardAuthor);
+				
+				successMsg = `✅ Board wird beobachtet! ${shareLinkData.name || boardId}`;
+				
+				// Schließe Dialog nach kurzer Verzögerung
+				setTimeout(() => {
+					showShareLinkPreview = false;
+					successMsg = '';
+				}, 1500);
+				
+				isLoading = false;
+				return;
+			}
+			
 			// ⚠️ shareLinkData ist ein PLAIN OBJECT (geparst vom JSON Token)
 			// Nutze importBoardFromJson() das macht die Rekonstruktion automatisch!
 			// WICHTIG: Die mode wird DIREKT weitergeleitet (nicht umkonvertieren!)
+			// TypeScript: Nach dem watch-Check oben ist mode garantiert einer der Fork-Modi
+			const forkMode = mode as 'merge' | 'new' | 'overwrite';
 			
 			const jsonString = JSON.stringify(shareLinkData);
-			const result = boardStore.importBoardFromJson(jsonString, mode);
+			const result = boardStore.importBoardFromJson(jsonString, forkMode);
 			
 			if (result.success && result.board) {
 				console.log('✅ Share-Link Board importiert (vor Speicherung):', {

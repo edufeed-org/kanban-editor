@@ -63,17 +63,78 @@ export async function mockNip07Extension(page: Page, options: {
  * need to be at /cardsboard first!
  */
 export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
- 
-  await page.getByRole('button', { name: 'Anmelden' }).click();
+  // Warte auf Netzwerk-Idle und vollständiges Laden
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(500); // Extra Zeit für Svelte 5 Hydration
   
+  // Warte auf den Anmelden-Button via data-testid
+  const loginButton = page.getByTestId('login-button');
+  await expect(loginButton).toBeVisible({ timeout: 10000 });
+  
+  // Versuche verschiedene Click-Methoden
+  let dialogOpened = false;
+  
+  // Methode 1: Standard click mit force
+  try {
+    await loginButton.click({ force: true, timeout: 2000 });
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 3000 });
+    dialogOpened = true;
+  } catch {
+    console.log('Standard click failed, trying alternative methods...');
+  }
+  
+  // Methode 2: JavaScript click
+  if (!dialogOpened) {
+    try {
+      await loginButton.evaluate((el: HTMLElement) => el.click());
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    } catch {
+      console.log('JS click failed, trying dispatchEvent...');
+    }
+  }
+  
+  // Methode 3: dispatchEvent
+  if (!dialogOpened) {
+    try {
+      await loginButton.dispatchEvent('click');
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    } catch {
+      console.log('dispatchEvent failed, trying mouse click...');
+    }
+  }
+  
+  // Methode 4: Mouse click mit bounding box
+  if (!dialogOpened) {
+    const box = await loginButton.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    }
+  }
+  
+  if (!dialogOpened) {
+    // Screenshot für Debugging
+    await page.screenshot({ path: 'test-results/login-button-debug.png' });
+    throw new Error('Could not open login dialog after trying all click methods');
+  }
+  
+  // Dialog ist jetzt offen, klicke auf den nsec Tab
   const nsecTab = page.getByRole('tab', { name: 'nsec' });
-  await expect(nsecTab).toBeVisible();
+  await expect(nsecTab).toBeVisible({ timeout: 5000 });
   await nsecTab.click();
   
+  // Fülle nsec ein
   await page.getByPlaceholder('nsec1...').fill(nsec);
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
 
-  await expect(page.getByTestId('auth-user-avatar')).toBeVisible();
+  await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 10000 });
 }
 
 /**

@@ -5,7 +5,10 @@
 	import UploadIcon from '@lucide/svelte/icons/upload';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import EyeIcon from '@lucide/svelte/icons/eye';
 	import type { Board } from '$lib/classes/BoardModel.js';
+
+	type ImportMode = 'merge' | 'new' | 'overwrite' | 'watch';
 
 	interface Props {
 		open?: boolean;
@@ -13,13 +16,13 @@
 		tokenSize: number;
 		maxTokenSize: number;
 		isLoading?: boolean;
-		onConfirm: (mode: 'merge' | 'new' | 'overwrite') => void;
+		onConfirm: (mode: ImportMode) => void;
 		onCancel: () => void;
 	}
 
 	let { open = false, boardData, tokenSize, maxTokenSize, isLoading = false, onConfirm, onCancel }: Props = $props();
 
-	let selectedMode = $state<'merge' | 'new' | 'overwrite'>('merge');
+	let selectedMode = $state<ImportMode>('merge');
 
 	// Berechne Token-Größe Prozentsatz
 	let tokenSizePercent = $derived(Math.round((tokenSize / maxTokenSize) * 100));
@@ -148,6 +151,36 @@
 			<fieldset class="space-y-2 border-t pt-4">
 				<legend class="text-sm font-medium">Import-Modus</legend>
 				<div class="space-y-2">
+					<!-- Nur Beobachten - First option for read-only following -->
+					<label class="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer border border-blue-200 bg-blue-50/50">
+						<input
+							type="radio"
+							value="watch"
+							bind:group={selectedMode}
+							disabled={isLoading}
+							class="mt-1 cursor-pointer"
+						/>
+						<div class="flex-1">
+							<p class="text-sm font-medium flex items-center gap-2">
+								<EyeIcon class="h-4 w-4 text-blue-600" />
+								Nur Beobachten
+							</p>
+							<p class="text-xs text-muted-foreground">Board folgen (read-only, keine Kopie)</p>
+						</div>
+						{#if selectedMode === 'watch'}
+							<CheckCircleIcon class="h-4 w-4 text-blue-600 mt-1" />
+						{/if}
+					</label>
+
+					<div class="relative py-2">
+						<div class="absolute inset-0 flex items-center">
+							<span class="w-full border-t border-dashed"></span>
+						</div>
+						<div class="relative flex justify-center text-xs uppercase">
+							<span class="bg-background px-2 text-muted-foreground">oder eigene Kopie erstellen</span>
+						</div>
+					</div>
+
 					<label class="flex items-start gap-3 p-2 rounded hover:bg-muted/50 cursor-pointer">
 						<input
 							type="radio"
@@ -158,7 +191,7 @@
 						/>
 						<div class="flex-1">
 							<p class="text-sm font-medium">Merge</p>
-							<p class="text-xs text-muted-foreground">Neue IDs (keine Konflikte)</p>
+							<p class="text-xs text-muted-foreground">Eigene Kopie mit neuen IDs</p>
 						</div>
 						{#if selectedMode === 'merge'}
 							<CheckCircleIcon class="h-4 w-4 text-green-600 mt-1" />
@@ -175,7 +208,7 @@
 						/>
 						<div class="flex-1">
 							<p class="text-sm font-medium">Neues Board</p>
-							<p class="text-xs text-muted-foreground">Separate Kopie mit (Imported) Suffix</p>
+							<p class="text-xs text-muted-foreground">Eigene Kopie mit (Imported) Suffix</p>
 						</div>
 						{#if selectedMode === 'new'}
 							<CheckCircleIcon class="h-4 w-4 text-green-600 mt-1" />
@@ -219,7 +252,10 @@
 			>
 				{#if isLoading}
 					<span class="mr-1">⏳</span>
-					Importiert...
+					{selectedMode === 'watch' ? 'Folge...' : 'Importiert...'}
+				{:else if selectedMode === 'watch'}
+					<EyeIcon class="h-4 w-4" />
+					Board folgen
 				{:else}
 					<UploadIcon class="h-4 w-4" />
 					Importieren

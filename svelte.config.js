@@ -6,6 +6,16 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const isDev = process.argv.includes('dev');
 const isPreview = process.argv.includes('preview');
 
+// Determine base path:
+// - Dev/Preview: empty (local development)
+// - CI with BASE_PATH: use BASE_PATH (GitHub Pages deployment)
+// - CI without BASE_PATH: empty
+// - Production build with BASE_PATH: use BASE_PATH
+const getBasePath = () => {
+	if (isDev || isPreview) return '';
+	return process.env.BASE_PATH || '';
+};
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: [vitePreprocess(), mdsvex()],
@@ -16,7 +26,7 @@ const config = {
 			fallback: '404.html'
 		}),
 		paths: {
-			base: isDev || isPreview || process.env.CI ? '' : (process.env.BASE_PATH || '')
+			base: getBasePath()
 		},
 	},
 	extensions: ['.svelte', '.svx'],

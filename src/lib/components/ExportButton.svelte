@@ -47,10 +47,10 @@
 
 <Button
 	variant="outline"
-	class="h-9 w-9 bg-secondary"
+	class="h-9 w-22 bg-secondary"
 	size="icon"
 	title="Board als JSON exportieren"
 	onclick={handleClick}
 >
-	<DownloadIcon class="h-4 w-4" />
+	<DownloadIcon class="h-4 w-4" /> Export
 </Button>
