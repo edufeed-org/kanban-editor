@@ -4,7 +4,6 @@
 	import UploadIcon from '@lucide/svelte/icons/upload';
 	import ShareLinkPreview from './ShareLinkPreview.svelte';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-	import { base } from '$app/paths';
 
 	let open = $state(false);
 	let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
@@ -201,7 +200,7 @@
 			
 			// Get max size from config
 			try {
-				const config = await fetch(`${base}/config.json`).then(r => r.json());
+				const config = await fetch(`${import.meta.env.BASE_URL}config.json`).then(r => r.json());
 				maxShareLinkSize = config.shareTokenMaxSize || 200000;
 			} catch {
 				maxShareLinkSize = 200000;

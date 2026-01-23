@@ -5,7 +5,6 @@ import { Board, Column, Card } from '../../classes/BoardModel.js';
 import { generateTimestamp, generateDTag } from '../../utils/idGenerator.js';
 import { BoardStorage } from './storage.js';
 import jsoncrush from 'jsoncrush';
-import { base } from '$app/paths';
 
 export class ExportImport {
     /**
@@ -204,7 +203,7 @@ export class ExportImport {
         let maxTokenSize = 200000;
         try {
             // Use base path for GitHub Pages compatibility
-            const resp = await fetch(`${base}/config.json`);
+            const resp = await fetch(`${import.meta.env.BASE_URL}config.json`);
             if (resp.ok) {
                 const cfg = await resp.json();
                 if (cfg?.shareTokenMaxSize) maxTokenSize = Number(cfg.shareTokenMaxSize) || maxTokenSize;
@@ -218,7 +217,7 @@ export class ExportImport {
         }
 
         // Use SvelteKit base path for GitHub Pages compatibility
-        const url = `${window.location.origin}${base}/cardsboard?import=${token}`;
+        const url = `${window.location.origin}${import.meta.env.BASE_URL}cardsboard?import=${token}`;
         return { url, tokenSize: token.length };
     }
 

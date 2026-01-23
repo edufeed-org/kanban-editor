@@ -56,8 +56,7 @@
             
             // Config laden für dynamisches Maximum
             try {
-                const { base } = await import('$app/paths');
-                const config = await fetch(`${base}/config.json`).then(r => r.json()).catch(() => ({}));
+                const config = await fetch(`${import.meta.env.BASE_URL}config.json`).then(r => r.json()).catch(() => ({}));
                 if (config?.shareTokenMaxSize) {
                     maxTokenSize = config.shareTokenMaxSize;
                 }

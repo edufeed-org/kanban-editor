@@ -854,10 +854,8 @@ export class SettingsStore {
       //    In Development: Vite serviert automatisch aus /public/
       //    In Production: static/ Ordner wird in /build/ kopiert
 
-      // Use SvelteKit base path from $app/paths (configured in svelte.config.js)
-      const { base } = await import('$app/paths');
-
-      const response = await fetch(`${base}/config.json`);
+      // Use Vite's BASE_URL (configured in svelte.config.js)
+      const response = await fetch(`${import.meta.env.BASE_URL}config.json`);
       if (!response.ok) {
         console.warn(`⚠️ config.json not found (${response.status}), using defaults`);
         return null;
