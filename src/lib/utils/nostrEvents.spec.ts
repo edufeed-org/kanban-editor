@@ -369,8 +369,8 @@ describe('nostrEvents - naddr Link Generation', () => {
             const decoded = decodeBoardNaddr(naddr);
             
             expect(decoded).not.toBeNull();
-            expect(decoded?.boardId).toBe(testBoardId);
-            expect(decoded?.authorPubkey).toBe(testAuthorPubkey);
+            expect(decoded?.identifier).toBe(testBoardId);
+            expect(decoded?.pubkey).toBe(testAuthorPubkey);
             expect(decoded?.kind).toBe(30301);
         });
 
@@ -400,7 +400,7 @@ describe('nostrEvents - naddr Link Generation', () => {
             const decoded = decodeBoardNaddr(fromUrl);
             
             expect(decoded).not.toBeNull();
-            expect(decoded?.boardId).toBe(testBoardId);
+            expect(decoded?.identifier).toBe(testBoardId);
         });
     });
 
@@ -413,8 +413,8 @@ describe('nostrEvents - naddr Link Generation', () => {
             const naddr = createBoardNaddr(originalBoardId, originalAuthor, originalRelays);
             const decoded = decodeBoardNaddr(naddr);
             
-            expect(decoded?.boardId).toBe(originalBoardId);
-            expect(decoded?.authorPubkey).toBe(originalAuthor);
+            expect(decoded?.identifier).toBe(originalBoardId);
+            expect(decoded?.pubkey).toBe(originalAuthor);
             expect(decoded?.relays).toEqual(originalRelays);
         });
 
@@ -424,7 +424,7 @@ describe('nostrEvents - naddr Link Generation', () => {
             const naddr = createBoardNaddr(specialBoardId, testAuthorPubkey);
             const decoded = decodeBoardNaddr(naddr);
             
-            expect(decoded?.boardId).toBe(specialBoardId);
+            expect(decoded?.identifier).toBe(specialBoardId);
         });
     });
 });
