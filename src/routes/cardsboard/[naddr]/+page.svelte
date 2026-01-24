@@ -1,468 +1,354 @@
 <script lang="ts">
-/**
- * NAddr-basierte Board-Ansicht
- * 
- * URL-Format: /cardsboard/naddr1...
- * 
- * Lädt ein Board von Nostr basierend auf dem NIP-19 naddr Parameter.
- * Jeder User mit Relay-Zugang kann das Board anzeigen (Read-Only View).
- * 
- * Der naddr enthält:
- * - kind: 30301 (Kanban Board)
- * - pubkey: Board-Autor
- * - identifier (d-tag): Board-ID
- * - relays: Optional relay hints
- */
-import { onMount, getContext } from 'svelte';
-import { goto } from '$app/navigation';
-import { nip19 } from '@nostr-dev-kit/ndk';
-import type NDK from '@nostr-dev-kit/ndk';
-import Board from "../Board.svelte";
-import Topbar from "../Topbar.svelte";
-import type { Column } from "../types.js";
-import { Board as BoardClass, type BoardProps, type CardProps, type ColumnProps } from '$lib/classes/BoardModel.js';
-import { nostrEventToBoard, nostrEventToCard } from '$lib/utils/nostrEvents.js';
-import { Button } from "$lib/components/ui/button/index.js";
-import LoaderIcon from "@lucide/svelte/icons/loader";
-import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
-import HomeIcon from "@lucide/svelte/icons/home";
-import UserPlusIcon from "@lucide/svelte/icons/user-plus";
-import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
-import { toast } from "svelte-sonner";
-import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-import { authStore } from '$lib';
+    /**
+     * naddr Route: Lade Board aus Nostr und weiterleiten zur normalen Ansicht
+     * 
+     * Diese Route dient nur als Lademechanismus:
+     * 1. Dekodiere naddr aus URL
+     * 2. Verbinde mit Relay-Hints
+     * 3. Lade Board + Cards von Nostr
+     * 4. Speichere in BoardStore (localStorage)
+     * 5. Weiterleitung zu /cardsboard/ (normale Ansicht)
+     * 
+     * Dadurch funktioniert alles normal: Sidebar, Topbar, Bearbeitung (wenn Owner)
+     */
+    import { page } from '$app/stores';
+    import { goto } from '$app/navigation';
+    import { onMount } from 'svelte';
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { authStore } from '$lib/stores/authStore.svelte.js';
+    import { Board, Card, Column, type CardProps } from '$lib/classes/BoardModel.js';
+    import { BoardStorage } from '$lib/stores/boardstore/storage.js';
+    import type NDK from '@nostr-dev-kit/ndk';
+    import { NDKEvent, NDKRelay, nip19 } from '@nostr-dev-kit/ndk';
+    import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+    import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 
-// Page data from +page.ts
-let { data } = $props();
+    // State
+    let status = $state<'loading' | 'error' | 'success'>('loading');
+    let errorMessage = $state('');
+    let loadingStep = $state('naddr dekodieren...');
 
-// Get NDK from context (initialized in +layout.svelte)
-const ndk = getContext<NDK>('ndk');
-
-// State
-let loading = $state(true);
-let error = $state<string | null>(null);
-let board = $state<BoardClass | null>(null);
-let boardAuthor = $state<string>('');
-let boardId = $state<string>('');
-let relayHints = $state<string[]>([]);
-
-// Derived: Convert Board to UI format
-let columns = $derived.by((): Column[] => {
-    if (!board) return [];
-    
-    return board.columns.map((col, colIndex) => ({
-        id: col.id,
-        name: col.name,
-        color: col.color,
-        items: col.cards.map((card, cardIndex) => ({
-            id: card.id,
-            name: card.heading, // CardItem uses 'name' not 'title'
-            description: card.content || '',
-            color: card.color,
-            labels: card.labels || [],
-            comments: card.comments || [],
-            attendees: card.attendees || [],
-            publishState: card.publishState || 'published',
-            author: card.author,
-            image: card.image,
-            link: card.links?.[0]?.url // First link if exists
-        }))
-    }));
-});
-
-let boardTitle = $derived(board?.name || 'Board wird geladen...');
-
-// Check if current user is the board owner or maintainer
-let canEdit = $derived.by(() => {
-    const currentPubkey = authStore.getPubkey();
-    if (!currentPubkey || !board) return false;
-    
-    // Owner can always edit
-    if (board.author === currentPubkey) return true;
-    
-    // Maintainers can edit
-    if (board.maintainers?.includes(currentPubkey)) return true;
-    
-    return false;
-});
-
-// Decode naddr and load board on mount
-onMount(async () => {
-    const naddrParam = data.naddr;
-    
-    if (!naddrParam) {
-        error = 'Keine naddr in der URL gefunden';
-        loading = false;
-        return;
+    interface NaddrData {
+        kind: number;
+        pubkey: string;
+        identifier: string;
+        relays: string[];
     }
-    
-    try {
-        // 1. Decode NIP-19 naddr
-        console.log('🔍 Dekodiere naddr:', naddrParam);
-        const decoded = decodeNaddr(naddrParam);
-        
-        if (!decoded) {
-            error = 'Ungültiges naddr Format';
-            loading = false;
-            return;
-        }
-        
-        boardId = decoded.identifier;
-        boardAuthor = decoded.pubkey;
-        relayHints = decoded.relays || [];
-        
-        console.log('✅ naddr dekodiert:', { boardId, boardAuthor, relayHints });
-        
-        // 2. Wait for NDK to be ready
-        if (!ndk) {
-            error = 'Nostr-Verbindung nicht verfügbar';
-            loading = false;
-            return;
-        }
-        
-        // 3. Load board from Nostr
-        await loadBoardFromNostr();
-        
-    } catch (e) {
-        console.error('❌ Fehler beim Laden des Boards:', e);
-        error = e instanceof Error ? e.message : 'Unbekannter Fehler';
-        loading = false;
-    }
-});
 
-/**
- * Decode NIP-19 naddr to extract board info
- */
-function decodeNaddr(naddr: string): { kind: number; pubkey: string; identifier: string; relays?: string[] } | null {
-    try {
-        // Remove 'nostr:' prefix if present
-        const cleanNaddr = naddr.replace(/^nostr:/, '');
-        
-        const decoded = nip19.decode(cleanNaddr);
-        
-        if (decoded.type !== 'naddr') {
-            console.error('❌ Nicht ein naddr:', decoded.type);
+    /**
+     * Dekodiere naddr String zu Komponenten
+     */
+    function decodeNaddr(naddrString: string): NaddrData | null {
+        try {
+            // Entferne "naddr1" prefix wenn vorhanden (für URL-Kompatibilität)
+            const cleanNaddr = naddrString.startsWith('naddr1') ? naddrString : `naddr1${naddrString}`;
+            
+            const decoded = nip19.decode(cleanNaddr);
+            
+            if (decoded.type !== 'naddr') {
+                console.error('Invalid naddr type:', decoded.type);
+                return null;
+            }
+            
+            const data = decoded.data as {
+                kind: number;
+                pubkey: string;
+                identifier: string;
+                relays?: string[];
+            };
+            
+            return {
+                kind: data.kind,
+                pubkey: data.pubkey,
+                identifier: data.identifier,
+                relays: data.relays || []
+            };
+        } catch (error) {
+            console.error('Failed to decode naddr:', error);
             return null;
         }
-        
-        const data = decoded.data as { kind: number; pubkey: string; identifier: string; relays?: string[] };
-        
-        // Validate it's a Kanban Board (Kind 30301)
-        if (data.kind !== 30301) {
-            console.warn('⚠️ Unerwarteter Event-Kind:', data.kind, '(erwartet: 30301)');
-            // Still proceed - could be a different addressable event type
-        }
-        
-        return data;
-        
-    } catch (e) {
-        console.error('❌ naddr Dekodierung fehlgeschlagen:', e);
-        return null;
     }
-}
 
-/**
- * Load board and cards from Nostr relays
- */
-async function loadBoardFromNostr(): Promise<void> {
-    try {
-        console.log('📡 Lade Board von Nostr...', { boardId, boardAuthor });
+    /**
+     * Verbinde zu Relay-Hints aus naddr
+     */
+    async function connectToRelayHints(ndk: NDK, relays: string[]): Promise<void> {
+        if (relays.length === 0) {
+            console.log('ℹ️ Keine Relay-Hints im naddr');
+            return;
+        }
+
+        console.log(`🔌 Verbinde zu ${relays.length} Relay-Hints:`, relays);
         
-        // 1. Fetch Board Event (Kind 30301)
-        const boardFilter = {
-            kinds: [30301],
-            authors: [boardAuthor],
-            '#d': [boardId]
-        };
-        
-        const boardEvent = await ndk.fetchEvent(boardFilter);
-        
-        if (!boardEvent) {
-            throw new Error('Board nicht gefunden. Möglicherweise existiert es nicht oder das Relay ist nicht erreichbar.');
+        for (const relayUrl of relays) {
+            try {
+                // Prüfe ob Relay bereits verbunden
+                const existingRelay = ndk.pool.relays.get(relayUrl);
+                if (existingRelay?.connectivity?.status === 1) {
+                    console.log(`✅ Relay bereits verbunden: ${relayUrl}`);
+                    continue;
+                }
+                
+                // NDKRelay erfordert 3 Argumente: url, authPolicy, ndk
+                const relay = new NDKRelay(relayUrl, undefined, ndk);
+                ndk.pool.addRelay(relay, true);
+                console.log(`🔌 Relay hinzugefügt: ${relayUrl}`);
+            } catch (error) {
+                console.warn(`⚠️ Konnte nicht zu Relay verbinden: ${relayUrl}`, error);
+            }
         }
         
-        console.log('✅ Board Event geladen:', boardEvent.id);
+        // Kurz warten damit Relays verbinden können
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    /**
+     * Lade Board von Nostr
+     */
+    async function loadBoardFromNostr(
+        ndk: NDK,
+        pubkey: string,
+        identifier: string
+    ): Promise<Board | null> {
+        loadingStep = 'Board von Nostr laden...';
         
-        // 2. Convert to Board object
-        const boardProps = nostrEventToBoard(boardEvent);
-        board = new BoardClass(boardProps);
-        
-        console.log('✅ Board erstellt:', board.name, 'mit', board.columns.length, 'Spalten');
-        
-        // 3. Fetch Card Events (Kind 30302) for this board
-        const boardRef = `30301:${boardAuthor}:${boardId}`;
-        
-        const cardFilter = {
-            kinds: [30302],
-            '#a': [boardRef]
+        const filter = {
+            kinds: [30301],
+            authors: [pubkey],
+            '#d': [identifier]
         };
+
+        console.log('🔍 Suche Board Event:', filter);
+
+        const event = await ndk.fetchEvent(filter);
         
-        console.log('📡 Lade Cards mit Filter:', cardFilter);
+        if (!event) {
+            console.error('❌ Kein Board Event gefunden');
+            return null;
+        }
+
+        console.log('✅ Board Event gefunden:', event.id);
+
+        // Konvertiere Event zu Board
+        const { nostrEventToBoard } = await import('$lib/utils/nostrEvents.js');
+        const boardProps = nostrEventToBoard(event);
         
-        const cardEvents = await ndk.fetchEvents(cardFilter);
+        if (!boardProps.id) {
+            console.error('❌ Board Props ungültig');
+            return null;
+        }
+
+        return new Board(boardProps);
+    }
+
+    /**
+     * Lade Cards für Board von Nostr
+     */
+    async function loadCardsFromNostr(
+        ndk: NDK,
+        board: Board,
+        pubkey: string,
+        identifier: string
+    ): Promise<void> {
+        loadingStep = 'Cards laden...';
         
-        console.log(`✅ ${cardEvents.size} Card Events gefunden`);
+        // Addressable Reference für das Board
+        const aTagValue = `30301:${pubkey}:${identifier}`;
         
-        // 4. Process cards and add to columns
-        const cardsByColumn = new Map<string, CardProps[]>();
+        const filter = {
+            kinds: [30302],
+            '#a': [aTagValue]
+        };
+
+        console.log('🔍 Suche Card Events für:', aTagValue);
+
+        const events = await ndk.fetchEvents(filter);
+        const cardEvents = Array.from(events);
+        
+        console.log(`✅ ${cardEvents.length} Card Events gefunden`);
+
+        if (cardEvents.length === 0) return;
+
+        // Konvertiere Events zu Cards und füge sie dem Board hinzu
+        const { nostrEventToCard } = await import('$lib/utils/nostrEvents.js');
         
         for (const event of cardEvents) {
             try {
-                const cardProps = nostrEventToCard(event);
+                const cardProps = nostrEventToCard(event) as CardProps & { columnName?: string };
+                if (!cardProps.id) continue;
+
+                // Finde oder erstelle Spalte (columnName kommt via @ts-ignore aus nostrEventToCard)
+                const columnName = cardProps.columnName || 'To Do';
+                let column = board.columns.find(c => c.name === columnName);
                 
-                // Find column name from 's' tag
-                const columnTag = event.tags.find((t: string[]) => t[0] === 's');
-                const columnName = columnTag?.[1] || 'Unbekannt';
-                
-                // Find column by name
-                const column = board.columns.find(c => c.name === columnName);
-                if (column) {
-                    if (!cardsByColumn.has(column.id)) {
-                        cardsByColumn.set(column.id, []);
+                if (!column) {
+                    // Spalte existiert nicht im Board Event, erstelle sie
+                    column = board.addColumn({ name: columnName });
+                    console.log(`📁 Spalte erstellt: ${columnName}`);
+                }
+
+                // Prüfe ob Card bereits existiert
+                const existingCard = column.findCard(cardProps.id);
+                if (existingCard) {
+                    // Update existierende Card (LWW)
+                    const existingTime = existingCard.updatedAt ? new Date(existingCard.updatedAt).getTime() : 0;
+                    const newTime = cardProps.updatedAt ? new Date(cardProps.updatedAt).getTime() : 0;
+                    
+                    if (newTime > existingTime) {
+                        existingCard.update(cardProps);
                     }
-                    cardsByColumn.get(column.id)!.push(cardProps);
                 } else {
-                    console.warn('⚠️ Spalte nicht gefunden für Card:', columnName);
+                    // Füge neue Card hinzu
+                    const card = new Card(cardProps);
+                    column.cards.push(card);
                 }
-                
-            } catch (e) {
-                console.error('❌ Fehler beim Verarbeiten einer Card:', e);
+            } catch (error) {
+                console.warn('⚠️ Fehler beim Verarbeiten von Card Event:', error);
             }
         }
-        
-        // 5. Add cards to columns (sorted by rank if available)
-        for (const column of board.columns) {
-            const cards = cardsByColumn.get(column.id) || [];
+
+        // Sortiere Cards nach Rank (gespeichert in cardProps während Erstellung)
+        // Hinweis: Card-Instanzen haben kein rank Property, aber die Position ist durch Einfügereihenfolge bestimmt
+    }
+
+    /**
+     * Hauptlogik: Lade Board und leite weiter
+     */
+    async function loadAndRedirect() {
+        try {
+            // 1. Warte auf NDK
+            loadingStep = 'NDK initialisieren...';
             
-            // Sort by rank tag if present
-            cards.sort((a, b) => {
-                const rankA = (a as any).rank ?? 999;
-                const rankB = (b as any).rank ?? 999;
-                return rankA - rankB;
+            // Warte bis boardStore.ndkReady true ist
+            let attempts = 0;
+            while (!boardStore.ndkReady && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!boardStore.ndkReady) {
+                throw new Error('NDK konnte nicht initialisiert werden');
+            }
+
+            const ndk = boardStore.nostrIntegration?.getNDK();
+            if (!ndk) {
+                throw new Error('NDK nicht verfügbar');
+            }
+
+            // 2. Dekodiere naddr
+            loadingStep = 'naddr dekodieren...';
+            const naddrParam = $page.params.naddr;
+            
+            if (!naddrParam) {
+                throw new Error('Kein naddr Parameter in URL');
+            }
+
+            const naddrData = decodeNaddr(naddrParam);
+            
+            if (!naddrData) {
+                throw new Error('Ungültiger naddr - konnte nicht dekodiert werden');
+            }
+
+            if (naddrData.kind !== 30301) {
+                throw new Error(`Ungültiger Event Kind: ${naddrData.kind} (erwartet: 30301)`);
+            }
+
+            console.log('📋 naddr dekodiert:', {
+                kind: naddrData.kind,
+                pubkey: naddrData.pubkey.slice(0, 16) + '...',
+                identifier: naddrData.identifier,
+                relays: naddrData.relays
             });
+
+            // 3. Verbinde zu Relay-Hints
+            loadingStep = 'Verbinde zu Relays...';
+            await connectToRelayHints(ndk, naddrData.relays);
+
+            // 4. Prüfe ob Board bereits lokal existiert
+            const boardId = naddrData.identifier;
+            const existingBoard = BoardStorage.loadBoard(boardId);
             
-            // Add cards to column
-            for (const cardProps of cards) {
-                column.addCard(cardProps);
-            }
-        }
-        
-        console.log('✅ Board vollständig geladen mit', 
-            board.columns.reduce((sum, col) => sum + col.cards.length, 0), 'Cards');
-        
-        // 6. Load comments for all cards
-        await loadAllComments();
-        
-        loading = false;
-        
-    } catch (e) {
-        console.error('❌ Fehler beim Laden des Boards:', e);
-        throw e;
-    }
-}
-
-/**
- * Load comments for all cards in the board
- */
-async function loadAllComments(): Promise<void> {
-    if (!board) return;
-    
-    try {
-        // Collect all card refs for comment loading
-        const cardRefs: string[] = [];
-        
-        for (const column of board.columns) {
-            for (const card of column.cards) {
-                const cardRef = `30302:${card.author || boardAuthor}:${card.id}`;
-                cardRefs.push(cardRef);
-            }
-        }
-        
-        if (cardRefs.length === 0) return;
-        
-        console.log('📡 Lade Kommentare für', cardRefs.length, 'Cards...');
-        
-        // Fetch comment events (Kind 1 with 'a' tag referencing cards)
-        const commentFilter = {
-            kinds: [1],
-            '#a': cardRefs
-        };
-        
-        const commentEvents = await ndk.fetchEvents(commentFilter);
-        
-        console.log(`✅ ${commentEvents.size} Kommentare geladen`);
-        
-        // Add comments to cards
-        for (const event of commentEvents) {
-            try {
-                const aTag = event.tags.find((t: string[]) => t[0] === 'a');
-                if (!aTag) continue;
+            if (existingBoard) {
+                console.log('✅ Board bereits lokal vorhanden, lade direkt');
+                loadingStep = 'Board wird geöffnet...';
                 
-                const cardRef = aTag[1];
-                const cardId = cardRef.split(':')[2]; // Format: 30302:pubkey:cardId
+                // Lade das Board im Store
+                boardStore.loadBoard(boardId);
                 
-                // Find card and add comment
-                for (const column of board.columns) {
-                    const card = column.findCard(cardId);
-                    if (card) {
-                        card.addComment(event.content, event.pubkey);
-                        break;
-                    }
-                }
-                
-            } catch (e) {
-                console.error('❌ Fehler beim Verarbeiten eines Kommentars:', e);
+                // Weiterleitung
+                status = 'success';
+                await goto('/cardsboard/', { replaceState: true });
+                return;
             }
+
+            // 5. Lade Board von Nostr
+            const board = await loadBoardFromNostr(
+                ndk,
+                naddrData.pubkey,
+                naddrData.identifier
+            );
+
+            if (!board) {
+                throw new Error('Board konnte nicht von Nostr geladen werden');
+            }
+
+            // 6. Lade Cards
+            await loadCardsFromNostr(
+                ndk,
+                board,
+                naddrData.pubkey,
+                naddrData.identifier
+            );
+
+            // 7. Speichere Board lokal
+            loadingStep = 'Board speichern...';
+            BoardStorage.saveBoard(board);
+            
+            // Board-IDs neu laden damit es in der Liste erscheint
+            boardStore.refreshBoardIds();
+
+            // 8. Lade das Board im Store
+            loadingStep = 'Board wird geöffnet...';
+            boardStore.loadBoard(board.id);
+
+            // 9. Weiterleitung zur normalen Ansicht
+            status = 'success';
+            console.log('✅ Board geladen und gespeichert, leite weiter...');
+            
+            await goto('/cardsboard/', { replaceState: true });
+
+        } catch (error) {
+            console.error('❌ Fehler beim Laden:', error);
+            status = 'error';
+            errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
         }
-        
-    } catch (e) {
-        console.error('❌ Fehler beim Laden der Kommentare:', e);
     }
-}
 
-/**
- * Follow/Add this board to user's board list
- */
-async function followBoard(): Promise<void> {
-    if (!board || !boardId || !boardAuthor) {
-        toast.error('Board-Daten nicht verfügbar');
-        return;
-    }
-    
-    try {
-        // Import and use BoardSharingOperations
-        const { BoardSharingOperations } = await import('$lib/stores/boardstore/sharing.js');
-        
-        await BoardSharingOperations.followBoard(boardId, boardAuthor, ndk);
-        
-        toast.success('Board wurde hinzugefügt!', {
-            description: 'Du findest es jetzt in deiner Board-Liste.'
-        });
-        
-        // Navigate to the board in normal view
-        goto('/cardsboard');
-        
-    } catch (e) {
-        console.error('❌ Fehler beim Folgen des Boards:', e);
-        toast.error('Fehler beim Hinzufügen', {
-            description: e instanceof Error ? e.message : 'Unbekannter Fehler'
-        });
-    }
-}
-
-/**
- * Go back to main board view
- */
-function goHome(): void {
-    goto('/cardsboard');
-}
-
-/**
- * Copy shareable link to clipboard
- */
-async function copyShareLink(): Promise<void> {
-    const url = window.location.href;
-    await navigator.clipboard.writeText(url);
-    toast.success('Link kopiert!');
-}
-
-// Read-only handler - no changes allowed for non-editors
-function handleBoardUpdated(newColumns: Column[]): void {
-    if (!canEdit) {
-        toast.info('Nur Lesen', {
-            description: 'Du kannst dieses Board nur ansehen, nicht bearbeiten.'
-        });
-        return;
-    }
-    
-    // If user can edit, sync changes
-    // Note: This would need integration with the actual board sync
-    console.log('📝 Board-Update (canEdit=true) - TODO: Implement edit sync');
-}
+    onMount(() => {
+        loadAndRedirect();
+    });
 </script>
 
-<div class="flex h-screen w-full flex-col overflow-hidden">
-    {#if loading}
-        <!-- Loading State -->
-        <div class="flex h-full items-center justify-center">
+<div class="min-h-screen bg-background flex items-center justify-center">
+    <div class="text-center p-8 max-w-md">
+        {#if status === 'loading'}
             <div class="flex flex-col items-center gap-4">
-                <LoaderIcon class="h-8 w-8 animate-spin text-muted-foreground" />
-                <p class="text-muted-foreground">Board wird geladen...</p>
-                {#if boardId}
-                    <p class="text-xs text-muted-foreground/60">ID: {boardId}</p>
-                {/if}
+                <LoaderCircleIcon class="h-12 w-12 animate-spin text-primary" />
+                <h1 class="text-xl font-semibold">Board wird geladen...</h1>
+                <p class="text-muted-foreground">{loadingStep}</p>
             </div>
-        </div>
-        
-    {:else if error}
-        <!-- Error State -->
-        <div class="flex h-full items-center justify-center p-4">
-            <div class="max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-                <div class="flex items-center gap-2 text-destructive">
-                    <AlertCircleIcon class="h-4 w-4" />
-                    <h3 class="font-semibold">Board nicht gefunden</h3>
-                </div>
-                <p class="mt-2 text-sm text-muted-foreground">
-                    {error}
-                </p>
-                <div class="mt-4 flex gap-2">
-                    <Button variant="outline" onclick={goHome}>
-                        <HomeIcon class="mr-2 h-4 w-4" />
-                        Zur Startseite
-                    </Button>
-                </div>
+        {:else if status === 'error'}
+            <div class="flex flex-col items-center gap-4">
+                <AlertCircleIcon class="h-12 w-12 text-destructive" />
+                <h1 class="text-xl font-semibold text-destructive">Fehler beim Laden</h1>
+                <p class="text-muted-foreground">{errorMessage}</p>
+                <a 
+                    href="/cardsboard/" 
+                    class="mt-4 text-primary hover:underline"
+                >
+                    Zurück zur Übersicht
+                </a>
             </div>
-        </div>
-        
-    {:else if board}
-        <!-- Board View -->
-        <main class="flex flex-1 flex-col overflow-hidden">
-            <!-- Custom Topbar for shared view -->
-            <header class="flex h-14 items-center justify-between border-b bg-background px-4">
-                <div class="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" onclick={goHome}>
-                        <HomeIcon class="h-4 w-4" />
-                    </Button>
-                    <div>
-                        <h1 class="text-lg font-semibold">{boardTitle}</h1>
-                        {#if board.description}
-                            <p class="text-xs text-muted-foreground line-clamp-1">{board.description}</p>
-                        {/if}
-                    </div>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    <!-- Read-only indicator -->
-                    {#if !canEdit}
-                        <span class="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                            Nur Lesen
-                        </span>
-                    {/if}
-                    
-                    <!-- Copy Link -->
-                    <Button variant="outline" size="sm" onclick={copyShareLink}>
-                        <ExternalLinkIcon class="mr-2 h-4 w-4" />
-                        Link kopieren
-                    </Button>
-                    
-                    <!-- Follow Board (if not owner) -->
-                    {#if !canEdit && authStore.isAuthenticated}
-                        <Button variant="default" size="sm" onclick={followBoard}>
-                            <UserPlusIcon class="mr-2 h-4 w-4" />
-                            Board folgen
-                        </Button>
-                    {/if}
-                </div>
-            </header>
-            
-            <!-- Board Content -->
-            <div class="flex-1 overflow-hidden p-0 min-h-0">
-                <Board 
-                    columns={columns} 
-                    onFinalUpdate={handleBoardUpdated}
-                    readOnly={!canEdit}
-                />
-            </div>
-        </main>
-    {/if}
+        {/if}
+    </div>
 </div>

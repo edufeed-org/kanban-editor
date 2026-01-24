@@ -1,7 +1,15 @@
 // src/lib/utils/nostrEvents.spec.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { cardToNostrEvent, createCommentEvent, createColumnOrderPatchEvent, nostrEventToCard } from './nostrEvents.js';
+import { 
+    cardToNostrEvent, 
+    createCommentEvent, 
+    createColumnOrderPatchEvent, 
+    nostrEventToCard,
+    createBoardNaddr,
+    createBoardNaddrUrl,
+    decodeBoardNaddr
+} from './nostrEvents.js';
 import { Card } from '../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
 
@@ -306,5 +314,117 @@ describe('nostrEvents - Column Order Patch Events', () => {
         );
 
         expect(event.tags).toContainEqual(['col', 'col-a', '', 'slate']);
+    });
+});
+
+describe('nostrEvents - naddr Link Generation', () => {
+    const testBoardId = 'test-board-123';
+    const testAuthorPubkey = 'a'.repeat(64); // 64-char hex pubkey
+    const testRelays = ['wss://relay.damus.io', 'wss://nos.lol'];
+
+    describe('createBoardNaddr', () => {
+        it('should create a valid naddr string', () => {
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey);
+            
+            expect(naddr).toBeDefined();
+            expect(naddr).toMatch(/^naddr1[a-z0-9]+$/);
+        });
+
+        it('should create naddr with relay hints', () => {
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey, testRelays);
+            
+            expect(naddr).toBeDefined();
+            expect(naddr).toMatch(/^naddr1[a-z0-9]+$/);
+            // naddr with relays should be longer
+            const naddrWithoutRelays = createBoardNaddr(testBoardId, testAuthorPubkey);
+            expect(naddr.length).toBeGreaterThan(naddrWithoutRelays.length);
+        });
+
+        it('should filter out invalid relay URLs', () => {
+            const mixedRelays = ['wss://valid.relay', 'http://invalid', '', 'wss://another.valid'];
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey, mixedRelays);
+            
+            // Should still create a valid naddr
+            expect(naddr).toMatch(/^naddr1[a-z0-9]+$/);
+        });
+    });
+
+    describe('createBoardNaddrUrl', () => {
+        it('should create a URL path starting with /cardsboard/', () => {
+            const url = createBoardNaddrUrl(testBoardId, testAuthorPubkey);
+            
+            expect(url).toMatch(/^\/cardsboard\/naddr1[a-z0-9]+$/);
+        });
+
+        it('should include relay hints in URL', () => {
+            const url = createBoardNaddrUrl(testBoardId, testAuthorPubkey, testRelays);
+            
+            expect(url).toMatch(/^\/cardsboard\/naddr1[a-z0-9]+$/);
+        });
+    });
+
+    describe('decodeBoardNaddr', () => {
+        it('should decode a valid naddr and return board info', () => {
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey, testRelays);
+            const decoded = decodeBoardNaddr(naddr);
+            
+            expect(decoded).not.toBeNull();
+            expect(decoded?.boardId).toBe(testBoardId);
+            expect(decoded?.authorPubkey).toBe(testAuthorPubkey);
+            expect(decoded?.kind).toBe(30301);
+        });
+
+        it('should include relay hints in decoded result', () => {
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey, testRelays);
+            const decoded = decodeBoardNaddr(naddr);
+            
+            expect(decoded?.relays).toBeDefined();
+            expect(decoded?.relays).toContain('wss://relay.damus.io');
+            expect(decoded?.relays).toContain('wss://nos.lol');
+        });
+
+        it('should return null for invalid naddr', () => {
+            const decoded = decodeBoardNaddr('invalid-naddr');
+            expect(decoded).toBeNull();
+        });
+
+        it('should return null for empty string', () => {
+            const decoded = decodeBoardNaddr('');
+            expect(decoded).toBeNull();
+        });
+
+        it('should handle naddr with naddr1 prefix from URL', () => {
+            const naddr = createBoardNaddr(testBoardId, testAuthorPubkey);
+            // Simulate extracting from URL path
+            const fromUrl = `/cardsboard/${naddr}`.split('/').pop()!;
+            const decoded = decodeBoardNaddr(fromUrl);
+            
+            expect(decoded).not.toBeNull();
+            expect(decoded?.boardId).toBe(testBoardId);
+        });
+    });
+
+    describe('round-trip encoding/decoding', () => {
+        it('should preserve board data through encode/decode cycle', () => {
+            const originalBoardId = 'my-kanban-board';
+            const originalAuthor = 'b'.repeat(64);
+            const originalRelays = ['wss://relay1.example.com', 'wss://relay2.example.com'];
+            
+            const naddr = createBoardNaddr(originalBoardId, originalAuthor, originalRelays);
+            const decoded = decodeBoardNaddr(naddr);
+            
+            expect(decoded?.boardId).toBe(originalBoardId);
+            expect(decoded?.authorPubkey).toBe(originalAuthor);
+            expect(decoded?.relays).toEqual(originalRelays);
+        });
+
+        it('should work with special characters in board ID', () => {
+            const specialBoardId = 'board-with-special-chars_123';
+            
+            const naddr = createBoardNaddr(specialBoardId, testAuthorPubkey);
+            const decoded = decodeBoardNaddr(naddr);
+            
+            expect(decoded?.boardId).toBe(specialBoardId);
+        });
     });
 });

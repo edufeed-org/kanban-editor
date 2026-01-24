@@ -6,11 +6,16 @@
     import * as Tabs from "$lib/components/ui/tabs";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { authStore } from "$lib/stores/authStore.svelte";
+    import { settingsStore } from "$lib/stores/settingsStore.svelte";
     import { BoardRole, type BoardShare } from "$lib/types/sharing";
     import TrashIcon from "@lucide/svelte/icons/trash";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";
+    import LinkIcon from "@lucide/svelte/icons/link";
+    import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
     import { toast } from "svelte-sonner";
+    import { createBoardNaddr, createBoardNaddrUrl } from "$lib/utils/nostrEvents";
+    import QRCode from 'qrcode';
     
     // Props
     let { open = $bindable(false) } = $props();
@@ -20,9 +25,19 @@
     let participants = $state<BoardShare[]>([]);
     let isLoading = $state(false);
     let errorMessage = $state('');
-    let activeTab = $state('share-link'); // 'share-link' | 'editors'
-    let shareLink = $state('');
+    let activeTab = $state('nostr-link'); // 'nostr-link' | 'share-link' | 'editors'
     let linkCopied = $state(false);
+    
+    // Nostr naddr Link State
+    let naddrPath = $state(''); // Relativer Pfad: /cardsboard/naddr...
+    let naddrCopied = $state(false);
+    let qrCodeDataUrl = $state('');
+    
+    // Base-URL für vollständige Links (default: aktuelle Origin)
+    let baseUrl = $state(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+    
+    // Vollständiger naddr-Link (kombiniert baseUrl + naddrPath)
+    let naddrLink = $derived(naddrPath ? `${baseUrl}${naddrPath}` : '');
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
@@ -45,14 +60,26 @@
     let isSizeWarning = $derived(tokenSizePercent >= 80 && tokenSizePercent < 100);
     let isSizeError = $derived(tokenSizePercent >= 100);
     
-    async function generateShareLinkAsync(): Promise<string> {
+    // Share-Link Token (ohne Base-URL, wird separat zusammengesetzt)
+    let shareToken = $state('');
+    
+    // Vollständiger Share-Link (kombiniert baseUrl + Token)
+    let fullShareLink = $derived(shareToken ? `${baseUrl}${import.meta.env.BASE_URL}cardsboard?import=${shareToken}` : '');
+    
+    async function generateShareLinkAsync(): Promise<void> {
         const boardId = boardStore.data?.id;
-        if (!boardId) return '';
+        if (!boardId) return;
         
         isGeneratingLink = true;
         try {
             const result = await boardStore.generateShareLink(boardId, true);
             tokenSize = result.tokenSize;
+            
+            // Token aus der URL extrahieren (alles nach "?import=")
+            const importMatch = result.url.match(/[?&]import=(.+)$/);
+            if (importMatch) {
+                shareToken = importMatch[1];
+            }
             
             // Config laden für dynamisches Maximum
             try {
@@ -61,12 +88,9 @@
                     maxTokenSize = config.shareTokenMaxSize;
                 }
             } catch { /* ignore */ }
-            
-            return result.url;
         } catch (error) {
             console.error('Fehler beim Generieren des Share-Links:', error);
             toast.error('Link konnte nicht generiert werden');
-            return '';
         } finally {
             isGeneratingLink = false;
         }
@@ -75,7 +99,7 @@
     // Link kopieren
     async function copyShareLink() {
         try {
-            await navigator.clipboard.writeText(shareLink);
+            await navigator.clipboard.writeText(fullShareLink);
             linkCopied = true;
             toast.success('Link kopiert!', {
                 description: 'Der Share-Link wurde in die Zwischenablage kopiert'
@@ -230,9 +254,19 @@
             loadParticipants();
             loadUserRole();
             // Share-Link async generieren (Token-basiert mit allen Daten)
-            generateShareLinkAsync().then(url => {
-                shareLink = url;
-            });
+            void generateShareLinkAsync();
+            
+            // Nostr naddr-Link generieren (async wegen QR-Code)
+            void generateNaddrLink();
+        }
+    });
+    
+    // QR-Code neu generieren wenn baseUrl sich ändert
+    $effect(() => {
+        const currentBaseUrl = baseUrl;
+        const currentPath = naddrPath;
+        if (currentBaseUrl && currentPath) {
+            void regenerateQrCode();
         }
     });
 
@@ -249,28 +283,187 @@
             leaveRequestsByPubkey = {};
         }
     });
+    
+    // Nostr naddr-Link generieren
+    async function generateNaddrLink() {
+        const board = boardStore.data;
+        if (!board || !board.author) {
+            naddrPath = '';
+            qrCodeDataUrl = '';
+            return;
+        }
+        
+        try {
+            // Relay-Hints aus den öffentlichen Relays holen
+            const relayHints: string[] = settingsStore.settings.relaysPublic || [];
+            console.log('📡 naddr mit Relay-Hints:', relayHints);
+            
+            naddrPath = createBoardNaddrUrl(board.id, board.author, relayHints);
+            
+            // QR-Code mit vollständiger URL generieren
+            await regenerateQrCode();
+        } catch (error) {
+            console.error('Fehler beim Generieren des naddr-Links:', error);
+            naddrPath = '';
+            qrCodeDataUrl = '';
+        }
+    }
+    
+    // QR-Code neu generieren (wenn baseUrl oder naddrPath sich ändert)
+    async function regenerateQrCode() {
+        if (!naddrLink) {
+            qrCodeDataUrl = '';
+            return;
+        }
+        
+        try {
+            qrCodeDataUrl = await QRCode.toDataURL(naddrLink, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            });
+        } catch (error) {
+            console.error('Fehler beim Generieren des QR-Codes:', error);
+            qrCodeDataUrl = '';
+        }
+    }
+    
+    // naddr-Link kopieren
+    async function copyNaddrLink() {
+        try {
+            await navigator.clipboard.writeText(naddrLink);
+            naddrCopied = true;
+            toast.success('Nostr-Link kopiert!', {
+                description: 'Der naddr-Link wurde in die Zwischenablage kopiert'
+            });
+            setTimeout(() => naddrCopied = false, 2000);
+        } catch {
+            toast.error('Fehler beim Kopieren');
+        }
+    }
+    
+    // Im Browser öffnen (neuer Tab)
+    function openNaddrInBrowser() {
+        if (naddrLink) {
+            window.open(naddrLink, '_blank');
+        }
+    }
 </script>
 
 <Dialog.Root bind:open>
-    <Dialog.Content class="max-w-lg" data-testid="share-dialog">
-        <Dialog.Header>
+    <Dialog.Content class="max-w-lg max-h-[90vh] flex flex-col" data-testid="share-dialog">
+        <Dialog.Header class="flex-shrink-0">
             <Dialog.Title>Board teilen</Dialog.Title>
             <Dialog.Description>
                 Teile dieses Board mit anderen über einen Link oder verwalte Editoren.
             </Dialog.Description>
         </Dialog.Header>
         
+        <!-- Scrollbarer Hauptbereich -->
+        <div class="flex-1 overflow-y-auto min-h-0 pb-4 pr-3">
+        <!-- Base-URL Einstellung (gilt für alle Link-Typen) -->
+        <div class="mt-4 space-y-1">
+            <label class="text-xs font-medium text-muted-foreground">Base-URL (für externe Zugriffe ggf. anpassen)</label>
+            <input 
+                type="text"
+                bind:value={baseUrl}
+                placeholder="https://example.com"
+                class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
+            />
+        </div>
+        
         <Tabs.Root bind:value={activeTab} class="mt-4">
-            <Tabs.List class="grid w-full grid-cols-2">
+            <Tabs.List class="grid w-full grid-cols-3">
+                <Tabs.Trigger value="nostr-link">
+                    Nostr-Link
+                </Tabs.Trigger>
                 <Tabs.Trigger value="share-link">
-                    Share-Link
+                    Share & Fork
                 </Tabs.Trigger>
                 <Tabs.Trigger value="editors">
                     Editoren ({editorsAndOwners.length})
                 </Tabs.Trigger>
             </Tabs.List>
             
-            <!-- Share-Link Tab -->
+            <!-- Nostr-Link Tab (naddr) - jetzt erster Tab -->
+            <Tabs.Content value="nostr-link" class="mt-4 space-y-4">
+                <div class="space-y-2">
+                    <p class="text-sm text-muted-foreground">
+                        Teile die permanente Nostr-Adresse dieses Boards. Empfänger können das Board 
+                        direkt über Nostr-Relays laden und sehen immer die aktuelle Version.
+                    </p>
+                    
+                    <!-- QR Code -->
+                    {#if qrCodeDataUrl}
+                        <div class="flex justify-center py-4">
+                            <div class="p-3 bg-white rounded-lg shadow-sm border">
+                                <img src={qrCodeDataUrl} alt="QR-Code für Nostr-Link" class="w-48 h-48" />
+                            </div>
+                        </div>
+                        <p class="text-xs text-center text-muted-foreground">
+                            Scanne diesen QR-Code, um das Board auf einem anderen Gerät zu öffnen
+                        </p>
+                    {/if}
+                    
+                    <div class="flex gap-2">
+                        {#if naddrLink}
+                            <Input 
+                                value={naddrLink}
+                                readonly
+                                class="flex-1 font-mono text-xs opacity-50"
+                                data-testid="naddr-link-input"
+                            />
+                            <Button 
+                                onclick={copyNaddrLink}
+                                variant="outline"
+                                class="gap-2"
+                                title="Link kopieren"
+                            >
+                                {#if naddrCopied}
+                                    <CheckIcon class="h-4 w-4" />
+                                {:else}
+                                    <CopyIcon class="h-4 w-4" />
+                                {/if}
+                            </Button>
+                            <Button 
+                                onclick={openNaddrInBrowser}
+                                variant="outline"
+                                title="Im Browser öffnen"
+                            >
+                                <ExternalLinkIcon class="h-4 w-4" />
+                            </Button>
+                        {:else}
+                            <div class="flex-1 p-2 text-sm text-muted-foreground bg-muted rounded-md">
+                                ⚠️ Board muss veröffentlicht sein (nicht Draft) und einen Author haben.
+                            </div>
+                        {/if}
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-muted rounded-md">
+                        <p class="text-sm font-medium mb-2">ℹ️ Was ist ein Nostr-Link (naddr)?</p>
+                        <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                            <li><strong>Permanente Adresse:</strong> Das Board ist über diese URL immer erreichbar</li>
+                            <li><strong>Immer aktuell:</strong> Empfänger sehen live die neueste Version</li>
+                            <li><strong>Read-only:</strong> Besucher können das Board ansehen, aber nicht bearbeiten</li>
+                            <li><strong>Dezentral:</strong> Funktioniert über jeden öffentlichen Nostr-Client/Relay</li>
+                        </ul>
+                    </div>
+                    
+                    {#if naddrLink}
+                        <div class="mt-3 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md">
+                            <p class="text-xs text-green-700 dark:text-green-300">
+                                <LinkIcon class="h-3 w-3 inline mr-1" />
+                                Dieser Link ist klein (~80 Bytes) und funktioniert in allen Browsern.
+                            </p>
+                        </div>
+                    {/if}
+                </div>
+            </Tabs.Content>
+            
+            <!-- Share-Link Tab (jetzt "Share & Fork") -->
             <Tabs.Content value="share-link" class="mt-4 space-y-4">
                 <div class="space-y-2">
                     <p class="text-sm text-muted-foreground">
@@ -291,16 +484,16 @@
                             </Button>
                         {:else}
                             <Input 
-                                value={shareLink}
+                                value={fullShareLink}
                                 readonly
-                                class="flex-1 font-mono text-xs"
+                                class="flex-1 font-mono text-xs opacity-50"
                                 data-testid="share-link-input"
                             />
                             <Button 
                                 onclick={copyShareLink}
                                 variant="outline"
                                 class="gap-2"
-                                disabled={!shareLink}
+                                disabled={!fullShareLink}
                             >
                                 {#if linkCopied}
                                     <CheckIcon class="h-4 w-4" />
@@ -423,8 +616,9 @@
                 </div>
             </Tabs.Content>
         </Tabs.Root>
+        </div>
         
-        <Dialog.Footer>
+        <Dialog.Footer class="flex-shrink-0">
             <Button variant="outline" onclick={() => open = false}>
                 Schließen
             </Button>

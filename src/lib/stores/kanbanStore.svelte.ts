@@ -57,8 +57,8 @@ export class BoardStore {
     // 🚀 NEW: NDK Ready Signal (prevents race conditions)
     public ndkReady = $state(false);
     
-    // Module instances
-    private nostrIntegration: NostrIntegration;
+    // Module instances (public for external access to NDK)
+    public nostrIntegration: NostrIntegration;
 
     constructor() {
         // ✅ NEW (REFACTORING): Run migration FIRST if needed
