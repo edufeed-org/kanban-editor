@@ -259,6 +259,12 @@ button.bg-destructive:hover {
   background-color: var(--primary) !important;
   color: var(--primary-foreground) !important;
 }
+
+.ProseMirror-focused:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @layer base {
   * {
     border-color: var(--border)

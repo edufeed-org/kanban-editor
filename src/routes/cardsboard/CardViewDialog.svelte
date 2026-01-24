@@ -401,6 +401,10 @@
 		showModal = true;
 	}
 
+	function getCardColor(colorName: string | undefined): string {
+		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
+	}
+
 	/**
 	 * Switch to edit mode - closes view dialog and triggers edit dialog
 	 * Now allows both authenticated and anonymous users to edit
@@ -415,6 +419,7 @@
 	<Dialog.Content 
 		class="w-full max-w-3xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0"
 		showCloseButton={false}
+		style="border-bottom: 5px solid {getCardColor(selectedColor)};"
 	>
 		<!-- Header: 2 Zeilen Layout -->
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -747,7 +752,7 @@
 				{:else if card.description}
 					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert -->
 					<div 
-						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-amber-500 cursor-text hover:bg-muted/70 transition-colors"
+						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] cursor-text hover:bg-muted/70 transition-colors"
 						onclick={() => isEditingDescription = true}
 						onfocusin={() => isEditingDescription = true}
 						onkeydown={(e) => e.key === 'Enter' && (isEditingDescription = true)}

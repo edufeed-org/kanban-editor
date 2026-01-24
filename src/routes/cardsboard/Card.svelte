@@ -329,7 +329,7 @@
 	class="card p-1 transition-all duration-200 cursor-pointer {isSelected ? 'border-2 border-accent shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
 	data-card-id={card.id}
 	data-card-root
-	style="border-bottom: 6px solid {getCardColor(localColor)};"
+	style="border-bottom: 5px solid {getCardColor(localColor)};"
 	onclick={(e) => {
 		// Nur bei interaktiven Elementen blockieren (Button, Input, Links, etc.)
 		const target = e.target as HTMLElement;
