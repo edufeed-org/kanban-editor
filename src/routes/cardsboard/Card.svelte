@@ -22,17 +22,14 @@
     import TrashIcon from "@lucide/svelte/icons/trash";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import XIcon from "@lucide/svelte/icons/x";
+	import BrainIcon from "@lucide/svelte/icons/brain";
 
 	let {
 		card,
-		isSelected = false,
-		onSelect,
 		onCardAction,
 		onSidebarAction
 	}: {
 		card: CardItem;
-		isSelected?: boolean;
-		onSelect?: () => void;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 	} = $props();
@@ -62,6 +59,59 @@
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
 	let newLabelInput = $state('');
+	
+	// Long-press für Mobile (AI-Kontext hinzufügen)
+	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let isLongPress = $state(false);
+	const LONG_PRESS_DURATION = 500; // 500ms
+	
+	function addToAIContext() {
+		// Column-Name aus dem Store holen
+		const columnId = card.columnId;
+		const columns = boardStore.uiData;
+		const column = columns.find(c => c.id === columnId);
+		const columnName = column?.name || 'Unbekannt';
+		
+		// Dispatch CustomEvent um Karte zum AI-Kontext hinzuzufügen
+		const event = new CustomEvent('addCardToAIContext', {
+			detail: {
+				cardId: card.id,
+				cardName: localName,
+				columnId: columnId,
+				columnName: columnName
+			},
+			bubbles: true,
+			composed: true
+		});
+		window.dispatchEvent(event);
+		console.log('🧠 Karte zum AI-Kontext hinzugefügt:', localName);
+	}
+	
+	function handleTouchStart(e: TouchEvent) {
+		longPressTimer = setTimeout(() => {
+			isLongPress = true;
+			addToAIContext();
+			// Haptic feedback (falls unterstützt)
+			if (navigator.vibrate) navigator.vibrate(50);
+		}, LONG_PRESS_DURATION);
+	}
+	
+	function handleTouchEnd() {
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+		// Reset nach kurzem Delay
+		setTimeout(() => { isLongPress = false; }, 100);
+	}
+	
+	function handleTouchMove() {
+		// Bei Bewegung Long-Press abbrechen
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+	}
 	let localLabels = $state(card.labels || []);
 	
 	// ✅ FIX: Lokale State für author-bezogene Felder (reaktiv!)
@@ -326,11 +376,30 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 cursor-pointer {isSelected ? 'border-2 border-accent shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
+	class="card p-1 transition-all duration-200 cursor-pointer border border-border hover:shadow-md {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
+	ontouchstart={handleTouchStart}
+	ontouchend={handleTouchEnd}
+	ontouchmove={handleTouchMove}
+	ontouchcancel={handleTouchEnd}
 	onclick={(e) => {
+		// CTRL+Klick (oder CMD auf Mac) fügt zum AI-Kontext hinzu
+		if (e.ctrlKey || e.metaKey) {
+			e.preventDefault();
+			e.stopPropagation();
+			addToAIContext();
+			return;
+		}
+		
+		// Long-Press wurde bereits behandelt
+		if (isLongPress) {
+			e.preventDefault();
+			e.stopPropagation();
+			return;
+		}
+		
 		// Nur bei interaktiven Elementen blockieren (Button, Input, Links, etc.)
 		const target = e.target as HTMLElement;
 		const isInteractive = target.closest('button, input, [role="button"], a, [role="link"], .popover-trigger');
@@ -340,7 +409,6 @@
 		e.stopPropagation();
 		// Klick auf Card öffnet direkt CardViewDialog
 		isDialogOpen = true;
-		onSelect?.();
 	}}
 >
 	<Card.Header class="px-1 py-1">
