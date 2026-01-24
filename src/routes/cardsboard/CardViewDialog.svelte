@@ -9,6 +9,7 @@
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
+	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
 	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
@@ -394,10 +395,15 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="w-full max-w-3xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-		<!-- Header: Inline-Editable Title + Color -->
+	<Dialog.Content 
+		class="w-full max-w-3xl sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden p-0"
+		showCloseButton={false}
+	>
+		<!-- Header: 2 Zeilen Layout -->
+		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div 
-			class="px-6 py-4 border-b bg-background"
+			role="presentation"
+			class="px-6 py-4 border-b bg-background space-y-3"
 			onclick={() => {
 				// Schließe Editor wenn auf Header geklickt wird
 				if (isEditingDescription) {
@@ -405,22 +411,70 @@
 				}
 			}}
 		>
-			<div class="flex items-start justify-between gap-4 mb-2">
-				<!-- 🆕 Inline-Editable Title (klicken zum Bearbeiten) -->
-				<div class="flex items-center gap-2 flex-1 min-w-0">
-					<input
-						type="text"
-						bind:value={editName}
-						onblur={handleRenameChange}
-						onkeydown={(e) => e.key === 'Enter' && handleRenameChange()}
-						class="text-xl font-semibold bg-transparent border-none outline-none w-full focus:ring-2 focus:ring-primary/20 rounded px-1 -ml-1 hover:bg-muted/50 transition-colors"
-						placeholder="Kartentitel eingeben..."
-					/>
+			<!-- Zeile 1: Heading (links) | Close Button (rechts) -->
+			<div class="flex items-center justify-between gap-4">
+				<input
+					type="text"
+					bind:value={editName}
+					onblur={handleRenameChange}
+					onkeydown={(e) => e.key === 'Enter' && handleRenameChange()}
+					class="text-xl font-semibold bg-transparent border-none outline-none flex-1 min-w-0 focus:ring-2 focus:ring-primary/20 rounded px-1 -ml-1 hover:bg-muted/50 transition-colors"
+					placeholder="Kartentitel eingeben..."
+				/>
+				<Button 
+					variant="ghost" 
+					size="sm"
+					onclick={() => open = false}
+					class="h-8 w-8 p-0 flex-shrink-0"
+					aria-label="Dialog schließen"
+				>
+					<XIcon class="h-4 w-4" />
+				</Button>
+			</div>
+
+			<!-- Zeile 2: Labels (links) | ColorPicker (rechts) -->
+			<div class="flex items-center justify-between gap-4">
+				<!-- Labels -->
+				<div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+					{#each editLabels as label}
+						<Badge 
+							variant="secondary" 
+							class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1 group"
+						>
+							{label}
+							<button
+								onclick={() => handleRemoveLabel(label)}
+								class="opacity-0 group-hover:opacity-100 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-opacity"
+								aria-label="Label entfernen"
+							>
+								<XIcon class="h-3 w-3" />
+							</button>
+						</Badge>
+					{/each}
+					
+					<!-- Inline Add Label -->
+					<div class="flex items-center gap-1">
+						<Input 
+							bind:value={newLabelInput} 
+							placeholder="+ Label"
+							onkeydown={handleLabelKeyDown}
+							class="h-6 w-20 text-xs px-2 border-dashed focus:w-32 transition-all"
+						/>
+						{#if newLabelInput.trim()}
+							<Button 
+								variant="ghost" 
+								size="sm"
+								onclick={handleAddLabel}
+								class="h-6 w-6 p-0"
+							>
+								<PlusIcon class="h-3 w-3" />
+							</Button>
+						{/if}
+					</div>
 				</div>
-				
-				<!-- Right: Color Selector + Settings -->
-				<div class="flex items-center gap-2 flex-shrink-0">
-					<!-- 🆕 Inline Color Selector -->
+
+				<!-- Color Selector -->
+				<div class="flex-shrink-0">
 					<ColorSelector 
 						selectedColor={selectedColor} 
 						onColorChange={(colorValue) => {
@@ -431,49 +485,12 @@
 					/>
 				</div>
 			</div>
-
-			<!-- 🆕 Inline-Editable Labels -->
-			<div class="flex flex-wrap items-center gap-1.5">
-				{#each editLabels as label}
-					<Badge 
-						variant="secondary" 
-						class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1 group"
-					>
-						{label}
-						<button
-							onclick={() => handleRemoveLabel(label)}
-							class="opacity-0 group-hover:opacity-100 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-opacity"
-							aria-label="Label entfernen"
-						>
-							<XIcon class="h-3 w-3" />
-						</button>
-					</Badge>
-				{/each}
-				
-				<!-- 🆕 Inline Add Label -->
-				<div class="flex items-center gap-1">
-					<Input 
-						bind:value={newLabelInput} 
-						placeholder="+ Label"
-						onkeydown={handleLabelKeyDown}
-						class="h-6 w-20 text-xs px-2 border-dashed focus:w-32 transition-all"
-					/>
-					{#if newLabelInput.trim()}
-						<Button 
-							variant="ghost" 
-							size="sm"
-							onclick={handleAddLabel}
-							class="h-6 w-6 p-0"
-						>
-							<PlusIcon class="h-3 w-3" />
-						</Button>
-					{/if}
-				</div>
-			</div>
 		</div>
 
 		<!-- Main Content: Scrollable (Scroll-Lock wenn Editor aktiv) -->
+		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div 
+			role="presentation"
 			class="flex-1 px-6 py-4 space-y-4 {isEditingDescription ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}"
 			onclick={(e) => {
 				// Schließe Editor wenn außerhalb des Description-Bereichs geklickt wird
@@ -486,6 +503,27 @@
 				}
 			}}
 		>
+			<!-- Author mit Avatar (ausgeblendet während Editor aktiv) -->
+			{#if !isEditingDescription}
+				{@const authorName = card.authorName || 'Nostr Nutzer:in'}
+				{@const authorPubkey = card.author}
+				<div class="flex items-center gap-3">
+					<Avatar.Root class="h-8 w-8 flex-shrink-0">
+						<Avatar.Fallback class="{Avatar.getAvatarColor(authorPubkey)} text-white text-xs font-semibold">
+							{Avatar.getInitials(authorName)}
+						</Avatar.Fallback>
+					</Avatar.Root>
+					<div>
+						<p class="text-sm font-semibold">{authorName}</p>
+						{#if authorPubkey}
+							<p class="text-xs text-muted-foreground font-mono">
+								{authorPubkey.slice(0, 4)}...{authorPubkey.slice(-4)}
+							</p>
+						{/if}
+					</div>
+				</div>
+			{/if}
+
 			<!-- Image Section (ausgeblendet während Editor aktiv) -->
 			{#if card.image && !isEditingDescription}
 				<div class="relative group">
@@ -666,7 +704,7 @@
 					<div class="flex items-center gap-3">
 						<!-- Clickable Avatars mit Popover -->
 						<div class="flex -space-x-3">
-							{#each attendees.slice(0, 5) as author, index}
+							{#each attendees.slice(0, 5) as author}
 								<Popover.Root>
 									<Popover.Trigger
 										class="avatar w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-background cursor-pointer hover:z-50 transition-transform hover:scale-110"
