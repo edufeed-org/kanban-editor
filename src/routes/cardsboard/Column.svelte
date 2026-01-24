@@ -431,11 +431,18 @@
 								// Der $effect wird automatisch getriggert und items wird aktualisiert
 								// Doppel-Update (createCard + onDrop) verursacht Race Condition!
 								
-								// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
+								// ✨ Neue Karte automatisch selektieren & Dialog öffnen
 								setTimeout(() => {
 									onSelectCard?.(String(newCardId));
-									console.log('✨ Neue Karte selektiert:', newCardId);
-								}, 100);  // Erhöhte Verzögerung für sicheres Store-Update
+									// 🔔 Trigger external event to open CardViewDialog
+									const event = new CustomEvent('openCardDialog', {
+										detail: { cardId: String(newCardId) },
+										bubbles: true,
+										composed: true
+									});
+									window.dispatchEvent(event);
+									console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
+								}, 150);  // Etwas längere Verzögerung für Store-Update + UI-Rendering
 							}
 						}
 					}}

@@ -112,6 +112,25 @@
 			window.removeEventListener('closeOtherPopovers', handleClose);
 		};
 	});
+	
+	// ============================================================================
+	// EXTERNAL DIALOG OPEN TRIGGER: Listen for 'openCardDialog' events
+	// ============================================================================
+	$effect(() => {
+		const handleOpenDialog = (event: Event) => {
+			const customEvent = event as CustomEvent<{ cardId: string }>;
+			if (customEvent.detail.cardId === String(card.id)) {
+				console.log('📖 Opening dialog for card:', card.id);
+				isDialogOpen = true;
+			}
+		};
+		
+		window.addEventListener('openCardDialog', handleOpenDialog);
+		
+		return () => {
+			window.removeEventListener('openCardDialog', handleOpenDialog);
+		};
+	});
 
 	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
@@ -334,16 +353,29 @@
 					
 				</div>
 				
-				{#if localLabels && localLabels.length > 0}
-					<div class="flex flex-wrap gap-1 mt-2 mb-0">
-						{#each localLabels.slice(0, 2) as label}
-							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
-								{label}
-							</Badge>
-						{/each}
-						{#if localLabels.length > 2}
-							<Badge variant="outline" class="text-xs px-1.5 py-0.5">
-								+{localLabels.length - 2}
+				{#if localLabels && localLabels.length > 0 || localComments.length > 0}
+					<div class="flex items-center justify-between gap-2 mt-2 mb-0">
+						<div class="flex flex-wrap gap-1 flex-1 min-w-0">
+							{#each localLabels.slice(0, 2) as label}
+								<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+									{label}
+								</Badge>
+							{/each}
+							{#if localLabels.length > 2}
+								<Badge variant="outline" class="text-xs px-1.5 py-0.5">
+									+{localLabels.length - 2}
+								</Badge>
+							{/if}
+						</div>
+						
+						<!-- 🚀 NEW: Comment Count Badge -->
+						{#if localComments.length > 0}
+							<Badge 
+								variant="secondary" 
+								class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex-shrink-0"
+							>
+								<MessageSquareIcon class="h-3 w-3" />
+								{localComments.length}
 							</Badge>
 						{/if}
 					</div>
@@ -351,7 +383,8 @@
 			</div>
 			
 			<div class="header-actions">
-				{#if showMenu}
+				<!-- Karten-Aktionen Popover deprecated -->
+				<!-- {#if showMenu}
 					<Popover.Root bind:open={showPopover} onOpenChange={handlePopoverOpenChange}>
 						<Popover.Trigger
 								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
@@ -458,7 +491,7 @@
 							</div>
 						</Popover.Content>
 					</Popover.Root>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</Card.Header>
@@ -512,53 +545,6 @@
 		{/if}
 	</Card.Content>
 
-	<Card.Footer class="border-t border-border [.border-t]:pt-0 px-0">
-		<div class="footer-content">
-			<!-- Links anorden -->
-			<div class="flex items-center gap-2 scale-80">
-				<!-- 🚀 NEW: Comment Count Badge -->
-				<!-- {#if localComments.length > 0} -->
-					<Badge 
-						variant="secondary" 
-						class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
-						>
-						<MessageSquareIcon class="h-3 w-3" />
-						{localComments.length>0?localComments.length:''}
-					</Badge>
-				<!-- {/if} -->
-				
-				{#if attendees.length > 0}
-					<AvatarStack {attendees} maxVisible={3} />
-				{/if}
-			</div>
-			
-			<!-- Rechts anorden -->
-			<div class="flex gap-2 scale-80">
-				<Button
-					variant="default"
-					size="icon"
-					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; onSelect?.(); }}
-					aria-label="Anzeigen"
-					title="Anzeigen"
-				>
-					<FullscreenIcon />
-				</Button>
-				<Button
-					variant="default"
-					size="sm"
-					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; onSelect?.(); }}
-					aria-label="Bearbeiten"
-					title="Bearbeiten"
-				>
-					<EditIcon class="mr-2 h-4 w-4" />
-					Bearbeiten
-				</Button>
-			</div>
-		</div>
-	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
 	<!-- CardViewDialog mit bind:open für automatisches Selection -->
 	<CardViewDialog

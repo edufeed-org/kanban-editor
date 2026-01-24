@@ -430,6 +430,16 @@
 		>
 			<!-- Zeile 1: Heading (links) | Delete + Close Button (rechts) -->
 			<div class="flex items-center justify-between gap-4">
+					<!-- Author Avatar  {@const} müssen innerhalb von {#if} stehen -->
+				{#if true}
+					{@const authorName = card.authorName || 'Nostr Nutzer:in'}
+					{@const authorPubkey = card.author}
+					<Avatar.Root class="h-8 w-8 flex-shrink-0">
+						<Avatar.Fallback class="{Avatar.getAvatarColor(authorPubkey)} text-white text-xs font-semibold">
+							{Avatar.getInitials(authorName)}
+						</Avatar.Fallback>
+					</Avatar.Root>
+				{/if}
 				<input
 					type="text"
 					bind:value={editName}
@@ -507,7 +517,7 @@
 				</div>
 
 				<!-- Color Selector -->
-				<div class="flex-shrink-0">
+				<div class="flex items-center gap-3 flex-shrink-0">
 					<ColorSelector 
 						selectedColor={selectedColor} 
 						onColorChange={(colorValue) => {
@@ -516,6 +526,8 @@
 						}} 
 						compact={true}
 					/>
+					
+				
 				</div>
 			</div>
 		</div>
@@ -536,45 +548,27 @@
 				}
 			}}
 		>
-			<!-- Author mit Avatar (ausgeblendet während Editor aktiv) -->
-			{#if !isEditingDescription}
-				{@const authorName = card.authorName || 'Nostr Nutzer:in'}
-				{@const authorPubkey = card.author}
-				<div class="flex items-center gap-3">
-					<Avatar.Root class="h-8 w-8 flex-shrink-0">
-						<Avatar.Fallback class="{Avatar.getAvatarColor(authorPubkey)} text-white text-xs font-semibold">
-							{Avatar.getInitials(authorName)}
-						</Avatar.Fallback>
-					</Avatar.Root>
-					<div>
-						<p class="text-sm font-semibold">{authorName}</p>
-						{#if authorPubkey}
-							<p class="text-xs text-muted-foreground font-mono">
-								{authorPubkey.slice(0, 4)}...{authorPubkey.slice(-4)}
-							</p>
-						{/if}
-					</div>
-				</div>
-			{/if}
-
 			<!-- Image Section (ausgeblendet während Description-Editor aktiv) -->
 			{#if !isEditingDescription}
 				<div class="space-y-2">
 					{#if !isEditingImage && !card.image}
 						<!-- Kein Bild: Button zum Hinzufügen -->
-						<Button
-							variant="ghost"
-							size="sm"
-							onclick={() => {
-								isEditingImage = true;
-								editImageUrl = '';
-								imageMode = 'url';
-							}}
-							class="h-7 px-2 text-xs text-muted-foreground"
-						>
-							<ImageIcon class="h-3 w-3 mr-1" />
-							Bild hinzufügen
-						</Button>
+						<div class="flex items-center justify-between">
+							<h3 class="text-sm font-semibold text-muted-foreground">Karteninhalt</h3>
+							<Button
+								variant="outline"
+								size="sm"
+								onclick={() => {
+									isEditingImage = true;
+									editImageUrl = '';
+									imageMode = 'url';
+								}}
+								class="h-7 px-2 text-xs text-muted-foreground"
+							>
+								<ImageIcon class="h-3 w-3 mr-1" />
+								Bild hinzufügen
+							</Button>
+						</div>
 					{/if}
 
 					{#if isEditingImage}
@@ -753,7 +747,7 @@
 				{:else if card.description}
 					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert -->
 					<div 
-						class="p-3 bg-muted/50 rounded-md text-sm border border-amber-500 cursor-text hover:bg-muted/70 transition-colors"
+						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-amber-500 cursor-text hover:bg-muted/70 transition-colors"
 						onclick={() => isEditingDescription = true}
 						onfocusin={() => isEditingDescription = true}
 						onkeydown={(e) => e.key === 'Enter' && (isEditingDescription = true)}
