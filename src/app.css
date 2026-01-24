@@ -245,6 +245,20 @@ button.bg-destructive:hover {
   border-radius: var(--radius-md);
 }
 
+.prose-card h1,
+.prose-card h2,
+.prose-card h3,
+.prose-card h4 {
+  font-size: 80% !important;
+}
+.btn-transparent {
+  background-color: transparent !important;
+  border: 1px dotted var(--border);
+}
+.btn-transparent:hover {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
 @layer base {
   * {
     border-color: var(--border)

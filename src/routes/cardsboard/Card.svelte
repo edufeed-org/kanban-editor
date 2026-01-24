@@ -504,9 +504,7 @@
 					src={localImage}
 					alt={card.name}
 					class="card-image"
-					onclick={handleImageClick}
-					role={card.link ? "button" : ""}
-					onkeydown={(e) => e.key === 'Enter' && handleImageClick()}
+					
 				/>
 			</div>
 		{/if}
@@ -514,23 +512,23 @@
 		<!-- Description Section (Markdown Content) -->
 		{#if card.description}
 			<div class="card-description line-clamp-3">
-				<MarkdownRenderer content={card.description} class="prose-sm" />
+				<MarkdownRenderer content={card.description} class="prose-sm prose-card" />
 			</div>
 		{/if}
 
 		<!-- Links Section -->
 		{#if card.links && card.links.length > 0}
-			<div class="space-y-2">
+			<div class="space-y-2 mt-2">
 				{#each card.links as link}
 					<Button 
-						variant="outline" 
+						variant="link" 
 						size="sm"
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
 							window.open(link.url, '_blank', 'noopener,noreferrer');
 						}}
-						class="w-full justify-start gap-2 text-xs"
+						class="w-full justify-start gap-2 text-xs btn-transparent hover:bg-accent/20"
 					>
 						<LinkIcon class="h-3 w-3 flex-shrink-0" />
 						<span class="truncate">{link.title}</span>
@@ -600,16 +598,14 @@
 		
 		.card-image-container {
 			width: 100%;
-			display: flex;
-			justify-content: center;
-		}
+		overflow: hidden;
+		border-radius: 6px;
+	}
 
-		.card-image {
-			max-width: 100%;
-			max-height: 80px;
-			border-radius: 6px;
-			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
+	.card-image {
+		width: 100%;
+		height: 120px;
+		object-fit: cover;
 			cursor: pointer;
 		}
 
@@ -636,14 +632,14 @@
 		}
 		
 		/* Footer styling */
-		.footer-content {
+		/* .footer-content {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: 1em;
 			flex-grow: 1;
 
-		}
+		} */
 		
 		
 
