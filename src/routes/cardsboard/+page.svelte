@@ -193,56 +193,12 @@ import { authStore } from '$lib';
 		}
 	}
 
-	// State für Selection
-	let selectedColumn = $state<string | null>(null);
-	let selectedCard = $state<string | null>(null);
-	
-	function handleSelectColumn(columnId: string) {
-		selectedColumn = selectedColumn === columnId ? null : columnId;
-		selectedCard = null; // Clear card selection when selecting column
-	}
-	
-	function handleSelectCard(cardId: string) {
-		console.log('🎯 handleSelectCard called:', cardId, 'current selectedCard:', selectedCard);
-		// Toggle: Wenn gleiche Karte, deselektieren; sonst selektieren
-		selectedCard = selectedCard === cardId ? null : cardId;
-		selectedColumn = null; // Clear column selection when selecting card
-		console.log('✅ selectedCard now:', selectedCard);
-	}
-	
-	function clearSelectedCard() {
-		console.log('🗑️ clearSelectedCard called, was:', selectedCard);
-		selectedCard = null;
-	}
 
-	// Helper-Funktion: Findet die vollständige Hierarchie einer Karte
-	function getCardHierarchy(cardId: string | null) {
-		if (!cardId) return null;
-
-		for (const column of columns) {
-			const card = column.items.find(item => String(item.id) === String(cardId));
-			if (card) {
-				return {
-					boardId: card.boardId || "board-1",
-					columnId: card.columnId || column.id,
-					columnName: column.name,
-					cardId: String(card.id),
-					cardName: card.name
-				};
-			}
-		}
-		return null;
-	}
-
-	// Abgeleitete Hierarchie-Info
-	let selectedCardHierarchy = $derived(getCardHierarchy(selectedCard));
 
 	// Debug Stats
 	let stats = $derived({
 		columnsCount: columns.length,
-		cardsCount: columns.reduce((sum, col) => sum + col.items.length, 0),
-		selectedColumn,
-		selectedCard
+		cardsCount: columns.reduce((sum, col) => sum + col.items.length, 0)
 	});
 
 	// Sidebar states - jetzt mit Größen
@@ -308,10 +264,6 @@ import { authStore } from '$lib';
 				<Board 
 					columns={columns} 
 					onFinalUpdate={handleBoardUpdated}
-					{selectedColumn}
-					{selectedCard}
-					onSelectColumn={handleSelectColumn}
-					onSelectCard={handleSelectCard}
 				/>
 			</div>
 		</main>
@@ -337,7 +289,7 @@ import { authStore } from '$lib';
 				<Sheet.Header class="p-4 border-b">
 					<Sheet.Title>KI-Assistent</Sheet.Title>
 				</Sheet.Header>
-				<AIPanel boardId={currentBoardId} selectedCard={selectedCardHierarchy} onClearSelection={clearSelectedCard} />
+				<AIPanel boardId={currentBoardId} />
 			</Sheet.Content>
 		</Sheet.Root>
 		
@@ -384,10 +336,6 @@ import { authStore } from '$lib';
 						<Board 
 							columns={columns} 
 							onFinalUpdate={handleBoardUpdated}
-							{selectedColumn}
-							{selectedCard}
-							onSelectColumn={handleSelectColumn}
-							onSelectCard={handleSelectCard}
 						/>
 					</div>
 				</main>
@@ -407,7 +355,7 @@ import { authStore } from '$lib';
 					class="border-l bg-background"
 					onResize={(size: number) => { rightSidebarSize = size; }}
 				>
-					<AIPanel boardId={currentBoardId} selectedCard={selectedCardHierarchy} onClearSelection={clearSelectedCard} />
+					<AIPanel boardId={currentBoardId} />
 				</Resizable.Pane>
 			{/if}
 		</Resizable.PaneGroup>

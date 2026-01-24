@@ -2,9 +2,10 @@
 	interface Props {
 		selectedColor: string;
 		onColorChange: (colorValue: string) => void;
+		compact?: boolean;
 	}
 
-	let { selectedColor = 'slate', onColorChange }: Props = $props();
+	let { selectedColor = 'slate', onColorChange, compact = false }: Props = $props();
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -16,13 +17,16 @@
 	];
 </script>
 
-<div class="space-y-2">
-	<h4 class="font-medium text-sm">Farbe wählen</h4>
-	<div class="flex flex-wrap gap-3">
+<div class={compact ? "flex items-center gap-1.5" : "space-y-2"}>
+	{#if !compact}
+		<h4 class="font-medium text-sm">Farbe wählen</h4>
+	{/if}
+	<div class="flex flex-wrap" class:gap-3={!compact} class:gap-1={compact}>
 		{#each colorOptions as option}
 			<button
 				class="color-circle"
 				class:selected={selectedColor === option.value}
+				class:compact={compact}
 				style="background-color: var({option.cssVar})"
 				onclick={(e) => {
 					e.preventDefault();
@@ -34,7 +38,7 @@
 				type="button"
 			>
 				{#if selectedColor === option.value}
-					<svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+					<svg class="checkmark" class:checkmark-compact={compact} viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
 						<polyline points="20 6 9 17 4 12"></polyline>
 					</svg>
 				{/if}
@@ -57,6 +61,11 @@
 		position: relative;
 	}
 
+	.color-circle.compact {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
 	.color-circle:hover {
 		transform: scale(1.1);
 		box-shadow: 0 0 0 2px var(--background),
@@ -70,10 +79,20 @@
 		border-color: var(--accent);
 	}
 
+	.color-circle.compact.selected {
+		box-shadow: 0 0 0 2px var(--background),
+		           0 0 0 3px var(--accent);
+	}
+
 	.checkmark {
 		width: 16px;
 		height: 16px;
 		animation: scaleIn 0.2s ease-out;
+	}
+
+	.checkmark-compact {
+		width: 10px;
+		height: 10px;
 	}
 
 	@keyframes scaleIn {

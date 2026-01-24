@@ -24,6 +24,7 @@
 		value: string;
 		placeholder?: string;
 		disabled?: boolean;
+		fullHeight?: boolean;
 		onchange?: (content: string) => void;
 	}
 	
@@ -31,6 +32,7 @@
 		value = '', 
 		placeholder = 'Beschreibung eingeben...', 
 		disabled = false,
+		fullHeight = false,
 		onchange 
 	}: Props = $props();
 	
@@ -191,14 +193,14 @@
 	}
 </script>
 
-<div class="border rounded-md overflow-hidden {disabled ? 'opacity-50 cursor-not-allowed' : ''}">
+<div class="markdown-editor-wrapper border rounded-md overflow-hidden {fullHeight ? 'h-full flex flex-col full-height-mode' : ''} {disabled ? 'opacity-50 cursor-not-allowed' : ''}">
 	<!-- Toolbar -->
 	{#if isEditorReady && editor && !disabled}
-		<div class="bg-muted/30 border-b p-2 flex flex-wrap gap-1">
+		<div class="bg-muted/30 border-b p-2 flex flex-wrap gap-1 {fullHeight ? 'sticky top-0 z-10 flex-shrink-0' : ''}">
 			<!-- Text Formatting -->
 			<button
 				type="button"
-				onclick={toggleBold}
+				onmousedown={(e) => { e.preventDefault(); toggleBold(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('bold') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Fett"
@@ -208,7 +210,7 @@
 			
 			<button
 				type="button"
-				onclick={toggleItalic}
+				onmousedown={(e) => { e.preventDefault(); toggleItalic(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('italic') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Kursiv"
@@ -218,7 +220,7 @@
 			
 			<button
 				type="button"
-				onclick={toggleStrike}
+				onmousedown={(e) => { e.preventDefault(); toggleStrike(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('strike') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Durchgestrichen"
@@ -228,7 +230,7 @@
 			
 			<button
 				type="button"
-				onclick={toggleCode}
+				onmousedown={(e) => { e.preventDefault(); toggleCode(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('code') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Inline Code"
@@ -241,7 +243,7 @@
 			<!-- Headings -->
 			<button
 				type="button"
-				onclick={() => setHeading(1)}
+				onmousedown={(e) => { e.preventDefault(); setHeading(1); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('heading', { level: 1 }) ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Überschrift 1"
@@ -251,7 +253,7 @@
 			
 			<button
 				type="button"
-				onclick={() => setHeading(2)}
+				onmousedown={(e) => { e.preventDefault(); setHeading(2); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('heading', { level: 2 }) ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Überschrift 2"
@@ -264,7 +266,7 @@
 			<!-- Lists -->
 			<button
 				type="button"
-				onclick={toggleBulletList}
+				onmousedown={(e) => { e.preventDefault(); toggleBulletList(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('bulletList') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Aufzählung"
@@ -274,7 +276,7 @@
 			
 			<button
 				type="button"
-				onclick={toggleOrderedList}
+				onmousedown={(e) => { e.preventDefault(); toggleOrderedList(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('orderedList') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Nummerierte Liste"
@@ -284,7 +286,7 @@
 			
 			<button
 				type="button"
-				onclick={toggleBlockquote}
+				onmousedown={(e) => { e.preventDefault(); toggleBlockquote(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('blockquote') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Zitat"
@@ -297,7 +299,7 @@
 			<!-- Link -->
 			<button
 				type="button"
-				onclick={addLink}
+				onmousedown={(e) => { e.preventDefault(); addLink(); }}
 				class="p-1.5 rounded hover:bg-muted {editor.isActive('link') ? 'bg-muted' : ''}"
 				disabled={disabled}
 				title="Link einfügen"
@@ -308,7 +310,7 @@
 	{/if}
 	
 	<!-- Editor Content -->
-	<div bind:this={element} class="prose prose-sm max-w-none p-4 min-h-[200px] max-h-[400px] overflow-y-hidden" aria-label="Beschreibungfocus:outline-none"></div>
+	<div bind:this={element} class="prose prose-sm max-w-none p-4 {fullHeight ? 'flex-1 min-h-[300px] overflow-y-auto' : 'min-h-[200px] max-h-[400px] overflow-y-hidden'}" aria-label="Beschreibungfocus:outline-none"></div>
 </div>
 
 <style>
@@ -316,6 +318,14 @@
 		outline: none;
 		min-height: 200px;
 		max-height: 400px;
+		overflow-y: auto;
+	}
+	
+	/* Full-Height-Mode: ProseMirror füllt verfügbaren Platz */
+	:global(.full-height-mode .ProseMirror) {
+		min-height: 280px;
+		max-height: unset;
+		height: auto;
 		overflow-y: auto;
 	}
 	

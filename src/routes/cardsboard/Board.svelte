@@ -41,18 +41,10 @@
 
    let {
 	columns: columns_inner,
-	onFinalUpdate,
-	selectedColumn = null,
-	selectedCard = null,
-	onSelectColumn = undefined,
-	onSelectCard = undefined
+	onFinalUpdate
    }: {
 	columns: ColumnType[];
 	onFinalUpdate: BoardUpdateHandler;
-	selectedColumn?: string | null;
-	selectedCard?: string | null;
-	onSelectColumn?: ((columnId: string) => void) | undefined;
-	onSelectCard?: ((cardId: string) => void) | undefined;
    } = $props();
 
    // Lokaler State für dndzone: Wird von dndzone mutiert
@@ -307,12 +299,8 @@
  						color={color}
  						items={items}
 					columnId={id}
-					isSelected={selectedColumn === id}
-					onSelect={() => onSelectColumn?.(id)}
  						onDrop={(newItems) => handleItemFinalize(idx, newItems)}
  						onCardAction={handleCardAction}
-					selectedCardId={selectedCard}
-					onSelectCard={(cardId) => onSelectCard?.(cardId)}
  						onSidebarAction={handleSidebarAction}
 					maxCardsBeforeScroll={settings?.maxCardsBeforeScroll ?? 20}
  					/>

@@ -22,17 +22,14 @@
     import TrashIcon from "@lucide/svelte/icons/trash";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import XIcon from "@lucide/svelte/icons/x";
+	import BrainIcon from "@lucide/svelte/icons/brain";
 
 	let {
 		card,
-		isSelected = false,
-		onSelect,
 		onCardAction,
 		onSidebarAction
 	}: {
 		card: CardItem;
-		isSelected?: boolean;
-		onSelect?: () => void;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 	} = $props();
@@ -62,6 +59,59 @@
 	let editName = $state(card.name);
 	let selectedColor = $state(card.color || 'slate');
 	let newLabelInput = $state('');
+	
+	// Long-press für Mobile (AI-Kontext hinzufügen)
+	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let isLongPress = $state(false);
+	const LONG_PRESS_DURATION = 500; // 500ms
+	
+	function addToAIContext() {
+		// Column-Name aus dem Store holen
+		const columnId = card.columnId;
+		const columns = boardStore.uiData;
+		const column = columns.find(c => c.id === columnId);
+		const columnName = column?.name || 'Unbekannt';
+		
+		// Dispatch CustomEvent um Karte zum AI-Kontext hinzuzufügen
+		const event = new CustomEvent('addCardToAIContext', {
+			detail: {
+				cardId: card.id,
+				cardName: localName,
+				columnId: columnId,
+				columnName: columnName
+			},
+			bubbles: true,
+			composed: true
+		});
+		window.dispatchEvent(event);
+		console.log('🧠 Karte zum AI-Kontext hinzugefügt:', localName);
+	}
+	
+	function handleTouchStart(e: TouchEvent) {
+		longPressTimer = setTimeout(() => {
+			isLongPress = true;
+			addToAIContext();
+			// Haptic feedback (falls unterstützt)
+			if (navigator.vibrate) navigator.vibrate(50);
+		}, LONG_PRESS_DURATION);
+	}
+	
+	function handleTouchEnd() {
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+		// Reset nach kurzem Delay
+		setTimeout(() => { isLongPress = false; }, 100);
+	}
+	
+	function handleTouchMove() {
+		// Bei Bewegung Long-Press abbrechen
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+	}
 	let localLabels = $state(card.labels || []);
 	
 	// ✅ FIX: Lokale State für author-bezogene Felder (reaktiv!)
@@ -110,6 +160,25 @@
 		
 		return () => {
 			window.removeEventListener('closeOtherPopovers', handleClose);
+		};
+	});
+	
+	// ============================================================================
+	// EXTERNAL DIALOG OPEN TRIGGER: Listen for 'openCardDialog' events
+	// ============================================================================
+	$effect(() => {
+		const handleOpenDialog = (event: Event) => {
+			const customEvent = event as CustomEvent<{ cardId: string }>;
+			if (customEvent.detail.cardId === String(card.id)) {
+				console.log('📖 Opening dialog for card:', card.id);
+				isDialogOpen = true;
+			}
+		};
+		
+		window.addEventListener('openCardDialog', handleOpenDialog);
+		
+		return () => {
+			window.removeEventListener('openCardDialog', handleOpenDialog);
 		};
 	});
 
@@ -307,21 +376,39 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 {isSelected ? 'border-2 border-accent shadow-lg scale-105' : 'border border-border hover:shadow-md'}"
+	class="card p-1 transition-all duration-200 cursor-pointer border border-border hover:shadow-md {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
 	data-card-id={card.id}
 	data-card-root
-	style="border-bottom: 6px solid {getCardColor(localColor)};"
+	style="border-bottom: 5px solid {getCardColor(localColor)};"
+	ontouchstart={handleTouchStart}
+	ontouchend={handleTouchEnd}
+	ontouchmove={handleTouchMove}
+	ontouchcancel={handleTouchEnd}
 	onclick={(e) => {
+		// CTRL+Klick (oder CMD auf Mac) fügt zum AI-Kontext hinzu
+		if (e.ctrlKey || e.metaKey) {
+			e.preventDefault();
+			e.stopPropagation();
+			addToAIContext();
+			return;
+		}
+		
+		// Long-Press wurde bereits behandelt
+		if (isLongPress) {
+			e.preventDefault();
+			e.stopPropagation();
+			return;
+		}
+		
 		// Nur bei interaktiven Elementen blockieren (Button, Input, Links, etc.)
-		// ABER NICHT auf der Root selbst!
 		const target = e.target as HTMLElement;
-		const isInteractive = target.closest('button, input, [role="button"], a, [role="link"]');
+		const isInteractive = target.closest('button, input, [role="button"], a, [role="link"], .popover-trigger');
 		if (isInteractive) {
 			return;
 		}
 		e.stopPropagation();
-		console.log('🖱️ Card.Root onclick - calling onSelect');
-		onSelect?.();
+		// Klick auf Card öffnet direkt CardViewDialog
+		isDialogOpen = true;
 	}}
 >
 	<Card.Header class="px-1 py-1">
@@ -334,16 +421,29 @@
 					
 				</div>
 				
-				{#if localLabels && localLabels.length > 0}
-					<div class="flex flex-wrap gap-1 mt-2 mb-0">
-						{#each localLabels.slice(0, 2) as label}
-							<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
-								{label}
-							</Badge>
-						{/each}
-						{#if localLabels.length > 2}
-							<Badge variant="outline" class="text-xs px-1.5 py-0.5">
-								+{localLabels.length - 2}
+				{#if localLabels && localLabels.length > 0 || localComments.length > 0}
+					<div class="flex items-center justify-between gap-2 mt-2 mb-0">
+						<div class="flex flex-wrap gap-1 flex-1 min-w-0">
+							{#each localLabels.slice(0, 2) as label}
+								<Badge variant="secondary" class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100">
+									{label}
+								</Badge>
+							{/each}
+							{#if localLabels.length > 2}
+								<Badge variant="outline" class="text-xs px-1.5 py-0.5">
+									+{localLabels.length - 2}
+								</Badge>
+							{/if}
+						</div>
+						
+						<!-- 🚀 NEW: Comment Count Badge -->
+						{#if localComments.length > 0}
+							<Badge 
+								variant="secondary" 
+								class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex-shrink-0"
+							>
+								<MessageSquareIcon class="h-3 w-3" />
+								{localComments.length}
 							</Badge>
 						{/if}
 					</div>
@@ -351,7 +451,8 @@
 			</div>
 			
 			<div class="header-actions">
-				{#if showMenu}
+				<!-- Karten-Aktionen Popover deprecated -->
+				<!-- {#if showMenu}
 					<Popover.Root bind:open={showPopover} onOpenChange={handlePopoverOpenChange}>
 						<Popover.Trigger
 								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
@@ -458,7 +559,7 @@
 							</div>
 						</Popover.Content>
 					</Popover.Root>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</Card.Header>
@@ -471,9 +572,7 @@
 					src={localImage}
 					alt={card.name}
 					class="card-image"
-					onclick={handleImageClick}
-					role={card.link ? "button" : ""}
-					onkeydown={(e) => e.key === 'Enter' && handleImageClick()}
+					
 				/>
 			</div>
 		{/if}
@@ -481,23 +580,23 @@
 		<!-- Description Section (Markdown Content) -->
 		{#if card.description}
 			<div class="card-description line-clamp-3">
-				<MarkdownRenderer content={card.description} class="prose-sm" />
+				<MarkdownRenderer content={card.description} class="prose-sm prose-card" />
 			</div>
 		{/if}
 
 		<!-- Links Section -->
 		{#if card.links && card.links.length > 0}
-			<div class="space-y-2">
+			<div class="space-y-2 mt-2">
 				{#each card.links as link}
 					<Button 
-						variant="outline" 
+						variant="link" 
 						size="sm"
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
 							window.open(link.url, '_blank', 'noopener,noreferrer');
 						}}
-						class="w-full justify-start gap-2 text-xs"
+						class="w-full justify-start gap-2 text-xs btn-transparent hover:bg-accent/20"
 					>
 						<LinkIcon class="h-3 w-3 flex-shrink-0" />
 						<span class="truncate">{link.title}</span>
@@ -512,53 +611,6 @@
 		{/if}
 	</Card.Content>
 
-	<Card.Footer class="border-t border-border [.border-t]:pt-0 px-0">
-		<div class="footer-content">
-			<!-- Links anorden -->
-			<div class="flex items-center gap-2 scale-80">
-				<!-- 🚀 NEW: Comment Count Badge -->
-				<!-- {#if localComments.length > 0} -->
-					<Badge 
-						variant="secondary" 
-						class="gap-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100"
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; }}
-						>
-						<MessageSquareIcon class="h-3 w-3" />
-						{localComments.length>0?localComments.length:''}
-					</Badge>
-				<!-- {/if} -->
-				
-				{#if attendees.length > 0}
-					<AvatarStack {attendees} maxVisible={3} />
-				{/if}
-			</div>
-			
-			<!-- Rechts anorden -->
-			<div class="flex gap-2 scale-80">
-				<Button
-					variant="default"
-					size="icon"
-					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isDialogOpen = true; onSelect?.(); }}
-					aria-label="Anzeigen"
-					title="Anzeigen"
-				>
-					<FullscreenIcon />
-				</Button>
-				<Button
-					variant="default"
-					size="sm"
-					class="btn"
-					onclick={(e) => { e.preventDefault(); e.stopPropagation(); showModal = true; onSelect?.(); }}
-					aria-label="Bearbeiten"
-					title="Bearbeiten"
-				>
-					<EditIcon class="mr-2 h-4 w-4" />
-					Bearbeiten
-				</Button>
-			</div>
-		</div>
-	</Card.Footer>
 	<!-- Card View Dialog (Read-Only View with Tabs) -->
 	<!-- CardViewDialog mit bind:open für automatisches Selection -->
 	<CardViewDialog
@@ -614,16 +666,14 @@
 		
 		.card-image-container {
 			width: 100%;
-			display: flex;
-			justify-content: center;
-		}
+		overflow: hidden;
+		border-radius: 6px;
+	}
 
-		.card-image {
-			max-width: 100%;
-			max-height: 80px;
-			border-radius: 6px;
-			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
+	.card-image {
+		width: 100%;
+		height: 120px;
+		object-fit: cover;
 			cursor: pointer;
 		}
 
@@ -650,14 +700,14 @@
 		}
 		
 		/* Footer styling */
-		.footer-content {
+		/* .footer-content {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: 1em;
 			flex-grow: 1;
 
-		}
+		} */
 		
 		
 

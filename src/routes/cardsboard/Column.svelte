@@ -38,26 +38,18 @@
 		items,
 		color,
 		columnId,
-		isSelected = false,
-		onSelect,
 		onDrop,
 		onCardAction,
-		onSidebarAction,
-		selectedCardId,
-		onSelectCard
+		onSidebarAction
  	, maxCardsBeforeScroll = 20
  	}: {
 		name: string;
 		items: CardItem[];
 		color?: string;
 		columnId?: string;
-		isSelected?: boolean;
-		onSelect?: () => void;
 		onDrop: ColumnDropHandler;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
-		selectedCardId?: string | null;
-		onSelectCard?: (cardId: string) => void;
 		maxCardsBeforeScroll?: number;
 	} = $props();
 
@@ -236,14 +228,6 @@
 		popoverOpen = false;
 	}
 
-	function handleHeaderClick(e: MouseEvent) {
-		// Only select column when clicking on the header itself, not on the popover trigger
-		if ((e.target as HTMLElement).closest('.popover-trigger-ignore')) {
-			return;
-		}
-		e.stopPropagation();
-		onSelect?.();
-	}
 </script>
 
 <style>
@@ -389,14 +373,9 @@
 </style>
 
 <div 
-	class="column-wrapper {isSelected ? 'border-2 border-accent rounded-sm p-1' : ''}" 
+	class="column-wrapper" 
 >
-	<div class="column-header" onclick={handleHeaderClick} onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			handleHeaderClick(e as unknown as MouseEvent);
-		}
-	}} role="button" tabindex="0">
+	<div class="column-header">
 		<div class="flex items-center justify-between w-full">
 			<!-- Drag Handle + Title -->
 			<div class="flex items-center gap-2 flex-1 cursor-grab active:cursor-grabbing" title="Spalte verschieben" data-dnd-handle>
@@ -424,18 +403,24 @@
 					onclick={(e) => {
 						e.stopPropagation();
 						if (columnId) {
-							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
 							if (newCardId) {
 								// ✅ FIX: NICHT onDrop() aufrufen!
 								// boardStore.createCard() hat bereits den Store aktualisiert
 								// Der $effect wird automatisch getriggert und items wird aktualisiert
 								// Doppel-Update (createCard + onDrop) verursacht Race Condition!
 								
-								// ✨ Neue Karte automatisch selektieren (mit Verzögerung damit UI aktualisiert wird)
+								// ✨ Neue Karte: Dialog öffnen
 								setTimeout(() => {
-									onSelectCard?.(String(newCardId));
-									console.log('✨ Neue Karte selektiert:', newCardId);
-								}, 100);  // Erhöhte Verzögerung für sicheres Store-Update
+									// 🔔 Trigger external event to open CardViewDialog
+									const event = new CustomEvent('openCardDialog', {
+										detail: { cardId: String(newCardId) },
+										bubbles: true,
+										composed: true
+									});
+									window.dispatchEvent(event);
+									console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
+								}, 150);  // Etwas längere Verzögerung für Store-Update + UI-Rendering
 							}
 						}
 					}}
@@ -520,11 +505,6 @@
 			<div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
 				<Card
 					card={item}
-					isSelected={selectedCardId === String(item.id)}
-					onSelect={() => {
-						console.log('🖱️ Card clicked:', item.id, 'selectedCardId:', selectedCardId);
-						onSelectCard?.(String(item.id));
-					}}
 					{onCardAction}
 					{onSidebarAction}
 				/>

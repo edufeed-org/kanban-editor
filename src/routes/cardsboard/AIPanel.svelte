@@ -18,8 +18,9 @@
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
   import LoaderIcon from '@lucide/svelte/icons/loader';
-  import XIcon from '@lucide/svelte/icons/x';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+  import XIcon from '@lucide/svelte/icons/x';
+  import { onMount, onDestroy } from 'svelte';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -35,23 +36,48 @@
   
   // Props
   let {
-    boardId,
-    selectedCard = null,
-    onClearSelection
+    boardId
   }: {
     boardId: string;
-    selectedCard?: {
-      cardId: string;
-      cardName: string;
-      columnId: string;
-      columnName: string;
-    } | null;
-    onClearSelection?: () => void;
   } = $props();
   
   // Chat State
   let userInput = $state('');
   let isProcessing = $state(false);
+  
+  // 🎯 Kontext-Karten (per CTRL+Klick oder Long-Press hinzugefügt)
+  interface ContextCard {
+    cardId: string;
+    cardName: string;
+    columnId: string;
+    columnName: string;
+  }
+  let contextCards = $state<ContextCard[]>([]);
+  
+  function handleAddCardToContext(e: CustomEvent<ContextCard>) {
+    const newCard = e.detail;
+    // Verhindere Duplikate
+    if (!contextCards.some(c => c.cardId === newCard.cardId)) {
+      contextCards = [...contextCards, newCard];
+    }
+  }
+  
+  function removeContextCard(cardId: string) {
+    contextCards = contextCards.filter(c => c.cardId !== cardId);
+  }
+  
+  function clearAllContextCards() {
+    contextCards = [];
+  }
+  
+  // Event-Listener für CTRL+Klick/Long-Press
+  onMount(() => {
+    window.addEventListener('addCardToAIContext', handleAddCardToContext as EventListener);
+  });
+  
+  onDestroy(() => {
+    window.removeEventListener('addCardToAIContext', handleAddCardToContext as EventListener);
+  });
   
   // Chat Messages (derived from chatStore)
   let messages = $derived(chatStore.messages);
@@ -126,24 +152,40 @@
         cards: boardContext.columns?.reduce((sum: number, c: any) => sum + (c.cards?.length || 0), 0) || 0
       });
       
-      // Step 2: Build selected card context if available
+      // Step 2: Build selected card context from contextCards (if any)
       let selectedCardContext: SelectedCardContext | null = null;
-      if (selectedCard) {
-        // Find the full card data from board context
-        const column = boardContext.columns?.find((c: { id: string }) => c.id === selectedCard.columnId);
-        const card = column?.cards?.find((c: { id: string }) => c.id === selectedCard.cardId);
-        selectedCardContext = {
-          cardId: selectedCard.cardId,
-          cardName: selectedCard.cardName,
-          columnId: selectedCard.columnId,
-          columnName: selectedCard.columnName,
-          content: card?.content,
-          labels: card?.labels
-        };
-        console.log('🎯 [Tool-Based] Selected card context:', selectedCardContext);
+      if (contextCards.length > 0) {
+        // Wenn Kontext-Karten vorhanden, nutze die erste als Haupt-Kontext
+        // und erwähne alle anderen im System-Prompt
+        const primaryCard = contextCards[0];
+        const column = boardContext.columns?.find((c: { id: string }) => c.id === primaryCard.columnId);
+        const card = column?.cards?.find((c: { id: string }) => c.id === primaryCard.cardId);
+        
+        if (card) {
+          selectedCardContext = {
+            cardId: primaryCard.cardId,
+            cardName: primaryCard.cardName,
+            columnId: primaryCard.columnId,
+            columnName: primaryCard.columnName,
+            content: card?.content,
+            labels: card?.labels
+          };
+          
+          // Für mehrere Karten: erweitere Context
+          if (contextCards.length > 1) {
+            const additionalCards = contextCards.slice(1).map(cc => {
+              const col = boardContext.columns?.find((c: { id: string }) => c.id === cc.columnId);
+              const crd = col?.cards?.find((c: { id: string }) => c.id === cc.cardId);
+              return `- "${cc.cardName}" (${cc.columnName})${crd?.content ? `: ${crd.content.slice(0, 100)}...` : ''}`;
+            }).join('\n');
+            selectedCardContext.content = `${selectedCardContext.content || ''}\n\n[Weitere ausgewählte Karten:]\n${additionalCards}`;
+          }
+          
+          console.log('🎯 [Tool-Based] Context cards:', contextCards.length);
+        }
       }
       
-      // Step 3: Build system prompt with full card context and selected card
+      // Step 3: Build system prompt with card context
       const systemPrompt = buildToolSystemPrompt(boardContext, selectedCardContext);
       
       // Step 4: Get tool definitions in OpenAI format
@@ -326,25 +368,46 @@
     <p class="text-xs text-muted-foreground">
       Intelligente Board-Assistenz
     </p>
-    {#if selectedCard}
-      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-b-[var(--destructive)] border-primary/20 relative">
-        <button
-          type="button"
-          onclick={() => onClearSelection?.()}
-          class="absolute top-1 right-1 p-0.5 rounded hover:bg-primary/20 transition-colors"
-          aria-label="Auswahl aufheben"
-          title="Auswahl aufheben"
-        >
-          <XIcon class="h-3 w-3 text-muted-foreground hover:text-foreground" />
-        </button>
-        <p class="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Ausgewählter Kontext:</p>
-        <p class="text-xs font-medium text-primary truncate pr-4" title={selectedCard.cardName}>
-          {selectedCard.cardName}
-        </p>
-        <p class="text-[10px] text-muted-foreground">
-          in "{selectedCard.columnName}"
+    
+    <!-- 🎯 Kontext-Karten Anzeige -->
+    {#if contextCards.length > 0}
+      <div class="mt-2 p-2 bg-primary/10 rounded-md border border-primary/20">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-[10px] text-muted-foreground uppercase tracking-wide">
+            Kontext ({contextCards.length} {contextCards.length === 1 ? 'Karte' : 'Karten'}):
+          </p>
+          <button
+            type="button"
+            onclick={clearAllContextCards}
+            class="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            title="Alle entfernen"
+          >
+            Alle entfernen
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-1">
+          {#each contextCards as ctx (ctx.cardId)}
+            <span class="inline-flex items-center gap-1 text-xs bg-primary/20 text-primary rounded px-1.5 py-0.5">
+              <span class="truncate max-w-[100px]" title={ctx.cardName}>{ctx.cardName}</span>
+              <button
+                type="button"
+                onclick={() => removeContextCard(ctx.cardId)}
+                class="hover:bg-primary/30 rounded-sm p-0.5"
+                title="Entfernen"
+              >
+                <XIcon class="h-3 w-3" />
+              </button>
+            </span>
+          {/each}
+        </div>
+        <p class="text-[10px] text-muted-foreground mt-1 italic">
+          Tipp: Strg+Klick oder langes Drücken auf Karten
         </p>
       </div>
+    {:else}
+      <p class="text-[10px] text-muted-foreground mt-2 italic">
+        Tipp: Strg+Klick (Desktop) oder langes Drücken (Mobile) fügt Karten zum Kontext hinzu
+      </p>
     {/if}
   </div>
   
