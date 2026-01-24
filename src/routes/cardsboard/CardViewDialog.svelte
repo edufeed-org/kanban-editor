@@ -33,9 +33,10 @@
 		cardId: string | number;
 		open: boolean;
 		onEditMode?: () => void;
+		readOnly?: boolean;
 	}
 	let showModal = $state(false);
-	let { cardId, open = $bindable(), onEditMode }: Props = $props();
+	let { cardId, open = $bindable(), onEditMode, readOnly = false }: Props = $props();
 
 	let commentText = $state('');
 	let isSubmitting = $state(false);
@@ -448,12 +449,14 @@
 				<input
 					type="text"
 					bind:value={editName}
-					onblur={handleRenameChange}
-					onkeydown={(e) => e.key === 'Enter' && handleRenameChange()}
-					class="text-xl font-semibold bg-transparent border-none outline-none flex-1 min-w-0 focus:ring-2 focus:ring-primary/20 rounded px-1 -ml-1 hover:bg-muted/50 transition-colors"
+					onblur={readOnly ? undefined : handleRenameChange}
+					onkeydown={readOnly ? undefined : (e) => e.key === 'Enter' && handleRenameChange()}
+					disabled={readOnly}
+					class="text-xl font-semibold bg-transparent border-none outline-none flex-1 min-w-0 focus:ring-2 focus:ring-primary/20 rounded px-1 -ml-1 {readOnly ? '' : 'hover:bg-muted/50'} transition-colors {readOnly ? 'cursor-default' : ''}"
 					placeholder="Kartentitel eingeben..."
 				/>
 				<div class="flex items-center gap-1 flex-shrink-0">
+					{#if !readOnly}
 					<Button 
 						variant="ghost" 
 						size="sm"
@@ -468,6 +471,7 @@
 					>
 						<TrashIcon class="h-4 w-4" />
 					</Button>
+					{/if}
 					<Button 
 						variant="ghost" 
 						size="sm"
@@ -490,6 +494,7 @@
 							class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1 group"
 						>
 							{label}
+							{#if !readOnly}
 							<button
 								onclick={() => handleRemoveLabel(label)}
 								class="opacity-0 group-hover:opacity-100 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-opacity"
@@ -497,10 +502,12 @@
 							>
 								<XIcon class="h-3 w-3" />
 							</button>
+							{/if}
 						</Badge>
 					{/each}
 					
-					<!-- Inline Add Label -->
+					<!-- Inline Add Label (hidden in readOnly mode) -->
+					{#if !readOnly}
 					<div class="flex items-center gap-1">
 						<Input 
 							bind:value={newLabelInput} 
@@ -519,9 +526,11 @@
 							</Button>
 						{/if}
 					</div>
+					{/if}
 				</div>
 
-				<!-- Color Selector -->
+				<!-- Color Selector (hidden in readOnly mode) -->
+				{#if !readOnly}
 				<div class="flex items-center gap-3 flex-shrink-0">
 					<ColorSelector 
 						selectedColor={selectedColor} 
@@ -534,6 +543,7 @@
 					
 				
 				</div>
+				{/if}
 			</div>
 		</div>
 
@@ -557,7 +567,8 @@
 			{#if !isEditingDescription}
 				<div class="space-y-2">
 					{#if !isEditingImage && !card.image}
-						<!-- Kein Bild: Button zum Hinzufügen -->
+						<!-- Kein Bild: Button zum Hinzufügen (hidden in readOnly mode) -->
+						{#if !readOnly}
 						<div class="flex items-center justify-between">
 							<h3 class="text-sm font-semibold text-muted-foreground">Karteninhalt</h3>
 							<Button
@@ -574,9 +585,10 @@
 								Bild hinzufügen
 							</Button>
 						</div>
+						{/if}
 					{/if}
 
-					{#if isEditingImage}
+					{#if isEditingImage && !readOnly}
 						<!-- Edit Mode: URL oder OER -->
 						<div class="space-y-3 p-3 border rounded-md bg-muted/30">
 							<!-- Mode Toggle -->
@@ -695,7 +707,8 @@
 									}}
 								/>
 							</div>
-							<!-- Edit-Button Overlay -->
+							<!-- Edit-Button Overlay (hidden in readOnly mode) -->
+							{#if !readOnly}
 							<Button
 								variant="secondary"
 								size="sm"
@@ -709,6 +722,7 @@
 								<PencilIcon class="h-3 w-3 mr-1" />
 								Ändern
 							</Button>
+							{/if}
 						</div>
 					{/if}
 				</div>
@@ -750,20 +764,21 @@
 						/>
 					</div>
 				{:else if card.description}
-					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert -->
+					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
 					<div 
-						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] cursor-text hover:bg-muted/70 transition-colors"
-						onclick={() => isEditingDescription = true}
-						onfocusin={() => isEditingDescription = true}
-						onkeydown={(e) => e.key === 'Enter' && (isEditingDescription = true)}
-						role="textbox"
-						tabindex="0"
-						aria-label="Beschreibung bearbeiten"
+						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] {readOnly ? '' : 'cursor-text hover:bg-muted/70'} transition-colors"
+						onclick={() => !readOnly && (isEditingDescription = true)}
+						onfocusin={() => !readOnly && (isEditingDescription = true)}
+						onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
+						role={readOnly ? undefined : "textbox"}
+						tabindex={readOnly ? undefined : 0}
+						aria-label={readOnly ? undefined : "Beschreibung bearbeiten"}
 					>
 						<MarkdownRenderer content={card.description} />
 					</div>
 				{:else}
-					<!-- Platzhalter - bei Klick wird Editor aktiviert -->
+					<!-- Platzhalter - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
+					{#if !readOnly}
 					<div 
 						class="p-3 bg-muted/30 rounded-md text-sm border border-dashed cursor-text hover:bg-muted/50 transition-colors text-muted-foreground"
 						onclick={() => isEditingDescription = true}
@@ -775,6 +790,9 @@
 					>
 						Inhalt hinzufügen...
 					</div>
+					{:else}
+					<p class="text-sm text-muted-foreground italic">Keine Beschreibung vorhanden</p>
+					{/if}
 				{/if}
 			</div>
 
@@ -783,6 +801,7 @@
 			<div class="space-y-2">
 				<div class="flex items-center justify-between">
 					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
+					{#if !readOnly}
 					<Button
 						variant="ghost"
 						size="sm"
@@ -792,9 +811,10 @@
 						<PlusIcon class="h-3 w-3 mr-1" />
 						Link hinzufügen
 					</Button>
+					{/if}
 				</div>
 				
-				{#if isAddingLink}
+				{#if isAddingLink && !readOnly}
 					<div class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border border-dashed">
 						<Input 
 							bind:value={newLinkTitle} 
@@ -835,6 +855,7 @@
 										<div class="text-xs text-muted-foreground truncate">{link.url}</div>
 									</div>
 								</a>
+								{#if !readOnly}
 								<button
 									type="button"
 									onclick={() => handleRemoveLink(index)}
@@ -843,10 +864,12 @@
 								>
 									<XIcon class="h-3.5 w-3.5" />
 								</button>
+								{/if}
 							</div>
 						{/each}
 					</div>
 			{:else if !isAddingLink}
+				{#if !readOnly}
 				<div 
 					class="p-3 bg-muted/30 rounded-md text-sm border border-dashed cursor-pointer hover:bg-muted/50 transition-colors text-muted-foreground text-center"
 					onclick={() => isAddingLink = true}
@@ -856,6 +879,11 @@
 				>
 					Klicken um Link hinzuzufügen...
 				</div>
+				{:else}
+				<div class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center">
+					Keine Links vorhanden
+				</div>
+				{/if}
 				{/if}
 			</div>
 			{/if}
@@ -978,7 +1006,8 @@
 										</div>
 									</div>
 									
-									<!-- Action Buttons: Retry (if failed) + Delete -->
+									<!-- Action Buttons: Retry (if failed) + Delete (hidden in readOnly mode) -->
+									{#if !readOnly}
 									<div class="flex gap-1">
 										{#if comment.syncStatus === 'failed'}
 											<Button
@@ -1000,6 +1029,7 @@
 											<TrashIcon class="size-3" />
 										</Button>
 									</div>
+									{/if}
 								</div>
 								<p class="text-sm text-foreground whitespace-pre-wrap break-words">
 									{comment.text}
@@ -1012,7 +1042,8 @@
 				<p class="text-sm text-muted-foreground text-center py-4">Keine Kommentare vorhanden</p>
 			{/if}
 
-			<!-- Comment Input Form -->
+			<!-- Comment Input Form (hidden in readOnly mode) -->
+			{#if !readOnly}
 			<div class="space-y-3">
 				<Textarea
 					placeholder="Schreibe einen Kommentar..."
@@ -1048,6 +1079,7 @@
 					</Button>
 				</div>
 			</div>
+			{/if}
 			{/if}
 		</div>
 

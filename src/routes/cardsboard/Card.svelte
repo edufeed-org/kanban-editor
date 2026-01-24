@@ -27,11 +27,13 @@
 	let {
 		card,
 		onCardAction,
-		onSidebarAction
+		onSidebarAction,
+		readOnly = false
 	}: {
 		card: CardItem;
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
+		readOnly?: boolean;
 	} = $props();
 
 	let showModal = $state(false);
@@ -616,7 +618,8 @@
 	<CardViewDialog
 		cardId={card.id}
 		bind:open={isDialogOpen}
-		onEditMode={() => {
+		{readOnly}
+		onEditMode={readOnly ? undefined : () => {
 			isDialogOpen = false;
 			showModal = true;
 		}}

@@ -41,10 +41,12 @@
 
    let {
 	columns: columns_inner,
-	onFinalUpdate
+	onFinalUpdate,
+	readOnly = false
    }: {
 	columns: ColumnType[];
 	onFinalUpdate: BoardUpdateHandler;
+	readOnly?: boolean;
    } = $props();
 
    // Lokaler State für dndzone: Wird von dndzone mutiert
@@ -283,7 +285,7 @@
 	class="board" 
 	aria-label="Kanban Board mit Spalten"
 	bind:this={boardElement}
-	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: false, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
+	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: readOnly, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
 	onconsider={handleDndConsiderColumns} 
 	onfinalize={handleDndFinalizeColumns}
 >
@@ -303,10 +305,12 @@
  						onCardAction={handleCardAction}
  						onSidebarAction={handleSidebarAction}
 					maxCardsBeforeScroll={settings?.maxCardsBeforeScroll ?? 20}
+					readOnly={readOnly}
  					/>
  			</div>
      {/each}
-	<!-- Add Column Button - ähnlich wie Column Footer -->
+	<!-- Add Column Button - nur anzeigen wenn nicht readOnly -->
+	{#if !readOnly}
 	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
 		<Button
 			variant="outline"
@@ -329,4 +333,5 @@
 			Neue Spalte hinzufügen
 		</Button>
 	</div>
+	{/if}
 </section>
