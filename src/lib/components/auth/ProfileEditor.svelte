@@ -147,7 +147,7 @@
     <form onsubmit={handleSubmit} class="space-y-4">
       <!-- Nostr Public Key (Read-only) -->
       <div class="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border-2 border-slate-300 dark:border-slate-600 shadow-sm">
-        <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2 block uppercase tracking-wide">Ihre Nostr Public Key (npub)</label>
+        <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2 block uppercase tracking-wide">Ihre Nostr Public Key (npub)</span>
         <div class="font-mono text-sm text-slate-700 dark:text-slate-200 break-all select-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
           {authStore.getNpub() || authStore.currentUser?.pubkey || 'Nicht verfügbar'}
         </div>

@@ -714,4 +714,122 @@ export function validateEventTags(event: NDKEvent, kind: number): boolean {
   }
 }
 
+// ============================================================================
+// NIP-19 NADDR ENCODING/DECODING
+// ============================================================================
+
+import { nip19 } from '@nostr-dev-kit/ndk';
+
+/**
+ * AddressPointer Interface für naddr encoding
+ * (Explizit definiert für TypeScript-Kompatibilität)
+ */
+interface AddressPointer {
+  kind: number;
+  pubkey: string;
+  identifier: string;
+  relays?: string[];
+}
+
+/**
+ * Erstellt eine shareable naddr-URL für ein Board
+ * 
+ * @param boardId - Die d-tag ID des Boards
+ * @param authorPubkey - Der public key des Board-Autors (hex format)
+ * @param relayHints - Optional: Relay-URLs für bessere Auffindbarkeit
+ * @returns Die vollständige naddr-URL (z.B. /cardsboard/naddr1...)
+ * 
+ * @example
+ * const shareUrl = createBoardNaddrUrl('my-board-id', 'abc123...', ['wss://relay.damus.io']);
+ * // Returns: '/cardsboard/naddr1qqxnzd3e...'
+ */
+export function createBoardNaddrUrl(
+  boardId: string,
+  authorPubkey: string,
+  relayHints?: string[]
+): string {
+  const naddr = createBoardNaddr(boardId, authorPubkey, relayHints);
+  return `/cardsboard/${naddr}`;
+}
+
+/**
+ * Erstellt einen naddr string für ein Board (ohne URL-Pfad)
+ * 
+ * @param boardId - Die d-tag ID des Boards
+ * @param authorPubkey - Der public key des Board-Autors (hex format)
+ * @param relayHints - Optional: Relay-URLs für bessere Auffindbarkeit
+ * @returns Der naddr string (z.B. naddr1qqxnzd3e...)
+ */
+export function createBoardNaddr(
+  boardId: string,
+  authorPubkey: string,
+  relayHints?: string[]
+): string {
+  const naddrData: AddressPointer = {
+    kind: EVENT_KINDS.BOARD,
+    pubkey: authorPubkey,
+    identifier: boardId,
+    relays: relayHints?.filter(r => r && r.startsWith('wss://'))
+  };
+  
+  return nip19.naddrEncode(naddrData);
+}
+
+/**
+ * Dekodiert eine naddr und gibt die Board-Informationen zurück
+ * 
+ * @param naddr - Der naddr string (mit oder ohne 'nostr:' prefix)
+ * @returns Die dekodierten Board-Informationen oder null bei Fehler
+ */
+export function decodeBoardNaddr(naddr: string): {
+  kind: number;
+  pubkey: string;
+  identifier: string;
+  relays?: string[];
+} | null {
+  try {
+    // Remove 'nostr:' prefix if present
+    const cleanNaddr = naddr.replace(/^nostr:/, '');
+    
+    const decoded = nip19.decode(cleanNaddr);
+    
+    if (decoded.type !== 'naddr') {
+      console.error('❌ Nicht ein naddr:', decoded.type);
+      return null;
+    }
+    
+    const data = decoded.data as AddressPointer;
+    
+    return {
+      kind: data.kind,
+      pubkey: data.pubkey,
+      identifier: data.identifier,
+      relays: data.relays
+    };
+    
+  } catch (e) {
+    console.error('❌ naddr Dekodierung fehlgeschlagen:', e);
+    return null;
+  }
+}
+
+/**
+ * Erstellt eine vollständige shareable URL für ein Board
+ * 
+ * @param boardId - Die d-tag ID des Boards
+ * @param authorPubkey - Der public key des Board-Autors
+ * @param baseUrl - Die Basis-URL der Anwendung (z.B. 'https://app.example.com')
+ * @param relayHints - Optional: Relay-URLs
+ * @returns Die vollständige URL (z.B. https://app.example.com/cardsboard/naddr1...)
+ */
+export function createBoardShareUrl(
+  boardId: string,
+  authorPubkey: string,
+  baseUrl: string,
+  relayHints?: string[]
+): string {
+  const naddrPath = createBoardNaddrUrl(boardId, authorPubkey, relayHints);
+  return `${baseUrl.replace(/\/$/, '')}${naddrPath}`;
+}
+
 export type { BoardProps, CardProps, ColumnProps };

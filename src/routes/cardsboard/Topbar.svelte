@@ -752,11 +752,11 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 >
                     <SlidersHorizontalIcon class="h-4 w-4" />
                 </Dialog.Trigger>
-                <Dialog.Content>
-                    <Dialog.Header>
+                <Dialog.Content class="max-h-[90vh] flex flex-col">
+                    <Dialog.Header class="flex-shrink-0">
                         <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
                     </Dialog.Header>
-                    <div class="flex-1 overflow-y-auto">
+                    <div class="flex-1 overflow-y-auto min-h-0">
                         <SettingsPanel />
                     </div>
                 </Dialog.Content>

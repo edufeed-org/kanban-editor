@@ -40,8 +40,9 @@
 		columnId,
 		onDrop,
 		onCardAction,
-		onSidebarAction
- 	, maxCardsBeforeScroll = 20
+		onSidebarAction,
+		maxCardsBeforeScroll = 20,
+		readOnly = false
  	}: {
 		name: string;
 		items: CardItem[];
@@ -51,6 +52,7 @@
 		onCardAction?: (cardId: string, action: string) => void;
 		onSidebarAction?: (cardId: string, action: string) => void;
 		maxCardsBeforeScroll?: number;
+		readOnly?: boolean;
 	} = $props();
 
 	// Local state for column editing
@@ -394,6 +396,7 @@
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
 			>
+				{#if !readOnly}
 				<!-- Add Card Button -->
 				<Button 
 					variant="default" 
@@ -493,12 +496,13 @@
 						</div>
 					</Popover.Content>
 				</Popover.Root>
+				{/if}
 			</div>
 		</div>
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div class={`column-content ${items.length > (maxCardsBeforeScroll || 20) ? 'scrollable' : ''}`} use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: false, delayTouchStart: 300}}
+	<div class={`column-content ${items.length > (maxCardsBeforeScroll || 20) ? 'scrollable' : ''}`} use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
 	     onconsider={handleDndConsiderCards}
 		 onfinalize={handleDndFinalizeCards}>
 		{#each items as item (item.id)}
@@ -507,6 +511,7 @@
 					card={item}
 					{onCardAction}
 					{onSidebarAction}
+					{readOnly}
 				/>
 			</div>
 		{/each}
