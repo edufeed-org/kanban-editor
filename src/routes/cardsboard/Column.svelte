@@ -424,7 +424,7 @@
 					onclick={(e) => {
 						e.stopPropagation();
 						if (columnId) {
-							const newCardId = boardStore.createCard(columnId, 'Neue Karte', 'Bitte bearbeiten...');
+							const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
 							if (newCardId) {
 								// ✅ FIX: NICHT onDrop() aufrufen!
 								// boardStore.createCard() hat bereits den Store aktualisiert

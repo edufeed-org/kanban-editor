@@ -25,6 +25,8 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import LinkIcon from '@lucide/svelte/icons/link';
+	import ImageIcon from '@lucide/svelte/icons/image';
+	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import { onMount, onDestroy } from 'svelte';
 
 	interface Props {
@@ -49,6 +51,11 @@
 	let editLabels = $state<string[]>([]);
 	let newLinkUrl = $state('');
 	let newLinkTitle = $state('');
+	
+	// 🆕 IMAGE-EDITING STATE
+	let isEditingImage = $state(false);
+	let editImageUrl = $state('');
+	let imageMode = $state<'url' | 'oer'>('url');
 	let isAddingLink = $state(false);
 
 	// Subscription cleanup function
@@ -135,6 +142,16 @@
 		selectedColor = card.color || 'slate';
 		editDescription = card.description || '';
 		editLabels = [...(card.labels || [])];
+	});
+
+	// Auto-Focus: Bei leerer Karte direkt Beschreibungs-Editor öffnen
+	$effect(() => {
+		if (open && !card.description && !card.image) {
+			// Kurzer Timeout damit Dialog vollständig gerendert ist
+			setTimeout(() => {
+				isEditingDescription = true;
+			}, 100);
+		}
 	});
 
 	const attendees = $derived(
@@ -411,7 +428,7 @@
 				}
 			}}
 		>
-			<!-- Zeile 1: Heading (links) | Close Button (rechts) -->
+			<!-- Zeile 1: Heading (links) | Delete + Close Button (rechts) -->
 			<div class="flex items-center justify-between gap-4">
 				<input
 					type="text"
@@ -421,15 +438,31 @@
 					class="text-xl font-semibold bg-transparent border-none outline-none flex-1 min-w-0 focus:ring-2 focus:ring-primary/20 rounded px-1 -ml-1 hover:bg-muted/50 transition-colors"
 					placeholder="Kartentitel eingeben..."
 				/>
-				<Button 
-					variant="ghost" 
-					size="sm"
-					onclick={() => open = false}
-					class="h-8 w-8 p-0 flex-shrink-0"
-					aria-label="Dialog schließen"
-				>
-					<XIcon class="h-4 w-4" />
-				</Button>
+				<div class="flex items-center gap-1 flex-shrink-0">
+					<Button 
+						variant="ghost" 
+						size="sm"
+						onclick={() => {
+							if (confirm('Möchtest du diese Karte wirklich löschen?')) {
+								boardStore.deleteCard(String(card.id));
+								open = false;
+							}
+						}}
+						class="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+						aria-label="Karte löschen"
+					>
+						<TrashIcon class="h-4 w-4" />
+					</Button>
+					<Button 
+						variant="ghost" 
+						size="sm"
+						onclick={() => open = false}
+						class="h-8 w-8 p-0"
+						aria-label="Dialog schließen"
+					>
+						<XIcon class="h-4 w-4" />
+					</Button>
+				</div>
 			</div>
 
 			<!-- Zeile 2: Labels (links) | ColorPicker (rechts) -->
@@ -524,37 +557,169 @@
 				</div>
 			{/if}
 
-			<!-- Image Section (ausgeblendet während Editor aktiv) -->
-			{#if card.image && !isEditingDescription}
-				<div class="relative group">
-					<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
-						<img
-							src={card.image}
-							alt="Kartenbild"
-							class="w-full h-full object-cover"
-							onerror={(e) => {
-								(e.target as HTMLImageElement).style.display = 'none';
+			<!-- Image Section (ausgeblendet während Description-Editor aktiv) -->
+			{#if !isEditingDescription}
+				<div class="space-y-2">
+					{#if !isEditingImage && !card.image}
+						<!-- Kein Bild: Button zum Hinzufügen -->
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => {
+								isEditingImage = true;
+								editImageUrl = '';
+								imageMode = 'url';
 							}}
-						/>
-					</div>
-					<Button
-						variant="secondary"
-						size="sm"
-						onclick={switchToEditMode}
-						class="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-						title="Bild bearbeiten"
-					>
-						<PencilIcon class="h-3.5 w-3.5" />
-					</Button>
+							class="h-7 px-2 text-xs text-muted-foreground"
+						>
+							<ImageIcon class="h-3 w-3 mr-1" />
+							Bild hinzufügen
+						</Button>
+					{/if}
+
+					{#if isEditingImage}
+						<!-- Edit Mode: URL oder OER -->
+						<div class="space-y-3 p-3 border rounded-md bg-muted/30">
+							<!-- Mode Toggle -->
+							<div class="flex gap-1">
+								<Button
+									type="button"
+									variant={imageMode === 'url' ? 'default' : 'outline'}
+									size="sm"
+									onclick={() => (imageMode = 'url')}
+								>
+									URL eingeben
+								</Button>
+								<Button
+									type="button"
+									variant={imageMode === 'oer' ? 'default' : 'outline'}
+									size="sm"
+									onclick={() => (imageMode = 'oer')}
+								>
+									OER suchen
+								</Button>
+							</div>
+
+							{#if imageMode === 'url'}
+								<!-- URL Input -->
+								<div class="flex gap-2">
+									<Input
+										bind:value={editImageUrl}
+										placeholder="https://example.com/image.jpg"
+										class="flex-1"
+									/>
+								</div>
+								
+								<!-- URL Preview -->
+								{#if editImageUrl && editImageUrl !== card.image}
+									<div class="rounded-md overflow-hidden bg-muted border-2 border-blue-400">
+										<img
+											src={editImageUrl}
+											alt="Vorschau"
+											class="w-full h-auto max-h-48 object-contain"
+											onerror={(e) => {
+												(e.target as HTMLImageElement).style.display = 'none';
+											}}
+										/>
+										<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
+											Vorschau - noch nicht gespeichert
+										</div>
+									</div>
+								{/if}
+							{:else}
+								<!-- OER Picker -->
+								<OerImagePicker
+									onSelect={(url) => {
+										editImageUrl = url;
+										imageMode = 'url';
+									}}
+								/>
+							{/if}
+
+							<!-- Action Buttons -->
+							<div class="flex justify-between items-center pt-2 border-t">
+								<div>
+									{#if card.image}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => {
+												boardStore.editCard(String(card.id), { image: '' });
+												isEditingImage = false;
+											}}
+											class="text-destructive hover:text-destructive"
+										>
+											<TrashIcon class="h-3 w-3 mr-1" />
+											Bild entfernen
+										</Button>
+									{/if}
+								</div>
+								<div class="flex gap-2">
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => {
+											isEditingImage = false;
+											editImageUrl = '';
+										}}
+									>
+										Abbrechen
+									</Button>
+									<Button
+										size="sm"
+										onclick={() => {
+											if (editImageUrl !== card.image) {
+												boardStore.editCard(String(card.id), { image: editImageUrl });
+											}
+											isEditingImage = false;
+										}}
+										disabled={!editImageUrl && !card.image}
+									>
+										<CheckIcon class="h-3 w-3 mr-1" />
+										Speichern
+									</Button>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					{#if card.image && !isEditingImage}
+						<!-- Display Mode: Bild anzeigen mit Hover-Edit -->
+						<div class="relative group">
+							<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
+								<img
+									src={card.image}
+									alt="Kartenbild"
+									class="w-full h-full object-cover"
+									onerror={(e) => {
+										(e.target as HTMLImageElement).style.display = 'none';
+									}}
+								/>
+							</div>
+							<!-- Edit-Button Overlay -->
+							<Button
+								variant="secondary"
+								size="sm"
+								onclick={() => {
+									isEditingImage = true;
+									editImageUrl = card.image || '';
+									imageMode = 'url';
+								}}
+								class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2 text-xs"
+							>
+								<PencilIcon class="h-3 w-3 mr-1" />
+								Ändern
+							</Button>
+						</div>
+					{/if}
 				</div>
 			{/if}
 
 			<!-- 🆕 Description mit TipTap-Editor (automatisch bei Focus/Blur) -->
 			<div 
-				class="{isEditingDescription ? 'flex-1 flex flex-col min-h-0' : ''} space-y-2"
+				class="{isEditingDescription ? 'flex-1 flex flex-col min-h-0' : ''}"
 				data-description-section
 			>
-				<h3 class="text-sm font-semibold text-muted-foreground flex-shrink-0">Beschreibung</h3>
 				
 				{#if isEditingDescription}
 					<!-- TipTap Markdown Editor - wird bei Blur automatisch gespeichert -->
@@ -588,7 +753,7 @@
 				{:else if card.description}
 					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert -->
 					<div 
-						class="p-3 bg-muted/50 rounded-md text-sm border cursor-text hover:bg-muted/70 transition-colors"
+						class="p-3 bg-muted/50 rounded-md text-sm border border-amber-500 cursor-text hover:bg-muted/70 transition-colors"
 						onclick={() => isEditingDescription = true}
 						onfocusin={() => isEditingDescription = true}
 						onkeydown={(e) => e.key === 'Enter' && (isEditingDescription = true)}
@@ -609,7 +774,7 @@
 						tabindex="0"
 						aria-label="Beschreibung hinzufügen"
 					>
-						Klicken um Beschreibung hinzuzufügen...
+						Inhalt hinzufügen...
 					</div>
 				{/if}
 			</div>
