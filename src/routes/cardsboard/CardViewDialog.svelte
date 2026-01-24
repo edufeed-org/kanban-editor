@@ -765,17 +765,20 @@
 					</div>
 				{:else if card.description}
 					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
-					<div 
-						class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] {readOnly ? '' : 'cursor-text hover:bg-muted/70'} transition-colors"
-						onclick={() => !readOnly && (isEditingDescription = true)}
-						onfocusin={() => !readOnly && (isEditingDescription = true)}
-						onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
-						role={readOnly ? undefined : "textbox"}
-						tabindex={readOnly ? undefined : 0}
-						aria-label={readOnly ? undefined : "Beschreibung bearbeiten"}
-					>
-						<MarkdownRenderer content={card.description} />
-					</div>
+					{#if readOnly}
+						<div class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] transition-colors">
+							<MarkdownRenderer content={card.description} />
+						</div>
+					{:else}
+						<button 
+							type="button"
+							class="w-full text-left min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] cursor-text hover:bg-muted/70 transition-colors"
+							onclick={() => isEditingDescription = true}
+							aria-label="Beschreibung bearbeiten"
+						>
+							<MarkdownRenderer content={card.description} />
+						</button>
+					{/if}
 				{:else}
 					<!-- Platzhalter - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
 					{#if !readOnly}

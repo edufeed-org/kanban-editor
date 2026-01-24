@@ -366,8 +366,9 @@
         <div class="flex-1 overflow-y-auto min-h-0 pb-4 pr-3">
         <!-- Base-URL Einstellung (gilt für alle Link-Typen) -->
         <div class="mt-4 space-y-1">
-            <label class="text-xs font-medium text-muted-foreground">Base-URL (für externe Zugriffe ggf. anpassen)</label>
+            <label for="base-url-input" class="text-xs font-medium text-muted-foreground">Base-URL (für externe Zugriffe ggf. anpassen)</label>
             <input 
+                id="base-url-input"
                 type="text"
                 bind:value={baseUrl}
                 placeholder="https://example.com"
