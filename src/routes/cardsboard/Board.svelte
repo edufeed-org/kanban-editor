@@ -4,7 +4,6 @@
  	import Column from "./Column.svelte";
  	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
  	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
- 	import { Button } from "$lib/components/ui/button/index.js";
  	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
  	import { toast } from "svelte-sonner";
  	import type { Column as ColumnType, BoardUpdateHandler, CardItem } from "./types.js";
@@ -237,13 +236,13 @@
 		display: flex;
 		flex-direction: row;
 		overflow-x: auto;
-		overflow-y: auto;
+		overflow-y: hidden;
 		flex: 1 1 auto;
 		gap: 0.5em;
 		padding: 0.5em;
 		/* scroll-behavior: smooth; */ /* Deaktiviert für schnelleres Auto-Scroll während Drag */
 		scrollbar-width: thick;  /* Firefox */
-		align-items: flex-start;
+		align-items: stretch;  /* Spalten dehnen sich vertikal */
 		height: 100%;
 		width: 100%;
 		position: relative;
@@ -276,8 +275,40 @@
 		border-right: 1px solid var(--column-border);
 		/* background-color: var(--background); */
 		align-items: stretch;
+		height: 100%;  /* Nutze volle verfügbare Höhe vom Parent */
+		max-height: 100%;
+		overflow: hidden;
 	}
 
+	.add-column-button {
+		flex: 0 0 80px;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-left: 0.5em;
+	}
+
+	.add-column-button button {
+		width: 64px;
+		height: 64px;
+		border-radius: var(--radius-md);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		transition: all 0.2s ease;
+	}
+
+	.add-column-button button:hover {
+		background: var(--accent);
+		transform: scale(1.05);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+	}
 	
 </style>
 
@@ -309,13 +340,11 @@
  					/>
  			</div>
      {/each}
-	<!-- Add Column Button - nur anzeigen wenn nicht readOnly -->
+	<!-- Add Column Button - neben der letzten Spalte -->
 	{#if !readOnly}
-	<div class="addcolumn" title="Neue Spalte hinzufügen" style="justify-content: center; padding: 1rem;">
-		<Button
-			variant="outline"
-			size="lg"
-			class="add-column-button w-full h-full min-h-[48px]  btn bg-secondary"
+	<div class="add-column-button">
+		<button
+			title="Neue Spalte hinzufügen"
 			aria-label="Neue Spalte hinzufügen"
 			onclick={() => {
 				console.log('➕ Adding new column...');
@@ -329,9 +358,8 @@
 				}
 			}}
 		>
-			<SquarePlusIcon class="mr-2 h-5 w-5" />
-			Neue Spalte hinzufügen
-		</Button>
+			<SquarePlusIcon class="h-6 w-6" />
+		</button>
 	</div>
 	{/if}
 </section>

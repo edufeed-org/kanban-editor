@@ -238,6 +238,8 @@
 		width: 100%;
 		display: flex;
 		flex-direction: column;
+		max-height: 100%;
+		overflow: hidden;
 	}
 
 	.column-header {
@@ -246,6 +248,7 @@
 		padding-bottom: 0.75rem;
 		cursor: pointer;
 		transition: opacity 0.2s ease;
+		flex-shrink: 0;
 	}
 
 	.column-header:hover {
@@ -272,41 +275,34 @@
 	}
 
 	.column-content {
-		flex: 0 0 auto; /* do not scroll individually - let column grow */
+		flex: 1 1 auto;
+		overflow-y: auto;
+		overflow-x: hidden;
 		padding-right: 0.5rem;
-		min-height: 100px; /* Minimum dropzone height when empty */
+		min-height: 50px;
 		border-radius: var(--radius-md);
 		padding-bottom: 10px;
 	}
 
-	/* When many cards are present we allow the column to use an inner scroll */
-	.column-content.scrollable {
-		flex: 1 1 auto;
-		overflow-y: auto;
-		max-height: 70vh; /* reasonable cap so footer remains reachable */
-	}
-
 	.column-footer {
 		flex: 0 0 auto;
-		padding: 0.5rem;
-		border-top: 1px dashed var(--muted);
-		min-height: 24px;
-		background: linear-gradient(180deg, transparent, rgba(0,0,0,0.01));
+		padding: 0.25rem 0;
+		min-height: 20px;
+		margin-top: auto;
 	}
 	.add-card-button {
-		border: 1px dotted var(--muted-foreground);
 		border-radius: var(--radius-md);
-		background: transparent;
-		color: var(--muted-foreground);
+		background: var(--primary);
+		color: var(--primary-foreground);
 		transition: all 0.2s ease;
-		font-size: 1rem;
+		font-size: 0.8rem;
+		cursor: pointer;
 	}
 	
 
 	.add-card-button:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-		background: var(--accent)/10;
+		background: var(--accent);
+		color: var(--primary-foreground);
 	}
 
 	
@@ -387,7 +383,7 @@
 				<div class="column-title">{name}</div>
 			</div>
 			
-			<!-- Header Toolbar: Add Card + Menu (click-only, no drag) -->
+			<!-- Header Toolbar: Menu (click-only, no drag) -->
 			<div 
 				class="flex items-center gap-1" 
 				role="toolbar" 
@@ -397,39 +393,6 @@
 				onmousedown={(e) => e.stopPropagation()}
 			>
 				{#if !readOnly}
-				<!-- Add Card Button -->
-				<Button 
-					variant="default" 
-					size="sm" 
-					class="btn"
-					title="Neue Karte am Anfang"
-					onclick={(e) => {
-						e.stopPropagation();
-						if (columnId) {
-							const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
-							if (newCardId) {
-								// ✅ FIX: NICHT onDrop() aufrufen!
-								// boardStore.createCard() hat bereits den Store aktualisiert
-								// Der $effect wird automatisch getriggert und items wird aktualisiert
-								// Doppel-Update (createCard + onDrop) verursacht Race Condition!
-								
-								// ✨ Neue Karte: Dialog öffnen
-								setTimeout(() => {
-									// 🔔 Trigger external event to open CardViewDialog
-									const event = new CustomEvent('openCardDialog', {
-										detail: { cardId: String(newCardId) },
-										bubbles: true,
-										composed: true
-									});
-									window.dispatchEvent(event);
-									console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
-								}, 150);  // Etwas längere Verzögerung für Store-Update + UI-Rendering
-							}
-						}
-					}}
-				>
-					<SquarePlusIcon class="h-4 w-4" />
-				</Button>
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
 					<Popover.Trigger 
@@ -502,7 +465,7 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div class={`column-content ${items.length > (maxCardsBeforeScroll || 20) ? 'scrollable' : ''}`} use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
+	<div class="column-content" use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
 	     onconsider={handleDndConsiderCards}
 		 onfinalize={handleDndFinalizeCards}>
 		{#each items as item (item.id)}
@@ -517,6 +480,33 @@
 		{/each}
 	</div>
 
-	<!-- Footer: nur noch visueller Separator -->
-	<div class="column-footer"></div>
+	<!-- Footer: Add Card Button (GitHub-Style) -->
+	<div class="column-footer">
+		{#if !readOnly}
+		<button 
+			class="add-card-button w-full flex items-center gap-2.5 px-2 py-1 rounded-md hover:bg-accent hover:text-accent-foreground"
+			onclick={(e) => {
+				e.stopPropagation();
+				if (columnId) {
+					const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
+					if (newCardId) {
+						// ✨ Neue Karte: Dialog öffnen
+						setTimeout(() => {
+							const event = new CustomEvent('openCardDialog', {
+								detail: { cardId: String(newCardId) },
+								bubbles: true,
+								composed: true
+							});
+							window.dispatchEvent(event);
+							console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
+						}, 150);
+					}
+				}
+			}}
+		>
+			<SquarePlusIcon class="h-4.5 w-4.5" />
+			<span>Karte hinzufügen</span>
+		</button>
+		{/if}
+	</div>
 </div>
