@@ -283,7 +283,9 @@ async function getViewerLink(page: Page): Promise<string> {
 
 async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
     try {
-        const addCardButton = page.locator('button[title="Neue Karte am Anfang"]').first();
+        // Der "Karte hinzufügen" Button ist jetzt innerhalb der Spalte (nicht mehr im Header)
+        const addCardButton = page.locator('button.add-card-button').first()
+            .or(page.locator('button:has-text("Karte hinzufügen")').first());
         
         await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
         
