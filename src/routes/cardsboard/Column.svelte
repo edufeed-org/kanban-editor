@@ -240,6 +240,7 @@
 		flex-direction: column;
 		max-height: 100%;
 		overflow: hidden;
+		position: relative; /* Wichtig für position: absolute des fixed Buttons */
 	}
 
 	.column-header {
@@ -284,29 +285,31 @@
 		padding-bottom: 10px;
 	}
 
-	.column-footer {
-		flex: 0 0 auto;
-		padding: 0.25rem 0;
-		min-height: 20px;
-		margin-top: auto;
-	}
+	/* Add-Card-Button: Sticky am unteren Rand wenn gescrollt wird */
 	.add-card-button {
 		border-radius: var(--radius-md);
-		background: var(--primary);
+		border: 2px dotted var(--accent);
+		background: var(--background);
 		color: var(--primary-foreground);
 		transition: all 0.2s ease;
-		font-size: 0.8rem;
+		font-size: 0.9rem;
 		cursor: pointer;
+		width: 100%;
+		margin-top: 0.5rem;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		
+		/* Sticky: Klebt am unteren Rand wenn Container scrollbar ist */
+		position: sticky;
+		bottom: -10px;
+		z-index: 5;
 	}
-	
 
 	.add-card-button:hover {
 		background: var(--accent);
 		color: var(--primary-foreground);
 	}
-
-	
-		
 
 	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
 
@@ -465,9 +468,12 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div class="column-content" use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
-	     onconsider={handleDndConsiderCards}
-		 onfinalize={handleDndFinalizeCards}>
+	<div 
+		class="column-content" 
+		use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
+		onconsider={handleDndConsiderCards}
+		onfinalize={handleDndFinalizeCards}
+	>
 		{#each items as item (item.id)}
 			<div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
 				<Card
@@ -478,13 +484,11 @@
 				/>
 			</div>
 		{/each}
-	</div>
-
-	<!-- Footer: Add Card Button (GitHub-Style) -->
-	<div class="column-footer">
+		
+		<!-- Add Card Button: Direkt unter der letzten Karte (oder oben wenn keine Karten) -->
 		{#if !readOnly}
 		<button 
-			class="add-card-button w-full flex items-center gap-2.5 px-2 py-1 rounded-md hover:bg-accent hover:text-accent-foreground"
+			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md"
 			onclick={(e) => {
 				e.stopPropagation();
 				if (columnId) {

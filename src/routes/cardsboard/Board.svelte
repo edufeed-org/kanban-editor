@@ -316,24 +316,26 @@
 		flex: 0 0 80px;
 		height: 100%;
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		justify-content: center;
 		margin-left: 0.5em;
+		margin-top: 3.5rem;
 	}
 
 	.add-column-button button {
-		width: 64px;
+		width: 250px;
 		height: 64px;
+		border: 2px dotted var(--accent);
 		border-radius: var(--radius-md);
-		background: var(--primary);
+		background: var(--background);
 		color: var(--primary-foreground);
-		border: none;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 		transition: all 0.2s ease;
+		font-size: 0.9rem;
 	}
 
 	.add-column-button button:hover {
@@ -345,8 +347,8 @@
 	/* Fixed mode - wenn zu viele Spalten */
 	.add-column-button-fixed {
 		position: fixed;
-		right: 1.5rem;
-		top: 50%;
+		right: 0.2rem;
+		top: 10rem;
 		transform: translateY(-50%);
 		z-index: 100;
 	}
@@ -355,9 +357,9 @@
 		width: 48px;
 		height: 48px;
 		border-radius: var(--radius-md);
-		background: var(--primary);
+		border: 1px solid var(--accent);
+		background: var(--background);
 		color: var(--primary-foreground);
-		border: none;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -420,7 +422,11 @@
 				}
 			}}
 		>
-			<SquarePlusIcon class="h-6 w-6" />
+			{#if !isAddColumnFixed}
+				<SquarePlusIcon class="h-4.5 w-4.5" /> <span class="ml-2">Spalte hinzufügen</span>
+			{:else}
+				<SquarePlusIcon class="h-6 w-6" />
+			{/if}
 		</button>
 	</div>
 	{/if}
