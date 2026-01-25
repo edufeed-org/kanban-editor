@@ -344,13 +344,13 @@
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 	}
 
-	/* Fixed mode - wenn zu viele Spalten */
+	/* Fixed mode - wenn zu viele Spalten (relativ zum Board-Container) */
 	.add-column-button-fixed {
-		position: fixed;
-		right: 0.2rem;
-		top: 10rem;
+		position: absolute;
+		right: 0.5rem;
+		top: 50%;
 		transform: translateY(-50%);
-		z-index: 100;
+		z-index: 50;
 	}
 
 	.add-column-button-fixed button {
