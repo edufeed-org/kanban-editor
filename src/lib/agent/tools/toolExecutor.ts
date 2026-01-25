@@ -14,17 +14,85 @@ import type { NostrIntegration } from '$lib/stores/boardstore/nostr';
 // ============================================================================
 
 /**
+ * Escaped echte Control-Characters (Newlines, Tabs, etc.) innerhalb von JSON-Strings
+ * 
+ * Problem: LLMs (besonders Ollama) senden manchmal echte Newlines statt \n in JSON-Strings.
+ * Das führt zu "bad control character in string literal" Fehlern.
+ * 
+ * Diese Funktion durchläuft den JSON-String und escaped alle Control-Characters
+ * die innerhalb von String-Werten (zwischen Anführungszeichen) vorkommen.
+ */
+function escapeControlCharsInJsonStrings(jsonStr: string): string {
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = 0; i < jsonStr.length; i++) {
+        const char = jsonStr[i];
+        const charCode = jsonStr.charCodeAt(i);
+        
+        if (escapeNext) {
+            result += char;
+            escapeNext = false;
+            continue;
+        }
+        
+        if (char === '\\' && inString) {
+            result += char;
+            escapeNext = true;
+            continue;
+        }
+        
+        if (char === '"') {
+            result += char;
+            inString = !inString;
+            continue;
+        }
+        
+        // Wenn wir in einem String sind und ein Control-Character finden
+        if (inString && charCode < 32) {
+            // Escape das Control-Character
+            if (charCode === 10) { // Newline
+                result += '\\n';
+            } else if (charCode === 13) { // Carriage Return
+                result += '\\r';
+            } else if (charCode === 9) { // Tab
+                result += '\\t';
+            } else if (charCode === 8) { // Backspace
+                result += '\\b';
+            } else if (charCode === 12) { // Form Feed
+                result += '\\f';
+            } else {
+                // Andere Control-Characters als Unicode-Escape
+                result += '\\u' + charCode.toString(16).padStart(4, '0');
+            }
+            continue;
+        }
+        
+        result += char;
+    }
+    
+    return result;
+}
+
+/**
  * Versucht fehlerhaftes JSON zu reparieren
  * Häufige LLM-Fehler:
  * - Extra Zeichen nach dem JSON
  * - Fehlende schließende Klammern
  * - Doppelt escapte Zeilenumbrüche (\\n statt \n)
  * - Unescapte Sonderzeichen in Strings
+ * - Echte Newlines/Control-Characters in JSON-Strings (müssen escaped werden)
  */
 function attemptJsonRepair(jsonStr: string): string {
     let repaired = jsonStr.trim();
     
-    // 0. Korrigiere doppelt escapte Zeilenumbrüche/Tabs
+    // 0. KRITISCH: Escape echte Newlines/Tabs innerhalb von JSON-Strings
+    // LLMs (besonders Ollama) senden manchmal echte Control-Characters statt \n
+    // Das verursacht "bad control character in string literal" Fehler
+    repaired = escapeControlCharsInJsonStrings(repaired);
+    
+    // 1. Korrigiere doppelt escapte Zeilenumbrüche/Tabs
     // LLMs erzeugen manchmal \\n statt \n in JSON-Strings
     // Wir müssen vorsichtig sein: nur innerhalb von String-Werten korrigieren
     repaired = repaired.replace(/\\\\n/g, '\\n');
@@ -251,7 +319,26 @@ function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
  * - Optional: Löscht unpassende Spalten (removeUnusedColumns)
  */
 function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
-    const { title, description, columns, removeUnusedColumns } = args;
+    const { title, description, removeUnusedColumns } = args;
+    
+    // columns kann als String (JSON) oder als Array kommen - beide Fälle behandeln
+    let columns = args.columns;
+    if (typeof columns === 'string') {
+        try {
+            // Wichtig: Erst Control-Characters escapen bevor JSON.parse
+            const cleanedColumns = escapeControlCharsInJsonStrings(columns);
+            columns = JSON.parse(cleanedColumns);
+            console.log('🔧 populate_board: columns war ein String, geparst zu Array');
+        } catch (e) {
+            console.error('❌ populate_board: columns konnte nicht geparst werden:', e);
+            return {
+                tool_call_id: '',
+                tool_name: 'populate_board',
+                success: false,
+                error: `columns JSON konnte nicht geparst werden: ${e}`
+            };
+        }
+    }
     
     console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns });
     
@@ -290,8 +377,19 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                 }
                 
                 // Karten zur Spalte hinzufügen
-                if (column && colDef.cards && Array.isArray(colDef.cards)) {
-                    for (const cardDef of colDef.cards) {
+                let cards = colDef.cards;
+                // Falls cards als String kommt, parsen
+                if (typeof cards === 'string') {
+                    try {
+                        cards = JSON.parse(cards);
+                    } catch (e) {
+                        console.warn(`⚠️ cards für Spalte ${colDef.name} konnte nicht geparst werden:`, e);
+                        cards = [];
+                    }
+                }
+                
+                if (column && cards && Array.isArray(cards)) {
+                    for (const cardDef of cards) {
                         if (!cardDef.heading) continue;
                         
                         if (ctx.boardStore?.createCard) {

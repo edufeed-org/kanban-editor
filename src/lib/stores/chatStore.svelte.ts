@@ -586,19 +586,19 @@ export class ChatStore {
 				model: settings.llmModel,
 				messages,
 				temperature: 0.1, // Sehr niedrig für konsistente Tool-Calls
-				max_tokens: 2000
+				max_tokens: 4000
 			};
 
 			// Tool-Support je nach Provider
 			if (isOllama) {
 				// Ollama unterstützt tools ab Version 0.4.0
-				// Falls nicht unterstützt, Fallback auf JSON-Generierung
+				// Verwende 'required' um Tool-Nutzung zu erzwingen
 				requestBody.tools = tools;
-				requestBody.tool_choice = 'auto';
+				requestBody.tool_choice = 'required';
 			} else {
 				// OpenAI/OpenRouter - Standard Tool Format
 				requestBody.tools = tools;
-				requestBody.tool_choice = 'auto';
+				requestBody.tool_choice = 'required';
 			}
 
 			// Call API
