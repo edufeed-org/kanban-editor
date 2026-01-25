@@ -20,6 +20,38 @@
 
 	// Direkt auf settingsStore.settings zugreifen (Svelte 5 Runes)
 	let settings = $derived(settingsStore.settings);
+
+	// Intelligenter Modus-Wechsel für Add Column Button
+	let isAddColumnFixed = $state(false);
+
+	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
+	$effect(() => {
+		if (!boardElement) return;
+
+		const checkScroll = () => {
+			if (boardElement) {
+				// Wenn scrollWidth > clientWidth, dann scrollt das Board horizontal
+				const hasScroll = boardElement.scrollWidth > boardElement.clientWidth;
+				isAddColumnFixed = hasScroll;
+			}
+		};
+
+		// Initial check
+		checkScroll();
+
+		// Observer für Größenänderungen
+		const resizeObserver = new ResizeObserver(checkScroll);
+		resizeObserver.observe(boardElement);
+
+		// Auch bei Spalten-Änderungen prüfen (mit kleinem Delay für Rendering)
+		const columnsLength = columns.length; // ← Dependency tracking
+		setTimeout(checkScroll, 100);
+
+		// Cleanup
+		return () => {
+			resizeObserver.disconnect();
+		};
+	});
 	
 	// This is a known issue with svelte-dnd-action library
  	if (typeof window !== 'undefined') {
@@ -309,6 +341,36 @@
 		transform: scale(1.05);
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 	}
+
+	/* Fixed mode - wenn zu viele Spalten */
+	.add-column-button-fixed {
+		position: fixed;
+		right: 1.5rem;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 100;
+	}
+
+	.add-column-button-fixed button {
+		width: 48px;
+		height: 48px;
+		border-radius: var(--radius-md);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border: none;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		transition: all 0.2s ease;
+	}
+
+	.add-column-button-fixed button:hover {
+		background: var(--accent);
+		transform: scale(1.05);
+		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+	}
 	
 </style>
 
@@ -340,9 +402,9 @@
  					/>
  			</div>
      {/each}
-	<!-- Add Column Button - neben der letzten Spalte -->
+	<!-- Add Column Button - intelligenter Modus-Wechsel -->
 	{#if !readOnly}
-	<div class="add-column-button">
+	<div class={isAddColumnFixed ? 'add-column-button-fixed' : 'add-column-button'}>
 		<button
 			title="Neue Spalte hinzufügen"
 			aria-label="Neue Spalte hinzufügen"
