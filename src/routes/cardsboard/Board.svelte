@@ -319,7 +319,7 @@
 		align-items: flex-start;
 		justify-content: center;
 		margin-left: 0.5em;
-		margin-top: 3.5rem;
+		margin-top: 4rem;
 	}
 
 	.add-column-button button {
