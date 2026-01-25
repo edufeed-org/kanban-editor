@@ -84,6 +84,33 @@
 		return turndownService.turndown(html);
 	}
 	
+	// Paste-Handler für Markdown-Inhalt
+	function handlePaste(event: ClipboardEvent) {
+		if (!editor || disabled) return;
+		
+		const clipboardData = event.clipboardData;
+		if (!clipboardData) return;
+		
+		// Prüfe ob HTML-Inhalt vorhanden ist (formatierter Text aus anderen Apps)
+		const htmlContent = clipboardData.getData('text/html');
+		if (htmlContent) {
+			// Lass TipTap den HTML-Inhalt normal verarbeiten
+			return;
+		}
+		
+		// Nur Plain-Text → Prüfe ob es Markdown ist
+		const plainText = clipboardData.getData('text/plain');
+		if (plainText && isMarkdown(plainText)) {
+			// Verhindere Standard-Paste
+			event.preventDefault();
+			
+			// Konvertiere Markdown zu HTML und füge ein
+			const html = md.render(plainText);
+			editor.commands.insertContent(html);
+		}
+		// Sonst: Normales Paste-Verhalten für Plain-Text
+	}
+	
 	onMount(() => {
 		// Konvertiere initialen Wert von Markdown zu HTML für den Editor
 		const initialContent = markdownToHtml(value);
@@ -123,6 +150,28 @@
 				const markdown = htmlToMarkdown(html);
 				if (onchange) {
 					onchange(markdown);
+				}
+			},
+			editorProps: {
+				handlePaste: (view, event) => {
+					// Custom Paste-Handler für Markdown
+					const clipboardData = event.clipboardData;
+					if (!clipboardData) return false;
+					
+					// HTML vorhanden? → Standard-Verarbeitung
+					const htmlContent = clipboardData.getData('text/html');
+					if (htmlContent) return false;
+					
+					// Plain-Text prüfen
+					const plainText = clipboardData.getData('text/plain');
+					if (plainText && isMarkdown(plainText)) {
+						// Markdown zu HTML konvertieren und einfügen
+						const html = md.render(plainText);
+						editor?.commands.insertContent(html);
+						return true; // Event wurde behandelt
+					}
+					
+					return false; // Standard-Verarbeitung
 				}
 			}
 		});
