@@ -112,10 +112,10 @@
                         id="link-column"
                         bind:value={selectedColumnId}
                         disabled={isLoading}
-                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        class="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {#each columns as column (column.id)}
-                            <option value={column.id}>{column.name}</option>
+                            <option value={column.id} class="bg-background text-foreground">{column.name}</option>
                         {/each}
                     </select>
                 </div>
