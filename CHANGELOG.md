@@ -1,5 +1,28 @@
 # Changelog
 
+## Version 4.7.22 - Nostr Paste: njump Config + Ursprungs-Link 🔗
+
+**Datum:** 26. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Erweiterung: Nostr naddr Paste System
+- **njump URL konfigurierbar**: `config.json → nostr.njumpUrl` (Standard: `https://njump.edufeed.org`)
+- **Ursprünglicher Link**: Die gepastete URL wird als dritter Link hinzugefügt ("Ursprünglicher Link")
+- **Bereinigtes Output**: "Nostr:" Zeile aus Card-Description entfernt
+
+### 📚 Dokumentation
+- **PASTE-SYSTEM.md** vollständig überarbeitet:
+  - Workflow-Diagramm für naddr-Verarbeitung
+  - Tag-Extraktion Tabelle
+  - njump Konfiguration erklärt
+  - Link-Struktur dokumentiert
+
+### 🔧 Technische Änderungen
+- `NostrEventHandler.ts`: `originalUrl` Parameter durch gesamte Aufrufkette
+- `collectLinks()`: Dritten Link nur wenn URL ≠ njump-URL
+- `formatAmbContent()`: Kein `nostrUrl` Parameter mehr nötig
+
 ## Version 4.7.21 - Paste: Strg+V im Board erstellt Card 🧷
 
 **Datum:** 26. Januar 2026  

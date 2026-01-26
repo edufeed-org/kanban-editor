@@ -40,8 +40,10 @@ export class NostrEventHandler implements IPasteHandler {
             }
             
             const type = this.getNostrType(identifier);
+            // Ursprüngliche URL falls gepastet (nicht der reine Identifier)
+            const originalUrl = this.isHttpUrl(text) ? text : undefined;
 
-            const cardUpdates = await this.createCardUpdates(identifier, type, context);
+            const cardUpdates = await this.createCardUpdates(identifier, type, context, originalUrl);
             
             return {
                 success: true,
@@ -137,11 +139,11 @@ export class NostrEventHandler implements IPasteHandler {
         }
     }
 
-    private async createCardUpdates(identifier: string, type: string, context: PasteContext) {
+    private async createCardUpdates(identifier: string, type: string, context: PasteContext, originalUrl?: string) {
         const nostrWebUrl = this.getNostrWebUrl(identifier);
         const ndk = context.ndk;
 
-        console.log('🔍 createCardUpdates:', { identifier: identifier.substring(0, 20), type, hasNdk: !!ndk });
+        console.log('🔍 createCardUpdates:', { identifier: identifier.substring(0, 20), type, hasNdk: !!ndk, originalUrl });
 
         if (type === 'Addressable Event' && ndk) {
             console.log('🔍 Fetching naddr event...');
@@ -162,7 +164,7 @@ export class NostrEventHandler implements IPasteHandler {
                     const ambResult = nostrToAmb(event, { defaultLanguage: 'de' });
                     console.log('🔍 AMB conversion:', ambResult.success ? 'success' : 'failed', ambResult.success ? ambResult.data?.name : ambResult.error);
                     if (ambResult.success && ambResult.data) {
-                        return this.createAmbCardUpdates(ambResult.data, identifier, context);
+                        return this.createAmbCardUpdates(ambResult.data, identifier, context, originalUrl);
                     }
                 } catch (conversionError) {
                     console.error('🔍 AMB conversion error:', conversionError);
@@ -172,7 +174,7 @@ export class NostrEventHandler implements IPasteHandler {
                 console.log('🔍 Using fallback: extracting from tags directly');
                 const resource = this.extractResourceFromTags(event);
                 if (resource.name) {
-                    return this.createAmbCardUpdates(resource, identifier, context);
+                    return this.createAmbCardUpdates(resource, identifier, context, originalUrl);
                 }
             }
         }
@@ -201,12 +203,12 @@ export class NostrEventHandler implements IPasteHandler {
         };
     }
 
-    private createAmbCardUpdates(resource: AmbLearningResource, identifier: string, context: PasteContext) {
+    private createAmbCardUpdates(resource: AmbLearningResource, identifier: string, context: PasteContext, originalUrl?: string) {
         const nostrWebUrl = this.getNostrWebUrl(identifier);
         const heading = resource.name || 'AMB Learning Resource';
         const content = this.formatAmbContent(resource);
         const labels = this.collectLabels(resource);
-        const links = this.collectLinks(resource, nostrWebUrl);
+        const links = this.collectLinks(resource, nostrWebUrl, originalUrl);
 
         if (context.target === 'card') {
             return {
@@ -291,12 +293,21 @@ export class NostrEventHandler implements IPasteHandler {
         return Array.from(labels);
     }
 
-    private collectLinks(resource: AmbLearningResource, nostrWebUrl: string) {
+    private collectLinks(resource: AmbLearningResource, nostrWebUrl: string, originalUrl?: string) {
         const links = [{
             id: crypto.randomUUID(),
             url: nostrWebUrl,
             title: 'Nostr Event (njump)'
         }];
+
+        // Ursprüngliche gepastete URL als zweiter Link (falls nicht identisch mit njump URL)
+        if (originalUrl && originalUrl !== nostrWebUrl) {
+            links.push({
+                id: crypto.randomUUID(),
+                url: originalUrl,
+                title: 'Ursprünglicher Link'
+            });
+        }
 
         if (resource.id && this.isHttpUrl(resource.id)) {
             links.unshift({

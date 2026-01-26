@@ -1587,6 +1587,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
 | 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
 | 3.19 | 26.01.2026 | 🧩 **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |
 | 3.18 | 26.01.2026 | 🧷 **Paste UX:** Strg+V im Board erstellt neue Card (globaler Paste-Handler, Input-safe). |
