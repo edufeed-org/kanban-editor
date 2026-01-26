@@ -32,6 +32,7 @@ export interface SettingsState {
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
   draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
+  njumpUrl: string; // Web-Client URL für Nostr-Links (naddr, nevent, note)
 
   // LLM Model Integration
   llmModel: string; // API Name des LLM Models, z.B. "gpt-4-mini", "ollama/mistral"
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   ],
   relaysPrivate: [],
   draftPublishingMode: 'private-relays', // Default: draft → private relays
+  njumpUrl: 'https://njump.edufeed.org', // Default: edufeed njump instance
 
   // LLM Settings
   llmModel: 'ollama/mistral', // Default: lokales Ollama
@@ -352,6 +354,12 @@ export class SettingsStore {
         this.settings = {
           ...this.settings,
           draftPublishingMode: config.nostr.draftPublishingMode
+        };
+      }
+      if (config.nostr.njumpUrl) {
+        this.settings = {
+          ...this.settings,
+          njumpUrl: config.nostr.njumpUrl
         };
       }
     }

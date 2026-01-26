@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
+    import { onMount } from 'svelte';
     import { dndzone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
  	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
@@ -23,6 +24,47 @@
 
 	// Intelligenter Modus-Wechsel für Add Column Button
 	let isAddColumnFixed = $state(false);
+
+	function isEditableTarget(target: EventTarget | null): boolean {
+		if (!(target instanceof HTMLElement)) return false;
+		const tag = target.tagName.toLowerCase();
+		return tag === 'input' || tag === 'textarea' || target.isContentEditable;
+	}
+
+	async function handleGlobalPaste(event: ClipboardEvent) {
+		if (readOnly) return;
+		if (isEditableTarget(event.target)) return;
+		if (!columns.length) {
+			toast.error('Paste fehlgeschlagen', {
+				description: 'Keine Spalten verfügbar.'
+			});
+			return;
+		}
+
+		const columnId = columns[0]?.id;
+		if (!columnId) return;
+		if (!event.clipboardData) return;
+
+		event.preventDefault();
+		const result = await boardStore.handleColumnPaste(columnId, event.clipboardData);
+		if (!result.success) {
+			console.warn('❌ Paste fehlgeschlagen:', result);
+			toast.error('Paste fehlgeschlagen', {
+				description: result.debug ? `${result.error} (${result.debug})` : result.error
+			});
+		}
+	}
+
+	onMount(() => {
+		if (typeof window === 'undefined') return;
+		const handler = (event: ClipboardEvent) => {
+			handleGlobalPaste(event);
+		};
+		window.addEventListener('paste', handler);
+		return () => {
+			window.removeEventListener('paste', handler);
+		};
+	});
 
 	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
 	$effect(() => {
@@ -327,8 +369,8 @@
 		height: 64px;
 		border: 2px dotted var(--accent);
 		border-radius: var(--radius-md);
-		background: var(--background);
-		color: var(--primary-foreground);
+		background: var(--muted);
+		color: var(--foreground);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -358,7 +400,7 @@
 		height: 48px;
 		border-radius: var(--radius-md);
 		border: 1px solid var(--accent);
-		background: var(--background);
+		background: var(--muted);
 		color: var(--primary-foreground);
 		cursor: pointer;
 		display: flex;

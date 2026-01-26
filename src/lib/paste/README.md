@@ -24,7 +24,7 @@ async function handlePaste(event: ClipboardEvent) {
 ✅ **YouTube URLs** → Embed Player  
 ✅ **Bild-URLs** → Card Image  
 ✅ **Screenshots** → Data URL → Card Image  
-✅ **Nostr Events** → Event Preview  
+✅ **Nostr Events (naddr)** → AMB Learning Resource Card  
 ✅ **HTML** → Markdown Konvertierung  
 ✅ **Plain Text** → Direkt einfügen  
 
@@ -36,7 +36,7 @@ async function handlePaste(event: ClipboardEvent) {
   - `UrlPasteHandler.ts`
   - `ImagePasteHandler.ts`
   - `TextPasteHandler.ts`
-  - `NostrEventHandler.ts`
+    - `NostrEventHandler.ts` (NDK Fetch + AMB Konvertierung)
 
 ## Dokumentation
 

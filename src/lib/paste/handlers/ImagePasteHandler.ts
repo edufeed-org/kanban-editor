@@ -6,41 +6,29 @@
  * - Kopierte Bilder → Als Card-Image setzen
  */
 
-import type { IPasteHandler, PasteContext, PasteResult } from '../types.js';
+import type { IPasteHandler, PasteContext, PasteResult, ClipboardData } from '../types.js';
 
 export class ImagePasteHandler implements IPasteHandler {
     readonly name = 'Image Handler';
     readonly priority = 20; // Höchste Priorität für binäre Bilder
     
-    async canHandle(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): Promise<boolean> {
-        if (!clipboardData) return false;
-        
+    async canHandle(data: ClipboardData): Promise<boolean> {
         // Prüfe ob Bild-Dateien vorhanden sind
-        const items = clipboardData.items;
-        if (!items) return false;
-        
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.startsWith('image/')) {
-                return true;
-            }
-        }
-        
-        return false;
+        return data.files.some(file => file.type.startsWith('image/'));
     }
     
-    async handle(
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData'],
-        context: PasteContext
-    ): Promise<PasteResult> {
-        if (!clipboardData) {
-            return { success: false, type: 'image', error: 'Keine Clipboard-Daten' };
-        }
-        
+    async handle(data: ClipboardData, context: PasteContext): Promise<PasteResult> {
         try {
-            const imageDataUrl = await this.extractImageAsDataUrl(clipboardData);
+            const imageFile = data.files.find(file => file.type.startsWith('image/'));
+            
+            if (!imageFile) {
+                return { success: false, type: 'image', error: 'Kein Bild gefunden' };
+            }
+            
+            const imageDataUrl = await this.fileToDataUrl(imageFile);
             
             if (!imageDataUrl) {
-                return { success: false, type: 'image', error: 'Kein Bild gefunden' };
+                return { success: false, type: 'image', error: 'Bild konnte nicht gelesen werden' };
             }
             
             const cardUpdates = this.createCardUpdates(imageDataUrl, context);
@@ -60,29 +48,13 @@ export class ImagePasteHandler implements IPasteHandler {
         }
     }
     
-    private async extractImageAsDataUrl(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): Promise<string | null> {
-        if (!clipboardData) return null;
-        const items = clipboardData.items;
-        if (!items) return null;
-        
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            
-            if (item.type.startsWith('image/')) {
-                const blob = item.getAsFile();
-                if (!blob) continue;
-                
-                // Konvertiere Blob zu Data URL
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            }
-        }
-        
-        return null;
+    private fileToDataUrl(file: File): Promise<string | null> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     }
     
     private createCardUpdates(imageDataUrl: string, context: PasteContext) {

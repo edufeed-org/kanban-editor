@@ -8,7 +8,7 @@
  * - Generische URLs → Link in content
  */
 
-import type { IPasteHandler, PasteContext, PasteResult, UrlMetadata } from '../types.js';
+import type { IPasteHandler, PasteContext, PasteResult, UrlMetadata, ClipboardData } from '../types.js';
 
 export class UrlPasteHandler implements IPasteHandler {
     readonly name = 'URL Handler';
@@ -18,31 +18,22 @@ export class UrlPasteHandler implements IPasteHandler {
     private readonly IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
     private readonly NOSTR_REGEX = /^(nostr:|)(nevent|note|npub|nprofile|naddr)[a-z0-9]+$/i;
     
-    async canHandle(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): Promise<boolean> {
-        if (!clipboardData) return false;
-        
-        const text = clipboardData.getData('text/plain');
+    async canHandle(data: ClipboardData): Promise<boolean> {
+        const text = data.text.trim();
         if (!text) return false;
         
         // Ist es eine gültige URL?
         try {
-            new URL(text.trim());
+            new URL(text);
             return true;
         } catch {
             // Falls nicht URL, prüfe ob Nostr-Identifier
-            return this.NOSTR_REGEX.test(text.trim());
+            return this.NOSTR_REGEX.test(text);
         }
     }
     
-    async handle(
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData'],
-        context: PasteContext
-    ): Promise<PasteResult> {
-        if (!clipboardData) {
-            return { success: false, type: 'unknown', error: 'Keine Clipboard-Daten' };
-        }
-        
-        const text = clipboardData.getData('text/plain').trim();
+    async handle(data: ClipboardData, context: PasteContext): Promise<PasteResult> {
+        const text = data.text.trim();
         
         // Nostr Events an separaten Handler delegieren
         if (this.NOSTR_REGEX.test(text)) {
