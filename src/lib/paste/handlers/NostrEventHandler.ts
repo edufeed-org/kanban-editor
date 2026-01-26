@@ -15,6 +15,7 @@ import type { IPasteHandler, PasteContext, PasteResult, ClipboardData } from '..
 import type NDK from '@nostr-dev-kit/ndk';
 import { nip19 } from 'nostr-tools';
 import { nostrToAmb, type AmbLearningResource, type NostrEvent } from '@edufeed-org/amb-nostr-converter';
+import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 
 export class NostrEventHandler implements IPasteHandler {
     readonly name = 'Nostr Event Handler';
@@ -79,14 +80,54 @@ export class NostrEventHandler implements IPasteHandler {
             const decoded = nip19.decode(identifier);
             if (decoded.type !== 'naddr') return null;
 
-            const data = decoded.data as { kind: number; pubkey: string; identifier: string };
+            const data = decoded.data as { kind: number; pubkey: string; identifier: string; relays?: string[] };
             const filter = {
                 kinds: [data.kind],
                 authors: [data.pubkey],
                 '#d': [data.identifier]
             };
 
+            console.log('🔍 naddr decoded:', { kind: data.kind, pubkey: data.pubkey.substring(0, 16), identifier: data.identifier, relays: data.relays });
+
+            // Versuche zuerst mit den Relay-Hints aus dem naddr
+            if (data.relays && data.relays.length > 0) {
+                console.log('🔍 Trying relay hints:', data.relays);
+                for (const relayUrl of data.relays) {
+                    try {
+                        // Prüfe ob Relay bereits verbunden ist
+                        const existingRelay = ndk.pool.relays.get(relayUrl);
+                        if (!existingRelay) {
+                            // Relay nicht im Pool, verbinden und warten
+                            console.log('🔍 Connecting to relay:', relayUrl);
+                            const relay = await ndk.addExplicitRelay(relayUrl);
+                            // Warte auf Verbindung mit Timeout
+                            await new Promise<void>((resolve) => {
+                                const timeout = setTimeout(() => {
+                                    console.log('🔍 Relay connection timeout, continuing...');
+                                    resolve();
+                                }, 3000);
+                                
+                                relay.on('connect', () => {
+                                    console.log('🔍 Relay connected:', relayUrl);
+                                    clearTimeout(timeout);
+                                    resolve();
+                                });
+                                
+                                // Falls bereits verbunden
+                                if (relay.status === 1) { // WebSocket.OPEN
+                                    clearTimeout(timeout);
+                                    resolve();
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Relay hinzufügen fehlgeschlagen:', relayUrl, e);
+                    }
+                }
+            }
+
             const event = await ndk.fetchEvent(filter as any);
+            console.log('🔍 fetchEvent result:', event ? `kind=${event.kind}` : 'null');
             if (!event) return null;
 
             return event.rawEvent() as NostrEvent;
@@ -97,26 +138,52 @@ export class NostrEventHandler implements IPasteHandler {
     }
 
     private async createCardUpdates(identifier: string, type: string, context: PasteContext) {
-        const nostrUrl = `nostr:${identifier}`;
+        const nostrWebUrl = this.getNostrWebUrl(identifier);
         const ndk = context.ndk;
 
+        console.log('🔍 createCardUpdates:', { identifier: identifier.substring(0, 20), type, hasNdk: !!ndk });
+
         if (type === 'Addressable Event' && ndk) {
+            console.log('🔍 Fetching naddr event...');
             const event = await this.fetchEventFromNaddr(identifier, ndk);
+            console.log('🔍 Fetched event:', event ? 'found' : 'null');
             if (event) {
-                const ambResult = nostrToAmb(event, { defaultLanguage: 'de' });
-                if (ambResult.success && ambResult.data) {
-                    return this.createAmbCardUpdates(ambResult.data, identifier, context);
+                console.log('🔍 Event details:', { 
+                    kind: event.kind, 
+                    pubkey: event.pubkey?.substring(0, 16),
+                    tagsCount: event.tags?.length,
+                    contentLen: event.content?.length,
+                    hasCreatedAt: !!event.created_at
+                });
+                console.log('🔍 Event tags:', event.tags?.map(t => `${t[0]}=${t[1]?.substring(0, 30)}`));
+                
+                // Versuche AMB Konvertierung
+                try {
+                    const ambResult = nostrToAmb(event, { defaultLanguage: 'de' });
+                    console.log('🔍 AMB conversion:', ambResult.success ? 'success' : 'failed', ambResult.success ? ambResult.data?.name : ambResult.error);
+                    if (ambResult.success && ambResult.data) {
+                        return this.createAmbCardUpdates(ambResult.data, identifier, context);
+                    }
+                } catch (conversionError) {
+                    console.error('🔍 AMB conversion error:', conversionError);
+                }
+                
+                // Fallback: Extrahiere Daten direkt aus Event-Tags
+                console.log('🔍 Using fallback: extracting from tags directly');
+                const resource = this.extractResourceFromTags(event);
+                if (resource.name) {
+                    return this.createAmbCardUpdates(resource, identifier, context);
                 }
             }
         }
 
         if (context.target === 'card') {
             return {
-                content: `\n\n## Nostr ${type}\n\n[${identifier.substring(0, 20)}...](${nostrUrl})`,
+                content: `\n\n## Nostr ${type}\n\n[${identifier.substring(0, 20)}...](${nostrWebUrl})`,
                 labels: ['nostr', type.toLowerCase()],
                 links: [{
                     id: crypto.randomUUID(),
-                    url: nostrUrl,
+                    url: nostrWebUrl,
                     title: `Nostr ${type}`
                 }]
             };
@@ -124,22 +191,22 @@ export class NostrEventHandler implements IPasteHandler {
 
         return {
             heading: `Nostr ${type}`,
-            content: `[${identifier}](${nostrUrl})\n\nIdentifier: \`${identifier}\``,
+            content: `[${identifier}](${nostrWebUrl})\n\nIdentifier: \`${identifier}\``,
             labels: ['nostr', type.toLowerCase()],
             links: [{
                 id: crypto.randomUUID(),
-                url: nostrUrl,
+                url: nostrWebUrl,
                 title: `Nostr ${type}`
             }]
         };
     }
 
     private createAmbCardUpdates(resource: AmbLearningResource, identifier: string, context: PasteContext) {
-        const nostrUrl = `nostr:${identifier}`;
+        const nostrWebUrl = this.getNostrWebUrl(identifier);
         const heading = resource.name || 'AMB Learning Resource';
-        const content = this.formatAmbContent(resource, nostrUrl);
+        const content = this.formatAmbContent(resource);
         const labels = this.collectLabels(resource);
-        const links = this.collectLinks(resource, nostrUrl);
+        const links = this.collectLinks(resource, nostrWebUrl);
 
         if (context.target === 'card') {
             return {
@@ -159,7 +226,7 @@ export class NostrEventHandler implements IPasteHandler {
         };
     }
 
-    private formatAmbContent(resource: AmbLearningResource, nostrUrl: string): string {
+    private formatAmbContent(resource: AmbLearningResource): string {
         const lines: string[] = [];
 
         if (resource.description) {
@@ -203,8 +270,6 @@ export class NostrEventHandler implements IPasteHandler {
             lines.push(`- Quelle: ${this.formatLink(resource.id, resource.id)}`);
         }
 
-        lines.push(`- Nostr: ${this.formatLink(nostrUrl, nostrUrl)}`);
-
         return lines.join('\n');
     }
 
@@ -226,11 +291,11 @@ export class NostrEventHandler implements IPasteHandler {
         return Array.from(labels);
     }
 
-    private collectLinks(resource: AmbLearningResource, nostrUrl: string) {
+    private collectLinks(resource: AmbLearningResource, nostrWebUrl: string) {
         const links = [{
             id: crypto.randomUUID(),
-            url: nostrUrl,
-            title: 'Nostr Event'
+            url: nostrWebUrl,
+            title: 'Nostr Event (njump)'
         }];
 
         if (resource.id && this.isHttpUrl(resource.id)) {
@@ -253,6 +318,17 @@ export class NostrEventHandler implements IPasteHandler {
         }
     }
 
+    /**
+     * Erzeugt eine Web-URL für einen Nostr-Identifier
+     * Verwendet konfigurierbare njump-Instanz (default: njump.edufeed.org)
+     */
+    private getNostrWebUrl(identifier: string): string {
+        const njumpUrl = settingsStore.settings.njumpUrl || 'https://njump.edufeed.org';
+        // Entferne trailing slash falls vorhanden
+        const baseUrl = njumpUrl.replace(/\/$/, '');
+        return `${baseUrl}/${identifier}`;
+    }
+
     private getResourceTypes(resource: AmbLearningResource): string[] {
         return (resource.type || []).filter(type => type && type !== 'LearningResource');
     }
@@ -261,5 +337,107 @@ export class NostrEventHandler implements IPasteHandler {
         if (!concept?.prefLabel) return undefined;
         const values = Object.values(concept.prefLabel);
         return values.length > 0 ? values[0] : undefined;
+    }
+
+    /**
+     * Fallback: Extrahiert AMB-Daten direkt aus Event-Tags wenn nostrToAmb fehlschlägt
+     */
+    private extractResourceFromTags(event: NostrEvent): AmbLearningResource {
+        const getTag = (name: string): string | undefined => {
+            const tag = event.tags?.find(t => t[0] === name);
+            return tag?.[1];
+        };
+
+        const getTagsByPrefix = (prefix: string): Array<{ key: string; value: string }> => {
+            return (event.tags || [])
+                .filter(t => t[0].startsWith(prefix))
+                .map(t => ({ key: t[0], value: t[1] }));
+        };
+
+        // Extrahiere Basis-Felder
+        const name = getTag('name') || getTag('title');
+        const description = getTag('description') || getTag('summary');
+        const image = getTag('image');
+        const inLanguage = getTag('inLanguage');
+        const licenseId = getTag('license:id');
+        const isAccessibleForFree = getTag('isAccessibleForFree');
+
+        // Extrahiere creator
+        const creatorName = getTag('creator:name');
+        const creatorType = getTag('creator:type') as 'Person' | 'Organization' | undefined;
+        const creator: AmbLearningResource['creator'] = creatorName ? [{
+            type: creatorType === 'Organization' ? 'Organization' : 'Person',
+            name: creatorName
+        }] : undefined;
+
+        // Extrahiere learningResourceType
+        const lrtId = getTag('learningResourceType:id');
+        const lrtPrefLabel = getTagsByPrefix('learningResourceType:prefLabel')
+            .reduce((acc, { key, value }) => {
+                const lang = key.split(':')[2] || 'de';
+                acc[lang] = value;
+                return acc;
+            }, {} as Record<string, string>);
+        
+        const learningResourceType: AmbLearningResource['learningResourceType'] = lrtId ? [{
+            id: lrtId,
+            prefLabel: Object.keys(lrtPrefLabel).length > 0 ? lrtPrefLabel : undefined
+        }] : undefined;
+
+        // Extrahiere about (Themen)
+        const aboutTags = getTagsByPrefix('about:');
+        const aboutMap = new Map<string, { id: string; prefLabel: Record<string, string> }>();
+        for (const { key, value } of aboutTags) {
+            const parts = key.split(':');
+            if (parts[1] === 'id') {
+                const existing = aboutMap.get(value) || { id: value, prefLabel: {} };
+                existing.id = value;
+                aboutMap.set(value, existing);
+            } else if (parts[1] === 'prefLabel') {
+                // Finde passende ID oder erstelle neuen Eintrag
+                const lang = parts[2] || 'de';
+                // Suche existierenden Eintrag
+                let found = false;
+                for (const entry of aboutMap.values()) {
+                    if (!entry.prefLabel[lang]) {
+                        entry.prefLabel[lang] = value;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    aboutMap.set(value, { id: value, prefLabel: { [lang]: value } });
+                }
+            }
+        }
+        const about: AmbLearningResource['about'] = aboutMap.size > 0 ? Array.from(aboutMap.values()) : undefined;
+
+        // Parse content für zusätzliche Daten
+        let contentData: { id?: string } = {};
+        if (event.content) {
+            try {
+                contentData = JSON.parse(event.content);
+            } catch {
+                // Content ist kein JSON
+            }
+        }
+
+        const resource: AmbLearningResource = {
+            '@context': ['https://w3id.org/kim/amb/context.jsonld'],
+            type: ['LearningResource'],
+            id: contentData.id || '',
+            name: name || '',
+            description,
+            image,
+            inLanguage: inLanguage ? [inLanguage] : undefined,
+            creator,
+            learningResourceType,
+            about,
+            license: licenseId ? { id: licenseId } : undefined,
+            isAccessibleForFree: isAccessibleForFree === 'true'
+        };
+
+        console.log('🔍 Extracted resource:', { name: resource.name, hasImage: !!resource.image, hasCreator: !!resource.creator });
+        return resource;
     }
 }
