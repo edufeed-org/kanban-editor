@@ -18,7 +18,7 @@
  * ```
  */
 
-import type { IPasteHandler, PasteContext, PasteResult } from './types.js';
+import type { IPasteHandler, PasteContext, PasteResult, ClipboardData } from './types.js';
 import { UrlPasteHandler } from './handlers/UrlPasteHandler.js';
 import { ImagePasteHandler } from './handlers/ImagePasteHandler.js';
 import { TextPasteHandler } from './handlers/TextPasteHandler.js';
@@ -53,6 +53,27 @@ export class PasteHandler {
     public unregisterHandler(handlerName: string): void {
         this.handlers = this.handlers.filter(h => h.name !== handlerName);
     }
+
+    /**
+     * Extrahiert Clipboard-Daten EINMAL (DataTransfer kann nur einmal gelesen werden!)
+     */
+    private extractClipboardData(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): ClipboardData {
+        const text = clipboardData?.getData('text/plain') || '';
+        const html = clipboardData?.getData('text/html') || '';
+        const files: File[] = [];
+        
+        if (clipboardData?.items) {
+            for (let i = 0; i < clipboardData.items.length; i++) {
+                const item = clipboardData.items[i];
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    if (file) files.push(file);
+                }
+            }
+        }
+        
+        return { text, html, files };
+    }
     
     /**
      * Hauptmethode: Verarbeitet Paste-Event
@@ -68,15 +89,28 @@ export class PasteHandler {
                 error: 'Keine Clipboard-Daten verfügbar'
             };
         }
+
+        // WICHTIG: Daten EINMAL extrahieren (DataTransfer kann nur einmal gelesen werden!)
+        const data = this.extractClipboardData(clipboardData);
+        
+        console.log('📋 Clipboard Data:', { 
+            textLen: data.text.length, 
+            htmlLen: data.html.length, 
+            files: data.files.length,
+            textPreview: data.text.substring(0, 80)
+        });
         
         // Versuche jeden Handler in Reihenfolge der Priorität
+        const handlerResults: string[] = [];
         for (const handler of this.handlers) {
-            const canHandle = await handler.canHandle(clipboardData);
+            const canHandle = await handler.canHandle(data);
+            handlerResults.push(`${handler.name}=${canHandle}`);
+            console.log(`   → ${handler.name}: canHandle=${canHandle}`);
             
             if (canHandle) {
                 console.log(`🎯 Paste Handler: ${handler.name} (Priority: ${handler.priority})`);
                 
-                const result = await handler.handle(clipboardData, context);
+                const result = await handler.handle(data, context);
                 
                 if (result.success) {
                     console.log(`✅ Paste erfolgreich: ${result.type}`, result.debug || '');
@@ -92,7 +126,8 @@ export class PasteHandler {
         return {
             success: false,
             type: 'unknown',
-            error: 'Kein passender Handler gefunden'
+            error: 'Kein passender Handler gefunden',
+            debug: `Handlers: ${handlerResults.join(', ')} | Text: "${data.text.substring(0, 50)}..."`
         };
     }
     

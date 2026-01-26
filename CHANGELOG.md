@@ -1,5 +1,42 @@
 # Changelog
 
+## Version 4.7.21 - Paste: Strg+V im Board erstellt Card 🧷
+
+**Datum:** 26. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ UX: Globaler Paste im Board
+- `paste` wird am Window abgefangen (außer in Inputs/Textareas)
+- Erstellt neue Card in erster Spalte via `handleColumnPaste()`
+
+### 🐛 Fix: HTML-only Clipboard wird erkannt
+- Text-Handler akzeptiert jetzt auch `text/html`, damit kein "Kein passender Handler" erscheint
+
+### 🔎 Debug: Bessere Fehlerdetails bei nicht erkannten Clipboard-Daten
+- Paste-Fehler zeigt jetzt Clipboard-Typen und Längen (text/html/items)
+
+## Version 4.7.20 - SSR Fix: Card-Link ohne verschachtelte <a> 🔗
+
+**Datum:** 26. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: `node_invalid_placement_ssr` (A-Tag in A-Tag)
+- Klickbarer Card-Bereich nutzt jetzt `div` + `goto()` statt `<a>`-Wrapper
+- verhindert `hydration_mismatch` durch ungültiges HTML
+
+## Version 4.7.19 - Paste: Nostr naddr → AMB Learning Resource Card 📋
+
+**Datum:** 26. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Feature: Nostr-Adressable Events als Card importieren
+- `naddr1...` (auch in URLs) wird per `nip19.decode()` erkannt
+- Event-Fetch via NDK und Konvertierung mit `nostrToAmb()`
+- Ergebnis ist eine Card mit Beschreibung, Metadaten, Links und optionalem Bild
+
 ## Version 4.7.18 - Fix: Reload für Shared Boards funktioniert auch als Editor 🔄
 
 **Datum:** 16. Dezember 2025  

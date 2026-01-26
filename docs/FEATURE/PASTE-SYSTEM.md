@@ -17,7 +17,7 @@ Das **Paste System** ermöglicht es Benutzern, Inhalte aus der Zwischenablage in
 | **YouTube URL** | `youtube.com/watch?v=...` | Embed Player in Card einfügen |
 | **Bild-URL** | `.jpg`, `.png`, `.webp`, etc. | Als Card-Image setzen |
 | **Binäres Bild** | Screenshot, kopiertes Bild | Blob → Data URL → Card-Image |
-| **Nostr Event** | `nevent1...`, `note1...`, `npub1...` | Event Preview mit Link |
+| **Nostr Event** | `naddr1...` (auch in URLs) | AMB Learning Resource → Card |
 | **HTML** | Rich Text aus Browser | HTML → Markdown konvertieren |
 | **Plain Text** | Beliebiger Text | Direkt als Content einfügen |
 
@@ -49,7 +49,7 @@ Handler werden nach **Priorität** sortiert (höchste zuerst):
 
 **Warum Prioritäten?**
 - Screenshot (binär) soll nicht als URL-Text verarbeitet werden
-- `nevent1...` soll von NostrEventHandler verarbeitet werden, nicht als Text
+- `naddr1...` soll von NostrEventHandler verarbeitet werden, nicht als Text
 - Fallback garantiert: TextPasteHandler fängt alles auf
 
 ---
@@ -105,6 +105,27 @@ Handler werden nach **Priorität** sortiert (höchste zuerst):
 <div onpaste={handlePaste}>
     <!-- Column Content -->
 </div>
+```
+
+### 3. Board-weites Paste (Strg+V)
+
+```svelte
+<script lang="ts">
+    import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { toast } from 'svelte-sonner';
+
+    async function handleGlobalPaste(event: ClipboardEvent) {
+        if (event.target instanceof HTMLElement) {
+            const tag = event.target.tagName.toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || event.target.isContentEditable) return;
+        }
+
+        event.preventDefault();
+        const result = await boardStore.handleColumnPaste(firstColumnId, event.clipboardData);
+        if (!result.success) toast.error(result.error);
+    }
+    window.addEventListener('paste', handleGlobalPaste);
+</script>
 ```
 
 ### 3. BoardStore API
@@ -218,26 +239,28 @@ items[i].type.startsWith('image/')
 
 **Erkennungslogik:**
 ```typescript
-/^(nostr:|)(nevent|note|npub|nprofile|naddr)1[a-z0-9]+$/i
+/(nevent|note|npub|nprofile|naddr)1[a-z0-9]+/i
 ```
 
-**Verarbeitung:**
+**Verarbeitung (aktuell):**
 ```typescript
-// Input: nevent1qqs...
+// Input: https://edufeed.org/naddr1...
 // Output:
 {
-  heading: 'Nostr Event',
-  content: `[nevent1qqs...](nostr:nevent1qqs...)\n\n> TODO: Fetch event via NDK`,
-  labels: ['nostr', 'event'],
-  links: [{ url: 'nostr:nevent1qqs...', title: 'Nostr Event' }]
+    heading: 'Shoah Stories',
+    content: '<AMB Metadaten + Beschreibung als Markdown>',
+    labels: ['nostr', 'amb', 'videoobject', ...],
+    links: [
+        { url: 'https://shoahstories.video/', title: 'Lernressource' },
+        { url: 'nostr:naddr1...', title: 'Nostr Event' }
+    ]
 }
 ```
 
-**🔮 Zukunft (Phase 2):**
-- Integration mit NDK
-- Event-Content fetchen
-- Profile-Metadata anzeigen
-- Author-Avatar einbetten
+**NDK-Integration:**
+- `naddr1...` wird via `nip19.decode()` aufgelöst
+- Event-Fetch mit `ndk.fetchEvent({ kinds, authors, '#d': [identifier] })`
+- Konvertierung via `nostrToAmb()` aus `@edufeed-org/amb-nostr-converter`
 
 ---
 
@@ -263,11 +286,11 @@ items[i].type.startsWith('image/')
    Paste in Card → Sollte Markdown zeigen
    ```
 
-4. **Nostr Event:**
-   ```
-   Kopiere: nevent1qqstest...
-   Paste in Card → Sollte Event-Preview zeigen
-   ```
+4. **Nostr Event (naddr):**
+    ```
+    Kopiere: https://edufeed.org/naddr1...
+    Paste in Card → Sollte AMB-Metadaten anzeigen
+    ```
 
 ### Unit Tests (TODO)
 
