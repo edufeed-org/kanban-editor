@@ -1,28 +1,14 @@
 <script lang="ts">
 	import { boardStore, type CardItem } from "$lib/stores/kanbanStore.svelte.js";
 	import * as Card from "../../lib/components/ui/card/index.js";
-	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Separator } from "$lib/components/ui/separator/index.js";
 	import { Badge } from "$lib/components/ui/badge/index.js";
 	import CardDialog from "./CardDialog.svelte";
 	import CardViewDialog from "./CardViewDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
-	import AvatarStack from "./AvatarStack.svelte";
-	import ColorSelector from "./ColorSelector.svelte";
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
-	import EditIcon from '@lucide/svelte/icons/edit';
-	import FullscreenIcon from "@lucide/svelte/icons/fullscreen";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
-	import UserIcon from "@lucide/svelte/icons/user";
 	import LinkIcon from "@lucide/svelte/icons/link";
-	import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
-	import { authStore } from "$lib/index.js";
-    import TrashIcon from "@lucide/svelte/icons/trash";
-	import PlusIcon from "@lucide/svelte/icons/plus";
-	import XIcon from "@lucide/svelte/icons/x";
-	import BrainIcon from "@lucide/svelte/icons/brain";
 
 	let {
 		card,

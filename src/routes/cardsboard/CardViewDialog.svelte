@@ -5,19 +5,15 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Separator from '$lib/components/ui/separator/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 	import { authStore } from '$lib/stores/authStore.svelte.js';
 	import ColorSelector from './ColorSelector.svelte';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
-	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
-	import EditIcon from '@lucide/svelte/icons/edit';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
@@ -35,25 +31,17 @@
 		onEditMode?: () => void;
 		readOnly?: boolean;
 	}
-	let showModal = $state(false);
 	let { cardId, open = $bindable(), onEditMode, readOnly = false }: Props = $props();
 
 	let commentText = $state('');
 	let isSubmitting = $state(false);
-	let isLoadingComments = $state(false);
-	let isCommentFieldFocused = $state(false);
 	let editName = $state('');
 	let selectedColor = $state('slate');
-	
-	// 🆕 INLINE-EDITING STATE
-	let isEditingDescription = $state(false);
 	let editDescription = $state('');
 	let newLabelInput = $state('');
 	let editLabels = $state<string[]>([]);
 	let newLinkUrl = $state('');
 	let newLinkTitle = $state('');
-	
-	// 🆕 IMAGE-EDITING STATE
 	let isEditingImage = $state(false);
 	let editImageUrl = $state('');
 	let imageMode = $state<'url' | 'oer'>('url');
@@ -145,16 +133,6 @@
 		editLabels = [...(card.labels || [])];
 	});
 
-	// Auto-Focus: Bei leerer Karte direkt Beschreibungs-Editor öffnen
-	$effect(() => {
-		if (open && !card.description && !card.image) {
-			// Kurzer Timeout damit Dialog vollständig gerendert ist
-			setTimeout(() => {
-				isEditingDescription = true;
-			}, 100);
-		}
-	});
-
 	const attendees = $derived(
 		card.attendees && card.attendees.length > 0
 			? card.attendees
@@ -162,6 +140,20 @@
 				? [card.authorName]
 				: []
 	);
+
+	// Auto-adjust textarea height when description changes
+	$effect(() => {
+		if (!readOnly && editDescription !== undefined) {
+			// Small delay to ensure DOM is updated
+			setTimeout(() => {
+				const textarea = document.querySelector('textarea[placeholder="Beschreibung eingeben..."]') as HTMLTextAreaElement;
+				if (textarea) {
+					textarea.style.height = 'auto';
+					textarea.style.height = textarea.scrollHeight + 'px';
+				}
+			}, 0);
+		}
+	});
 
 	/**
 	 * Handles comment submission
@@ -188,21 +180,6 @@
 			console.error('❌ Fehler beim Hinzufügen des Kommentars:', error);
 		} finally {
 			isSubmitting = false;
-		}
-	}
-
-	/**
-	 * 🔥 Load remote comments from Nostr relays
-	 */
-	async function handleLoadComments() {
-		try {
-			isLoadingComments = true;
-			await boardStore.loadComments(String(cardId));
-			console.log('✅ Comments loaded from Nostr');
-		} catch (error) {
-			console.error('❌ Failed to load comments:', error);
-		} finally {
-			isLoadingComments = false;
 		}
 	}
 
@@ -321,19 +298,12 @@
 	// ============================================================================
 	
 	/**
-	 * Beschreibung speichern und Editor schließen
+	 * Beschreibung speichern
 	 */
 	function handleSaveDescription() {
-		boardStore.updateCard(card.id as string, { content: editDescription });
-		isEditingDescription = false;
-	}
-	
-	/**
-	 * Beschreibung bearbeiten abbrechen
-	 */
-	function handleCancelDescription() {
-		editDescription = card.description || '';
-		isEditingDescription = false;
+		if (editDescription !== card.description) {
+			boardStore.updateCard(card.id as string, { content: editDescription });
+		}
 	}
 	
 	/**
@@ -398,21 +368,8 @@
 		boardStore.updateCard(card.id as string, { links: updatedLinks });
 	}
 
-	function handleEditClick() {
-		showModal = true;
-	}
-
 	function getCardColor(colorName: string | undefined): string {
 		return colorName ? `var(--color-${colorName})` : 'var(--muted)';
-	}
-
-	/**
-	 * Switch to edit mode - closes view dialog and triggers edit dialog
-	 * Now allows both authenticated and anonymous users to edit
-	 */
-	function switchToEditMode() {
-		open = false;
-		onEditMode?.();
 	}
 </script>
 
@@ -423,17 +380,7 @@
 		style="border-bottom: 5px solid {getCardColor(selectedColor)};"
 	>
 		<!-- Header: 2 Zeilen Layout -->
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-		<div 
-			role="presentation"
-			class="px-6 py-4 border-b bg-background space-y-3"
-			onclick={() => {
-				// Schließe Editor wenn auf Header geklickt wird
-				if (isEditingDescription) {
-					handleSaveDescription();
-				}
-			}}
-		>
+		<div class="px-6 py-4 border-b bg-background space-y-3">
 			<!-- Zeile 1: Heading (links) | Delete + Close Button (rechts) -->
 			<div class="flex items-center justify-between gap-4">
 					<!-- Author Avatar  {@const} müssen innerhalb von {#if} stehen -->
@@ -540,32 +487,15 @@
 						}} 
 						compact={true}
 					/>
-					
-				
 				</div>
 				{/if}
 			</div>
 		</div>
 
-		<!-- Main Content: Scrollable (Scroll-Lock wenn Editor aktiv) -->
-		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-		<div 
-			role="presentation"
-			class="flex-1 px-6 py-4 space-y-4 {isEditingDescription ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}"
-			onclick={(e) => {
-				// Schließe Editor wenn außerhalb des Description-Bereichs geklickt wird
-				if (isEditingDescription) {
-					const target = e.target as HTMLElement;
-					const descriptionSection = document.querySelector('[data-description-section]');
-					if (descriptionSection && !descriptionSection.contains(target)) {
-						handleSaveDescription();
-					}
-				}
-			}}
-		>
-			<!-- Image Section (ausgeblendet während Description-Editor aktiv) -->
-			{#if !isEditingDescription}
-				<div class="space-y-2">
+		<!-- Main Content: Scrollable -->
+		<div class="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
+			<!-- Image Section -->
+			<div class="space-y-2">
 					{#if !isEditingImage && !card.image}
 						<!-- Kein Bild: Button zum Hinzufügen (hidden in readOnly mode) -->
 						{#if !readOnly}
@@ -726,81 +656,35 @@
 						</div>
 					{/if}
 				</div>
-			{/if}
 
-			<!-- 🆕 Description mit TipTap-Editor (automatisch bei Focus/Blur) -->
-			<div 
-				class="{isEditingDescription ? 'flex-1 flex flex-col min-h-0' : ''}"
-				data-description-section
-			>
-				
-				{#if isEditingDescription}
-					<!-- TipTap Markdown Editor - wird bei Blur automatisch gespeichert -->
-					<div 
-						class="flex-1 flex flex-col min-h-0"
-						onfocusout={(e) => {
-							// Nur schließen wenn der Focus wirklich den Editor verlässt
-							const relatedTarget = e.relatedTarget as HTMLElement | null;
-							const container = e.currentTarget as HTMLElement;
-							
-							// Wenn relatedTarget null ist oder außerhalb des Containers liegt → schließen
-							if (!relatedTarget || !container.contains(relatedTarget)) {
-								// Kleiner Timeout um sicherzustellen, dass der Focus wirklich weg ist
-								// (TipTap hat manchmal interne Focus-Wechsel)
-								setTimeout(() => {
-									// Prüfe nochmal ob der Focus wirklich außerhalb ist
-									if (!container.contains(document.activeElement)) {
-										handleSaveDescription();
-									}
-								}, 50);
-							}
-						}}
-					>
-						<MarkdownEditor 
-							value={editDescription}
-							placeholder="Beschreibung eingeben..."
-							fullHeight={true}
-							onchange={(content) => editDescription = content}
-						/>
-					</div>
-				{:else if card.description}
-					<!-- Markdown-Anzeige - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
-					{#if readOnly}
-						<div class="min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] transition-colors">
+			<!-- Description Field - Inline Editing -->
+			<div class="space-y-2">
+				<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
+				{#if readOnly}
+					{#if card.description}
+						<div class="min-h-[4rem] p-3 bg-muted/50 rounded-md text-sm border">
 							<MarkdownRenderer content={card.description} />
 						</div>
 					{:else}
-						<button 
-							type="button"
-							class="w-full text-left min-h-[7.5rem] p-3 bg-muted/50 rounded-md text-sm border border-[var(--ring)] cursor-text hover:bg-muted/70 transition-colors"
-							onclick={() => isEditingDescription = true}
-							aria-label="Beschreibung bearbeiten"
-						>
-							<MarkdownRenderer content={card.description} />
-						</button>
+						<p class="text-sm text-muted-foreground italic p-3">Keine Beschreibung vorhanden</p>
 					{/if}
 				{:else}
-					<!-- Platzhalter - bei Klick wird Editor aktiviert (nur wenn nicht readOnly) -->
-					{#if !readOnly}
-					<div 
-						class="p-3 bg-muted/30 rounded-md text-sm border border-dashed cursor-text hover:bg-muted/50 transition-colors text-muted-foreground"
-						onclick={() => isEditingDescription = true}
-						onfocusin={() => isEditingDescription = true}
-						onkeydown={(e) => e.key === 'Enter' && (isEditingDescription = true)}
-						role="textbox"
-						tabindex="0"
-						aria-label="Beschreibung hinzufügen"
-					>
-						Inhalt hinzufügen...
-					</div>
-					{:else}
-					<p class="text-sm text-muted-foreground italic">Keine Beschreibung vorhanden</p>
-					{/if}
+					<Textarea
+						bind:value={editDescription}
+						onblur={handleSaveDescription}
+						oninput={(e) => {
+							const target = e.target as HTMLTextAreaElement;
+							target.style.height = 'auto';
+							target.style.height = target.scrollHeight + 'px';
+						}}
+						placeholder="Beschreibung eingeben..."
+						class="min-h-[4rem] resize-none text-sm hover:bg-muted/50 transition-colors overflow-hidden"
+						style="height: auto;"
+					/>
 				{/if}
 			</div>
 
-			<!-- 🆕 Links Section mit Inline-Add (ausgeblendet während Editor aktiv) -->
-			{#if !isEditingDescription}
+			<!-- 🆕 Links Section mit Inline-Add -->
 			<div class="space-y-2">
 				<div class="flex items-center justify-between">
 					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
@@ -887,13 +771,11 @@
 					Keine Links vorhanden
 				</div>
 				{/if}
-				{/if}
-			</div>
 			{/if}
-			<!-- Ende der ausgeblendeten Sections während Editor aktiv -->
+			</div>
 
-			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click (ausgeblendet während Editor aktiv) -->
-			{#if attendees.length > 0 && !isEditingDescription}
+			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
+			{#if attendees.length > 0}
 				<div class="space-y-2">
 					<h3 class="text-sm font-semibold text-muted-foreground">Teilnehmer</h3>
 					<div class="flex items-center gap-3">
@@ -930,7 +812,6 @@
 				</div>
 			{/if}
 
-			{#if !isEditingDescription}
 			<!-- Divider -->
 			<div class="my-2 border-t"></div>
 
@@ -1053,8 +934,6 @@
 					bind:value={commentText}
 					disabled={isSubmitting}
 					class="min-h-20 resize-none"
-					onfocus={() => (isCommentFieldFocused = true)}
-					onblur={() => (isCommentFieldFocused = false)}
 				/>
 				<div class="flex justify-end gap-2">
 					<Button
@@ -1062,7 +941,7 @@
 						size="sm"
 						class="gap-2 bg-secondary"
 						onclick={() => (commentText = '')}
-						disabled={isSubmitting || (!isCommentFieldFocused && !commentText.trim())}
+						disabled={isSubmitting || !commentText.trim()}
 					>
 						Abbrechen
 					</Button>
@@ -1083,20 +962,6 @@
 				</div>
 			</div>
 			{/if}
-			{/if}
 		</div>
-
-		<!-- Footer: Edit Button (statt Schließen, da Dialog selbst Close hat) -->
-		<!-- <div class="px-6 py-4 border-t bg-muted/20 flex gap-2">
-			<Button 
-				variant="outline" 
-				size="sm"
-				class="gap-2 bg-primary"
-				onclick={switchToEditMode}
-			>
-				<EditIcon class="h-4 w-4" />
-				<span>Bearbeiten</span>
-			</Button>
-		</div> -->
 	</Dialog.Content>
 </Dialog.Root>
