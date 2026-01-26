@@ -289,8 +289,8 @@
 	.add-card-button {
 		border-radius: var(--radius-md);
 		border: 2px dotted var(--accent);
-		background: var(--background);
-		color: var(--primary-foreground);
+		background: var(--muted);
+		color: var(--foreground);
 		transition: all 0.2s ease;
 		font-size: 0.9rem;
 		cursor: pointer;
