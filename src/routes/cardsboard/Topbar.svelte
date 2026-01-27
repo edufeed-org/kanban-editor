@@ -6,9 +6,7 @@
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
     import BotIcon from "@lucide/svelte/icons/bot";
-    import RelayStatusInfo from './RelayStatusInfo.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import { toast } from 'svelte-sonner';
     import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
@@ -37,7 +35,6 @@
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
-    let canReloadBoardFromNostr = $derived(boardStore.ndkReady);
 
     // CC License Badge Helper with proper symbols
     function getLicenseInfo(license: string) {
@@ -88,29 +85,6 @@
         
         return licenses[license] || licenses['cc-by-4.0'];
     }
-
-    async function handleReloadBoardFromNostr() {
-        if (!canReloadBoardFromNostr) return;
-
-        try {
-            const syncManager = getSyncManager();
-            await boardStore.forceReloadCurrentBoardFromNostr({
-                clearLocalCache: true,
-                syncManager
-            });
-
-            toast.success('✅ Board neu geladen', {
-                description: 'Aktueller Stand wurde von Nostr aktualisiert.',
-                duration: 2500
-            });
-        } catch (error) {
-            console.error('[Topbar] Reload from Nostr failed:', error);
-            toast.error('❌ Reload fehlgeschlagen', {
-                description: error instanceof Error ? error.message : 'Board konnte nicht von Nostr geladen werden.',
-                duration: 3500
-            });
-        }
-    }
     
     let relays = $state([
         // { url: 'ws://localhost:7000', type: 'local', enabled: true },
@@ -149,7 +123,7 @@
     import * as Field from "$lib/components/ui/field/index.js";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import { RefreshCwIcon, TrashIcon, SquareSigmaIcon, Loader2Icon, CheckCircle2Icon } from 'lucide-svelte';
+    import { TrashIcon, SquareSigmaIcon, Loader2Icon, CheckCircle2Icon } from 'lucide-svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -301,24 +275,6 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 {/if}
             </div>
             
-            <!-- 🟢 Relay Status Component -->
-            <RelayStatusInfo />
-
-            <!-- 🔄 Reload current board from Nostr -->
-            <Button
-                title={canReloadBoardFromNostr
-                    ? 'Aktuelles Board von den Servers neu laden'
-                    : 'Reload nur möglich, wenn Nostr bereit ist und mindestens ein Relay verbunden ist'}
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                disabled={!canReloadBoardFromNostr}
-                onclick={handleReloadBoardFromNostr}
-            >
-                <RefreshCwIcon class="h-4 w-4" />
-                <span class="sr-only">Board von den Servers neu laden</span>
-            </Button>
-
             <!-- ➕🔗 Link hinzufügen Popover -->
             <LinkAddPopover />
 

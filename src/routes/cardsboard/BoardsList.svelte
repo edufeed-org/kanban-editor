@@ -29,6 +29,7 @@
     import WifiIcon from '@lucide/svelte/icons/wifi';
     import FileTextIcon from '@lucide/svelte/icons/file-text';
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
+    import RelayStatusInfo from './RelayStatusInfo.svelte';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -630,7 +631,13 @@
                 Nostr Relay Einstellungen
             </Dialog.Title>
         </Dialog.Header>
-        <div class="py-4">
+        <div class="py-4 space-y-4">
+            <!-- Relay Status Component -->
+            <div class="pb-4 border-b">
+                <RelayStatusInfo />
+            </div>
+            
+            <!-- Settings Panel -->
             <SettingsPanel defaultTab="nostr" showHeader={false} showTabs={false} />
         </div>
     </Dialog.Content>
