@@ -296,86 +296,87 @@
     
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-muted/30 rounded-md p-2 mb-2 space-y-1">
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onclick={() => { 
                     profileEditorOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
             >
-                <UserIcon class="h-4 w-4" />
+                <UserIcon class="h-4 w-4 text-muted-foreground" />
                 <span>Profil</span>
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
             >
-                <SettingsIcon class="h-4 w-4" />
+                <SettingsIcon class="h-4 w-4 text-muted-foreground" />
                 <span>Board-Einstellungen</span>
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                 onclick={() => { 
                     uiSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
             >
-                <PaletteIcon class="h-4 w-4" />
+                <PaletteIcon class="h-4 w-4 text-muted-foreground" />
                 <span>UI & Layout</span>
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                 onclick={() => { 
                     llmSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
             >
-                <BotIcon class="h-4 w-4" />
+                <BotIcon class="h-4 w-4 text-muted-foreground" />
                 <span>LLM Einstellungen</span>
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                 onclick={() => { 
                     nostrSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
             >
-                <WifiIcon class="h-4 w-4" />
+                <WifiIcon class="h-4 w-4 text-muted-foreground" />
                 <span>Nostr Relays</span>
-            </Button>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="w-full justify-start gap-2"
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
                 onclick={() => { 
                     defaultsSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
             >
-                <FileTextIcon class="h-4 w-4" />
+                <FileTextIcon class="h-4 w-4 text-muted-foreground" />
                 <span>Standard-Werte</span>
-            </Button>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }}>
-                <ShareButton variant="ghost" class="w-full justify-start" showLabel={true} />
+            </button>
+            <div class="border-t"></div>
+            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
+                <ShareButton class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }}>
-                <VersionHistory variant="ghost" class="w-full justify-start" showLabel={true} />
+            <div class="border-t"></div>
+            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
+                <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
         </div>
     {/if}

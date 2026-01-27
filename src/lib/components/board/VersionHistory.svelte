@@ -20,7 +20,7 @@
 
     // Props for customization
     let {
-        variant = 'default' as 'default' | 'ghost',
+        variant = 'default',
         class: className = '',
         showLabel = false
     }: {
