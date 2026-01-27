@@ -16,7 +16,6 @@
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
     import { authStore } from '$lib/index.js';
     import { toast } from 'svelte-sonner';
-    import { ShareButton, VersionHistory } from '$lib/components/board';
     import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
@@ -435,12 +434,6 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                     </div>
                 </Dialog.Content>
             </Dialog.Root>
-
-            <!-- Board Sharing -->
-            <ShareButton />
-            
-            <!-- Version History -->
-            <VersionHistory />
             
             <!-- Theme -->
             <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">

@@ -19,6 +19,11 @@
     import SearchIcon from '@lucide/svelte/icons/search';
     import MenuIcon from '@lucide/svelte/icons/menu';
     import SettingsIcon from '@lucide/svelte/icons/settings';
+    import UserIcon from '@lucide/svelte/icons/user';
+    import { ProfileEditor } from '$lib/components/auth/index.js';
+    import { VersionHistory, ShareButton } from '$lib/components/board';
+    import ShareIcon2 from '@lucide/svelte/icons/share-2';
+    import HistoryIcon from '@lucide/svelte/icons/history';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -32,6 +37,9 @@
     // Board Settings Dialog State
     let settingsDialogOpen = $state(false);
     let previousDialogState = $state(false);
+    
+    // Profile Editor Dialog State
+    let profileEditorOpen = $state(false);
     
     // Board Settings Form
     let metaForm = $state({
@@ -276,7 +284,20 @@
     
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-muted/30 rounded-md p-2 mb-2">
+        <div transition:slide={{ duration: 200 }} class="bg-muted/30 rounded-md p-2 mb-2 space-y-1">
+            <Button
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
+                onclick={() => { 
+                    profileEditorOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+                disabled={!authStore.isAuthenticated}
+            >
+                <UserIcon class="h-4 w-4" />
+                <span>Profil</span>
+            </Button>
             <Button
                 variant="ghost"
                 size="sm"
@@ -290,6 +311,12 @@
                 <SettingsIcon class="h-4 w-4" />
                 <span>Board-Einstellungen</span>
             </Button>
+            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }}>
+                <ShareButton variant="ghost" class="w-full justify-start" showLabel={true} />
+            </div>
+            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }}>
+                <VersionHistory variant="ghost" class="w-full justify-start" showLabel={true} />
+            </div>
         </div>
     {/if}
     
@@ -501,6 +528,9 @@
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
+
+<!-- Profile Editor Dialog -->
+<ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
 
 <style>
     div {

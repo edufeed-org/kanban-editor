@@ -9,6 +9,17 @@
     import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import HeartOffIcon from "@lucide/svelte/icons/heart-off";
     
+    // Props for customization
+    let {
+        variant = 'default' as 'default' | 'ghost',
+        class: className = '',
+        showLabel = false
+    }: {
+        variant?: 'default' | 'ghost';
+        class?: string;
+        showLabel?: boolean;
+    } = $props();
+    
     // State
     let showShareDialog = $state(false);
     let isLoading = $state(false);
@@ -50,22 +61,23 @@
     {#if isOwnerOrEditor}
         <!-- Owner/Editor sehen Share-Button -->
         <Button 
-            variant="default" 
+            variant={variant}
             size="sm" 
             onclick={() => showShareDialog = true}
-            class="gap-2"
+            class={`gap-2 ${className}`}
             data-testid="share-button"
         >
             <ShareIcon2 class="h-4 w-4" />
+            {#if showLabel}<span>Board teilen</span>{/if}
         </Button>
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
         <Button 
-            variant="default" 
+            variant={variant}
             size="sm" 
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class="gap-2"
+            class={`gap-2 ${className}`}
             data-testid="unfollow-button"
         >
             <EyeOffIcon class="h-4 w-4" />
@@ -74,11 +86,11 @@
     {:else}
         <!-- Non-participant sehen Follow-Button -->
         <Button 
-            variant="default" 
+            variant={variant}
             size="sm" 
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class="gap-2"
+            class={`gap-2 ${className}`}
             data-testid="follow-button"
         >
             <HeartIcon class="h-4 w-4" />
