@@ -43,8 +43,8 @@ Ein publiziertes Board soll:
 │    "name": "Board-Titel",                                       │
 │    "description": "Board-Beschreibung",                         │
 │    "hasPart": [                                                 │
-│      { "type": "Chapter", "name": "Spalte 1", ... },           │
-│      { "type": "Chapter", "name": "Spalte 2", ... }            │
+│      { "type": "LearningObject", "name": "Karte 1", ... },     │
+│      { "type": "LearningObject", "name": "Karte 2", ... }      │
 │    ],                                                           │
 │    "encoding": {                                                │
 │      "contentType": "application/json",                         │
@@ -479,17 +479,38 @@ export function boardToAmbResource(
         // ... bestehende Felder ...
         
         // Strukturierte Darstellung (für AMB-kompatible Clients)
-        hasPart: boardSnapshot.columns.map((col, index) => ({
-            type: 'Chapter',
-            name: col.name,
-            position: index + 1,
-            hasPart: col.cards?.map((card, cardIndex) => ({
-                type: 'LearningObject',
-                name: card.heading,
-                description: card.content,
-                position: cardIndex + 1
+        // 
+        // WICHTIG: hasPart enthält die KARTEN (nicht die Spalten!)
+        // Grund: Spalten sind typischerweise Workflow-Status ("To Do", "In Progress", "Done")
+        //        und KEINE inhaltlichen Teile eines Kurses.
+        //        Die Karten sind die eigentlichen Lern-Inhalte.
+        //
+        // Sonderfall: Wenn Spalten inhaltlich strukturiert sind ("Einführung", "Grundlagen", etc.)
+        //             kann optional columnsAsChapters: true gesetzt werden.
+        //
+        hasPart: options.columnsAsChapters
+            // Option A: Spalten als Kapitel (für inhaltlich strukturierte Boards)
+            ? boardSnapshot.columns.map((col, index) => ({
+                type: 'Chapter',
+                name: col.name,
+                position: index + 1,
+                hasPart: col.cards?.map((card, cardIndex) => ({
+                    type: 'LearningObject',
+                    name: card.heading,
+                    description: card.content,
+                    position: cardIndex + 1
+                }))
             }))
-        })),
+            // Option B (Standard): Flache Liste aller Karten als LearningObjects
+            : boardSnapshot.columns.flatMap((col, colIndex) => 
+                col.cards?.map((card, cardIndex) => ({
+                    type: 'LearningObject',
+                    name: card.heading,
+                    description: card.content,
+                    // Position: Global über alle Spalten
+                    position: colIndex * 100 + cardIndex + 1
+                })) || []
+            ),
         
         // Vollständiger Snapshot als Encoding (für Import)
         encoding: {
