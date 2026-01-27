@@ -24,6 +24,11 @@
     import { VersionHistory, ShareButton } from '$lib/components/board';
     import ShareIcon2 from '@lucide/svelte/icons/share-2';
     import HistoryIcon from '@lucide/svelte/icons/history';
+    import PaletteIcon from '@lucide/svelte/icons/palette';
+    import BotIcon from '@lucide/svelte/icons/bot';
+    import WifiIcon from '@lucide/svelte/icons/wifi';
+    import FileTextIcon from '@lucide/svelte/icons/file-text';
+    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -40,6 +45,12 @@
     
     // Profile Editor Dialog State
     let profileEditorOpen = $state(false);
+    
+    // App Settings Dialog States
+    let uiSettingsOpen = $state(false);
+    let llmSettingsOpen = $state(false);
+    let nostrSettingsOpen = $state(false);
+    let defaultsSettingsOpen = $state(false);
     
     // Board Settings Form
     let metaForm = $state({
@@ -311,6 +322,54 @@
                 <SettingsIcon class="h-4 w-4" />
                 <span>Board-Einstellungen</span>
             </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
+                onclick={() => { 
+                    uiSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <PaletteIcon class="h-4 w-4" />
+                <span>UI & Layout</span>
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
+                onclick={() => { 
+                    llmSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <BotIcon class="h-4 w-4" />
+                <span>LLM Einstellungen</span>
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
+                onclick={() => { 
+                    nostrSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <WifiIcon class="h-4 w-4" />
+                <span>Nostr Relays</span>
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
+                onclick={() => { 
+                    defaultsSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <FileTextIcon class="h-4 w-4" />
+                <span>Standard-Werte</span>
+            </Button>
             <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }}>
                 <ShareButton variant="ghost" class="w-full justify-start" showLabel={true} />
             </div>
@@ -531,6 +590,66 @@
 
 <!-- Profile Editor Dialog -->
 <ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
+
+<!-- UI/UX Settings Dialog -->
+<Dialog.Root bind:open={uiSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <PaletteIcon class="h-5 w-5" />
+                UI & Layout Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="ui" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- LLM Settings Dialog -->
+<Dialog.Root bind:open={llmSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <BotIcon class="h-5 w-5" />
+                LLM Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="llm" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Nostr Relay Settings Dialog -->
+<Dialog.Root bind:open={nostrSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <WifiIcon class="h-5 w-5" />
+                Nostr Relay Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="nostr" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Defaults Settings Dialog -->
+<Dialog.Root bind:open={defaultsSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <FileTextIcon class="h-5 w-5" />
+                Standard-Werte
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="defaults" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
 
 <style>
     div {

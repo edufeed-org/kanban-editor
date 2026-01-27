@@ -1,20 +1,14 @@
 ﻿<script lang="ts">
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Drawer from '$lib/components/ui/drawer/index.js';
-    import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
     import BotIcon from "@lucide/svelte/icons/bot";
-    import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
-    import MoonIcon from "@lucide/svelte/icons/moon";
-    import SunIcon from "@lucide/svelte/icons/sun";
     import RelayStatusInfo from './RelayStatusInfo.svelte';
-    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { getSyncManager } from '$lib/stores/syncManager.svelte.js';
-    import { authStore } from '$lib/index.js';
     import { toast } from 'svelte-sonner';
     import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
@@ -130,16 +124,6 @@
         email: 'max@example.com',
         avatar: ''
     };
-
-    function toggleTheme() {
-        const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark'];
-        const currentIndex = themes.indexOf(currentTheme);
-        currentTheme = themes[(currentIndex + 1) % themes.length];
-        
-        if (typeof document !== 'undefined') {
-            applyTheme(currentTheme);
-        }
-    }
 
     function applyTheme(theme: 'light' | 'dark' | 'auto') {
         let effectiveTheme = theme;
@@ -417,33 +401,6 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
-            <!-- Settings Dialog -->
-            <Dialog.Root>
-                <Dialog.Trigger
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-transparent btn transition hover:border-foreground hover:bg-accent hover:text-accent-foreground"
-                    title="Einstellungen"
-                >
-                    <SlidersHorizontalIcon class="h-4 w-4" />
-                </Dialog.Trigger>
-                <Dialog.Content class="max-h-[90vh] flex flex-col">
-                    <Dialog.Header class="flex-shrink-0">
-                        <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
-                    </Dialog.Header>
-                    <div class="flex-1 overflow-y-auto min-h-0">
-                        <SettingsPanel />
-                    </div>
-                </Dialog.Content>
-            </Dialog.Root>
-            
-            <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">
-                {#if currentTheme === 'dark'}
-                    <SunIcon class="h-4 w-4"/>
-                {:else}
-                    <MoonIcon class="h-4 w-4"/>
-                {/if}
-            </Button>
-            
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
             <!-- Right Sidebar Trigger -->
