@@ -1587,6 +1587,12 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
+| 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
+| 3.19 | 26.01.2026 | 🧩 **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |
+| 3.18 | 26.01.2026 | 🧷 **Paste UX:** Strg+V im Board erstellt neue Card (globaler Paste-Handler, Input-safe). |
+| 3.17 | 26.01.2026 | 🔗 **SSR Fix:** Keine verschachtelten Links in Card-Layouts (node_invalid_placement_ssr). |
+| 3.16 | 26.01.2026 | 📋 **Paste Update:** Nostr naddr Events werden per NDK geladen und als AMB Learning Resource Cards erzeugt. |
 | 3.15 | 16.12.2025 | 🔐 **Permissions UX:** Board-Metadaten sind für Nicht-Owner read-only; Speichern deaktiviert. |
 | 3.14 | 16.12.2025 | 👀 **UX Fix:** Kein sichtbares "Re-Sort" beim Board-Load durch No-op Guards bei identischer Column-Order. |
 | 3.13 | 16.12.2025 | ✅ **Column-Order Patch Apply Fix:** `updated_at_ms` wird robust geparsed (auch numerischer String); bei Parse-Fehler Fallback auf `created_at` → Owner übernimmt Editor-Reorders zuverlässig. |

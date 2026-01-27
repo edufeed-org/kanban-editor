@@ -7,40 +7,32 @@
  * - Markdown → Direkt übernehmen
  */
 
-import type { IPasteHandler, PasteContext, PasteResult } from '../types.js';
+import type { IPasteHandler, PasteContext, PasteResult, ClipboardData } from '../types.js';
 
 export class TextPasteHandler implements IPasteHandler {
     readonly name = 'Text Handler';
     readonly priority = 0; // Niedrigste Priorität (Fallback)
     
-    async canHandle(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): Promise<boolean> {
-        if (!clipboardData) return false;
-        
-        // Text ist immer vorhanden - dieser Handler ist der Fallback
-        const text = clipboardData.getData('text/plain');
-        return !!text && text.trim().length > 0;
+    async canHandle(data: ClipboardData): Promise<boolean> {
+        // Text ist der Fallback, aber HTML-only Inhalte sollten auch erkannt werden
+        const result = (data.text.trim().length > 0) || (data.html.trim().length > 0);
+        console.log('TextPasteHandler.canHandle:', { textLen: data.text.length, htmlLen: data.html.length, result });
+        return result;
     }
     
-    async handle(
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData'],
-        context: PasteContext
-    ): Promise<PasteResult> {
-        if (!clipboardData) {
-            return { success: false, type: 'text', error: 'Keine Clipboard-Daten' };
-        }
-        
+    async handle(data: ClipboardData, context: PasteContext): Promise<PasteResult> {
         try {
-            // Versuche HTML zu extrahieren (für bessere Formatierung)
-            let content = clipboardData.getData('text/html');
+            let content: string;
             let isHtml = false;
             
-            if (content && content.trim().length > 0) {
+            // Versuche HTML zu extrahieren (für bessere Formatierung)
+            if (data.html.trim().length > 0) {
                 isHtml = true;
                 // Konvertiere HTML zu Markdown
-                content = this.htmlToMarkdown(content);
+                content = this.htmlToMarkdown(data.html);
             } else {
                 // Fallback zu Plain Text
-                content = clipboardData.getData('text/plain');
+                content = data.text;
             }
             
             if (!content || content.trim().length === 0) {

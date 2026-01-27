@@ -61,6 +61,9 @@ importers:
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.0
+      nostr-tools:
+        specifier: ~2.14.2
+        version: 2.14.3(typescript@5.9.3)
       oidc-client-ts:
         specifier: ^3.3.0
         version: 3.3.0

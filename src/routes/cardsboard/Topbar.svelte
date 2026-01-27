@@ -23,6 +23,7 @@
     import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
     import { ShareButton, VersionHistory } from '$lib/components/board';
+    import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
     import { publishBoardToEdufeed } from '$lib/utils/ambPublisher';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
@@ -532,6 +533,9 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 <RefreshCwIcon class="h-4 w-4" />
                 <span class="sr-only">Board von den Servers neu laden</span>
             </Button>
+
+            <!-- ➕🔗 Link hinzufügen Popover -->
+            <LinkAddPopover />
             
             <!-- Board Meta Settings Button (3 Punkte) -->
             <Dialog.Root bind:open={dialogOpen}>

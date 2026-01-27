@@ -19,8 +19,10 @@
     "relaysPrivate": [
       "ws://localhost:7000"
     ],
+    "njumpUrl": "https://njump.edufeed.org",
     "$comment": "⚠️ Development: Verwende 'ws://localhost:7000' nur wenn lokaler Docker-Relay läuft! Production: Nutze öffentliche wss:// Relays.",
-    "$comment_localhost": "Lokaler Relay für Tests: ws://localhost:7000 (erfordert: docker-compose up -d)"
+    "$comment_localhost": "Lokaler Relay für Tests: ws://localhost:7000 (erfordert: docker-compose up -d)",
+    "$comment_njump": "njumpUrl: Web-Client für Nostr-Links (naddr, nevent, note URLs)"
   },
 
   "llm": {

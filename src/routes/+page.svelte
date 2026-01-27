@@ -1,6 +1,7 @@
 <script lang="ts">
     import KeyRoundIcon from "@lucide/svelte/icons/key-round";
     import { resolve } from '$app/paths';
+    import { goto } from '$app/navigation';
     import * as Avatar from "$lib/components/ui/avatar/index.js";
     import { getInitials, getAvatarColor } from "$lib/components/ui/avatar/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
@@ -60,7 +61,18 @@
                 <Card.Title>Nostr Profile</Card.Title>
                 <Card.Description>Displaying profile for {currentUser?.profile?.name || 'Jack Dorsey'}</Card.Description>
             </Card.Header>
-            <a href={resolve('/cardsboard', {})}>
+            <div
+                role="link"
+                tabindex="0"
+                class="cursor-pointer"
+                onclick={() => goto(resolve('/cardsboard', {}))}
+                onkeydown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        goto(resolve('/cardsboard', {}));
+                    }
+                }}
+            >
                 <Card.Content>
                     <div class="flex items-center space-x-3">
                         <Avatar.Root class="h-8 w-8 flex-shrink-0">
@@ -78,7 +90,7 @@
                         <Button variant="link" class="mt-4">View on Nostr.com</Button>
                     </a>
                 </Card.Content>
-            </a>
+            </div>
         </Card.Root>
 
         <!-- Kind 1 Post Creation Form Component -->

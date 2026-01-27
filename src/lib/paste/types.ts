@@ -6,6 +6,7 @@
  */
 
 import type { CardProps } from '../classes/BoardModel.js';
+import type NDK from '@nostr-dev-kit/ndk';
 
 /**
  * Kontext für Paste-Operation
@@ -22,6 +23,18 @@ export interface PasteContext {
     
     /** Optional: User-Kontext für author-Zuordnung */
     author?: string;
+
+    /** Optional: NDK Instanz für Nostr Event Fetching */
+    ndk?: NDK;
+}
+
+/**
+ * Extrahierte Clipboard-Daten (einmal gelesen, mehrfach verwendet)
+ */
+export interface ClipboardData {
+    text: string;
+    html: string;
+    files: File[];
 }
 
 /**
@@ -56,14 +69,17 @@ export interface IPasteHandler {
     
     /**
      * Kann dieser Handler den Inhalt verarbeiten?
+     * @param data - Bereits extrahierte Clipboard-Daten
      */
-    canHandle(clipboardData: DataTransfer | ClipboardEvent['clipboardData']): Promise<boolean>;
+    canHandle(data: ClipboardData): Promise<boolean>;
     
     /**
      * Verarbeite den Inhalt und gebe Card-Updates zurück
+     * @param data - Bereits extrahierte Clipboard-Daten
+     * @param context - Paste-Kontext
      */
     handle(
-        clipboardData: DataTransfer | ClipboardEvent['clipboardData'],
+        data: ClipboardData,
         context: PasteContext
     ): Promise<PasteResult>;
 }

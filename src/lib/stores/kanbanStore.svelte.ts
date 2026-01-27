@@ -16,12 +16,14 @@ import {
     NostrIntegration,
     BoardOperations,
     ExportImport,
-    PasteHandler,
+    PasteHandler as BoardPasteHandler,
     ChatIntegration,
     BoardSharingOperations,
     type CardItem,
     type UIColumn
 } from './boardstore/index.js';
+
+import { pasteHandler } from '$lib/paste/PasteHandler.js';
 
 // ✅ NEW (REFACTORING): Migration import
 import { MetadataMigration } from './boardstore/migration.js';
@@ -2165,30 +2167,83 @@ export class BoardStore {
     // PASTE HANDLERS (delegiert zu PasteHandler)
     // ============================================================================
     
-    public handleCardPaste(cardId: string, pastedData: any): { success: boolean; type?: string; debug?: any; error?: string } {
+    public async handleCardPaste(
+        cardId: string,
+        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
+    ): Promise<{ success: boolean; type?: string; debug?: any; error?: string }> {
         const author = this.getSafeAuthor();
-        const success = PasteHandler.handleCardPaste(this.board, cardId, pastedData, author);
-        
+        const ndk = this.nostrIntegration?.getNDK();
+        const result = await pasteHandler.handlePaste(clipboardData, {
+            target: 'card',
+            cardId,
+            author,
+            ndk
+        });
+
+        if (!result.success || !result.cardUpdates) {
+            return { success: false, error: result.error || 'Paste fehlgeschlagen' };
+        }
+
+        const existing = this.board.findCardAndColumn(cardId);
+        if (!existing) {
+            return { success: false, error: 'Karte nicht gefunden' };
+        }
+
+        const mergedUpdates = BoardPasteHandler.mergeCardUpdates(existing.card, result.cardUpdates);
+        const success = BoardOperations.updateCard(this.board, cardId, mergedUpdates);
+
         if (success) {
             this.triggerUpdate();
             this.publishCardAsync(cardId);
-            return { success: true, type: 'card' };
+            return { success: true, type: result.type, debug: result.debug };
         }
-        
+
         return { success: false, error: 'Paste fehlgeschlagen' };
     }
 
-    public handleColumnPaste(columnId: string, pastedCards: any[]): { success: boolean; type?: string; debug?: any; error?: string } {
-        const author = this.getSafeAuthor();
-        const cardIds = PasteHandler.handleColumnPaste(this.board, columnId, pastedCards, author);
-        
-        if (cardIds.length > 0) {
-            this.triggerUpdate();
-            this.publishBoardAsync();
-            return { success: true, type: 'column', debug: { cardIds } };
+    public async handleColumnPaste(
+        columnId: string,
+        clipboardData: DataTransfer | ClipboardEvent['clipboardData']
+    ): Promise<{ success: boolean; type?: string; debug?: any; cardId?: string; error?: string }> {
+        const { author, authorName } = this.getAuthorFields();
+        const ndk = this.nostrIntegration?.getNDK();
+        const result = await pasteHandler.handlePaste(clipboardData, {
+            target: 'column',
+            columnId,
+            author,
+            ndk
+        });
+
+        if (!result.success || !result.cardUpdates) {
+            return { success: false, error: result.error || 'Paste fehlgeschlagen', debug: result.debug };
         }
-        
-        return { success: false, error: 'Keine Karten erstellt' };
+
+        const heading = result.cardUpdates.heading || 'Neue Karte';
+        const content = result.cardUpdates.content;
+        const cardId = BoardOperations.createCard(
+            this.board,
+            columnId,
+            heading,
+            content,
+            author,
+            authorName || undefined
+        );
+
+        if (!cardId) {
+            return { success: false, error: 'Karte konnte nicht erstellt werden' };
+        }
+
+        const updates = { ...result.cardUpdates } as Partial<CardProps>;
+        delete updates.heading;
+        delete updates.content;
+
+        if (Object.keys(updates).length > 0) {
+            BoardOperations.updateCard(this.board, cardId, updates);
+        }
+
+        this.triggerUpdate();
+        this.publishBoardAsync();
+        return { success: true, type: result.type, debug: result.debug, cardId };
     }
 
     // ============================================================================
