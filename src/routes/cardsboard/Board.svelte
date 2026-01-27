@@ -21,35 +21,30 @@
 	// Direkt auf settingsStore.settings zugreifen (Svelte 5 Runes)
 	let settings = $derived(settingsStore.settings);
 
-	// Intelligenter Modus-Wechsel für Add Column Button
-	let isAddColumnFixed = $state(false);
+	// Sticky button - nur zeigen wenn scrollable button nicht sichtbar ist
+	let showStickyButton = $state(false);
+	let scrollableButtonElement: HTMLElement | undefined;
 
-	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
+	// Intersection Observer für scrollable button
 	$effect(() => {
-		if (!boardElement) return;
+		if (!scrollableButtonElement) return;
 
-		const checkScroll = () => {
-			if (boardElement) {
-				// Wenn scrollWidth > clientWidth, dann scrollt das Board horizontal
-				const hasScroll = boardElement.scrollWidth > boardElement.clientWidth;
-				isAddColumnFixed = hasScroll;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const entry = entries[0];
+				// Sticky button nur zeigen wenn scrollable button NICHT sichtbar ist
+				showStickyButton = !entry.isIntersecting;
+			},
+			{
+				root: boardElement,
+				threshold: 0.1
 			}
-		};
+		);
 
-		// Initial check
-		checkScroll();
+		observer.observe(scrollableButtonElement);
 
-		// Observer für Größenänderungen
-		const resizeObserver = new ResizeObserver(checkScroll);
-		resizeObserver.observe(boardElement);
-
-		// Auch bei Spalten-Änderungen prüfen (mit kleinem Delay für Rendering)
-		const columnsLength = columns.length; // ← Dependency tracking
-		setTimeout(checkScroll, 100);
-
-		// Cleanup
 		return () => {
-			resizeObserver.disconnect();
+			observer.disconnect();
 		};
 	});
 	
@@ -313,7 +308,7 @@
 	}
 
 	.add-column-button {
-		flex: 0 0 80px;
+		flex: 0 0 280px;
 		height: 100%;
 		display: flex;
 		align-items: flex-start;
@@ -344,34 +339,35 @@
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 	}
 
-	/* Fixed mode - wenn zu viele Spalten (relativ zum Board-Container) */
-	.add-column-button-fixed {
-		position: absolute;
-		right: 0.5rem;
+	/* Sticky button - appears when scrollable button is not visible */
+	.sticky-add-column {
+		position: fixed;
+		right: 1rem;
 		top: 50%;
 		transform: translateY(-50%);
-		z-index: 50;
+		z-index: 100;
+		transition: opacity 0.2s ease, transform 0.2s ease;
 	}
 
-	.add-column-button-fixed button {
-		width: 48px;
-		height: 48px;
+	.sticky-add-column button {
+		width: 56px;
+		height: 56px;
 		border-radius: var(--radius-md);
-		border: 1px solid var(--accent);
+		border: 2px solid var(--accent);
 		background: var(--background);
 		color: var(--primary-foreground);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 		transition: all 0.2s ease;
 	}
 
-	.add-column-button-fixed button:hover {
+	.sticky-add-column button:hover {
 		background: var(--accent);
-		transform: scale(1.05);
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+		transform: scale(1.1);
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 	}
 	
 </style>
@@ -404,9 +400,9 @@
  					/>
  			</div>
      {/each}
-	<!-- Add Column Button - intelligenter Modus-Wechsel -->
+	<!-- Add Column Button - scrolls with board content -->
 	{#if !readOnly}
-	<div class={isAddColumnFixed ? 'add-column-button-fixed' : 'add-column-button'}>
+	<div class="add-column-button" bind:this={scrollableButtonElement}>
 		<button
 			title="Neue Spalte hinzufügen"
 			aria-label="Neue Spalte hinzufügen"
@@ -422,12 +418,37 @@
 				}
 			}}
 		>
-			{#if !isAddColumnFixed}
-				<SquarePlusIcon class="h-4.5 w-4.5" /> <span class="ml-2">Spalte hinzufügen</span>
-			{:else}
-				<SquarePlusIcon class="h-6 w-6" />
-			{/if}
+			<SquarePlusIcon class="h-4.5 w-4.5" /> <span class="ml-2">Spalte hinzufügen</span>
 		</button>
 	</div>
 	{/if}
 </section>
+
+<!-- Sticky Add Column Button - only visible when scrollable button is out of view -->
+{#if !readOnly && showStickyButton}
+	<div class="sticky-add-column">
+		<button
+			title="Neue Spalte hinzufügen"
+			aria-label="Neue Spalte hinzufügen"
+			onclick={() => {
+				console.log('➕ Adding new column (sticky)...');
+				try {
+					boardStore.createColumn('Neue Spalte');
+					// Scroll to the end to show the new column
+					if (boardElement) {
+						setTimeout(() => {
+							boardElement.scrollLeft = boardElement.scrollWidth;
+						}, 100);
+					}
+				} catch (error) {
+					console.error('❌ Fehler beim Erstellen der Spalte:', error);
+					toast.error('Keine Berechtigung', {
+						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
+					});
+				}
+			}}
+		>
+			<SquarePlusIcon class="h-6 w-6" />
+		</button>
+	</div>
+{/if}
