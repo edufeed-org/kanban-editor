@@ -249,7 +249,7 @@ async function createSharedBoard(page: Page, boardName: string) {
     const newBoardButton = page.getByTestId('create-board-button');
     await newBoardButton.click();
 
-    // Versuche Board-Titel zu bearbeiten (falls UI das unterstützt)
+    await page.getByTitle('Menü').click({timeout: 2000});
     await page.getByTitle('Board-Einstellungen').click({timeout: 2000});
 
     const titleInput = page.locator('#board-title');
@@ -262,8 +262,10 @@ async function createSharedBoard(page: Page, boardName: string) {
 }
 
 async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
+    await page.getByTitle('Menü').click();
     await page.getByTestId('share-button').click();
     
+    await page.getByTitle('Menü').click();
     await expect(page.getByTestId('share-dialog')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Editoren' }).click();
@@ -283,13 +285,7 @@ async function getViewerLink(page: Page): Promise<string> {
 
 async function attemptCardCreate(page: Page): Promise<{ success: boolean; error?: string }> {
     try {
-        // Der "Karte hinzufügen" Button ist jetzt innerhalb der Spalte (nicht mehr im Header)
-        const addCardButton = page.locator('button.add-card-button').first()
-            .or(page.locator('button:has-text("Karte hinzufügen")').first());
-        
-        await addCardButton.waitFor({ state: 'visible', timeout: 5000 });
-        
-        await addCardButton.click();
+        await page.getByText('Karte hinzufügen').first().click();
         
         const newCard = page.locator('text="Neue Karte"').first();
         if (await newCard.isVisible({ timeout: 5000 })) {

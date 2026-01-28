@@ -18,6 +18,17 @@
     import { authStore } from '$lib/stores/authStore.svelte.js';
     import { toast } from 'svelte-sonner';
 
+    // Props for customization
+    let {
+        variant = 'default',
+        class: className = '',
+        showLabel = false
+    }: {
+        variant?: 'default' | 'ghost';
+        class?: string;
+        showLabel?: boolean;
+    } = $props();
+
     // ========================================================================
     // HELPERS
     // ========================================================================
@@ -230,13 +241,17 @@
 
 <!-- Trigger Button -->
 <Button 
-    variant="default" 
+    variant={variant}
     size="sm" 
-    class="gap-2"
+    class={`gap-2 ${className}`}
     onclick={() => dialogOpen = true}
 >
     <HistoryIcon class="h-4 w-4" />
-    <span class="hidden sm:inline">Versionen</span>
+    {#if showLabel}
+        <span>Versionen</span>
+    {:else}
+        <span class="hidden sm:inline">Versionen</span>
+    {/if}
 </Button>
 
 <!-- Version History Dialog -->

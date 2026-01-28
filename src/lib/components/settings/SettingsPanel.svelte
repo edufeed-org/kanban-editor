@@ -24,6 +24,17 @@
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
   
+  // Props
+  let { 
+    defaultTab = 'ui',
+    showHeader = true,
+    showTabs = true
+  }: { 
+    defaultTab?: 'ui' | 'llm' | 'nostr' | 'defaults';
+    showHeader?: boolean;
+    showTabs?: boolean;
+  } = $props();
+  
   // Reactive bindings zu settingsStore
   let settings = $derived(settingsStore.settings);
   
@@ -108,6 +119,7 @@
 <div class="w-full max-w-4xl mx-auto p-6 space-y-6">
   
   <!-- Header -->
+  {#if showHeader}
   <div class="space-y-2">
     <h2 class="text-3xl font-bold">Einstellungen</h2>
     <p class="text-muted-foreground">
@@ -116,15 +128,18 @@
   </div>
   
   <Separator />
+  {/if}
   
   <!-- Tabbed Settings -->
-  <Tabs.Root value="ui" class="w-full">
+  <Tabs.Root value={defaultTab} class="w-full">
+    {#if showTabs}
     <Tabs.List class="grid w-full grid-cols-4">
       <Tabs.Trigger value="ui">UI/UX</Tabs.Trigger>
       <Tabs.Trigger value="llm">LLM</Tabs.Trigger>
       <Tabs.Trigger value="nostr">Nostr</Tabs.Trigger>
       <Tabs.Trigger value="defaults">Defaults</Tabs.Trigger>
     </Tabs.List>
+    {/if}
     
     <!-- TAB 1: UI/UX Settings -->
     <Tabs.Content value="ui" class="space-y-4">
