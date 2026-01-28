@@ -377,9 +377,12 @@
                 <span>Standard-Werte</span>
             </button>
             <div class="border-t"></div>
-            <div class="w-full">
-                <ShareButton class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
-            </div>
+            <ShareButton 
+                variant="default"
+                class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
+                showLabel={true}
+
+            />
             <div class="border-t"></div>
             <div class="w-full">
                 <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
