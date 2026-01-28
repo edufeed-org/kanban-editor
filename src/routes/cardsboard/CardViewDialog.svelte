@@ -49,6 +49,11 @@
 	let imageMode = $state<'url' | 'oer'>('url');
 	let isAddingLink = $state(false);
 	let isEditingDescription = $state(false);
+	let isImageModalOpen = $state(false);
+
+	// Reference for scrolling
+	// svelte-ignore non_reactive_update
+	let actionBarRef: HTMLDivElement;
 
 	// Subscription cleanup function
 	let unsubscribeComments: (() => void) | undefined;
@@ -597,16 +602,21 @@
 					{#if card.image && !isEditingImage}
 						<!-- Display Mode: Bild anzeigen mit Hover-Edit -->
 						<div class="relative group">
-							<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
+							<button
+								type="button"
+								class="rounded-md overflow-hidden bg-muted border cursor-pointer hover:opacity-90 transition-opacity w-full block p-0"
+								onclick={() => isImageModalOpen = true}
+								title="Klicken zum Vergrößern"
+							>
 								<img
 									src={card.image}
 									alt="Kartenbild"
-									class="w-full h-full object-cover"
+									class="w-full h-auto object-contain max-h-[200px]"
 									onerror={(e) => {
 										(e.target as HTMLImageElement).style.display = 'none';
 									}}
 								/>
-							</div>
+							</button>
 							<!-- Edit-Button Overlay (hidden in readOnly mode) -->
 							{#if !readOnly}
 							<Button
@@ -616,6 +626,10 @@
 									isEditingImage = true;
 									editImageUrl = card.image || '';
 									imageMode = 'url';
+									// Scroll to action bar after a short delay to ensure DOM is updated
+									setTimeout(() => {
+										actionBarRef?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+									}, 100);
 								}}
 								class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2 text-xs"
 							>
@@ -711,7 +725,7 @@
 
 			<!-- 🆕 Centered Action Bar (Icons with hover text) - Mutually Exclusive -->
 			{#if !readOnly}
-			<div class="flex justify-center gap-3 py-2">
+			<div bind:this={actionBarRef} class="flex justify-center gap-3 py-2">
 				<Button
 					variant={isEditingImage ? 'default' : 'ghost'}
 					size="sm"
@@ -1113,6 +1127,31 @@
 				</div>
 			</div>
 			{/if}
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Image Modal for full-size view -->
+<Dialog.Root bind:open={isImageModalOpen}>
+	<Dialog.Content class="max-w-[90vw] max-h-[90vh] p-0">
+		<div class="relative w-full h-full flex items-center justify-center bg-black/90 rounded-lg overflow-hidden">
+			<img
+				src={card.image}
+				alt="Kartenbild (vergrößert)"
+				class="max-w-full max-h-[85vh] object-contain"
+				onerror={(e) => {
+					(e.target as HTMLImageElement).style.display = 'none';
+				}}
+			/>
+			<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => isImageModalOpen = false}
+				class="absolute top-4 right-4"
+				title="Schließen"
+			>
+				✕
+			</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
