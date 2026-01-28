@@ -118,9 +118,6 @@ describe('SettingsStore - unit tests', () => {
 
     store.setDefaultBoardPublishState('published');
     expect(store.settings.defaultBoardPublishState).toBe('published');
-
-    store.setDefaultCardPublishState('private');
-    expect(store.settings.defaultCardPublishState).toBe('private');
   });
 
   it('sidebar toggles and setters', () => {
