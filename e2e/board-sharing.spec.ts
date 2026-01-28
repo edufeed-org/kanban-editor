@@ -265,7 +265,6 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
     await page.getByTitle('Menü').click();
     await page.getByTestId('share-button').click();
     
-    await page.getByTitle('Menü').click();
     await expect(page.getByTestId('share-dialog')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Editoren' }).click();
