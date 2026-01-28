@@ -6,7 +6,6 @@
     import MenuIcon from "@lucide/svelte/icons/menu";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { toast } from 'svelte-sonner';
-    import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	
@@ -180,9 +179,7 @@
                     </a>
                 {/if}
             </div>
-            
-            <!-- ➕🔗 Link hinzufügen Popover -->
-            <LinkAddPopover />
+
         </div>
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
