@@ -725,10 +725,10 @@
 							editImageUrl = '';
 						}
 					}}
-					class="group h-9 px-3 {isEditingImage ? '' : 'text-muted-foreground hover:text-foreground'} transition-all"
+					class="group h-9 transition-all {isEditingImage ? 'px-4' : 'px-3'}"
 				>
 					<ImageIcon class="h-4 w-4" />
-					<span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-200 group-hover:ml-2">
+					<span class="{isEditingImage ? 'ml-2' : 'max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2'} transition-all duration-200">
 						Bild {isEditingImage ? 'schließen' : 'hinzufügen'}
 					</span>
 				</Button>
@@ -744,10 +744,10 @@
 							newLinkTitle = '';
 						}
 					}}
-					class="group h-9 px-3 {isAddingLink ? '' : 'text-muted-foreground hover:text-foreground'} transition-all"
+					class="group h-9 transition-all {isAddingLink ? 'px-4' : 'px-3'}"
 				>
 					<LinkIcon class="h-4 w-4" />
-					<span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-200 group-hover:ml-2">
+					<span class="{isAddingLink ? 'ml-2' : 'max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2'} transition-all duration-200">
 						Link {isAddingLink ? 'schließen' : 'hinzufügen'}
 					</span>
 				</Button>
