@@ -377,11 +377,11 @@
                 <span>Standard-Werte</span>
             </button>
             <div class="border-t"></div>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
+            <div class="w-full">
                 <ShareButton class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
             <div class="border-t"></div>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
+            <div class="w-full">
                 <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
         </div>
