@@ -484,29 +484,9 @@
 
 		<!-- Main Content: Scrollable -->
 		<div class="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-			<!-- Image Section -->
+			<!-- Image Display Section (only shows existing image, not for editing) -->
+			{#if card.image && !isEditingImage}
 			<div class="space-y-2">
-					{#if !isEditingImage && !card.image}
-						<!-- Kein Bild: Button zum Hinzufügen (hidden in readOnly mode) -->
-						{#if !readOnly}
-						<div class="flex items-center justify-between">
-							<h3 class="text-sm font-semibold text-muted-foreground">Karteninhalt</h3>
-							<Button
-								variant="outline"
-								size="sm"
-								onclick={() => {
-									isEditingImage = true;
-									editImageUrl = '';
-									imageMode = 'url';
-								}}
-								class="h-7 px-2 text-xs text-muted-foreground"
-							>
-								<ImageIcon class="h-3 w-3 mr-1" />
-								Bild hinzufügen
-							</Button>
-						</div>
-						{/if}
-					{/if}
 
 					{#if isEditingImage && !readOnly}
 						<!-- Edit Mode: URL oder OER -->
@@ -646,7 +626,9 @@
 						</div>
 					{/if}
 				</div>
+			{/if}
 
+			<!-- Description Section -->
 			<div class="space-y-2">
 				<div class="flex items-center justify-between">
 					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
@@ -727,25 +709,168 @@
 				{/if}
 			</div>
 
-			<!-- 🆕 Links Section mit Inline-Add -->
-			<div class="space-y-2">
-				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
-					{#if !readOnly}
+			<!-- 🆕 Centered Action Bar (Icons with hover text) - Mutually Exclusive -->
+			{#if !readOnly}
+			<div class="flex justify-center gap-3 py-2">
+				<Button
+					variant={isEditingImage ? 'default' : 'ghost'}
+					size="sm"
+					onclick={() => {
+						isEditingImage = !isEditingImage;
+						if (isEditingImage) {
+							isAddingLink = false;
+							editImageUrl = card.image || '';
+							imageMode = 'url';
+						} else {
+							editImageUrl = '';
+						}
+					}}
+					class="group h-9 px-3 {isEditingImage ? '' : 'text-muted-foreground hover:text-foreground'} transition-all"
+				>
+					<ImageIcon class="h-4 w-4" />
+					<span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-200 group-hover:ml-2">
+						Bild {isEditingImage ? 'schließen' : 'hinzufügen'}
+					</span>
+				</Button>
+				<Button
+					variant={isAddingLink ? 'default' : 'ghost'}
+					size="sm"
+					onclick={() => {
+						isAddingLink = !isAddingLink;
+						if (isAddingLink) {
+							isEditingImage = false;
+						} else {
+							newLinkUrl = '';
+							newLinkTitle = '';
+						}
+					}}
+					class="group h-9 px-3 {isAddingLink ? '' : 'text-muted-foreground hover:text-foreground'} transition-all"
+				>
+					<LinkIcon class="h-4 w-4" />
+					<span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-200 group-hover:ml-2">
+						Link {isAddingLink ? 'schließen' : 'hinzufügen'}
+					</span>
+				</Button>
+			</div>
+			{/if}
+
+			<!-- Image Editing Form (appears below action bar) -->
+			{#if isEditingImage && !readOnly}
+			<div 
+				class="space-y-3 p-3 border rounded-md bg-muted/30"
+				in:slide={{ duration: 250, axis: 'y' }}
+				out:slide={{ duration: 200, axis: 'y' }}
+			>
+				<!-- Mode Toggle -->
+				<div class="flex gap-1">
 					<Button
-						variant="ghost"
+						type="button"
+						variant={imageMode === 'url' ? 'default' : 'outline'}
 						size="sm"
-						onclick={() => isAddingLink = !isAddingLink}
-						class="h-6 px-2 text-xs"
+						onclick={() => (imageMode = 'url')}
 					>
-						<PlusIcon class="h-3 w-3 mr-1" />
-						Link hinzufügen
+						URL eingeben
 					</Button>
-					{/if}
+					<Button
+						type="button"
+						variant={imageMode === 'oer' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (imageMode = 'oer')}
+					>
+						OER suchen
+					</Button>
 				</div>
-				
-				{#if isAddingLink && !readOnly}
-					<div class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border border-dashed">
+
+				{#if imageMode === 'url'}
+					<!-- URL Input -->
+					<div class="flex gap-2">
+						<Input
+							bind:value={editImageUrl}
+							placeholder="https://example.com/image.jpg"
+							class="flex-1"
+						/>
+					</div>
+					
+					<!-- URL Preview -->
+					{#if editImageUrl && editImageUrl !== card.image}
+						<div class="rounded-md overflow-hidden bg-muted border-2 border-blue-400">
+							<img
+								src={editImageUrl}
+								alt="Vorschau"
+								class="w-full h-auto max-h-48 object-contain"
+								onerror={(e) => {
+									(e.target as HTMLImageElement).style.display = 'none';
+								}}
+							/>
+							<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
+								Vorschau - noch nicht gespeichert
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<!-- OER Picker -->
+					<OerImagePicker
+						onSelect={(url) => {
+							editImageUrl = url;
+							imageMode = 'url';
+						}}
+					/>
+				{/if}
+
+				<!-- Action Buttons -->
+				<div class="flex justify-between items-center pt-2 border-t">
+					<div>
+						{#if card.image}
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={() => {
+									boardStore.editCard(String(card.id), { image: '' });
+									isEditingImage = false;
+								}}
+								class="text-destructive hover:text-destructive"
+							>
+								<TrashIcon class="h-3 w-3 mr-1" />
+								Bild entfernen
+							</Button>
+						{/if}
+					</div>
+					<div class="flex gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => {
+								isEditingImage = false;
+								editImageUrl = '';
+							}}
+						>
+							Abbrechen
+						</Button>
+						<Button
+							size="sm"
+							onclick={() => {
+								if (editImageUrl !== card.image) {
+									boardStore.editCard(String(card.id), { image: editImageUrl });
+								}
+								isEditingImage = false;
+							}}
+							disabled={!editImageUrl && !card.image}
+						>
+							<CheckIcon class="h-3 w-3 mr-1" />
+							Speichern
+						</Button>
+					</div>
+				</div>
+			</div>
+			{/if}
+
+			<!-- Link Add Form (appears below action bar) -->
+			{#if isAddingLink && !readOnly}
+					<div 
+						class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border border-dashed"
+						in:slide={{ duration: 250, axis: 'y' }}
+						out:slide={{ duration: 200, axis: 'y' }}
+					>
 						<Input 
 							bind:value={newLinkTitle} 
 							placeholder="Titel"
@@ -798,24 +923,7 @@
 							</div>
 						{/each}
 					</div>
-			{:else if !isAddingLink}
-				{#if !readOnly}
-				<div 
-					class="p-3 bg-muted/30 rounded-md text-sm border border-dashed cursor-pointer hover:bg-muted/50 transition-colors text-muted-foreground text-center"
-					onclick={() => isAddingLink = true}
-					role="button"
-					tabindex="0"
-					onkeydown={(e) => e.key === 'Enter' && (isAddingLink = true)}
-				>
-					Klicken um Link hinzuzufügen...
-				</div>
-				{:else}
-				<div class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center">
-					Keine Links vorhanden
-				</div>
-				{/if}
 			{/if}
-			</div>
 
 			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
 			{#if attendees.length > 0}
