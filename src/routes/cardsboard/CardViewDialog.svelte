@@ -10,6 +10,7 @@
 	import ColorSelector from './ColorSelector.svelte';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
+	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
@@ -24,6 +25,7 @@
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { fade, slide } from 'svelte/transition';
 
 	interface Props {
 		cardId: string | number;
@@ -46,6 +48,7 @@
 	let editImageUrl = $state('');
 	let imageMode = $state<'url' | 'oer'>('url');
 	let isAddingLink = $state(false);
+	let isEditingDescription = $state(false);
 
 	// Subscription cleanup function
 	let unsubscribeComments: (() => void) | undefined;
@@ -140,20 +143,6 @@
 				? [card.authorName]
 				: []
 	);
-
-	// Auto-adjust textarea height when description changes
-	$effect(() => {
-		if (!readOnly && editDescription !== undefined) {
-			// Small delay to ensure DOM is updated
-			setTimeout(() => {
-				const textarea = document.querySelector('textarea[placeholder="Beschreibung eingeben..."]') as HTMLTextAreaElement;
-				if (textarea) {
-					textarea.style.height = 'auto';
-					textarea.style.height = textarea.scrollHeight + 'px';
-				}
-			}, 0);
-		}
-	});
 
 	/**
 	 * Handles comment submission
@@ -304,6 +293,7 @@
 		if (editDescription !== card.description) {
 			boardStore.updateCard(card.id as string, { content: editDescription });
 		}
+		isEditingDescription = false;
 	}
 	
 	/**
@@ -657,30 +647,83 @@
 					{/if}
 				</div>
 
-			<!-- Description Field - Inline Editing -->
 			<div class="space-y-2">
-				<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
-				{#if readOnly}
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
+					{#if !readOnly && !isEditingDescription}
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => isEditingDescription = true}
+							class="h-6 px-2 text-xs"
+						>
+							<PencilIcon class="h-3 w-3 mr-1" />
+							Bearbeiten
+						</Button>
+					{/if}
+				</div>
+				
+				{#if isEditingDescription && !readOnly}
+					<!-- Edit Mode: MarkdownEditor with toolbar -->
+					<div 
+						class="border rounded-md overflow-hidden"
+						in:fade={{ duration: 200, delay: 50 }}
+						out:fade={{ duration: 150 }}
+					>
+						<MarkdownEditor
+							value={editDescription}
+							onchange={(content) => {
+								editDescription = content;
+							}}
+							placeholder="Beschreibung eingeben..."
+							disabled={false}
+						/>
+					</div>
+					<!-- Save/Cancel Buttons -->
+					<div class="flex justify-end gap-2 pt-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								editDescription = card.description || '';
+								isEditingDescription = false;
+							}}
+						>
+							Abbrechen
+						</Button>
+						<Button
+							size="sm"
+							onclick={handleSaveDescription}
+						>
+							<CheckIcon class="h-3 w-3 mr-1" />
+							Speichern
+						</Button>
+					</div>
+				{:else}
+					<!-- View Mode: Clean MarkdownRenderer -->
 					{#if card.description}
-						<div class="min-h-[4rem] p-3 bg-muted/50 rounded-md text-sm border">
+						<div 
+							class="min-h-[4rem] p-3 bg-muted/50 rounded-md text-sm border {readOnly ? '' : 'cursor-pointer hover:bg-muted transition-colors'}"
+							in:fade={{ duration: 200, delay: 50 }}
+							out:fade={{ duration: 150 }}
+							onclick={() => !readOnly && (isEditingDescription = true)}
+							role={readOnly ? undefined : 'button'}
+							onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
+						>
 							<MarkdownRenderer content={card.description} />
 						</div>
 					{:else}
-						<p class="text-sm text-muted-foreground italic p-3">Keine Beschreibung vorhanden</p>
+						<div 
+							class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center {readOnly ? '' : 'cursor-pointer hover:bg-muted/50 transition-colors'}"
+							in:fade={{ duration: 200, delay: 50 }}
+							out:fade={{ duration: 150 }}
+							onclick={() => !readOnly && (isEditingDescription = true)}
+							role={readOnly ? undefined : 'button'}
+							onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
+						>
+							{readOnly ? 'Keine Beschreibung vorhanden' : 'Klicken um Beschreibung hinzuzufügen...'}
+						</div>
 					{/if}
-				{:else}
-					<Textarea
-						bind:value={editDescription}
-						onblur={handleSaveDescription}
-						oninput={(e) => {
-							const target = e.target as HTMLTextAreaElement;
-							target.style.height = 'auto';
-							target.style.height = target.scrollHeight + 'px';
-						}}
-						placeholder="Beschreibung eingeben..."
-						class="min-h-[4rem] resize-none text-sm hover:bg-muted/50 transition-colors overflow-hidden"
-						style="height: auto;"
-					/>
 				{/if}
 			</div>
 
