@@ -418,6 +418,13 @@
 		transform: scale(1.1);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 	}
+
+	/* Hide sticky button on mobile screens */
+	@media (max-width: 768px) {
+		.sticky-add-column {
+			display: none;
+		}
+	}
 	
 </style>
 
