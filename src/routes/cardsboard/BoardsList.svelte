@@ -300,6 +300,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Profil"
                 onclick={() => { 
                     profileEditorOpen = true;
                     hamburgerMenuOpen = false;
@@ -313,6 +314,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Board-Einstellungen"
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
@@ -326,6 +328,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="UI & Layout"
                 onclick={() => { 
                     uiSettingsOpen = true;
                     hamburgerMenuOpen = false;
@@ -338,6 +341,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="LLM Einstellungen"
                 onclick={() => { 
                     llmSettingsOpen = true;
                     hamburgerMenuOpen = false;
@@ -350,6 +354,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="Nostr Relays"
                 onclick={() => { 
                     nostrSettingsOpen = true;
                     hamburgerMenuOpen = false;
@@ -362,6 +367,7 @@
             <button
                 type="button"
                 class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="Standard-Werte"
                 onclick={() => { 
                     defaultsSettingsOpen = true;
                     hamburgerMenuOpen = false;
