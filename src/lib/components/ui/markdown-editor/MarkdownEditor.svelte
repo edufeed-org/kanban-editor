@@ -40,6 +40,10 @@
 	let editor = $state<Editor | null>(null);
 	let isEditorReady = $state(false);
 	
+	// Track last value to prevent unnecessary updates
+	let lastExternalValue = $state(value);
+	let isInternalUpdate = false;
+	
 	// Markdown-it Instanz für die Konvertierung von Markdown zu HTML (beim Laden)
 	const md = new MarkdownIt({
 		html: true,
@@ -123,7 +127,9 @@
 				StarterKit.configure({
 					heading: {
 						levels: [1, 2, 3]
-					}
+					},
+					// Deaktiviere Link in StarterKit falls vorhanden (verwenden eigene Link-Extension)
+					link: false
 				}),
 				Link.configure({
 					openOnClick: false,
@@ -142,17 +148,25 @@
 			],
 			content: initialContent,
 			editable: !disabled,
-			onTransaction: () => {
-				// Force re-render für reactive updates
-				editor = editor;
-			},
-			onUpdate: ({ editor }) => {
+			// Removed onTransaction - was causing unnecessary re-renders
+			// The toolbar buttons use editor?.isActive() which works without it
+			onUpdate: ({ editor: ed }) => {
+				// Mark as internal update to prevent $effect loop
+				isInternalUpdate = true;
+				
 				// Konvertiere HTML zu Markdown beim Speichern!
-				const html = editor.getHTML();
+				const html = ed.getHTML();
 				const markdown = htmlToMarkdown(html);
+				lastExternalValue = markdown;
+				
 				if (onchange) {
 					onchange(markdown);
 				}
+				
+				// Reset flag after microtask
+				queueMicrotask(() => {
+					isInternalUpdate = false;
+				});
 			},
 			editorProps: {
 				handlePaste: (view, event) => {
@@ -187,14 +201,23 @@
 		}
 	});
 	
-	// Update content wenn value von außen ändert
+	// Update content wenn value von außen ändert (nicht von internen Updates)
 	$effect(() => {
-		if (editor && !editor.isFocused) {
-			const htmlContent = markdownToHtml(value);
-			if (htmlContent !== editor.getHTML()) {
-				editor.commands.setContent(htmlContent);
-			}
-		}
+		// Skip if this is our own update or editor isn't ready
+		if (!editor || isInternalUpdate) return;
+		
+		// Skip if value hasn't actually changed from external source
+		if (value === lastExternalValue) return;
+		
+		// Only update if editor is not focused (user not typing)
+		if (editor.isFocused) return;
+		
+		// Update tracking
+		lastExternalValue = value;
+		
+		// Convert and set content
+		const htmlContent = markdownToHtml(value);
+		editor.commands.setContent(htmlContent, { emitUpdate: false });
 	});
 	
 	// Update editable state wenn disabled ändert
