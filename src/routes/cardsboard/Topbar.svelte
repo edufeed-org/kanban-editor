@@ -1,30 +1,11 @@
 ﻿<script lang="ts">
     import { Button } from '$lib/components/ui/button/index.js';
-    import * as Drawer from '$lib/components/ui/drawer/index.js';
-    import * as Dialog from '$lib/components/ui/dialog/index.js';
-    import { Input } from '$lib/components/ui/input/index.js';
-    import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
-    import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
-    import BotIcon from "@lucide/svelte/icons/bot";
-    import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
-    import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
-    import MoonIcon from "@lucide/svelte/icons/moon";
-    import SunIcon from "@lucide/svelte/icons/sun";
-    import RelayStatusInfo from './RelayStatusInfo.svelte';
-    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { BoardRole } from '$lib/types/sharing';
-    import { authStore } from '$lib/index.js';
-    import ExportButton from '$lib/components/ExportButton.svelte';
-    import LiaScriptExportButton from '$lib/components/LiaScriptExportButton.svelte';
     import { toast } from 'svelte-sonner';
-    import { ShareButton, VersionHistory } from '$lib/components/board';
-    import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
-    import { publishBoardToEdufeed } from '$lib/utils/ambPublisher';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 	
@@ -45,98 +26,12 @@
         isMobile?: boolean;
     } = $props();
 
-    // State für Board-Metadaten Form
-    let metaForm = $state({
-        title: boardMeta?.title || 'Mein Projekt Board',
-        description: boardMeta?.description || '',
-        tags: boardMeta?.tags?.join(', ') || '',
-        license: 'cc-by-4.0',
-        publishState: 'draft' as 'draft' | 'published'
-    });
-
-    let dialogOpen = $state(false);
-    let previousDialogState = $state(false); // ← NEU: Track previous state
-    let isPublishingToEdufeed = $state(false); // Track publishing status
-    
-    // 🔥 WICHTIG: Nutze $derived vom Store - das ist reactive!
-    let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
-    let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
-    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
-    let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
-
-    // 🔐 Permissions (Owner-only Board Meta)
-    let currentUserRole = $derived(boardStore.getCurrentUserRole());
-    let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
-
-    let canReloadBoardFromNostr = $derived(boardStore.ndkReady);
-
-    async function handleReloadBoardFromNostr() {
-        if (!canReloadBoardFromNostr) return;
-
-        try {
-            const syncManager = getSyncManager();
-            await boardStore.forceReloadCurrentBoardFromNostr({
-                clearLocalCache: true,
-                syncManager
-            });
-
-            toast.success('✅ Board neu geladen', {
-                description: 'Aktueller Stand wurde von Nostr aktualisiert.',
-                duration: 2500
-            });
-        } catch (error) {
-            console.error('[Topbar] Reload from Nostr failed:', error);
-            toast.error('❌ Reload fehlgeschlagen', {
-                description: error instanceof Error ? error.message : 'Board konnte nicht von Nostr geladen werden.',
-                duration: 3500
-            });
-        }
-    }
-    
-    // Synchronisiere metaForm NUR beim ersten Öffnen (nicht beim Tippen!)
-    $effect(() => {
-        // Nur triggern wenn Dialog von false → true wechselt (Opening Event!)
-        if (dialogOpen && !previousDialogState) {
-            // Beim Öffnen: Lade aktuelle Werte vom Store
-            metaForm.title = currentBoardTitle;
-            metaForm.description = currentBoardDescription;
-            metaForm.tags = boardStore.data?.tags?.join(', ') || '';
-            metaForm.license = boardStore.data?.ccLicense || 'cc-by-4.0';
-            metaForm.publishState = currentBoardPublishState;
-            console.log('🔄 Topbar: Dialog geöffnet, metaForm synchronisiert:', {
-                title: currentBoardTitle,
-                tags: metaForm.tags,
-                license: metaForm.license
-            });
-        }
-        // Update previous state NACH dem Check
-        previousDialogState = dialogOpen;
-    });
-
     let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
     
-    let relays = $state([
-        // { url: 'ws://localhost:7000', type: 'local', enabled: true },
-        // { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
-    ]);
-    
-    let webhookUrl = $state('');
-
-    const currentUser = {
-        name: 'Max Mustermann',
-        email: 'max@example.com',
-        avatar: ''
-    };
-
-    const ccLicenses = [
-        { value: 'cc0', label: 'CC0 1.0 (Public Domain)' },
-        { value: 'cc-by-4.0', label: 'CC BY 4.0 (Attribution)' },
-        { value: 'cc-by-sa-4.0', label: 'CC BY-SA 4.0 (Attribution-ShareAlike)' },
-        { value: 'cc-by-nc-4.0', label: 'CC BY-NC 4.0 (Attribution-NonCommercial)' },
-        { value: 'cc-by-nd-4.0', label: 'CC BY-ND 4.0 (Attribution-NoDerivs)' },
-        { value: 'cc-by-nc-sa-4.0', label: 'CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike)' },
-        { value: 'cc-by-nc-nd-4.0', label: 'CC BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivs)' }
-    ];
+    // Derived values for displaying board info
+    let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
+    let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
+    let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
 
     // CC License Badge Helper with proper symbols
     function getLicenseInfo(license: string) {
@@ -187,16 +82,19 @@
         
         return licenses[license] || licenses['cc-by-4.0'];
     }
+    
+    let relays = $state([
+        // { url: 'ws://localhost:7000', type: 'local', enabled: true },
+        // { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
+    ]);
+    
+    let webhookUrl = $state('');
 
-    function toggleTheme() {
-        const themes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark'];
-        const currentIndex = themes.indexOf(currentTheme);
-        currentTheme = themes[(currentIndex + 1) % themes.length];
-        
-        if (typeof document !== 'undefined') {
-            applyTheme(currentTheme);
-        }
-    }
+    const currentUser = {
+        name: 'Max Mustermann',
+        email: 'max@example.com',
+        avatar: ''
+    };
 
     function applyTheme(theme: 'light' | 'dark' | 'auto') {
         let effectiveTheme = theme;
@@ -222,8 +120,7 @@
     import * as Field from "$lib/components/ui/field/index.js";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     import ImportPopover from '$lib/components/ImportPopover.svelte';
-  import { getSyncManager } from '$lib/stores/syncManager.svelte';
-  import { RefreshCwIcon, TrashIcon, SquareSigmaIcon, Loader2Icon, CheckCircle2Icon } from 'lucide-svelte';
+    import { TrashIcon } from 'lucide-svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -237,9 +134,8 @@
         }
     });
 
-    
 
-    function saveBoardMeta() {
+function saveBoardMeta() {
         if (!canEditBoardMeta) {
             // UI sollte den Button bereits deaktivieren; guard als Fallback.
             return;
@@ -522,272 +418,11 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                     </a>
                 {/if}
             </div>
-            
-            <!-- 🟢 Relay Status Component -->
-            <RelayStatusInfo />
 
-            <!-- 🔄 Reload current board from Nostr -->
-            <Button
-                title={canReloadBoardFromNostr
-                    ? 'Aktuelles Board von den Servers neu laden'
-                    : 'Reload nur möglich, wenn Nostr bereit ist und mindestens ein Relay verbunden ist'}
-                variant="ghost"
-                size="icon"
-                class="h-8 w-8"
-                disabled={!canReloadBoardFromNostr}
-                onclick={handleReloadBoardFromNostr}
-            >
-                <RefreshCwIcon class="h-4 w-4" />
-                <span class="sr-only">Board von den Servers neu laden</span>
-            </Button>
-
-            <!-- ➕🔗 Link hinzufügen Popover -->
-            <LinkAddPopover />
-            
-            <!-- Board Meta Settings Button (3 Punkte) -->
-            <Dialog.Root bind:open={dialogOpen}>
-                {#if authStore.isAuthenticated }
-                <Dialog.Trigger 
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-transparent btn transition hover:border-foreground hover:bg-accent hover:text-accent-foreground" 
-                    title="Board-Einstellungen"
-                >
-                    <EllipsisVerticalIcon class="h-4 w-4" />
-                </Dialog.Trigger>
-                {/if}
-                <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-                    <Dialog.Header>
-                        <Dialog.Title>Board-Einstellungen</Dialog.Title>
-                    </Dialog.Header>
-                    <div class="space-y-4 py-4">
-                        <div class="space-y-2">
-                            <Label for="board-title">Titel</Label>
-                            <Input 
-                                id="board-title" 
-                                bind:value={metaForm.title} 
-                                placeholder="Projekt-Titel"
-                                readonly={!canEditBoardMeta}
-                            />
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <Label for="board-description">Beschreibung</Label>
-                            <Input 
-                                id="board-description" 
-                                bind:value={metaForm.description} 
-                                placeholder="Projekt-Beschreibung"
-                                readonly={!canEditBoardMeta}
-                            />
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <Label>Veröffentlichungsstatus</Label>
-                            <RadioGroup.Root bind:value={metaForm.publishState} disabled={!canEditBoardMeta}>
-                                <div class="flex items-center space-x-2">
-                                    <RadioGroup.Item value="draft" id="state-draft" />
-                                    <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <RadioGroup.Item value="published" id="state-published" />
-                                    <Label for="state-published" class="font-normal">Veröffentlicht (Nostr)</Label>
-                                </div>
-                            </RadioGroup.Root>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <Label for="board-tags">Tags (komma-getrennt)</Label>
-                            <Input 
-                                id="board-tags" 
-                                bind:value={metaForm.tags} 
-                                placeholder="tag1, tag2, tag3"
-                                readonly={!canEditBoardMeta}
-                            />
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <Label for="cc-license">Creative Commons Lizenz</Label>
-                            <select 
-                                id="cc-license" 
-                                bind:value={metaForm.license}
-                                disabled={!canEditBoardMeta}
-                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {#each ccLicenses as license}
-                                    <option value={license.value}>{license.label}</option>
-                                {/each}
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <Dialog.Footer>
-                        <div class="flex flex-col gap-3 w-full">
-                            <!-- First row: Action buttons (Export, Import, Publish) -->
-                            <div class="flex flex-wrap gap-2 justify-center sm:justify-start">
-                                <ImportPopover />
-                                <ExportButton />
-                                <LiaScriptExportButton />
-                                <!-- Publish to Edufeed Button -->
-                                <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    class="h-9 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                                    title="Als Learning Resource bei Edufeed veröffentlichen"
-                                    onclick={handlePublishToEdufeed}
-                                    disabled={isPublishingToEdufeed || !canEditBoardMeta}
-                                >
-                                    <UploadCloudIcon class="h-4 w-4" />
-                                    <span>Edufeed</span>
-                                </Button>
-                            </div>
-                            
-                            <!-- Second row: Delete, Cancel, Save -->
-                            <div class="flex flex-wrap justify-between w-full gap-2">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onclick={handleDeleteBoard} 
-                                    class="h-9 gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                    <TrashIcon class="h-4 w-4" />
-                                    <span>Löschen</span>
-                                </Button>
-                                <div class="flex flex-wrap gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onclick={() => { dialogOpen = false; }} 
-                                        class="h-9"
-                                    >
-                                        Abbrechen
-                                    </Button>
-                                    <Button 
-                                        variant="default" 
-                                        size="sm"
-                                        onclick={saveBoardMeta} 
-                                        class="h-9" 
-                                        disabled={!canEditBoardMeta}
-                                    >
-                                        Speichern
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </Dialog.Footer>
-                </Dialog.Content>
-            </Dialog.Root>
-        
-
-            <!-- AI Summary Button (BotIcon) - Hidden on small screens -->
-            <Drawer.Root>
-                <Drawer.Trigger 
-                    class="hidden md:inline-flex items-center justify-center h-8 w-8 btn bg-secondary" 
-                    title="KI-Zusammenfassung"
-                >
-                    <SquareSigmaIcon class="h-4 w-4" />
-                </Drawer.Trigger>
-                <Drawer.Content>
-                    <Drawer.Header class="flex items-center justify-between pr-4">
-                        <Drawer.Title>Board-Zusammenfassung</Drawer.Title>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onclick={generateAiSummary}
-                            disabled={isGeneratingAiSummary}
-                            title="KI-Zusammenfassung generieren"
-                            class="h-8 gap-2"
-                        >
-                            {#if isGeneratingAiSummary}
-                                <Loader2Icon class="h-4 w-4 animate-spin" />
-                            {:else}
-                                <BotIcon class="h-4 w-4" />
-                            {/if}
-                            <span class="hidden sm:inline">KI generieren</span>
-                        </Button>
-                    </Drawer.Header>
-                    <div class="p-4 space-y-4">
-                        <!-- Manuelle Beschreibung -->
-                        <div>
-                            <h3 class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Beschreibung</h3>
-                            {#if currentBoardDescription}
-                                <div class="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
-                                    {@html currentBoardDescription
-                                        .replace(/\n\n/g, '</p><p class="mt-2">')
-                                        .replace(/\n/g, '<br />')
-                                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                                        .replace(/^## (.+)$/gm, '<h4 class="font-semibold text-foreground mt-3 mb-1">$1</h4>')
-                                        .replace(/^### (.+)$/gm, '<h5 class="font-medium text-foreground mt-2 mb-1">$1</h5>')
-                                        .replace(/^- (.+)$/gm, '<li class="ml-4">• $1</li>')
-                                    }
-                                </div>
-                            {:else}
-                                <p class="text-sm text-muted-foreground">Keine Beschreibung vorhanden</p>
-                            {/if}
-                        </div>
-                        
-                        <!-- AI Summary Section -->
-                        {#if aiSummaryError}
-                            <div class="rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-                                <p class="text-sm text-destructive">{aiSummaryError}</p>
-                            </div>
-                        {/if}
-                        
-                        {#if isGeneratingAiSummary}
-                            <div class="rounded-lg bg-muted p-4">
-                                <div class="flex items-center gap-2">
-                                    <Loader2Icon class="h-4 w-4 animate-spin text-muted-foreground" />
-                                    <p class="text-sm text-muted-foreground italic">KI generiert Zusammenfassung...</p>
-                                </div>
-                            </div>
-                        {:else if aiSummary}
-                            <div class="rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3">
-                                <div class="flex items-center gap-2">
-                                    <CheckCircle2Icon class="h-4 w-4 text-green-600 dark:text-green-400" />
-                                    <p class="text-sm text-green-700 dark:text-green-300">
-                                        Die Zusammenfassung wurde erfolgreich erstellt und als Beschreibung gespeichert.
-                                    </p>
-                                </div>
-                            </div>
-                        {/if}
-                    </div>
-                </Drawer.Content>
-            </Drawer.Root>
         </div>
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
-            <!-- Settings Dialog -->
-            <Dialog.Root>
-                <Dialog.Trigger
-                    class="inline-flex items-center justify-center h-8 w-8 rounded-md border border-transparent btn transition hover:border-foreground hover:bg-accent hover:text-accent-foreground"
-                    title="Einstellungen"
-                >
-                    <SlidersHorizontalIcon class="h-4 w-4" />
-                </Dialog.Trigger>
-                <Dialog.Content class="max-h-[90vh] flex flex-col">
-                    <Dialog.Header class="flex-shrink-0">
-                        <Dialog.Title>⚙️ Einstellungen</Dialog.Title>
-                    </Dialog.Header>
-                    <div class="flex-1 overflow-y-auto min-h-0">
-                        <SettingsPanel />
-                    </div>
-                </Dialog.Content>
-            </Dialog.Root>
-
-            <!-- Board Sharing -->
-            <ShareButton />
-            
-            <!-- Version History -->
-            <VersionHistory />
-            
-            <!-- Theme -->
-            <Button variant="ghost" size="icon" onclick={toggleTheme} class=" h-8 w-8 btn bg-secondary">
-                {#if currentTheme === 'dark'}
-                    <SunIcon class="h-4 w-4"/>
-                {:else}
-                    <MoonIcon class="h-4 w-4"/>
-                {/if}
-            </Button>
-            
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
             <!-- Right Sidebar Trigger -->
@@ -797,11 +432,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 onclick={onToggleRightSidebar}
                 class="  h-8 w-8 bg-secondary"
             >
-                {#if isMobile}
-                    <BotIcon class="h-4 w-4" />
-                {:else}
-                    <PanelRightIcon class="h-4 w-4"/>
-                {/if}
+                <PanelRightIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>

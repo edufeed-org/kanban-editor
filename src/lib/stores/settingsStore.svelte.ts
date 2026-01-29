@@ -47,7 +47,6 @@ export interface SettingsState {
   // Board Defaults
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
   defaultBoardPublishState: PublishState; // "published" | "draft" | "private"
-  defaultCardPublishState: PublishState; // "published" | "draft" | "private"
 
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
@@ -158,7 +157,6 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // Board Defaults
   defaultColumns: ['To Do', 'In Progress', 'Done'],
   defaultBoardPublishState: 'draft',
-  defaultCardPublishState: 'draft',
 
   // Sidebar
   showLeftSidebar: true,
@@ -414,10 +412,6 @@ export class SettingsStore {
       if (config.defaults.boardPublishState) {
         defaultsPartial.defaultBoardPublishState = config.defaults.boardPublishState;
       }
-      if (config.defaults.cardPublishState) {
-        defaultsPartial.defaultCardPublishState = config.defaults.cardPublishState;
-      }
-
       if (Object.keys(defaultsPartial).length > 0) {
         this.settings = { ...this.settings, ...defaultsPartial };
       }
@@ -750,16 +744,6 @@ export class SettingsStore {
     }
     // ✅ Reassignment für Reaktivität
     this.settings = { ...this.settings, defaultBoardPublishState: state };
-    this.saveToStorage();
-  }
-
-  public setDefaultCardPublishState(state: PublishState): void {
-    if (!['published', 'draft', 'private'].includes(state)) {
-      console.warn('Invalid publishState:', state);
-      return;
-    }
-    // ✅ Reassignment für Reaktivität
-    this.settings = { ...this.settings, defaultCardPublishState: state };
     this.saveToStorage();
   }
 

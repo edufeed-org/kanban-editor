@@ -9,6 +9,17 @@
     import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import HeartOffIcon from "@lucide/svelte/icons/heart-off";
     
+    // Props for customization
+    let {
+        variant = 'default' as 'default' | 'ghost',
+        class: className = '',
+        showLabel = false
+    }: {
+        variant?: 'default' | 'ghost';
+        class?: string;
+        showLabel?: boolean;
+    } = $props();
+    
     // State
     let showShareDialog = $state(false);
     let isLoading = $state(false);
@@ -49,41 +60,39 @@
 <div class="flex items-center gap-2">
     {#if isOwnerOrEditor}
         <!-- Owner/Editor sehen Share-Button -->
-        <Button 
-            variant="default" 
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={() => showShareDialog = true}
-            class="gap-2"
             data-testid="share-button"
         >
             <ShareIcon2 class="h-4 w-4" />
-        </Button>
+            {#if showLabel}<span>Board teilen</span>{/if}
+        </button>
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
-        <Button 
-            variant="default" 
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class="gap-2"
             data-testid="unfollow-button"
         >
             <EyeOffIcon class="h-4 w-4" />
             {isLoading ? 'Lädt...' : 'Ausblenden'}
-        </Button>
+        </button>
     {:else}
         <!-- Non-participant sehen Follow-Button -->
-        <Button 
-            variant="default" 
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class="gap-2"
             data-testid="follow-button"
         >
             <HeartIcon class="h-4 w-4" />
             {isLoading ? 'Lädt...' : 'Beobachten'}
-        </Button>
+        </button>
     {/if}
 </div>
 

@@ -2,15 +2,42 @@
     import { flip } from 'svelte/animate';
     import { Button } from '$lib/components/ui/button/index.js';
     import { Input } from '$lib/components/ui/input/index.js';
+    import { Label } from '$lib/components/ui/label/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
+    import * as Dialog from '$lib/components/ui/dialog/index.js';
+    import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+    import * as Popover from '$lib/components/ui/popover/index.js';
+    import { slide } from 'svelte/transition';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
+    import { BoardRole } from '$lib/types/sharing';
+    import { toast } from 'svelte-sonner';
 
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
     import CircleIcon from '@lucide/svelte/icons/circle';
     import SearchIcon from '@lucide/svelte/icons/search';
+    import MenuIcon from '@lucide/svelte/icons/menu';
+    import SettingsIcon from '@lucide/svelte/icons/settings';
+    import UserIcon from '@lucide/svelte/icons/user';
+    import { ProfileEditor } from '$lib/components/auth/index.js';
+    import { VersionHistory, ShareButton } from '$lib/components/board';
+    import ShareIcon2 from '@lucide/svelte/icons/share-2';
+    import HistoryIcon from '@lucide/svelte/icons/history';
+    import PaletteIcon from '@lucide/svelte/icons/palette';
+    import BotIcon from '@lucide/svelte/icons/bot';
+    import WifiIcon from '@lucide/svelte/icons/wifi';
+    import FileTextIcon from '@lucide/svelte/icons/file-text';
+    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
+    import RelayStatusInfo from './RelayStatusInfo.svelte';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+    import UploadIcon from '@lucide/svelte/icons/upload';
+    import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+    import ImportPopover from '$lib/components/ImportPopover.svelte';
+    import ExportButton from '$lib/components/ExportButton.svelte';
+    import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
+    import SendIcon from '@lucide/svelte/icons/send';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -19,6 +46,55 @@
     let searchQuery = $state('');
     let isCreating = $state(false);
     let isLoading = $state(false);
+    let hamburgerMenuOpen = $state(false);
+    
+    // Board Settings Dialog State
+    let settingsDialogOpen = $state(false);
+    let previousDialogState = $state(false);
+    
+    // Profile Editor Dialog State
+    let profileEditorOpen = $state(false);
+    
+    // App Settings Dialog States
+    let uiSettingsOpen = $state(false);
+    let llmSettingsOpen = $state(false);
+    let nostrSettingsOpen = $state(false);
+    let defaultsSettingsOpen = $state(false);
+    
+    // Import & Export States
+    let importExportPopoverOpen = $state(false);
+    let liaScriptExportDialogOpen = $state(false);
+    let importDialogOpen = $state(false);
+    let importFile = $state<File | null>(null);
+    let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
+    
+    // Board Settings Form
+    let metaForm = $state({
+        title: '',
+        description: '',
+        tags: '',
+        license: 'cc-by-4.0',
+        publishState: 'draft' as 'draft' | 'published'
+    });
+    
+    // Derived values for board settings
+    let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
+    let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
+    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+    let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
+    let currentUserRole = $derived(boardStore.getCurrentUserRole());
+    let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
+    
+    // CC License options
+    const ccLicenses = [
+        { value: 'cc0', label: 'CC0 1.0 (Public Domain)' },
+        { value: 'cc-by-4.0', label: 'CC BY 4.0 (Attribution)' },
+        { value: 'cc-by-sa-4.0', label: 'CC BY-SA 4.0 (Attribution-ShareAlike)' },
+        { value: 'cc-by-nc-4.0', label: 'CC BY-NC 4.0 (Attribution-NonCommercial)' },
+        { value: 'cc-by-nd-4.0', label: 'CC BY-ND 4.0 (Attribution-NoDerivs)' },
+        { value: 'cc-by-nc-sa-4.0', label: 'CC BY-NC-SA 4.0 (Attribution-NonCommercial-ShareAlike)' },
+        { value: 'cc-by-nc-nd-4.0', label: 'CC BY-NC-ND 4.0 (Attribution-NonCommercial-NoDerivs)' }
+    ];
 
     // ⚠️ FIXED: Trigger shared boards loading in $effect (not in $derived!)
     // This prevents state_unsafe_mutation error
@@ -28,6 +104,18 @@
         if (user) {
             boardStore.triggerLoadSharedBoards();
         }
+    });
+    
+    // Sync form data when dialog opens
+    $effect(() => {
+        if (settingsDialogOpen && !previousDialogState) {
+            metaForm.title = currentBoardTitle;
+            metaForm.description = currentBoardDescription;
+            metaForm.tags = boardStore.data?.tags?.join(', ') || '';
+            metaForm.license = currentBoardLicense;
+            metaForm.publishState = currentBoardPublishState;
+        }
+        previousDialogState = settingsDialogOpen;
     });
 
     // Abgeleitete Boards-Liste (mit Filterung + geteilte Boards)
@@ -176,9 +264,260 @@
             return date.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' });
         }
     }
+    
+    // Board Settings: Save handler
+    function handleSaveBoardSettings() {
+        if (!canEditBoardMeta) {
+            toast.error('Keine Berechtigung', {
+                description: 'Nur der Board-Owner kann Metadaten bearbeiten.'
+            });
+            return;
+        }
+        
+        try {
+            // Update board metadata
+            boardStore.updateCurrentBoardMeta({
+                name: metaForm.title,
+                description: metaForm.description,
+                tags: metaForm.tags.split(',').map(t => t.trim()).filter(Boolean),
+                ccLicense: metaForm.license,
+                publishState: metaForm.publishState
+            });
+            
+            toast.success('✅ Board-Einstellungen gespeichert');
+            settingsDialogOpen = false;
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern:', error);
+            toast.error('Fehler beim Speichern der Einstellungen');
+        }
+    }
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden p-2">
+    <!-- Hamburger Menu Header -->
+    <div class="flex items-center gap-2 mb-2">
+        <Button
+            variant="ghost"
+            size="icon"
+            class="h-9 w-9"
+            title="Menü"
+            onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
+        >
+            <MenuIcon class="h-5 w-5" />
+        </Button>
+        
+        <h2 class="text-sm font-semibold flex-1">Meine Boards</h2>
+    </div>
+    
+    <!-- Expandable Menu -->
+    {#if hamburgerMenuOpen}
+        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Profil"
+                onclick={() => { 
+                    profileEditorOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+                disabled={!authStore.isAuthenticated}
+            >
+                <UserIcon class="h-4 w-4 text-muted-foreground" />
+                <span>Profil</span>
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Board-Einstellungen"
+                onclick={() => { 
+                    settingsDialogOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+                disabled={!authStore.isAuthenticated}
+            >
+                <SettingsIcon class="h-4 w-4 text-muted-foreground" />
+                <span>Board-Einstellungen</span>
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="UI & Layout"
+                onclick={() => { 
+                    uiSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <PaletteIcon class="h-4 w-4 text-muted-foreground" />
+                <span>UI & Layout</span>
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="LLM Einstellungen"
+                onclick={() => { 
+                    llmSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <BotIcon class="h-4 w-4 text-muted-foreground" />
+                <span>LLM Einstellungen</span>
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="Nostr Relays"
+                onclick={() => { 
+                    nostrSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <WifiIcon class="h-4 w-4 text-muted-foreground" />
+                <span>Nostr Relays</span>
+            </button>
+            <div class="border-t"></div>
+            <button
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                title="Standard-Werte"
+                onclick={() => { 
+                    defaultsSettingsOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+            >
+                <FileTextIcon class="h-4 w-4 text-muted-foreground" />
+                <span>Standard-Werte</span>
+            </button>
+            <div class="border-t"></div>
+            
+            <!-- Import & Export Menu Item with Popover Submenu -->
+            <Popover.Root bind:open={importExportPopoverOpen}>
+                <Popover.Trigger>
+                    <button
+                        type="button"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                        title="Import & Export"
+                    >
+                        <div class="flex items-center gap-3">
+                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Import & Export</span>
+                        </div>
+                        <ChevronRightIcon class="h-4 w-4 text-muted-foreground" />
+                    </button>
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-56 p-1">
+                    <div class="space-y-0">
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="JSON importieren"
+                            onclick={() => { 
+                                importDialogOpen = true;
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        >
+                            <UploadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>JSON importieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Als JSON exportieren"
+                            onclick={() => { 
+                                try {
+                                    const jsonString = boardStore.exportBoardAsJson(true);
+                                    const blob = new Blob([jsonString], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const boardName = boardStore.data?.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'board';
+                                    const dateStr = new Date().toISOString().split('T')[0];
+                                    const filename = `${boardName}_${dateStr}.json`;
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = filename;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast.success('Board als JSON exportiert');
+                                    importExportPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                } catch (error) {
+                                    console.error('❌ Export fehlgeschlagen:', error);
+                                    toast.error('Export fehlgeschlagen');
+                                }
+                            }}
+                        >
+                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Als JSON exportieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Als LiaScript exportieren"
+                            onclick={() => { 
+                                liaScriptExportDialogOpen = true;
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        >
+                            <FileTextIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Als LiaScript exportieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Zu Nostr publizieren"
+                            onclick={async () => { 
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                                
+                                try {
+                                    const eventId = await boardStore.publishBoardAndGetEventId();
+                                    if (eventId) {
+                                        toast.success('Board erfolgreich als Learning Resource publiziert!', {
+                                            description: `Event ID: ${eventId.substring(0, 8)}...`
+                                        });
+                                    } else {
+                                        toast.error('Fehler beim Publizieren', {
+                                            description: 'Board konnte nicht zu Nostr publiziert werden'
+                                        });
+                                    }
+                                } catch (error) {
+                                    console.error('❌ Nostr publish fehlgeschlagen:', error);
+                                    toast.error('Fehler beim Publizieren', {
+                                        description: error instanceof Error ? error.message : 'Unbekannter Fehler'
+                                    });
+                                }
+                            }}
+                        >
+                            <SendIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Zu Nostr publizieren</span>
+                        </button>
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
+            
+            <div class="border-t"></div>
+            <ShareButton 
+                variant="default"
+                class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
+                showLabel={true}
+
+            />
+            <div class="border-t"></div>
+            <div class="w-full">
+                <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
+            </div>
+        </div>
+    {/if}
+    
     <Button
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}
@@ -299,6 +638,245 @@
     </div>
 
 </div>
+
+<!-- Board Settings Dialog -->
+<Dialog.Root bind:open={settingsDialogOpen}>
+    <Dialog.Content class="w-[95vw] sm:w-auto sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <Dialog.Header>
+            <Dialog.Title>Board-Einstellungen</Dialog.Title>
+            <Dialog.Description>
+                {#if !canEditBoardMeta}
+                    <span class="text-xs text-muted-foreground">Nur der Board-Owner kann diese Einstellungen bearbeiten.</span>
+                {/if}
+            </Dialog.Description>
+        </Dialog.Header>
+        <div class="space-y-4 py-4">
+            <div class="space-y-2">
+                <Label for="board-title">Titel</Label>
+                <Input
+                    id="board-title"
+                    bind:value={metaForm.title}
+                    placeholder="Projekt-Titel"
+                    readonly={!canEditBoardMeta}
+                />
+            </div>
+            
+            <div class="space-y-2">
+                <Label for="board-description">Beschreibung</Label>
+                <Input
+                    id="board-description"
+                    bind:value={metaForm.description}
+                    placeholder="Projekt-Beschreibung"
+                    readonly={!canEditBoardMeta}
+                />
+            </div>
+            
+            <div class="space-y-2">
+                <Label>Veröffentlichungsstatus</Label>
+                <RadioGroup.Root bind:value={metaForm.publishState} disabled={!canEditBoardMeta}>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="draft" id="state-draft" />
+                        <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="published" id="state-published" />
+                        <Label for="state-published" class="font-normal">Veröffentlicht (Nostr)</Label>
+                    </div>
+                </RadioGroup.Root>
+            </div>
+            
+            <div class="space-y-2">
+                <Label for="board-tags">Tags (komma-getrennt)</Label>
+                <Input
+                    id="board-tags"
+                    bind:value={metaForm.tags}
+                    placeholder="tag1, tag2, tag3"
+                    readonly={!canEditBoardMeta}
+                />
+            </div>
+            
+            <div class="space-y-2">
+                <Label for="cc-license">Creative Commons Lizenz</Label>
+                <select
+                    id="cc-license"
+                    bind:value={metaForm.license}
+                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canEditBoardMeta}
+                >
+                    {#each ccLicenses as license}
+                        <option value={license.value}>{license.label}</option>
+                    {/each}
+                </select>
+            </div>
+        </div>
+        
+        <Dialog.Footer>
+            <Button
+                variant="outline"
+                onclick={() => { settingsDialogOpen = false; }}
+            >
+                Abbrechen
+            </Button>
+            <Button
+                onclick={handleSaveBoardSettings}
+                disabled={!canEditBoardMeta}
+            >
+                Speichern
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Profile Editor Dialog -->
+<ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
+
+<!-- UI/UX Settings Dialog -->
+<Dialog.Root bind:open={uiSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <PaletteIcon class="h-5 w-5" />
+                UI & Layout Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="ui" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- LLM Settings Dialog -->
+<Dialog.Root bind:open={llmSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <BotIcon class="h-5 w-5" />
+                LLM Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="llm" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Nostr Relay Settings Dialog -->
+<Dialog.Root bind:open={nostrSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <WifiIcon class="h-5 w-5" />
+                Nostr Relay Einstellungen
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4 space-y-4">
+            <!-- Relay Status Component -->
+            <div class="pb-4 border-b">
+                <RelayStatusInfo />
+            </div>
+            
+            <!-- Settings Panel -->
+            <SettingsPanel defaultTab="nostr" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Defaults Settings Dialog -->
+<Dialog.Root bind:open={defaultsSettingsOpen}>
+    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <Dialog.Header>
+            <Dialog.Title class="flex items-center gap-2">
+                <FileTextIcon class="h-5 w-5" />
+                Standard-Werte
+            </Dialog.Title>
+        </Dialog.Header>
+        <div class="py-4">
+            <SettingsPanel defaultTab="defaults" showHeader={false} showTabs={false} />
+        </div>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- Import Dialog -->
+<Dialog.Root bind:open={importDialogOpen}>
+    <Dialog.Content class="sm:max-w-md">
+        <Dialog.Header>
+            <Dialog.Title>Board importieren</Dialog.Title>
+            <Dialog.Description>
+                Wählen Sie eine JSON-Datei zum Importieren
+            </Dialog.Description>
+        </Dialog.Header>
+        <div class="space-y-4 py-4">
+            <div class="space-y-2">
+                <Label>Import-Modus</Label>
+                <RadioGroup.Root bind:value={importMode}>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="merge" id="mode-merge" />
+                        <Label for="mode-merge" class="font-normal">Zusammenführen (neue IDs)</Label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="new" id="mode-new" />
+                        <Label for="mode-new" class="font-normal">Als neue Kopie</Label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="overwrite" id="mode-overwrite" />
+                        <Label for="mode-overwrite" class="font-normal">Überschreiben (Vorsicht!)</Label>
+                    </div>
+                </RadioGroup.Root>
+            </div>
+            <div class="space-y-2">
+                <Label for="import-file">JSON-Datei</Label>
+                <Input
+                    id="import-file"
+                    type="file"
+                    accept=".json"
+                    onchange={(e) => {
+                        const input = e.target as HTMLInputElement;
+                        importFile = input.files?.[0] || null;
+                    }}
+                />
+            </div>
+        </div>
+        <Dialog.Footer>
+            <Button
+                variant="outline"
+                onclick={() => { importDialogOpen = false; importFile = null; }}
+            >
+                Abbrechen
+            </Button>
+            <Button
+                onclick={async () => {
+                    if (!importFile) {
+                        toast.error('Bitte wählen Sie eine Datei');
+                        return;
+                    }
+                    try {
+                        const jsonString = await importFile.text();
+                        const result = await boardStore.importBoardFromJson(jsonString, importMode);
+                        if (result.success) {
+                            toast.success(`Board erfolgreich importiert: ${result.board?.name}`);
+                            importDialogOpen = false;
+                            importFile = null;
+                            if (result.board?.id) {
+                                boardStore.loadBoard(result.board.id);
+                            }
+                        } else {
+                            toast.error(`Import fehlgeschlagen: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        toast.error('Import fehlgeschlagen');
+                    }
+                }}
+                disabled={!importFile}
+            >
+                Importieren
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- LiaScript Export Dialog -->
+<LiaScriptExportDialog bind:open={liaScriptExportDialogOpen} />
 
 <style>
     div {

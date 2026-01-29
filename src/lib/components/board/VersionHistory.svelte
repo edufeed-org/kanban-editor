@@ -18,6 +18,17 @@
     import { authStore } from '$lib/stores/authStore.svelte.js';
     import { toast } from 'svelte-sonner';
 
+    // Props for customization
+    let {
+        variant = 'default',
+        class: className = '',
+        showLabel = false
+    }: {
+        variant?: 'default' | 'ghost';
+        class?: string;
+        showLabel?: boolean;
+    } = $props();
+
     // ========================================================================
     // HELPERS
     // ========================================================================
@@ -229,15 +240,18 @@
 </script>
 
 <!-- Trigger Button -->
-<Button 
-    variant="default" 
-    size="sm" 
-    class="gap-2"
+<button 
+    type="button"
+    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
     onclick={() => dialogOpen = true}
 >
     <HistoryIcon class="h-4 w-4" />
-    <span class="hidden sm:inline">Versionen</span>
-</Button>
+    {#if showLabel}
+        <span>Versionen</span>
+    {:else}
+        <span class="hidden sm:inline">Versionen</span>
+    {/if}
+</button>
 
 <!-- Version History Dialog -->
 <Dialog.Root bind:open={dialogOpen}>
