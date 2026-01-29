@@ -312,8 +312,6 @@
         >
             <MenuIcon class="h-5 w-5" />
         </Button>
-        
-        <h2 class="text-sm font-semibold flex-1">Meine Boards</h2>
     </div>
     
     <!-- Expandable Menu -->
@@ -572,22 +570,8 @@
         </div>
     {/if}
     
-    <Button
-        onclick={authStore.isAuthenticated ? handleCreateBoard : null}
-        disabled={authStore.isAuthenticated ? false : true}
-        class="w-full gap-2 h-auto py-2 whitespace-normal"
-        variant="default"
-        data-testid="create-board-button"
-    >
-        {#if isCreating}
-            <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
-        {:else}
-            <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
-        {/if}
-        <span class="break-words text-left">Neues Board</span>
-    </Button>
+    <h2 class="text-m font-semibold text-center upper">Meine Boards</h2>
 
-    <Separator />
     <div class="m-2 flex-shrink-0">
         <div class="relative">
             <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -691,6 +675,20 @@
         {/if}
     </div>
 
+    <Button
+        onclick={authStore.isAuthenticated ? handleCreateBoard : null}
+        disabled={authStore.isAuthenticated ? false : true}
+        class="w-full gap-2 h-auto py-2 whitespace-normal"
+        variant="default"
+        data-testid="create-board-button"
+    >
+        {#if isCreating}
+            <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
+        {:else}
+            <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
+        {/if}
+        <span class="break-words text-left">Neues Board</span>
+    </Button>
 </div>
 
 <!-- Board Settings Dialog -->
