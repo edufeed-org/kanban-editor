@@ -53,6 +53,12 @@ export async function llmRequest<T = any>(
 	} = options;
 
 	const config = getApiConfig();
+	
+	console.log('🔧 LLM Config:', { 
+		endpoint: config.endpoint, 
+		model: config.model, 
+		hasApiKey: !!config.apiKey 
+	});
 
 	// ✅ Ollama (local) braucht keinen API Key
 	const isOllama = config.endpoint.includes('localhost') || config.endpoint.includes('127.0.0.1');
@@ -61,11 +67,29 @@ export async function llmRequest<T = any>(
 		throw new Error('API Key nicht konfiguriert! Bitte in Einstellungen hinterlegen.');
 	}
 
-	// 🔧 Ollama verwendet /api/chat statt OpenAI /v1/chat/completions
-	let endpoint = config.endpoint;
-	if (isOllama && !endpoint.includes('/api/')) {
-		endpoint = endpoint.replace(/\/$/, '') + '/api/chat';
+	// 🔧 URL-Konstruktion basierend auf Provider
+	let endpoint = config.endpoint.replace(/\/$/, ''); // Trailing slash entfernen
+	
+	if (isOllama) {
+		// Ollama: /api/chat
+		if (!endpoint.includes('/api/')) {
+			endpoint = endpoint + '/api/chat';
+		}
+	} else {
+		// OpenAI-kompatible APIs: /v1/chat/completions
+		if (!endpoint.includes('/chat/completions')) {
+			// Prüfe ob es schon /v1 enthält
+			if (endpoint.includes('/v1')) {
+				if (!endpoint.endsWith('/chat/completions')) {
+					endpoint = endpoint + '/chat/completions';
+				}
+			} else {
+				endpoint = endpoint + '/v1/chat/completions';
+			}
+		}
 	}
+	
+	console.log('🌐 Final LLM endpoint:', endpoint);
 
 	const headers: Record<string, string> = {
 		'Content-Type': 'application/json'
@@ -117,8 +141,43 @@ export async function llmRequest<T = any>(
 			headers['X-Title'] = 'Kanban Editor AI Agent';
 		}
 		
-		// OpenAI response: { choices: [{ message: { content: "..." } }] }
-		parseResponse = (data) => data.choices?.[0]?.message?.content || '';
+		// OpenAI response: { choices: [{ message: { content: "...", reasoning?: "...", reasoning_content?: "..." } }] }
+		parseResponse = (data) => {
+			const message = data.choices?.[0]?.message;
+			
+			// 1. Prüfe zuerst content (normaler Fall)
+			if (message?.content && message.content.trim()) {
+				return message.content;
+			}
+			
+			// 2. Für Reasoning-Modelle: Versuche JSON aus reasoning zu extrahieren
+			const reasoningText = message?.reasoning || message?.reasoning_content || '';
+			if (reasoningText) {
+				console.log('⚠️ Reasoning model detected, trying to extract JSON from reasoning...');
+				
+				// Versuche JSON-Objekt aus dem Reasoning-Text zu finden
+				// Das JSON kommt oft am Ende nach dem Denkprozess
+				const jsonMatch = reasoningText.match(/\{[\s\S]*"(?:audience|educationalLevel|learningResourceType|tags|teaches|suggestedDescription)"[\s\S]*\}/);
+				if (jsonMatch) {
+					console.log('✓ Found JSON in reasoning text');
+					return jsonMatch[0];
+				}
+				
+				// Fallback: Suche nach letztem JSON-Objekt im Text
+				const allJsonMatches = reasoningText.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g);
+				if (allJsonMatches && allJsonMatches.length > 0) {
+					// Nimm das letzte (wahrscheinlich das finale Ergebnis)
+					const lastJson = allJsonMatches[allJsonMatches.length - 1];
+					console.log('✓ Using last JSON object from reasoning');
+					return lastJson;
+				}
+				
+				console.warn('⚠️ No JSON found in reasoning, returning raw reasoning (may fail)');
+				return reasoningText;
+			}
+			
+			return '';
+		};
 	}
 
 	const response = await fetch(endpoint, {
@@ -132,12 +191,25 @@ export async function llmRequest<T = any>(
 		throw new Error(`LLM Request failed (${response.status}): ${errorText}`);
 	}
 
-	const data = await response.json();
+	// Hole zuerst den rohen Text, um bei Fehlern mehr Infos zu haben
+	const responseText = await response.text();
+	
+	let data: any;
+	try {
+		data = JSON.parse(responseText);
+	} catch (parseError) {
+		console.error('❌ LLM response is not valid JSON:', responseText.substring(0, 500));
+		throw new Error(`LLM returned invalid response (not JSON): ${responseText.substring(0, 200)}`);
+	}
+	
 	const content = parseResponse(data);
 
 	if (!content) {
+		console.error('❌ LLM returned empty content. Full response:', data);
 		throw new Error('LLM returned empty response');
 	}
+
+	console.log('🤖 LLM content received:', content.substring(0, 300));
 
 	if (returnType === 'json') {
 		try {

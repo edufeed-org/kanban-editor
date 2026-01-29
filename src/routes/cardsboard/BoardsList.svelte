@@ -28,6 +28,7 @@
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import { VersionHistory, ShareButton } from '$lib/components/board';
     import ShareIcon2 from '@lucide/svelte/icons/share-2';
+    import ShareIcon from '@lucide/svelte/icons/share';
     import HistoryIcon from '@lucide/svelte/icons/history';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
@@ -41,6 +42,7 @@
     import ImportPopover from '$lib/components/ImportPopover.svelte';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
+    import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
 
     // Props
@@ -68,6 +70,7 @@
     // Import & Export States
     let importExportPopoverOpen = $state(false);
     let liaScriptExportDialogOpen = $state(false);
+    let publishToEdufeedDialogOpen = $state(false);
     let importDialogOpen = $state(false);
     let importFile = $state<File | null>(null);
     let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
@@ -343,7 +346,7 @@
                     <div class="space-y-0">
                         <SubmenuItem 
                             icon={UploadIcon} 
-                            label="Import" 
+                            label="Von JSON importieren" 
                             onclick={() => { 
                                 importDialogOpen = true;
                                 importExportPopoverOpen = false;
@@ -353,7 +356,7 @@
                         
                         <SubmenuItem 
                             icon={DownloadIcon} 
-                            label="JSON" 
+                            label="Als JSON downloaden" 
                             onclick={() => { 
                                 try {
                                     const jsonString = boardStore.exportBoardAsJson(true);
@@ -381,34 +384,17 @@
                         
                         <SubmenuItem 
                             icon={FileTextIcon} 
-                            label="Markdown" 
+                            label="An edufeed.org senden" 
                             onclick={async () => { 
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
-                                
-                                try {
-                                    const eventId = await boardStore.publishBoardAndGetEventId();
-                                    if (eventId) {
-                                        toast.success('Board erfolgreich als Learning Resource publiziert!', {
-                                            description: `Event ID: ${eventId.substring(0, 8)}...`
-                                        });
-                                    } else {
-                                        toast.error('Fehler beim Publizieren', {
-                                            description: 'Board konnte nicht zu Nostr publiziert werden'
-                                        });
-                                    }
-                                } catch (error) {
-                                    console.error('❌ Nostr publish fehlgeschlagen:', error);
-                                    toast.error('Fehler beim Publizieren', {
-                                        description: error instanceof Error ? error.message : 'Unbekannter Fehler'
-                                    });
-                                }
+                                publishToEdufeedDialogOpen = true;
                             }}
                         />
                         
                         <SubmenuItem 
                             icon={FileTextIcon} 
-                            label="Liascript" 
+                            label="Als Liascript exportieren" 
                             onclick={() => { 
                                 liaScriptExportDialogOpen = true;
                                 importExportPopoverOpen = false;
@@ -731,12 +717,14 @@
             
             <div class="space-y-2">
                 <Label for="board-description">Beschreibung</Label>
-                <Input
+                <textarea
                     id="board-description"
                     bind:value={metaForm.description}
                     placeholder="Projekt-Beschreibung"
                     readonly={!canEditBoardMeta}
-                />
+                    rows="4"
+                    class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                ></textarea>
             </div>
             
             <div class="space-y-2">
@@ -909,6 +897,9 @@
 
 <!-- LiaScript Export Dialog -->
 <LiaScriptExportDialog bind:open={liaScriptExportDialogOpen} />
+
+<!-- Publish to Edufeed Dialog -->
+<PublishToEdufeedDialog bind:open={publishToEdufeedDialogOpen} />
 
 <style>
     div {

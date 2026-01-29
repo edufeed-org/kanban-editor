@@ -578,8 +578,13 @@ export class NostrIntegration {
                 this.ndk
             );
             
-            const publishState = card.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft' | 'private';
+            // ⚡ WICHTIG: Card erbt publishState vom Board!
+            // Wenn Board öffentlich ist, soll Card auch auf öffentlichen Relays landen.
+            // Card-eigener publishState wird nur als Fallback verwendet.
+            const effectivePublishState = board.publishState === 'published' 
+                ? 'published' 
+                : (card.publishState || 'draft');
+            const normalizedState = effectivePublishState as 'published' | 'draft' | 'private';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
@@ -608,6 +613,90 @@ export class NostrIntegration {
         } catch (error) {
             console.error(`❌ Error publishing card ${cardId}:`, error);
         }
+    }
+
+    /**
+     * Publiziert ALLE Cards eines Boards auf öffentliche Relays.
+     * 
+     * ⚠️ WICHTIG: Wird aufgerufen wenn ein Board auf "published" gesetzt wird.
+     * Cards müssen auf öffentlichen Relays sein, damit das Board für andere sichtbar ist.
+     * 
+     * @param board - Das Board dessen Cards republiziert werden sollen
+     * @param targetRelays - Optional: Spezifische Relays (z.B. Edufeed-Relays)
+     * @returns Promise<number> - Anzahl erfolgreich publizierter Cards
+     */
+    public async publishAllCardsToPublicRelays(
+        board: Board, 
+        targetRelays?: string[]
+    ): Promise<number> {
+        if (!this.ndk) {
+            console.warn('[NostrIntegration] ⚠️ NDK not initialized - cannot publish cards');
+            return 0;
+        }
+
+        // Wenn keine spezifischen Relays angegeben, nutze öffentliche Relays
+        const relays = targetRelays ?? getTargetRelays({
+            publishState: 'published',
+            draftPublishingMode: settingsStore.settings.draftPublishingMode,
+            relaysPublic: settingsStore.settings.relaysPublic,
+            relaysPrivate: settingsStore.settings.relaysPrivate
+        });
+
+        if (relays.length === 0) {
+            console.warn('[NostrIntegration] ⚠️ No public relays configured - cannot publish cards publicly');
+            toast.warning('Keine öffentlichen Relays konfiguriert', {
+                description: 'Cards können nicht veröffentlicht werden. Bitte konfiguriere öffentliche Relays in den Einstellungen.',
+                duration: 5000
+            });
+            return 0;
+        }
+
+        console.log(`[NostrIntegration] 📤 Publishing all cards of board ${board.id} to public relays:`, relays);
+
+        let successCount = 0;
+        const syncManager = getSyncManager();
+
+        for (const column of board.columns) {
+            for (const card of column.cards) {
+                try {
+                    const rank = column.cards.indexOf(card);
+                    const boardRef = `30301:${board.author || 'unknown'}:${board.id}`;
+
+                    const event = cardToNostrEvent(
+                        card,
+                        column.id,
+                        column.name,
+                        rank,
+                        boardRef,
+                        this.ndk
+                    );
+
+                    const publishedEvent = await syncManager.publishOrQueue(
+                        event,
+                        'card',
+                        'normal',
+                        'published', // ⚡ Force published state for public relay targeting
+                        relays
+                    );
+
+                    if (publishedEvent?.id) {
+                        card.eventId = publishedEvent.id;
+                        successCount++;
+                        console.log(`[NostrIntegration] ✅ Card ${card.id} published to public relays`);
+                    }
+                } catch (error) {
+                    console.error(`[NostrIntegration] ❌ Error publishing card ${card.id}:`, error);
+                }
+            }
+        }
+
+        // Board nach Publish speichern (für eventIds)
+        if (successCount > 0) {
+            await BoardStorage.saveBoard(board);
+            console.log(`[NostrIntegration] 📤 Published ${successCount} cards to public relays`);
+        }
+
+        return successCount;
     }
 
     /**

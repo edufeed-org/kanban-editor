@@ -229,6 +229,7 @@ export interface ExecutionContext {
         editCard: (cardId: string, updates: any) => void;
         deleteCard: (cardId: string) => Promise<void>;
         moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => void;
+        updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => void;
     };
     triggerUpdate: () => void;
 }
@@ -431,8 +432,15 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
             }
         }
         
-        // 4. Änderungen persistieren
-        ctx.triggerUpdate();
+        // 4. Board-Metadaten persistieren (inkl. Nostr)
+        if ((title || description) && ctx.boardStore?.updateBoardMeta) {
+            ctx.boardStore.updateBoardMeta({ 
+                name: title || undefined, 
+                description: description || undefined 
+            });
+        } else {
+            ctx.triggerUpdate();
+        }
         
         return {
             tool_call_id: '',
@@ -462,11 +470,16 @@ function executeUpdateBoard(args: any, ctx: ExecutionContext): ToolResult {
     const { name, description, tags } = args;
     
     try {
-        if (name) ctx.board.name = name;
-        if (description !== undefined) ctx.board.description = description;
-        if (tags) ctx.board.tags = tags;
-        
-        ctx.triggerUpdate();
+        // Nutze boardStore API wenn verfügbar (triggert automatisch Update + Nostr)
+        if (ctx.boardStore?.updateBoardMeta) {
+            ctx.boardStore.updateBoardMeta({ name, description, tags });
+        } else {
+            // Fallback: Direkte Mutation + triggerUpdate
+            if (name) ctx.board.name = name;
+            if (description !== undefined) ctx.board.description = description;
+            if (tags) ctx.board.tags = tags;
+            ctx.triggerUpdate();
+        }
         
         return {
             tool_call_id: '',

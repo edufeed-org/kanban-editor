@@ -4,10 +4,15 @@
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
+    import ShareIcon from "@lucide/svelte/icons/share-2";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { toast } from 'svelte-sonner';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
+    import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
+    
+    // State für Edufeed-Dialog
+    let showEdufeedDialog = $state(false);
 	
     
 
@@ -120,7 +125,7 @@
     import * as Field from "$lib/components/ui/field/index.js";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import { TrashIcon } from 'lucide-svelte';
+    import { BotIcon, TrashIcon } from 'lucide-svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -133,7 +138,6 @@
             return () => mediaQuery.removeEventListener('change', handleChange);
         }
     });
-
 
 </script>
 
@@ -159,7 +163,7 @@
             <Separator orientation="vertical" class="min-w-4 hidden sm:block" />
             
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
-            <div class="flex items-baseline gap-1 hidden md:flex">
+            <div class="hidden md:flex items-baseline gap-1">
                 <span class="font-semibold text-lg">{currentBoardTitle}</span>
                 
                 <!-- CC License Badge (superscript style) -->
@@ -184,6 +188,17 @@
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
+            <!-- Mobile: Icon-only Button -->
+            <Button
+                variant="outline"
+                size="icon"
+                onclick={() => showEdufeedDialog = true}
+                class="sm:hidden h-8 w-8"
+                title="Board als OER zu Edufeed teilen"
+            >
+                <ShareIcon class="h-4 w-4" />
+            </Button>
+            
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
             <!-- Right Sidebar Trigger -->
@@ -193,10 +208,13 @@
                 onclick={onToggleRightSidebar}
                 class="  h-8 w-8 bg-secondary"
             >
-                <PanelRightIcon class="h-4 w-4"/>
+                <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>
     </div>
 </header>
+
+<!-- Edufeed Publish Dialog -->
+<PublishToEdufeedDialog bind:open={showEdufeedDialog} />
 
