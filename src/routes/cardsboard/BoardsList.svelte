@@ -330,7 +330,7 @@
             
             <!-- 2. Import & Export Menu Item with Popover Submenu -->
             <Popover.Root bind:open={importExportPopoverOpen}>
-                <Popover.Trigger>
+                <Popover.Trigger class="w-full">
                     <MenuItem 
                         icon={DownloadIcon} 
                         label="Import & Export" 
@@ -491,7 +491,7 @@
             
             <!-- 5. Applikation Submenu -->
             <Popover.Root>
-                <Popover.Trigger>
+                <Popover.Trigger class="w-full">
                     <MenuItem 
                         icon={SettingsIcon} 
                         label="Applikation" 
@@ -513,7 +513,7 @@
                         
                         <SubmenuItem 
                             icon={BotIcon} 
-                            label="KI-Anbindung und Systemprompt" 
+                            label="KI-Anbindung" 
                             onclick={() => { 
                                 llmSettingsOpen = true;
                                 hamburgerMenuOpen = false;
@@ -561,7 +561,7 @@
             
             <!-- 7. Wissenswertes Submenu -->
             <Popover.Root>
-                <Popover.Trigger>
+                <Popover.Trigger class="w-full">
                     <MenuItem 
                         icon={FileTextIcon} 
                         label="Wissenswertes" 
