@@ -250,7 +250,7 @@ async function createSharedBoard(page: Page, boardName: string) {
     await newBoardButton.click();
 
     await page.getByTitle('Menü').click({timeout: 2000});
-    await page.getByTitle('Board-Einstellungen').click({timeout: 2000});
+    await page.getByTitle('Eigenschaften').click({timeout: 2000});
 
     const titleInput = page.locator('#board-title');
     
@@ -263,7 +263,7 @@ async function createSharedBoard(page: Page, boardName: string) {
 
 async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
     await page.getByTitle('Menü').click();
-    await page.getByTestId('share-button').click();
+    await page.getByText('Board teilen').click();
     
     await expect(page.getByTestId('share-dialog')).toBeVisible();
 
