@@ -17,6 +17,7 @@
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/stores/authStore.svelte.js';
     import { toast } from 'svelte-sonner';
+    import MenuItem from '../../../routes/cardsboard/MenuItem.svelte';
 
     // Props for customization
     let {
@@ -240,18 +241,12 @@
 </script>
 
 <!-- Trigger Button -->
-<button 
-    type="button"
-    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+<MenuItem 
+    icon={HistoryIcon}
+    label="Versionen"
     onclick={() => dialogOpen = true}
->
-    <HistoryIcon class="h-4 w-4" />
-    {#if showLabel}
-        <span>Versionen</span>
-    {:else}
-        <span class="hidden sm:inline">Versionen</span>
-    {/if}
-</button>
+    showBorder={false}
+/>
 
 <!-- Version History Dialog -->
 <Dialog.Root bind:open={dialogOpen}>

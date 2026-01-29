@@ -9,6 +9,7 @@
         disabled?: boolean;
         showBorder?: boolean;
         showChevron?: boolean;
+        variant?: 'default' | 'danger';
     }
 
     let {
@@ -17,7 +18,8 @@
         onclick,
         disabled = false,
         showBorder = true,
-        showChevron = false
+        showChevron = false,
+        variant = 'default'
     }: Props = $props();
 </script>
 
@@ -26,8 +28,9 @@
 {/if}
 <button
     type="button"
-    class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    class="menu-item w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     class:justify-between={showChevron}
+    class:menu-item-danger={variant === 'danger'}
     title={label}
     {onclick}
     {disabled}

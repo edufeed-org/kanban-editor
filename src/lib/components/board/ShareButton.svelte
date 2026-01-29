@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
     import ShareDialog from "./ShareDialog.svelte";
+    import MenuItem from "../../../routes/cardsboard/MenuItem.svelte";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
     import { BoardRole } from "$lib/types/sharing";
     import { toast } from "svelte-sonner";
@@ -57,44 +58,33 @@
 </script>
 
 <!-- Conditional Button based on user role -->
-<div class="flex items-center gap-2">
-    {#if isOwnerOrEditor}
-        <!-- Owner/Editor sehen Share-Button -->
-        <button 
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-            onclick={() => showShareDialog = true}
-            data-testid="share-button"
-        >
-            <ShareIcon2 class="h-4 w-4" />
-            {#if showLabel}<span>Board teilen</span>{/if}
-        </button>
-    {:else if isViewer}
-        <!-- Viewer sehen Unfollow-Button -->
-        <button 
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-            onclick={handleToggleFollow}
-            disabled={isLoading}
-            data-testid="unfollow-button"
-        >
-            <EyeOffIcon class="h-4 w-4" />
-            {isLoading ? 'Lädt...' : 'Ausblenden'}
-        </button>
-    {:else}
-        <!-- Non-participant sehen Follow-Button -->
-        <button 
-            type="button"
-            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-            onclick={handleToggleFollow}
-            disabled={isLoading}
-            data-testid="follow-button"
-        >
-            <HeartIcon class="h-4 w-4" />
-            {isLoading ? 'Lädt...' : 'Beobachten'}
-        </button>
-    {/if}
-</div>
+{#if isOwnerOrEditor}
+    <!-- Owner/Editor sehen Share-Button -->
+    <MenuItem
+        icon={ShareIcon2}
+        label="Board teilen"
+        onclick={() => showShareDialog = true}
+        showBorder={false}
+    />
+{:else if isViewer}
+    <!-- Viewer sehen Unfollow-Button -->
+    <MenuItem
+        icon={EyeOffIcon}
+        label={isLoading ? 'Lädt...' : 'Ausblenden'}
+        onclick={handleToggleFollow}
+        disabled={isLoading}
+        showBorder={false}
+    />
+{:else}
+    <!-- Non-participant sehen Follow-Button -->
+    <MenuItem
+        icon={HeartIcon}
+        label={isLoading ? 'Lädt...' : 'Beobachten'}
+        onclick={handleToggleFollow}
+        disabled={isLoading}
+        showBorder={false}
+    />
+{/if}
 
 <!-- Share Dialog (nur für Owner/Editor) -->
 {#if isOwnerOrEditor}

@@ -476,6 +476,66 @@
             <div class="w-full">
                 <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
+            
+            <div class="border-t"></div>
+            <MenuItem 
+                icon={TrashIcon} 
+                label="Board löschen" 
+                variant="danger"
+                onclick={() => {
+                    if (!currentBoardId) {
+                        toast.error('Kein Board ausgewählt');
+                        return;
+                    }
+                    
+                    const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
+                    const isShared = targetBoard?.isShared || false;
+                    const userRole = targetBoard?.userRole || 'owner';
+                    
+                    const warningText = isShared && userRole !== 'owner'
+                        ? '⚠️ Dieses Board wirklich verlassen? Sie verlieren den Zugang!'
+                        : '⚠️ Dieses Board wirklich löschen? Die Aktion kann nicht rückgängig gemacht werden!';
+                    
+                    if (!confirm(warningText)) {
+                        return;
+                    }
+                    
+                    hamburgerMenuOpen = false;
+                    
+                    try {
+                        if (isShared && userRole !== 'owner') {
+                            boardStore.leaveBoard(currentBoardId);
+                            console.log('🚪 Board verlassen:', currentBoardId);
+                            toast.success('Board erfolgreich verlassen');
+                        } else {
+                            const ok = boardStore.deleteBoard(currentBoardId);
+                            if (ok) {
+                                console.log('🗑️ Board gelöscht:', currentBoardId);
+                                toast.success('Board erfolgreich gelöscht');
+                            } else {
+                                console.log('🚫 Board NICHT gelöscht (fehlende Berechtigung):', currentBoardId);
+                                toast.error('Fehler: Board konnte nicht gelöscht werden');
+                                return;
+                            }
+                        }
+                        
+                        // Switch to another board
+                        const remaining = boardStore.getAllBoards();
+                        if (remaining.length > 0) {
+                            const newBoardId = remaining[0].id;
+                            boardStore.loadBoard(newBoardId);
+                            currentBoardId = newBoardId;
+                        } else {
+                            currentBoardId = '';
+                        }
+                    } catch (error) {
+                        console.error('❌ Fehler beim Löschen/Verlassen:', error);
+                        toast.error('Fehler beim Löschen des Boards');
+                    }
+                }}
+                disabled={!currentBoardId || !authStore.isAuthenticated}
+                showBorder={false}
+            />
         </div>
     {/if}
     
