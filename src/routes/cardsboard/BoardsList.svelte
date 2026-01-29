@@ -481,7 +481,7 @@
                                 try {
                                     const eventId = await boardStore.publishBoardAndGetEventId();
                                     if (eventId) {
-                                        toast.success('Board zu Nostr publiziert', {
+                                        toast.success('Board erfolgreich als Learning Resource publiziert!', {
                                             description: `Event ID: ${eventId.substring(0, 8)}...`
                                         });
                                     } else {
@@ -853,11 +853,11 @@
                         const jsonString = await importFile.text();
                         const result = await boardStore.importBoardFromJson(jsonString, importMode);
                         if (result.success) {
-                            toast.success(`Board erfolgreich importiert: ${result.boardName}`);
+                            toast.success(`Board erfolgreich importiert: ${result.board?.name}`);
                             importDialogOpen = false;
                             importFile = null;
-                            if (result.boardId) {
-                                boardStore.loadBoard(result.boardId);
+                            if (result.board?.id) {
+                                boardStore.loadBoard(result.board.id);
                             }
                         } else {
                             toast.error(`Import fehlgeschlagen: ${result.error}`);
