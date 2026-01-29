@@ -92,6 +92,78 @@ async function directPublishToRelay(
     });
 }
 
+/**
+ * AMB Concept type for controlled vocabularies
+ */
+export interface AmbConcept {
+    id: string;
+    prefLabel?: { de?: string; en?: string } | string;
+    type?: 'Concept';
+}
+
+/**
+ * Audience Role vocabulary from LRMI
+ * @see http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/
+ */
+export const AUDIENCE_ROLES: AmbConcept[] = [
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/student', prefLabel: { de: 'Lernende', en: 'Student' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/teacher', prefLabel: { de: 'Lehrende', en: 'Teacher' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/administrator', prefLabel: { de: 'Verwaltung', en: 'Administrator' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/generalPublic', prefLabel: { de: 'Allgemeinheit', en: 'General Public' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/mentor', prefLabel: { de: 'Mentor', en: 'Mentor' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/parent', prefLabel: { de: 'Eltern', en: 'Parent' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/peerTutor', prefLabel: { de: 'Tutor', en: 'Peer Tutor' }, type: 'Concept' },
+    { id: 'http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/professional', prefLabel: { de: 'Fachleute', en: 'Professional' }, type: 'Concept' },
+];
+
+/**
+ * Educational Level vocabulary (Bildungsstufen)
+ * @see https://w3id.org/kim/educationalLevel/
+ */
+export const EDUCATIONAL_LEVELS: AmbConcept[] = [
+    { id: 'https://w3id.org/kim/educationalLevel/level_0', prefLabel: { de: 'Elementarbereich' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_1', prefLabel: { de: 'Primarbereich' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_2', prefLabel: { de: 'Sekundarbereich I' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_3', prefLabel: { de: 'Sekundarbereich II' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_4', prefLabel: { de: 'Postsekundarer nicht-tertiärer Bereich' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_5', prefLabel: { de: 'Kurzes tertiäres Bildungsprogramm' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_A', prefLabel: { de: 'Hochschule' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_B', prefLabel: { de: 'Vorbereitungsdienst' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/educationalLevel/level_C', prefLabel: { de: 'Fortbildung' }, type: 'Concept' },
+];
+
+/**
+ * Learning Resource Type vocabulary (HCRT)
+ * @see https://w3id.org/kim/hcrt/
+ */
+export const LEARNING_RESOURCE_TYPES: AmbConcept[] = [
+    { id: 'https://w3id.org/kim/hcrt/application', prefLabel: { de: 'Softwareanwendung', en: 'Application' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/assessment', prefLabel: { de: 'Lernkontrolle', en: 'Assessment' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/audio', prefLabel: { de: 'Audio', en: 'Audio' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/case_study', prefLabel: { de: 'Fallstudie', en: 'Case Study' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/course', prefLabel: { de: 'Kurs', en: 'Course' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/data', prefLabel: { de: 'Daten', en: 'Data' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/diagram', prefLabel: { de: 'Diagramm', en: 'Diagram' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/drill_and_practice', prefLabel: { de: 'Übung', en: 'Drill and Practice' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/educational_game', prefLabel: { de: 'Lernspiel', en: 'Educational Game' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/experiment', prefLabel: { de: 'Experiment', en: 'Experiment' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/image', prefLabel: { de: 'Abbildung', en: 'Image' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/index', prefLabel: { de: 'Nachschlagewerk', en: 'Index' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/lesson_plan', prefLabel: { de: 'Unterrichtsplanung', en: 'Lesson Plan' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/map', prefLabel: { de: 'Karte', en: 'Map' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/portal', prefLabel: { de: 'Portal', en: 'Portal' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/questionnaire', prefLabel: { de: 'Fragebogen', en: 'Questionnaire' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/script', prefLabel: { de: 'Skript', en: 'Script' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/simulation', prefLabel: { de: 'Simulation', en: 'Simulation' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/slide', prefLabel: { de: 'Präsentation', en: 'Slide' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/text', prefLabel: { de: 'Text', en: 'Text' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/textbook', prefLabel: { de: 'Lehrbuch', en: 'Textbook' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/video', prefLabel: { de: 'Video', en: 'Video' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/web_page', prefLabel: { de: 'Webseite', en: 'Web Page' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/worksheet', prefLabel: { de: 'Arbeitsmaterial', en: 'Worksheet' }, type: 'Concept' },
+    { id: 'https://w3id.org/kim/hcrt/other', prefLabel: { de: 'Sonstiges', en: 'Other' }, type: 'Concept' },
+];
+
 export interface AmbPublishOptions {
     /**
      * Nostr public key (hex format) of the publisher
@@ -117,6 +189,29 @@ export interface AmbPublishOptions {
      * Optional: Override license
      */
     license?: string;
+    
+    /**
+     * Optional: Learning Resource Type(s) - array of HCRT concept IDs
+     * @see https://w3id.org/kim/hcrt/
+     */
+    learningResourceType?: string[];
+    
+    /**
+     * Optional: Target audience(s) - array of LRMI audience role IDs
+     * @see http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/
+     */
+    audience?: string[];
+    
+    /**
+     * Optional: Educational level(s) - array of Bildungsstufen IDs
+     * @see https://w3id.org/kim/educationalLevel/
+     */
+    educationalLevel?: string[];
+    
+    /**
+     * Optional: Competencies/skills that this resource teaches (free text)
+     */
+    teaches?: string[];
     
     /**
      * Optional: Dry-run mode - logs the event to console without publishing
@@ -188,6 +283,39 @@ export function boardToAmbResource(
             : undefined,
         dateModified: boardData.updatedAt,
     };
+    
+    // Add learningResourceType if provided
+    if (options.learningResourceType && options.learningResourceType.length > 0) {
+        (ambResource as any).learningResourceType = options.learningResourceType.map(id => {
+            const concept = LEARNING_RESOURCE_TYPES.find(t => t.id === id);
+            return concept ? { ...concept } : { id };
+        });
+    }
+    
+    // Add audience if provided
+    if (options.audience && options.audience.length > 0) {
+        (ambResource as any).audience = options.audience.map(id => {
+            const concept = AUDIENCE_ROLES.find(a => a.id === id);
+            return concept ? { ...concept } : { id };
+        });
+    }
+    
+    // Add educationalLevel if provided
+    if (options.educationalLevel && options.educationalLevel.length > 0) {
+        (ambResource as any).educationalLevel = options.educationalLevel.map(id => {
+            const concept = EDUCATIONAL_LEVELS.find(l => l.id === id);
+            return concept ? { ...concept } : { id };
+        });
+    }
+    
+    // Add teaches (competencies) if provided
+    if (options.teaches && options.teaches.length > 0) {
+        // teaches can be free text or competency references
+        (ambResource as any).teaches = options.teaches.map(text => ({
+            type: 'DefinedTerm',
+            name: text
+        }));
+    }
     
     return ambResource;
 }

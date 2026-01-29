@@ -108,6 +108,7 @@ oder notfalls `event.content` verwenden.
         ["t", "geschichte"],
         ["license", "..."],
         ["a", "${naddr}"],
+        ["p", "<npub-hex>", "<relay>", "creator"],
         ["snapshot-eventid", "<30303-event-id>"],
         ["sha256", "<hex-checksum-of-snapshot>"],
         ["pub", "published"]
@@ -539,6 +540,55 @@ export async function publishBoardToEdufeedWithAI(
 │                          [Abbrechen] [Veröffentlichen]      │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## ✅ Implementation Status
+
+> **Stand: Januar 2026**
+
+### Phase 1: Backend & Store-Logik ✅ DONE
+
+- ✅ `ambPublisher.ts` vollständig implementiert (506 Zeilen)
+- ✅ `boardToAmbResource()` mit vollständigem Content-Snapshot
+- ✅ `publishBoardToEdufeed()` mit Link-Generierung (naddr, njump, nostrUri)
+- ✅ `directPublishToRelay()` umgeht NDK's AUTH_REQUIRED-Blockade
+- ✅ Relay-Routing: Kind 30142 → amb-relay, andere → normale Relays
+- ✅ Snapshot-Integration via Kind 30303
+- ✅ `AmbPublishOptions` und `AmbPublishResult` Interfaces
+
+### Phase 2: UI-Integration ✅ DONE
+
+- ✅ `PublishToEdufeedDialog.svelte` erstellt
+  - ✅ Editierbare Felder: Titel, Beschreibung, Tags, Lizenz
+  - ✅ Lizenz-Auswahl via RadioGroup (CC0, CC-BY, CC-BY-SA, etc.)
+  - ✅ Tag-Management (hinzufügen/entfernen)
+  - ✅ Dry-Run Toggle für Tests
+  - ✅ PublishState-Prüfung (nur "published" Boards)
+  - ✅ Loading-State während Publishing
+  - ✅ Fehleranzeige bei Problemen
+- ✅ Erfolgsanzeige mit kopierbaren Links
+  - ✅ naddr (Nostr-Adresse)
+  - ✅ njump-URL (Web-Link)
+  - ✅ Nostr-URI
+  - ✅ Kopier-Buttons mit Toast-Feedback
+  - ✅ "Öffnen"-Button für njump
+- ✅ Topbar-Integration
+  - ✅ "Zu Edufeed teilen"-Button (Desktop + Mobile)
+  - ✅ Share-Icon (@lucide/svelte)
+  - ✅ Dialog-Steuerung via `bind:open`
+
+### Phase 3: Import-Unterstützung 🔄 Geplant
+
+- [ ] `/cardsboard/[naddr]` Route für Kind 30142 erweitern
+- [ ] Snapshot-Event (30303) als primäre Quelle
+- [ ] Fallback auf `encoding.contentUrl` (Base64)
+
+### Phase 4: KI-Metadaten 🔄 Nice to have
+
+- [ ] Automatische Fach-/Themen-Erkennung
+- [ ] Bildungsstufen-Vorschläge
+- [ ] Keyword-Extraktion
 
 ---
 

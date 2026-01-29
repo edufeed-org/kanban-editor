@@ -4,10 +4,15 @@
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
+    import ShareIcon from "@lucide/svelte/icons/share-2";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { toast } from 'svelte-sonner';
     import { chatStore } from '$lib/stores/chatStore.svelte.js';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
+    import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
+    
+    // State für Edufeed-Dialog
+    let showEdufeedDialog = $state(false);
 	
     
 
@@ -183,6 +188,29 @@
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
+            <!-- Edufeed Publish Button -->
+            <Button
+                variant="outline"
+                size="sm"
+                onclick={() => showEdufeedDialog = true}
+                class="hidden sm:flex items-center gap-1.5 h-8 text-xs"
+                title="Board als OER zu Edufeed teilen"
+            >
+                <ShareIcon class="h-3.5 w-3.5" />
+                <span class="hidden md:inline">Zu Edufeed teilen</span>
+            </Button>
+            
+            <!-- Mobile: Icon-only Button -->
+            <Button
+                variant="outline"
+                size="icon"
+                onclick={() => showEdufeedDialog = true}
+                class="sm:hidden h-8 w-8"
+                title="Board als OER zu Edufeed teilen"
+            >
+                <ShareIcon class="h-4 w-4" />
+            </Button>
+            
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
             <!-- Right Sidebar Trigger -->
@@ -198,4 +226,7 @@
         </div>
     </div>
 </header>
+
+<!-- Edufeed Publish Dialog -->
+<PublishToEdufeedDialog bind:open={showEdufeedDialog} />
 

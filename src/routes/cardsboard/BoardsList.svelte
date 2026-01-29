@@ -37,6 +37,7 @@
     import ImportPopover from '$lib/components/ImportPopover.svelte';
     import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
+    import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
 
     // Props
@@ -64,6 +65,7 @@
     // Import & Export States
     let importExportPopoverOpen = $state(false);
     let liaScriptExportDialogOpen = $state(false);
+    let publishToEdufeedDialogOpen = $state(false);
     let importDialogOpen = $state(false);
     let importFile = $state<File | null>(null);
     let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
@@ -474,27 +476,10 @@
                             type="button"
                             class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
                             title="Zu Nostr publizieren"
-                            onclick={async () => { 
+                            onclick={() => { 
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
-                                
-                                try {
-                                    const eventId = await boardStore.publishBoardAndGetEventId();
-                                    if (eventId) {
-                                        toast.success('Board erfolgreich als Learning Resource publiziert!', {
-                                            description: `Event ID: ${eventId.substring(0, 8)}...`
-                                        });
-                                    } else {
-                                        toast.error('Fehler beim Publizieren', {
-                                            description: 'Board konnte nicht zu Nostr publiziert werden'
-                                        });
-                                    }
-                                } catch (error) {
-                                    console.error('❌ Nostr publish fehlgeschlagen:', error);
-                                    toast.error('Fehler beim Publizieren', {
-                                        description: error instanceof Error ? error.message : 'Unbekannter Fehler'
-                                    });
-                                }
+                                publishToEdufeedDialogOpen = true;
                             }}
                         >
                             <SendIcon class="h-4 w-4 text-muted-foreground" />
@@ -877,6 +862,9 @@
 
 <!-- LiaScript Export Dialog -->
 <LiaScriptExportDialog bind:open={liaScriptExportDialogOpen} />
+
+<!-- Publish to Edufeed Dialog -->
+<PublishToEdufeedDialog bind:open={publishToEdufeedDialogOpen} />
 
 <style>
     div {
