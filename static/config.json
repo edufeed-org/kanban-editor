@@ -13,16 +13,20 @@
 
   "nostr": {
     "relaysPublic": [
-      "wss://relay-rpi.edufeed.org",
+      "wss://relay.edufeed.org",
       "ws://localhost:7000"
     ],
     "relaysPrivate": [
       "ws://localhost:7000"
     ],
+    "relaysEdufeed": [
+      "wss://amb-relay.edufeed.org"
+    ],
     "njumpUrl": "https://njump.edufeed.org",
     "$comment": "⚠️ Development: Verwende 'ws://localhost:7000' nur wenn lokaler Docker-Relay läuft! Production: Nutze öffentliche wss:// Relays.",
     "$comment_localhost": "Lokaler Relay für Tests: ws://localhost:7000 (erfordert: docker-compose up -d)",
-    "$comment_njump": "njumpUrl: Web-Client für Nostr-Links (naddr, nevent, note URLs)"
+    "$comment_njump": "njumpUrl: Web-Client für Nostr-Links (naddr, nevent, note URLs)",
+    "$comment_edufeed": "relaysEdufeed: Relays für AMB (Kind 30142) Publishing - nur amb-relay.edufeed.org akzeptiert diese Events!"
   },
 
   "llm": {
@@ -60,5 +64,22 @@
   
   "allow_demo_session": {
     "enabled": false
+  },
+
+  "amb": {
+    "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) Konfiguration",
+    "$comment_vocabularies": "URLs können angepasst werden für verschiedene Kontexte (Schule, Hochschule, Beruf). Setze auf null für Default-URL.",
+    "vocabularies": {
+      "audience": null,
+      "educationalLevel": null,
+      "learningResourceType": null,
+      "about": null
+    },
+    "$comment_example_hochschule": {
+      "about": "https://skohub.io/dini-ag-kim/hochschulfaechersystematik/heads/main/w3id.org/kim/hochschulfaechersystematik/index.json",
+      "$note": "Beispiel für Hochschulkontext: Hochschulfächersystematik statt Schulfächer"
+    },
+    "cacheTTL": 86400000,
+    "$comment_cacheTTL": "Cache-Dauer in Millisekunden (86400000 = 24 Stunden)"
   }
 }

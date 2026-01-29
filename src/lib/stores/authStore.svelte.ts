@@ -84,6 +84,11 @@ export class AuthStore {
       try {
         getSyncManager().updateSigner(signer);
         console.log('✅ SyncManager signer updated after NIP-07 login');
+        
+        // 🔄 Reconnect AUTH_REQUIRED relays now that signer is available
+        // This allows relays like amb-relay.edufeed.org to complete NIP-42 AUTH
+        const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+        await reconnectAuthRelays();
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
       }
@@ -150,6 +155,10 @@ export class AuthStore {
       try {
         getSyncManager().updateSigner(signer);
         console.log('✅ SyncManager signer updated after nsec login');
+        
+        // 🔄 Reconnect AUTH_REQUIRED relays now that signer is available
+        const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+        await reconnectAuthRelays();
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
       }
@@ -211,6 +220,10 @@ export class AuthStore {
       try {
         getSyncManager().updateSigner(signer);
         console.log('✅ SyncManager signer updated after OIDC login');
+        
+        // 🔄 Reconnect AUTH_REQUIRED relays now that signer is available
+        const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+        await reconnectAuthRelays();
       } catch (error) {
         console.warn('⚠️ SyncManager signer update warning:', error);
       }
@@ -354,6 +367,10 @@ export class AuthStore {
             try {
               getSyncManager().updateSigner(signer);
               console.log('✅ SyncManager signer updated after NIP-07 restore');
+              
+              // 🔄 Reconnect AUTH_REQUIRED relays
+              const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+              await reconnectAuthRelays();
             } catch (e) {
               console.warn('⚠️ SyncManager update on restore:', e);
             }
@@ -385,6 +402,10 @@ export class AuthStore {
               try {
                 getSyncManager().updateSigner(signer);
                 console.log('✅ SyncManager signer updated after nsec restore');
+                
+                // 🔄 Reconnect AUTH_REQUIRED relays
+                const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+                await reconnectAuthRelays();
               } catch (e) {
                 console.warn('⚠️ SyncManager update on restore:', e);
               }

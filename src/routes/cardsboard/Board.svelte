@@ -24,7 +24,7 @@
 
 	// Sticky button - nur zeigen wenn scrollable button nicht sichtbar ist
 	let showStickyButton = $state(false);
-	let scrollableButtonElement: HTMLElement | undefined;
+	let scrollableButtonElement = $state<HTMLElement | undefined>(undefined);
 
 	function isEditableTarget(target: EventTarget | null): boolean {
 		if (!(target instanceof HTMLElement)) return false;
@@ -68,6 +68,7 @@
 	});
 
 	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
+	// Verwende IntersectionObserver für saubere Sticky-Button Logik
 	$effect(() => {
 		if (!scrollableButtonElement) return;
 

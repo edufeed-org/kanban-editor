@@ -321,9 +321,10 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             createCard: (columnId: string, heading: string, content?: string) => boardStore.createCard(columnId, heading, content),
             editCard: (cardId: string, updates: any) => boardStore.editCard(cardId, updates),
             deleteCard: (cardId: string) => boardStore.deleteCard(cardId),
-            moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId)
+            moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId),
+            updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates)
           },
-          triggerUpdate: () => {} // Not needed when using boardStore API
+          triggerUpdate: () => console.warn('[AIPanel] triggerUpdate called - use boardStore API methods instead')
         };
         
         // Execute tool calls
@@ -454,8 +455,8 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
 <div class="flex h-full flex-col overflow-hidden">
   
   <!-- Header -->
-  <div class="p-4 border-b">
-    <div class="flex items-center justify-between mb-1">
+  <div class="p-4 border-b-4 max-h-15 overflow-hidden">
+    <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <BrainIcon class="h-5 w-5 text-primary" />
         <h2 class="text-sm font-semibold">KI-Agent</h2>
@@ -471,10 +472,9 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         <span class="text-xs hidden sm:inline">Zusammenfassung</span>
       </Button>
     </div>
-    <p class="text-xs text-muted-foreground">
-      Intelligente Board-Assistenz
-    </p>
-    
+  </div>
+  <!-- Main Content Area (shrink to content, not flex-1) -->
+  <div class="overflow-y-auto flex flex-col p-4 space-y-4 shrink-0">
     <!-- AI Summary Section (Collapsible) -->
     {#if showSummarySection}
       <div class="mt-3 p-3 bg-muted/30 rounded-md border space-y-3">

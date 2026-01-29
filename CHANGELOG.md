@@ -1,5 +1,52 @@
 # Changelog
 
+## Version 4.7.23 - Edufeed Publishing: Cards auf öffentlichen Relays 📤
+
+**Datum:** 29. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fix: Board auf Edufeed erscheint leer
+- **Problem:** Boards wurden auf Edufeed veröffentlicht, aber die Cards (Kind 30302) blieben auf privaten Relays.
+- **Ursache:** Cards nutzten ihren eigenen `publishState` für die Relay-Auswahl, nicht den des Boards.
+
+### ✨ Verbesserungen
+
+#### 1. Cards erben publishState vom Board
+```typescript
+// VORHER: Card-eigener publishState
+const publishState = card.publishState || 'draft';
+
+// NACHHER: Board-Status hat Vorrang
+const effectivePublishState = board.publishState === 'published' 
+    ? 'published' 
+    : (card.publishState || 'draft');
+```
+- Neue Cards in öffentlichen Boards landen automatisch auf öffentlichen Relays
+- Card-eigener `publishState` wird nur als Fallback verwendet
+
+#### 2. Republizierung aller Cards bei Board-Veröffentlichung
+- `setPublishState('published')` triggert `publishAllCardsToPublicRelays()`
+- Toast-Notification zeigt Anzahl der publizierten Cards
+- Alle existierenden Cards werden auf öffentliche Relays republiziert
+
+#### 3. Edufeed-spezifische Card-Publikation
+- `publishBoardToEdufeed()` publiziert jetzt auch alle Cards auf Edufeed-Relays
+- Stellt sicher, dass Board + Cards auf denselben Relays landen
+
+### 📁 Geänderte Dateien
+- `src/lib/stores/boardstore/nostr.ts` - `publishCard()` + `publishAllCardsToPublicRelays()`
+- `src/lib/stores/kanbanStore.svelte.ts` - `setPublishState()` + `publishAllCardsToPublicRelaysAsync()`
+- `src/lib/utils/ambPublisher.ts` - `publishBoardToEdufeed()` publiziert auch Cards
+
+### 📊 Relay-Auswahl Logik
+
+| Board Status | Card Status | Ziel-Relays |
+|--------------|-------------|-------------|
+| `published` | (beliebig) | **Öffentliche Relays** ✅ |
+| `draft` | `published` | Öffentliche Relays |
+| `draft` | `draft` | Private Relays |
+
 ## Version 4.7.22 - Nostr Paste: njump Config + Ursprungs-Link 🔗
 
 **Datum:** 26. Januar 2026  
