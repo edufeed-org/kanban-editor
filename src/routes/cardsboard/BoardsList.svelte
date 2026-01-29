@@ -316,66 +316,19 @@
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
         <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
+            <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
-                icon={UserIcon} 
-                label="Profil" 
+                icon={SettingsIcon} 
+                label="Eigenschaften" 
                 onclick={() => { 
-                    profileEditorOpen = true;
+                    settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
                 showBorder={false}
             />
             
-            <MenuItem 
-                icon={SettingsIcon} 
-                label="Board-Einstellungen" 
-                onclick={() => { 
-                    settingsDialogOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-                disabled={!authStore.isAuthenticated}
-            />
-            
-            <MenuItem 
-                icon={PaletteIcon} 
-                label="UI & Layout" 
-                onclick={() => { 
-                    uiSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            />
-            
-            <MenuItem 
-                icon={BotIcon} 
-                label="LLM Einstellungen" 
-                onclick={() => { 
-                    llmSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            />
-            
-            <MenuItem 
-                icon={WifiIcon} 
-                label="Nostr Relays" 
-                onclick={() => { 
-                    nostrSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            />
-            
-            <MenuItem 
-                icon={FileTextIcon} 
-                label="Standard-Werte" 
-                onclick={() => { 
-                    defaultsSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            />
-            
-            <div class="border-t"></div>
-            
-            <!-- Import & Export Menu Item with Popover Submenu -->
+            <!-- 2. Import & Export Menu Item with Popover Submenu -->
             <Popover.Root bind:open={importExportPopoverOpen}>
                 <Popover.Trigger>
                     <MenuItem 
@@ -390,7 +343,7 @@
                     <div class="space-y-0">
                         <SubmenuItem 
                             icon={UploadIcon} 
-                            label="JSON importieren" 
+                            label="Import" 
                             onclick={() => { 
                                 importDialogOpen = true;
                                 importExportPopoverOpen = false;
@@ -400,7 +353,7 @@
                         
                         <SubmenuItem 
                             icon={DownloadIcon} 
-                            label="Als JSON exportieren" 
+                            label="JSON" 
                             onclick={() => { 
                                 try {
                                     const jsonString = boardStore.exportBoardAsJson(true);
@@ -428,17 +381,7 @@
                         
                         <SubmenuItem 
                             icon={FileTextIcon} 
-                            label="Als LiaScript exportieren" 
-                            onclick={() => { 
-                                liaScriptExportDialogOpen = true;
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
-                        
-                        <SubmenuItem 
-                            icon={SendIcon} 
-                            label="Zu Nostr publizieren" 
+                            label="Markdown" 
                             onclick={async () => { 
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
@@ -462,22 +405,28 @@
                                 }
                             }}
                         />
+                        
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Liascript" 
+                            onclick={() => { 
+                                liaScriptExportDialogOpen = true;
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
                     </div>
                 </Popover.Content>
             </Popover.Root>
             
-            <div class="border-t"></div>
+            <!-- 3. Teilen (Share) -->
             <ShareButton 
                 variant="default"
                 class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
                 showLabel={true}
             />
-            <div class="border-t"></div>
-            <div class="w-full">
-                <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
-            </div>
             
-            <div class="border-t"></div>
+            <!-- 4. Board löschen -->
             <MenuItem 
                 icon={TrashIcon} 
                 label="Board löschen" 
@@ -536,6 +485,104 @@
                 disabled={!currentBoardId || !authStore.isAuthenticated}
                 showBorder={false}
             />
+            
+            <!-- Separator 1 -->
+            <div class="border-t"></div>
+            
+            <!-- 5. Applikation Submenu -->
+            <Popover.Root>
+                <Popover.Trigger>
+                    <MenuItem 
+                        icon={SettingsIcon} 
+                        label="Applikation" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-64 p-1">
+                    <div class="space-y-0">
+                        <SubmenuItem 
+                            icon={PaletteIcon} 
+                            label="UI & Layout" 
+                            onclick={() => { 
+                                uiSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={BotIcon} 
+                            label="KI-Anbindung und Systemprompt" 
+                            onclick={() => { 
+                                llmSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={WifiIcon} 
+                            label="Nostr Relays" 
+                            onclick={() => { 
+                                nostrSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Standard-Werte" 
+                            onclick={() => { 
+                                defaultsSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
+            
+            <!-- Separator 2 -->
+            <div class="border-t"></div>
+            
+            <!-- 6. User Nostr-Profil -->
+            <MenuItem 
+                icon={UserIcon} 
+                label="User Nostr-Profil" 
+                onclick={() => { 
+                    profileEditorOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+                disabled={!authStore.isAuthenticated}
+                showBorder={false}
+            />
+            
+            <!-- Separator 3 -->
+            <div class="border-t"></div>
+            
+            <!-- 7. Wissenswertes Submenu -->
+            <Popover.Root>
+                <Popover.Trigger>
+                    <MenuItem 
+                        icon={FileTextIcon} 
+                        label="Wissenswertes" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-48 p-1">
+                    <div class="space-y-0">
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Source Code" 
+                            onclick={() => { 
+                                window.open('https://github.com/edufeed-org/kanban-editor', '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
         </div>
     {/if}
     

@@ -7,7 +7,7 @@
         open: boolean;
         title: string;
         icon: Component;
-        tab: string;
+        tab: 'ui' | 'llm' | 'nostr' | 'defaults';
     }
 
     let { open = $bindable(), title, icon, tab }: Props = $props();
