@@ -254,10 +254,9 @@ export function boardToAmbResource(
     // Map CC license to full URL
     const licenseUrl = mapCCLicenseToUrl(options.license || boardData.ccLicense || 'cc-by-4.0');
     
-    // Build keywords from board tags and column names
+    // Build keywords from board tags only (column names excluded - too generic for search)
     const keywords: string[] = [
-        ...(options.tags || boardData.tags || []),
-        ...boardData.columns.map(col => col.name)
+        ...(options.tags || boardData.tags || [])
     ];
     
     // Generate a unique ID for the resource
