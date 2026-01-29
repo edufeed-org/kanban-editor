@@ -445,13 +445,6 @@
                 Draft
               </Button>
               <Button 
-                variant={settings.defaultBoardPublishState === 'private' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultBoardPublishState('private')}
-                class="flex-1"
-              >
-                Private
-              </Button>
-              <Button 
                 variant={settings.defaultBoardPublishState === 'published' ? 'default' : 'outline'}
                 onclick={() => settingsStore.setDefaultBoardPublishState('published')}
                 class="flex-1"

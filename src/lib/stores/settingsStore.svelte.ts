@@ -15,7 +15,7 @@
  */
 
 export type Theme = 'dark' | 'default' | 'auto';
-export type PublishState = 'published' | 'draft' | 'private';
+export type PublishState = 'published' | 'draft';
 export type DraftPublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
 /**
@@ -46,7 +46,7 @@ export interface SettingsState {
 
   // Board Defaults
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
-  defaultBoardPublishState: PublishState; // "published" | "draft" | "private"
+  defaultBoardPublishState: PublishState; // "published" | "draft"
 
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
@@ -628,7 +628,7 @@ export class SettingsStore {
 
   /**
    * ────────────────────────────────────────────
-   * Draft Publishing Mode
+   * Private Publishing Mode
    * ────────────────────────────────────────────
    */
 
@@ -640,7 +640,7 @@ export class SettingsStore {
     // ✅ Reassignment für Reaktivität
     this.settings = { ...this.settings, draftPublishingMode: mode };
     this.saveToStorage();
-    console.log(`📝 Draft publishing mode set to: ${mode}`);
+    console.log(`📝 Private publishing mode set to: ${mode}`);
   }
 
   /**
@@ -779,7 +779,7 @@ export class SettingsStore {
   }
 
   public setDefaultBoardPublishState(state: PublishState): void {
-    if (!['published', 'draft', 'private'].includes(state)) {
+    if (!['published', 'draft'].includes(state)) {
       console.warn('Invalid publishState:', state);
       return;
     }
