@@ -807,7 +807,6 @@ export function debugNostrStatus(): void {
     console.log('\n👤 AuthStore:');
     console.log('  isAuthenticated:', authStore.isAuthenticated);
     console.log('  pubkey:', authStore.getPubkey()?.substring(0, 16) + '...');
-    console.log('  signerType:', authStore.session?.signerType);
     
     console.log('\n🌐 Connected Relays:');
     if (ndk?.pool?.relays) {

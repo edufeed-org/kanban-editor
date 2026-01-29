@@ -1,6 +1,6 @@
-<script context="module" lang="ts">
+<script module lang="ts">
   // 🔧 MODULE-LEVEL SINGLETON: Überlebt Re-Renders
-  // Muss in context="module" sein, damit es nicht bei jedem Render zurückgesetzt wird
+  // Muss in module sein, damit es nicht bei jedem Render zurückgesetzt wird
   import { NDKSvelte } from "@nostr-dev-kit/svelte";
   
   let _cachedNdk: NDKSvelte | null = null;
