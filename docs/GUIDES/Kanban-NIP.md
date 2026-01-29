@@ -4,63 +4,17 @@ Copyright (c) 2025 Vivek Ganesan: https://raw.githubusercontent.com/vivganes/kan
 ======
 
 Kanban Boards
-------------
 
-`private` `optional`
+### Private & Collaborative Boards (current implementation)
 
-This NIP defines a protocol for creating and managing Kanban boards on Nostr.
+The current implementation handles private and collaborative boards via board-level `p`-tags (maintainers) and the application's store/permission model. Wrapping board events in `kind:1059` gift-wraps is not used by the runtime.
 
-## Abstract
+Key points:
+- Use `p`-tags on the canonical `30301` board event to list maintainers who may edit the board.
+- Use snapshot events (`30303`) for complete-state snapshots and for restore/rollback workflows.
+- For encrypted/private payloads prefer application-level encryption of snapshots or external encrypted storage rather than protocol-level gift-wraps.
 
-This NIP introduces event kinds and conventions for implementing Kanban boards, allowing users to create boards with multiple columns and cards that can be organized and tracked in a visual workflow.
-
-## Motivation
-
-Kanban boards are a popular project management tool that enables visual organization of tasks and workflows. Adding native Kanban support to Nostr allows for decentralized project management while maintaining the platform's permissionless and censorship-resistant nature.
-
-## Specification
-
-### Board Event 
-
-```javascript
-{
-    "created_at": 34324234234, //<Unix timestamp in seconds>
-    "kind": 30301,
-    "tags": [
-        ["d", "<board-d-identifier>"],
-        ["title", "Board Name"],
-        ["description","Board Description"], //can contain markdown too
-        ["pub","private"], //publication state: 'private' or 'published'
-        ["alt","A board to track my work"], //Human-readable plaintext summary to be shown in non-supporting clients - as per NIP-31
-
-        // List of all columns in the board below in format ["col","col-id","name","order"]
-        ["col", "col1-id", "To Do", "0"],
-        ["col", "col2-id", "In Progress", "1"], 
-        ["col", "col3-id", "Done", "2"],
-
-        // Clients may designate a 'maintainers' list who can add/edit cards in this board
-        [ "p", "82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2" ],  
-        [ "p", "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52" ],  
-        [ "p", "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c" ],   
-    // other fields...
-    ]
-}
-```
-
-**⚠️ CRITICAL:** Board `p` tags grant **edit permission** (maintainers), NOT just notification/assignment.
-Only the Board creator and designated maintainers can publish new Card events under this Board's d-tag.
-
-In case there are no `p` tags to designate maintainers, the owner of the board is the only person who can publish cards on the boards.
-
-Editing the board event is possible only by the creator of the board. 
-
-### Card Event
-
-```javascript
-{
-    "created_at": 34324234234, //<Unix timestamp in seconds>
-    "kind": 30302,
-    "tags": [
+See `docs/STORES.md` and `docs/COLLABORATION/BOARD-SHARING.md` for permission and private-board details.
         ["d", "<card-d-identifier>"],
         ["title", "Card Title"],
         ["description","Card Description"], //can contain markdown too

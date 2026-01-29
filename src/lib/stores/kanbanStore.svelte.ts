@@ -1346,6 +1346,36 @@ export class BoardStore {
         BoardOperations.setBoardPublishState(this.board, state);
         this.triggerUpdate();
         this.publishBoardAsync();
+
+        // ⚡ WICHTIG: Wenn Board auf "published" gesetzt wird, müssen alle Cards auch 
+        // auf öffentlichen Relays publiziert werden, sonst wird das Board leer angezeigt!
+        if (state === 'published') {
+            this.publishAllCardsToPublicRelaysAsync();
+        }
+    }
+
+    /**
+     * Publiziert alle Cards des aktuellen Boards auf öffentliche Relays.
+     * Wird aufgerufen wenn ein Board auf "published" gesetzt wird.
+     */
+    private async publishAllCardsToPublicRelaysAsync(): Promise<void> {
+        const cardCount = this.board.columns.reduce((sum, col) => sum + col.cards.length, 0);
+        
+        if (cardCount === 0) {
+            console.log('[BoardStore] ℹ️ Board has no cards - skipping card publishing');
+            return;
+        }
+
+        console.log(`[BoardStore] 📤 Publishing ${cardCount} cards to public relays...`);
+        
+        const publishedCount = await this.nostrIntegration.publishAllCardsToPublicRelays(this.board);
+        
+        if (publishedCount > 0) {
+            toast.success(`${publishedCount} Karten veröffentlicht`, {
+                description: 'Alle Karten wurden auf öffentlichen Relays publiziert.',
+                duration: 4000
+            });
+        }
     }
 
     public moveCard(cardId: string, fromColumnId: string, toColumnId: string): void {

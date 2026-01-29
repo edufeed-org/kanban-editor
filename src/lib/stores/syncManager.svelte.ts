@@ -233,8 +233,13 @@ export class SyncManager {
             const connectedRelays = new Set<any>();
             for (const url of plainRelays) {
               try {
-                // Get relay from pool - it should already be there (added in +layout.svelte)
-                const relay = this.ndk.pool.getRelay(url);
+                // Get relay from pool OR add it dynamically if not present
+                let relay = this.ndk.pool.getRelay(url);
+                if (!relay) {
+                  console.log(`[SyncManager] Adding relay to pool: ${url}`);
+                  this.ndk.addExplicitRelay(url);
+                  relay = this.ndk.pool.getRelay(url);
+                }
                 if (relay) {
                   // Wait for connection if not connected
                   if (relay.status !== NDKRelayStatus.CONNECTED) {
@@ -251,7 +256,7 @@ export class SyncManager {
                     console.warn(`[SyncManager] ⚠️ Relay NOT connected after connect() call: ${url} (status: ${relay.status}, connectivity: ${relay.connectivity?.status})`);
                   }
                 } else {
-                  console.warn(`[SyncManager] Relay not in pool: ${url} - was it added in +layout.svelte?`);
+                  console.warn(`[SyncManager] Failed to add relay to pool: ${url}`);
                 }
               } catch (relayError) {
                 console.warn(`[SyncManager] Failed to connect relay ${url}:`, relayError);

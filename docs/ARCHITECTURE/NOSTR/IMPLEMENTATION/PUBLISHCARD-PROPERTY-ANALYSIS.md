@@ -2,7 +2,28 @@
 
 **Datei:** `src/lib/stores/boardstore/nostr.ts` (Lines 781-857)  
 **Konvertierungsfunktion:** `cardToNostrEvent()` in `src/lib/utils/nostrEvents.ts`  
-**Aktualisiert:** 11. November 2025
+**Aktualisiert:** 29. Januar 2026
+
+---
+
+## ⚡ WICHTIG: Relay-Auswahl (seit v4.7.23)
+
+Cards erben den `publishState` vom Board für die Relay-Auswahl:
+
+```typescript
+// In publishCard() - nostr.ts
+const effectivePublishState = board.publishState === 'published' 
+    ? 'published' 
+    : (card.publishState || 'draft');
+```
+
+| Board Status | Card Status | Ziel-Relays |
+|--------------|-------------|-------------|
+| `published` | (beliebig) | **Öffentliche Relays** ✅ |
+| `draft` | `published` | Öffentliche Relays |
+| `draft` | `draft` | Private Relays |
+
+**Konsequenz:** Neue Cards in öffentlichen Boards landen automatisch auf öffentlichen Relays.
 
 ---
 
@@ -148,12 +169,16 @@ if (card.publishState) {
     tags.push(['state', card.publishState]);
 }
 
-// PLUS: Relay-Auswahl basierend auf State
-const normalizedState = (publishState === 'archived' ? 'private' : publishState);
-const targetRelays = getTargetRelays({ publishState: normalizedState, ... });
+// PLUS: Relay-Auswahl basierend auf BOARD-Status (seit v4.7.23)
+const effectivePublishState = board.publishState === 'published' 
+    ? 'published' 
+    : (card.publishState || 'draft');
+const targetRelays = getTargetRelays({ publishState: effectivePublishState, ... });
 ```
 - **Nostr Tag:** `["state", "draft" | "published" | "archived"]`
+- **⚡ NEU (v4.7.23):** Board-Status hat Vorrang bei Relay-Auswahl!
 - **Relay-Handling:** 
+  - Board `'published'` → **Immer öffentliche Relays** (unabhängig von Card-Status)
   - `'draft'` → Private Relays (abhängig von `draftPublishingMode`)
   - `'published'` → Public + Private Relays
   - `'archived'` → Private Relays (normalisiert zu 'private')

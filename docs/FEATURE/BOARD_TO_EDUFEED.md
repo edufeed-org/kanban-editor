@@ -23,6 +23,10 @@ Ein publiziertes Board soll:
 4. ✅ **In Nostr-Clients sichtbar** sein (njump, andere Clients)
 5. ✅ **Per Link teilbar** sein (naddr-URL)
 
+Hinweis: Der Publish‑Workflow enthält eine Gate‑Prüfung — ein Board wird nur dann an öffentliche Relays
+publiziert, wenn `publishState === 'published'`. Drafts bleiben lokal bzw. werden nicht mit `['pub','published']`
+getaggt.
+
 ---
 
 ## 📐 Technische Architektur
@@ -31,28 +35,10 @@ Ein publiziertes Board soll:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  KANBAN BOARD (mit allen Spalten & Karten)                      │
+│  KANBAN BOARD                                                   │
 │  board.getContextData(true) → vollständiger JSON-Snapshot       │
 └───────────────────────────┬─────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│  AMB LEARNING RESOURCE (JSON-LD)                                │
-│  {                                                              │
-│    "@context": ["https://w3id.org/kim/amb/context.jsonld"],     │
-│    "type": ["LearningResource", "Course"],                      │
-│    "name": "Board-Titel",                                       │
-│    "description": "Board-Beschreibung",                         │
-│    "hasPart": [                                                 │
-│      { "type": "LearningObject", "name": "Karte 1", ... },     │
-│      { "type": "LearningObject", "name": "Karte 2", ... }      │
-│    ],                                                           │
-│    "encoding": {                                                │
-│      "contentType": "application/json",                         │
-│      "contentUrl": "data:application/json;base64,..."           │
-│    }                                                            │
-│  }                                                              │
-└───────────────────────────┬─────────────────────────────────────┘
-                            ↓
+                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │  NOSTR EVENT (Kind 30142 - AMB Learning Resource)               │
 │  {                                                              │
@@ -63,9 +49,9 @@ Ein publiziertes Board soll:
 │      ["summary", "Board-Beschreibung"],                         │
 │      ["t", "tag1"], ["t", "tag2"],                              │
 │      ["license", "https://creativecommons.org/..."],            │
-│      ["kanban-snapshot", "1"] // Marker für importierbares Board│
+│      ["a", "${naddr}"]  // nostr-sharelink (naddr) referencing the board
 │    ],                                                           │
-│    "content": "<vollständiger JSON-Snapshot des Boards>"        │
+│    "content": "Description"        │
 │  }                                                              │
 └───────────────────────────┬─────────────────────────────────────┘
                             ↓
@@ -77,57 +63,56 @@ Ein publiziertes Board soll:
 
 ### Content-Struktur im Nostr Event
 
-Der `content` des Events enthält den **vollständigen Board-Snapshot als JSON-String**:
+Der `content` des AMB-Events enthält die **Beschreibung in Markdown** (menschenlesbar).
+Der vollständige Board-Snapshot wird primär als eigenständiges Snapshot-Event (Kind `30303`) veröffentlicht;
+das AMB-Event enthält eine Referenz auf dieses Snapshot-Event via Tag `['snapshot-eventid', "<eventId>"]` sowie
+eine Prüfsumme als Tag `['sha256', "<hex>"]` zur Integritätsprüfung. Zusätzlich enthält das AMB-Event
+das Board‑`naddr` in `['a', "<naddr>"]` und den Publish‑Status in `['pub','published']`.
+
+`encoding.contentUrl` (Base64-kodierter JSON-Snapshot) kann weiterhin als Fallback dienen, wird aber nicht
+mehr als primäre Persistenzquelle erwartet.
+
+Beispiel: Markdown im `content`-Feld
+
+```markdown
+# Mein Kanban-Board
+
+Projektplanung für Q1
+
+## To Do
+- Feature X implementieren — Detaillierte Beschreibung...
+
+## In Progress
+- …
+
+## Done
+- …
+
+```
+
+**Wichtig:** Für den Import oder die programmgesteuerte Rekonstruktion des Boards nutzen Clients primär das
+Snapshot-Event (Kind `30303`) wenn das AMB-Event den Tag `['snapshot-eventid', <id>]` enthält. Falls kein
+Snapshot-Event referenziert ist, können Clients als Fallback `encoding.contentUrl` (Base64-kodierter JSON-Snapshot)
+oder notfalls `event.content` verwenden.
 
 ```json
 {
-  "id": "board-uuid",
-  "name": "Mein Kanban-Board",
-  "description": "Projektplanung für Q1",
-  "author": "hex-pubkey",
-  "columns": [
-    {
-      "id": "col-1",
-      "name": "To Do",
-      "cards": [
-        {
-          "id": "card-1",
-          "heading": "Feature X implementieren",
-          "content": "Detaillierte Beschreibung...",
-          "labels": ["feature", "priority-high"],
-          "comments": [...]
-        }
-      ]
-    },
-    {
-      "id": "col-2", 
-      "name": "In Progress",
-      "cards": [...]
+    "kind": 30142,
+    "tags": [
+        ["d", "nostr:kanban:board-123"],
+        ["title", "Mein Board"],
+        ["t", "religion"],
+        ["t", "geschichte"],
+        ["license", "..."],
+        ["a", "${naddr}"],
+        ["snapshot-eventid", "<30303-event-id>"],
+        ["sha256", "<hex-checksum-of-snapshot>"],
+        ["pub", "published"]
+    ],
+    "content": "# Mein Kanban-Board\n\nKurzbeschreibung und Vorschau (Markdown).",
+    "encoding": {
+        "contentUrl": "data:application/json;base64,<base64-snapshot>" // optional fallback
     }
-  ],
-  "tags": ["projekt", "q1-2026"],
-  "ccLicense": "cc-by-4.0",
-  "publishState": "published",
-  "createdAt": "2026-01-27T10:00:00Z",
-  "updatedAt": "2026-01-27T15:30:00Z"
-}
-```
-
-**Wichtig:** Der Snapshot ist ein **einfaches JSON-Objekt** (Ergebnis von `board.getContextData(true)`), 
-und wird als String im `content`-Feld des AMB-Events gespeichert.
-
-```json 
-{
-  "kind": 30142,
-  "tags": [
-    ["d", "nostr:kanban:board-123"],
-    ["title", "Mein Board"],
-    ["t", "religion"],
-    ["t", "geschichte"],
-    ["license", "..."],
-    ["kanban-snapshot", "1"]
-  ],
-  "content": "{\"id\":\"board-123\",\"name\":\"Mein Board\",...}"
 }
 ```
 ---
@@ -141,10 +126,10 @@ Nach dem Publizieren wird ein **naddr-Link** generiert:
 ```typescript
 // Nach erfolgreichem Publish
 const naddr = nip19.naddrEncode({
-  kind: 30142,                    // AMB Learning Resource Kind (Edufeed NIP)
-  pubkey: authorPubkey,           // Hex-Format
-  identifier: `nostr:kanban:${board.id}`,
-  relays: ['wss://relay.damus.io', 'wss://nos.lol']
+    kind: 30301,                    // Kanban Board (replaceable) Kind (30301)
+    pubkey: authorPubkey,           // Hex-Format
+    identifier: `nostr:kanban:${board.id}`,
+    relays: ['wss://relay.damus.io', 'wss://nos.lol']
 });
 
 // Ergebnis: naddr1qqxnzd3e8q6nwden8qunzwpe...
@@ -200,7 +185,13 @@ https://app.edufeed.org/cardsboard/naddr1qqxnzd3e...
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │  4. Content parsen & Board rekonstruieren                       │
-│     JSON.parse(event.content) → Board-Snapshot                  │
+│     - Wenn das AMB-Event ein Tag `['snapshot-eventid', <id>]` hat:                │
+│         → fetch Event Kind 30303 mit dieser Event-ID und parse its `content`    │
+│         → JSON.parse(snapshotEvent.content) → Board-Snapshot                    │
+│     - Sonst, wenn `encoding.contentUrl` vorhanden ist:                            │
+│         → decode Base64 `encoding.contentUrl` → JSON → Board-Snapshot           │
+│     - Sonst, wenn `event.content` JSON ist:                                      │
+│         → JSON.parse(event.content) → Board-Snapshot                            │
 └───────────────────────────┬─────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -581,11 +572,32 @@ async function loadBoardFromNostr(naddrData: NaddrData): Promise<void> {
     };
     
     const event = await ndk.fetchEvent(filter);
-    
+
     if (event?.kind === 30142) {
-        // AMB Learning Resource: Content parsen
-        const snapshot = JSON.parse(event.content);
-        // Board aus Snapshot rekonstruieren...
+        // AMB Learning Resource: prefer referenced snapshot-event (30303)
+        const snapshotTag = event.tags.find(t => t[0] === 'snapshot-eventid')?.[1];
+        let snapshotData = null;
+
+        if (snapshotTag) {
+            const snapEvent = await ndk.fetchEvent({ ids: [snapshotTag], kinds: [30303] });
+            if (snapEvent) snapshotData = JSON.parse(snapEvent.content);
+        }
+
+        if (!snapshotData && event.encoding?.contentUrl) {
+            // fallback: decode base64 contentUrl
+            const b64 = event.encoding.contentUrl.replace(/^data:.*;base64,/, '');
+            const json = atob(b64);
+            snapshotData = JSON.parse(json);
+        }
+
+        if (!snapshotData) {
+            // last resort: try parsing event.content if it's JSON
+            try { snapshotData = JSON.parse(event.content); } catch { /* ignore */ }
+        }
+
+        if (snapshotData) {
+            // Board aus Snapshot rekonstruieren...
+        }
     } else if (event?.kind === 30301) {
         // Standard Board Event (bestehende Logik)
     }
