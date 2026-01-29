@@ -132,17 +132,8 @@ export function getTargetRelays(options: RelaySelectionOptions): string[] {
     return uniqueRelays;
   }
 
-  // Rule 2: 'private' → ALWAYS private relays
-  if (publishState === 'private') {
-    if (relaysPrivate.length === 0) {
-      console.error('[RelaySelection] ⚠️ CRITICAL: No private relays configured for private content! Event will be local-only.');
-      return [];
-    }
-    console.log('[RelaySelection] publishState=private → Using private relays');
-    return relaysPrivate;
-  }
 
-  // Rule 3: 'draft' → Depends on draftPublishingMode
+  // Rule 2: 'draft' → Depends on draftPublishingMode
   if (publishState === 'draft') {
     switch (draftPublishingMode) {
       case 'private-relays':
@@ -199,7 +190,7 @@ export function shouldPublishToNostr(
   draftPublishingMode: DraftPublishingMode
 ): boolean {
   // Published and private always publish to Nostr
-  if (publishState === 'published' || publishState === 'private') {
+  if (publishState === 'published') {
     return true;
   }
 
@@ -256,10 +247,6 @@ export function getRelaySelectionDescription(options: RelaySelectionOptions): st
     } else {
       return `Published content → ${totalCount} private relay(s) only ⚠️ (no public relays!)`;
     }
-  }
-
-  if (publishState === 'private') {
-    return `Private content → ${targetRelays.length} private relay(s)`;
   }
 
   if (publishState === 'draft') {

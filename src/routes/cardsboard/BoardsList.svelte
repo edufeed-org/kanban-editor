@@ -26,10 +26,7 @@
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
     import { ProfileEditor } from '$lib/components/auth/index.js';
-    import { VersionHistory, ShareButton } from '$lib/components/board';
-    import ShareIcon2 from '@lucide/svelte/icons/share-2';
-    import ShareIcon from '@lucide/svelte/icons/share';
-    import HistoryIcon from '@lucide/svelte/icons/history';
+    import { ShareButton } from '$lib/components/board';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
     import WifiIcon from '@lucide/svelte/icons/wifi';
@@ -38,9 +35,6 @@
     import RelayStatusInfo from './RelayStatusInfo.svelte';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import UploadIcon from '@lucide/svelte/icons/upload';
-    import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-    import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
@@ -381,7 +375,7 @@
                         />
                         
                         <SubmenuItem 
-                            icon={FileTextIcon} 
+                            icon={SendIcon} 
                             label="An edufeed.org senden" 
                             onclick={async () => { 
                                 importExportPopoverOpen = false;

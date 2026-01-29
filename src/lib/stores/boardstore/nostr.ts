@@ -490,7 +490,7 @@ export class NostrIntegration {
         try {
             const event = boardToNostrEvent(board, this.ndk);
             const publishState = board.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft' | 'private';
+            const normalizedState = publishState as 'published' | 'draft';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
@@ -584,7 +584,7 @@ export class NostrIntegration {
             const effectivePublishState = board.publishState === 'published' 
                 ? 'published' 
                 : (card.publishState || 'draft');
-            const normalizedState = effectivePublishState as 'published' | 'draft' | 'private';
+            const normalizedState = effectivePublishState as 'published' | 'draft';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
@@ -747,8 +747,7 @@ export class NostrIntegration {
             const publishState = board.publishState || 'draft';
             const normalizedState = publishState as
                 | 'published'
-                | 'draft'
-                | 'private';
+                | 'draft';
 
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
@@ -798,7 +797,7 @@ export class NostrIntegration {
             // IMPORTANT: `e`-tag must reference the actual Nostr event id of the card (not the d-tag)
             const event = createCommentEvent(comment.text, cardRef, card.eventId || '', this.ndk);
             const publishState = card.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft' | 'private';
+            const normalizedState = publishState as 'published' | 'draft';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
@@ -878,7 +877,7 @@ export class NostrIntegration {
 
             // Bestimme Target-Relays basierend auf Card's publishState
             const publishState = card.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft' | 'private';
+            const normalizedState = publishState as 'published' | 'draft';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,

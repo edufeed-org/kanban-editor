@@ -23,7 +23,7 @@ export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<
 	try {
 		const event = boardToNostrEvent(board, ndk);
 		const publishState = board.publishState || 'draft';
-		const normalizedState = publishState as 'published' | 'draft' | 'private';
+		const normalizedState = publishState as 'published' | 'draft';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -117,8 +117,7 @@ export async function publishCard(ndk: NDK | undefined, board: Board, cardId: st
 		const publishState = card.publishState || 'draft';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft'
-			| 'private';
+			| 'draft';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -183,8 +182,7 @@ export async function publishComment(
 		const publishState = card.publishState || 'draft';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft'
-			| 'private';
+			| 'draft';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -262,8 +260,7 @@ export async function deleteComment(ndk: NDK | undefined, comment: Comment, card
 		const publishState = card.publishState || 'draft';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft'
-			| 'private';
+			| 'draft';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -454,8 +451,7 @@ export async function deleteCard(ndk: NDK | undefined, card: Card): Promise<void
 		const publishState = card.publishState || 'draft';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft'
-			| 'private';
+			| 'draft';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
@@ -520,7 +516,7 @@ export async function publishSnapshot(
 
 		// Publish via SyncManager
 		const syncManager = getSyncManager();
-		await syncManager.publishOrQueue(snapshotEvent, 'board', 'normal', 'private', targetRelays);
+		await syncManager.publishOrQueue(snapshotEvent, 'board', 'normal', 'draft', targetRelays);
 
 		console.log(`✅ [NostrIntegration] Snapshot "${label}" published for board ${board.id}`);
 		console.log(
