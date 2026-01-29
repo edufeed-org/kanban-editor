@@ -14,6 +14,13 @@ import NDK, { NDKEvent } from '@nostr-dev-kit/ndk';
 import { nip19 } from 'nostr-tools';
 import { makeDataUrl, sha256Hex } from '$lib/utils/ambEncoding';
 import { cardToNostrEvent } from '$lib/utils/nostrEvents';
+import { 
+    loadVocabulary, 
+    loadAllVocabularies, 
+    getConceptLabel,
+    type SkosConcept,
+    type VocabularyType
+} from '$lib/utils/vocabularyLoader';
 
 /**
  * Gets the Edufeed relays for AMB event publishing (Kind 30142)
@@ -166,6 +173,41 @@ export const LEARNING_RESOURCE_TYPES: AmbConcept[] = [
 ];
 
 /**
+ * Schulfächer vocabulary (KIM Schulfächer)
+ * @see http://w3id.org/kim/schulfaecher/
+ */
+export const SCHULFAECHER: AmbConcept[] = [
+    { id: 'http://w3id.org/kim/schulfaecher/s1005', prefLabel: { de: 'Deutsch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1017', prefLabel: { de: 'Mathematik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1007', prefLabel: { de: 'Englisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1009', prefLabel: { de: 'Französisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1016', prefLabel: { de: 'Latein' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1030', prefLabel: { de: 'Spanisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1001', prefLabel: { de: 'Biologie' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1002', prefLabel: { de: 'Chemie' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1022', prefLabel: { de: 'Physik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1011', prefLabel: { de: 'Geschichte' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1010', prefLabel: { de: 'Geografie' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1023', prefLabel: { de: 'Politik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1029', prefLabel: { de: 'Sozialkunde' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1035', prefLabel: { de: 'Wirtschaft' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1024', prefLabel: { de: 'Religion (evangelische)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1026', prefLabel: { de: 'Religion (katholische)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1008', prefLabel: { de: 'Ethik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1021', prefLabel: { de: 'Philosophie' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1013', prefLabel: { de: 'Informatik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1015', prefLabel: { de: 'Kunst' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1020', prefLabel: { de: 'Musik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1031', prefLabel: { de: 'Sport' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1033', prefLabel: { de: 'Technik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1012', prefLabel: { de: 'Hauswirtschaft' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1019', prefLabel: { de: 'Medienbildung' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1028', prefLabel: { de: 'Sachunterricht' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1018', prefLabel: { de: 'Naturwissenschaften' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1003', prefLabel: { de: 'Darstellendes Spiel' }, type: 'Concept' },
+];
+
+/**
  * Ergebnis der LLM-basierten Metadaten-Analyse
  */
 export interface AmbMetadataSuggestion {
@@ -175,6 +217,8 @@ export interface AmbMetadataSuggestion {
     educationalLevel: string[];
     /** Vorgeschlagene Ressourcentypen (HCRT IDs) */
     learningResourceType: string[];
+    /** Vorgeschlagene Fächer/Themen (about IDs - z.B. Schulfächer) */
+    about: string[];
     /** Vorgeschlagene Kompetenzen (Freitext) */
     teaches: string[];
     /** Vorgeschlagene Tags */
@@ -188,12 +232,23 @@ export interface AmbMetadataSuggestion {
 /**
  * Analysiert ein Board mit einem LLM und schlägt passende AMB-Metadaten vor.
  * Nutzt die in den Settings konfigurierte LLM-Instanz.
+ * Lädt die Vokabulare dynamisch von den konfigurierten URLs (mit Caching).
  * 
  * @param board - Das zu analysierende Board
  * @returns Vorschläge für AMB-Metadaten
  */
 export async function suggestAmbMetadata(board: Board): Promise<AmbMetadataSuggestion> {
     const boardData = board.getContextData(true);
+    
+    // Lade alle Vokabulare dynamisch (mit Caching)
+    console.log('📚 Lade AMB-Vokabulare...');
+    const vocabularies = await loadAllVocabularies();
+    console.log('✅ Vokabulare geladen:', {
+        audience: vocabularies.audience.length,
+        educationalLevel: vocabularies.educationalLevel.length,
+        learningResourceType: vocabularies.learningResourceType.length,
+        about: vocabularies.about.length
+    });
     
     // Erstelle eine kompakte Zusammenfassung des Boards
     const boardSummary = {
@@ -209,36 +264,33 @@ export async function suggestAmbMetadata(board: Board): Promise<AmbMetadataSugge
         existingTags: boardData.tags || []
     };
     
+    // Hilfsfunktion um SkosConcept zu kompakter Option zu konvertieren
+    const formatVocabOptions = (concepts: SkosConcept[]): string => {
+        return concepts.map(c => {
+            const label = getConceptLabel(c, 'de');
+            const key = c.id.split('/').pop();
+            return `${key}: ${label}`;
+        }).join(', ');
+    };
+    
     // Verfügbare Vokabular-Optionen als kompakte Listen
-    const audienceOptions = AUDIENCE_ROLES.map(a => {
-        const label = typeof a.prefLabel === 'object' ? a.prefLabel.de : a.prefLabel;
-        const key = a.id.split('/').pop();
-        return `${key}: ${label}`;
-    }).join(', ');
+    const audienceOptions = formatVocabOptions(vocabularies.audience);
+    const levelOptions = formatVocabOptions(vocabularies.educationalLevel);
+    const resourceTypeOptions = formatVocabOptions(vocabularies.learningResourceType);
+    const aboutOptions = formatVocabOptions(vocabularies.about);
     
-    const levelOptions = EDUCATIONAL_LEVELS.map(l => {
-        const label = typeof l.prefLabel === 'object' ? l.prefLabel.de : l.prefLabel;
-        const key = l.id.split('/').pop();
-        return `${key}: ${label}`;
-    }).join(', ');
-    
-    const resourceTypeOptions = LEARNING_RESOURCE_TYPES.map(t => {
-        const label = typeof t.prefLabel === 'object' ? t.prefLabel.de : t.prefLabel;
-        const key = t.id.split('/').pop();
-        return `${key}: ${label}`;
-    }).join(', ');
-    
-    const systemPrompt = `Du bist ein Metadaten-Assistent. Analysiere das Kanban-Board und gib NUR ein JSON-Objekt zurück.
+    const systemPrompt = `Du bist ein Metadaten-Assistent für Bildungsmaterialien. Analysiere das Kanban-Board und gib NUR ein JSON-Objekt zurück.
 
 ⚠️ WICHTIG: Deine GESAMTE Antwort muss ein valides JSON-Objekt sein. KEIN Text davor oder danach!
 
 Format:
-{"audience":["key1"],"educationalLevel":["level_X"],"learningResourceType":["type1"],"teaches":["Kompetenz"],"tags":["tag1"],"suggestedDescription":"Kurze prägnante Beschreibung","reasoning":"Begründung"}
+{"audience":["key1"],"educationalLevel":["level_X"],"learningResourceType":["type1"],"about":["fach1"],"teaches":["Kompetenz"],"tags":["tag1"],"suggestedDescription":"Kurze prägnante Beschreibung","reasoning":"Begründung"}
 
 Wähle aus:
-- audience: ${audienceOptions}
-- educationalLevel: ${levelOptions}  
-- learningResourceType: ${resourceTypeOptions}
+- audience (Zielgruppe): ${audienceOptions}
+- educationalLevel (Bildungsstufe): ${levelOptions}  
+- learningResourceType (Ressourcentyp): ${resourceTypeOptions}
+- about (Schulfach/Themengebiet): ${aboutOptions}
 - teaches: 2-4 Kompetenzen auf Deutsch
 - tags: 3-6 Schlagworte auf Deutsch
 - suggestedDescription: Prüfe ob die aktuelle Beschreibung zum Board-Inhalt passt. Falls nicht oder leer, schlage eine bessere vor (1-2 Sätze, max 200 Zeichen)`;
@@ -256,6 +308,7 @@ Antworte NUR mit JSON:`;
         audience?: string[];
         educationalLevel?: string[];
         learningResourceType?: string[];
+        about?: string[];
         teaches?: string[];
         tags?: string[];
         reasoning?: string;
@@ -317,6 +370,14 @@ Antworte NUR mit JSON:`;
                 ).filter(s => s);
             }
             
+            // about Array (Schulfächer)
+            const aboutMatch = text.match(/about[:\s]*\[([^\]]+)\]/i);
+            if (aboutMatch) {
+                result.about = aboutMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
             // teaches Array (auch als kommagetrennte Liste)
             const teachesMatch = text.match(/teaches[:\s]*\[([^\]]+)\]/i);
             if (teachesMatch) {
@@ -340,7 +401,7 @@ Antworte NUR mit JSON:`;
             }
             
             // Prüfe ob wir genug Daten haben
-            if (result.audience?.length || result.educationalLevel?.length || result.learningResourceType?.length) {
+            if (result.audience?.length || result.educationalLevel?.length || result.learningResourceType?.length || result.about?.length) {
                 console.log('✅ Extrahierte Struktur aus Text:', result);
                 return result as LlmMetadataResult;
             }
@@ -362,7 +423,7 @@ Antworte NUR mit JSON:`;
             
             console.log('🔧 Repariertes JSON:', truncated.substring(0, 300));
             const repaired = JSON.parse(truncated);
-            if (repaired.audience || repaired.educationalLevel || repaired.learningResourceType) {
+            if (repaired.audience || repaired.educationalLevel || repaired.learningResourceType || repaired.about) {
                 console.log('✅ Abgeschnittenes JSON erfolgreich repariert');
                 return repaired;
             }
@@ -406,8 +467,8 @@ Antworte NUR mit JSON:`;
             throw new Error('Unerwarteter Antworttyp vom LLM');
         }
         
-        // Map die Keys zu vollständigen IDs
-        const mapToFullIds = (keys: string[] | undefined, vocabulary: AmbConcept[]): string[] => {
+        // Map die Keys zu vollständigen IDs (funktioniert mit SkosConcept)
+        const mapToFullIds = (keys: string[] | undefined, vocabulary: SkosConcept[]): string[] => {
             if (!keys) return [];
             return keys
                 .map(key => {
@@ -421,9 +482,10 @@ Antworte NUR mit JSON:`;
         };
         
         return {
-            audience: mapToFullIds(result.audience, AUDIENCE_ROLES),
-            educationalLevel: mapToFullIds(result.educationalLevel, EDUCATIONAL_LEVELS),
-            learningResourceType: mapToFullIds(result.learningResourceType, LEARNING_RESOURCE_TYPES),
+            audience: mapToFullIds(result.audience, vocabularies.audience),
+            educationalLevel: mapToFullIds(result.educationalLevel, vocabularies.educationalLevel),
+            learningResourceType: mapToFullIds(result.learningResourceType, vocabularies.learningResourceType),
+            about: mapToFullIds(result.about, vocabularies.about),
             teaches: result.teaches || [],
             tags: result.tags || [],
             reasoning: result.reasoning,
@@ -479,6 +541,12 @@ export interface AmbPublishOptions {
      * @see https://w3id.org/kim/educationalLevel/
      */
     educationalLevel?: string[];
+    
+    /**
+     * Optional: Subject/Topic area(s) - array of Schulfächer or other "about" concept IDs
+     * @see http://w3id.org/kim/schulfaecher/
+     */
+    about?: string[];
     
     /**
      * Optional: Competencies/skills that this resource teaches (free text)
@@ -586,6 +654,14 @@ export function boardToAmbResource(
             type: 'DefinedTerm',
             name: text
         }));
+    }
+    
+    // Add about (subject/topic - e.g. Schulfächer) if provided
+    if (options.about && options.about.length > 0) {
+        (ambResource as any).about = options.about.map(id => {
+            const concept = SCHULFAECHER.find(s => s.id === id);
+            return concept ? { ...concept } : { id };
+        });
     }
     
     return ambResource;

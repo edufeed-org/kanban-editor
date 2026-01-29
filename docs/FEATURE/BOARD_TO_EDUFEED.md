@@ -516,6 +516,36 @@ export async function publishBoardToEdufeedWithAI(
 | **OpenEduHub LRT** | `http://w3id.org/openeduhub/vocabs/new_lrt/` | `learningResourceType` |
 | **LRMI Audience** | `http://purl.org/dcx/lrmi-vocabs/educationalAudienceRole/` | `audience` |
 
+### Konfiguration der Vokabular-URLs
+
+Die AMB-Vokabulare werden **dynamisch von SkoHub geladen** und lokal gecacht (24h TTL). Die URLs sind in `config.json` konfigurierbar:
+
+```json
+{
+  "amb": {
+    "vocabularyUrls": {
+      "audience": "https://skohub.io/dini-ag-kim/lrmi-audience-role/heads/master/w3id.org/kim/lrmi-audience-role/index.json",
+      "educationalLevel": "https://skohub.io/dini-ag-kim/educationalLevel/heads/main/w3id.org/kim/educationalLevel/index.json",
+      "learningResourceType": "https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/index.json",
+      "about": "https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json"
+    },
+    "cacheTtlHours": 24
+  }
+}
+```
+
+| Property | Beschreibung | Standard-Vokabular |
+|----------|--------------|-------------------|
+| `audience` | Zielgruppen (Lernende, Lehrende, etc.) | LRMI Audience Role |
+| `educationalLevel` | Bildungsstufen (Grundschule, Sek I, etc.) | KIM Educational Level |
+| `learningResourceType` | Ressourcentypen (Video, Kurs, etc.) | KIM HCRT |
+| `about` | Fächer/Themengebiete | KIM Schulfächer |
+
+**Fallback-Verhalten:**
+- Bei Netzwerkfehlern werden statische Fallback-Vokabulare aus `vocabularyLoader.ts` verwendet
+- Der Cache wird im localStorage gespeichert (`vocab-cache-*` Keys)
+- Nach 24 Stunden werden die Vokabulare erneut vom Server geladen
+
 ### UI-Flow mit KI-Vorschlägen
 
 ```

@@ -25,7 +25,7 @@ import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 import { authStore } from '$lib/stores/authStore.svelte.js';
 import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
-import { publishBoardToEdufeed, suggestAmbMetadata, type AmbPublishResult, type AmbMetadataSuggestion, AUDIENCE_ROLES, EDUCATIONAL_LEVELS, LEARNING_RESOURCE_TYPES } from '$lib/utils/ambPublisher.js';
+import { publishBoardToEdufeed, suggestAmbMetadata, type AmbPublishResult, type AmbMetadataSuggestion, AUDIENCE_ROLES, EDUCATIONAL_LEVELS, LEARNING_RESOURCE_TYPES, SCHULFAECHER } from '$lib/utils/ambPublisher.js';
 import { toast } from 'svelte-sonner';
 
 // Icons
@@ -56,6 +56,7 @@ let formData = $state<{
     learningResourceType: string[];
     audience: string[];
     educationalLevel: string[];
+    about: string[];
     teaches: string[];
     dryRun: boolean;
 }>({
@@ -66,6 +67,7 @@ let formData = $state<{
     learningResourceType: [],
     audience: [],
     educationalLevel: [],
+    about: [],
     teaches: [],
     dryRun: false
 });
@@ -108,6 +110,7 @@ $effect(() => {
             learningResourceType: [],
             audience: [],
             educationalLevel: [],
+            about: [],
             teaches: [],
             dryRun: false
         };
@@ -170,6 +173,14 @@ function toggleLearningResourceType(id: string) {
     }
 }
 
+function toggleAbout(id: string) {
+    if (formData.about.includes(id)) {
+        formData.about = formData.about.filter(a => a !== id);
+    } else {
+        formData.about = [...formData.about, id];
+    }
+}
+
 // Tag-Eingabe Handler (Enter-Taste)
 function handleTagKeyDown(event: KeyboardEvent) {
     if (event.key === 'Enter') {
@@ -225,6 +236,9 @@ async function analyzeBoardWithLLM() {
         }
         if (suggestion.learningResourceType.length > 0) {
             formData.learningResourceType = [...suggestion.learningResourceType];
+        }
+        if (suggestion.about && suggestion.about.length > 0) {
+            formData.about = [...suggestion.about];
         }
         if (suggestion.teaches.length > 0) {
             formData.teaches = [...suggestion.teaches];
@@ -285,6 +299,7 @@ async function handlePublish() {
             learningResourceType: formData.learningResourceType.length > 0 ? formData.learningResourceType : undefined,
             audience: formData.audience.length > 0 ? formData.audience : undefined,
             educationalLevel: formData.educationalLevel.length > 0 ? formData.educationalLevel : undefined,
+            about: formData.about.length > 0 ? formData.about : undefined,
             teaches: formData.teaches.length > 0 ? formData.teaches : undefined,
             dryRun: formData.dryRun
         });
@@ -640,6 +655,28 @@ function handleClose() {
                                                     disabled={isPublishing}
                                                 />
                                                 <span>{typeof resourceType.prefLabel === 'object' ? resourceType.prefLabel.de : resourceType.prefLabel}</span>
+                                            </label>
+                                        {/each}
+                                    </div>
+                                </FieldContent>
+                            </Field>
+
+                            <!-- Fach/Themengebiet (about) -->
+                            <Field>
+                                <FieldLabel class="flex items-center gap-2">
+                                    <BookOpenIcon class="h-4 w-4" />
+                                    Fach / Themengebiet
+                                </FieldLabel>
+                                <FieldContent>
+                                    <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
+                                        {#each SCHULFAECHER as fach}
+                                            <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
+                                                <Checkbox 
+                                                    checked={formData.about.includes(fach.id)}
+                                                    onCheckedChange={() => toggleAbout(fach.id)}
+                                                    disabled={isPublishing}
+                                                />
+                                                <span>{typeof fach.prefLabel === 'object' ? fach.prefLabel.de : fach.prefLabel}</span>
                                             </label>
                                         {/each}
                                     </div>

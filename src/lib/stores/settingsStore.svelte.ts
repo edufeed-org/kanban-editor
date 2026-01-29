@@ -57,6 +57,15 @@ export interface SettingsState {
   apiUrl: string,
   language: string
 
+  // AMB Vocabulary URLs (für verschiedene Bildungskontexte)
+  vocabularyUrls: {
+    audience: string | null;         // LRMI educationalAudienceRole
+    educationalLevel: string | null; // KIM educationalLevel
+    learningResourceType: string | null; // KIM HCRT
+    about: string | null;            // KIM Schulfächer oder Hochschulfächersystematik
+  };
+  vocabularyCacheTTL: number;        // Cache-Dauer in Millisekunden
+
 }
 
 /**
@@ -165,7 +174,16 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
 
   // OER Finder Plugin
   apiUrl: "http://localhost:3001",
-  language: "de"
+  language: "de",
+
+  // AMB Vocabulary URLs (null = use defaults from vocabularyLoader.ts)
+  vocabularyUrls: {
+    audience: null,
+    educationalLevel: null,
+    learningResourceType: null,
+    about: null,
+  },
+  vocabularyCacheTTL: 86400000, // 24 hours
 };
 
 /**
@@ -452,6 +470,29 @@ export class SettingsStore {
         console.log('📚 OER Finder Plugin configuration loaded from config.json');
       }
 
+    }
+
+    // AMB Vocabulary Configuration
+    if (config.amb) {
+      const ambPartial: Partial<SettingsState> = {};
+      
+      if (config.amb.vocabularies) {
+        ambPartial.vocabularyUrls = {
+          audience: config.amb.vocabularies.audience ?? null,
+          educationalLevel: config.amb.vocabularies.educationalLevel ?? null,
+          learningResourceType: config.amb.vocabularies.learningResourceType ?? null,
+          about: config.amb.vocabularies.about ?? null,
+        };
+      }
+      
+      if (config.amb.cacheTTL !== undefined) {
+        ambPartial.vocabularyCacheTTL = config.amb.cacheTTL;
+      }
+      
+      if (Object.keys(ambPartial).length > 0) {
+        this.settings = { ...this.settings, ...ambPartial };
+        console.log('📚 AMB Vocabulary configuration loaded from config.json');
+      }
     }
 
     // Speichere die gemergten Settings
