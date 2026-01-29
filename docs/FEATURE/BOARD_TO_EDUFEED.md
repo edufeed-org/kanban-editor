@@ -40,24 +40,27 @@ getaggt.
 └───────────────────────────┬─────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  NOSTR EVENT (Kind 30142 - AMB Learning Resource)               │
-│  {                                                              │
-│    "kind": 30142,                                               │
-│    "tags": [                                                    │
-│      ["d", "nostr:kanban:<board-id>"],                          │
-│      ["title", "Board-Titel"],                                  │
-│      ["summary", "Board-Beschreibung"],                         │
-│      ["t", "tag1"], ["t", "tag2"],                              │
-│      ["license", "https://creativecommons.org/..."],            │
-│      ["a", "${naddr}"]  // nostr-sharelink (naddr) referencing the board
-│    ],                                                           │
-│    "content": "Description"        │
-│  }                                                              │
+│  NOSTR EVENTS                                                   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Kind 30142 (AMB Learning Resource)                     │   │
+│  │  → Direct WebSocket zu amb-relay.edufeed.org            │   │
+│  │  → Umgeht NDK's AUTH_REQUIRED Blockade                  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Kind 30303 (Snapshot) + Kind 30302 (Cards)             │   │
+│  │  → Via syncManager zu normalen Relays                   │   │
+│  │  → NICHT an amb-relay (akzeptiert nur 30142!)           │   │
+│  └─────────────────────────────────────────────────────────┘   │
 └───────────────────────────┬─────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│  NOSTR RELAYS (öffentlich)                                      │
-│  wss://relay.damus.io, wss://relay.primal.net, etc.            │
+│  NOSTR RELAYS                                                   │
+│                                                                 │
+│  amb-relay.edufeed.org     ← NUR Kind 30142!                    │
+│  relay.damus.io            ← Kind 30301, 30302, 30303           │
+│  relay.primal.net          ← Kind 30301, 30302, 30303           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -302,7 +305,7 @@ Nach erfolgreichem Publish zeigt der Dialog:
 | **Board Snapshot** | 30303 | Private Versionshistorie | Nur eigene Relays |
 | **Board Event** | 30301 | Live-Sync zwischen Geräten | Private + Public |
 | **Card Event** | 30302 | Live-Sync einzelner Karten | Private + Public |
-| **AMB Learning Resource** | 30142 | **Öffentliche Veröffentlichung** | **Nur Public Relays** |
+| **AMB Learning Resource** | 30142 | **Öffentliche Veröffentlichung** | **Nur Edufeed-Relays** |
 
 ### Warum ein eigener Event-Typ?
 
@@ -310,6 +313,96 @@ Nach erfolgreichem Publish zeigt der Dialog:
 2. **Discovery:** Andere Edufeed-Clients können Learning Resources finden
 3. **Interoperabilität:** AMB ist ein breiterer Standard, nicht Kanban-spezifisch
 4. **Trennung:** Private Snapshots (30303) vs. öffentliche Publikationen (30142)
+
+---
+
+## 🔐 Relay-Routing & Direct WebSocket Publishing
+
+### Das Problem: AUTH_REQUIRED blockiert NDK
+
+Der `amb-relay.edufeed.org` ist ein spezialisierter Khatru-Relay, der **NUR Kind 30142** (AMB Learning Resources) akzeptiert. Alle anderen Event-Kinds werden abgelehnt - **inklusive NIP-42 AUTH Response Events (Kind 22242)!**
+
+Dies führt zu einem Paradox:
+1. Relay sendet NIP-42 AUTH Challenge
+2. NDK versucht AUTH Response (Kind 22242) zu senden
+3. Relay **lehnt** AUTH Response ab: `"blocked: we don't allow these kinds here. It's a 30142 only place."`
+4. NDK bleibt im Status `AUTH_REQUIRED` (6) und blockiert alle Publish-Versuche
+5. Der Relay würde Kind 30142 aber akzeptieren - NDK lässt es nicht durch!
+
+### Die Lösung: Direct WebSocket Publishing
+
+Um NDK's Relay-Status-Checks zu umgehen, publiziert `ambPublisher.ts` **Kind 30142 direkt per WebSocket**:
+
+```typescript
+// ambPublisher.ts
+
+async function directPublishToRelay(
+    event: NDKEvent, 
+    relayUrl: string
+): Promise<{ success: boolean; message: string }> {
+    return new Promise((resolve) => {
+        const ws = new WebSocket(relayUrl);
+        const timeout = setTimeout(() => {
+            ws.close();
+            resolve({ success: false, message: 'Timeout after 10s' });
+        }, 10000);
+
+        ws.onopen = () => {
+            // Send signed event directly as ["EVENT", rawEvent]
+            const msg = JSON.stringify(['EVENT', event.rawEvent()]);
+            ws.send(msg);
+        };
+
+        ws.onmessage = (msgEvent) => {
+            const data = JSON.parse(msgEvent.data);
+            if (data[0] === 'OK') {
+                clearTimeout(timeout);
+                ws.close();
+                resolve({ 
+                    success: data[2] === true, 
+                    message: data[3] || 'Published' 
+                });
+            }
+            // AUTH challenges are ignored - we just want to publish 30142
+        };
+
+        ws.onerror = () => {
+            clearTimeout(timeout);
+            resolve({ success: false, message: 'WebSocket error' });
+        };
+    });
+}
+```
+
+### Relay-Routing nach Event Kind
+
+| Event Kind | Beschreibung | Ziel-Relay | Methode |
+|------------|--------------|------------|---------|
+| **30142** | AMB Learning Resource | `amb-relay.edufeed.org` | `directPublishToRelay()` |
+| **30303** | Board Snapshot | Normale Relays | `syncManager.publishOrQueue()` |
+| **30302** | Cards | Normale Relays | `syncManager.publishOrQueue()` |
+| **30301** | Board Event | Normale Relays | `syncManager.publishOrQueue()` |
+
+**Warum diese Trennung?**
+
+- **amb-relay.edufeed.org** akzeptiert NUR Kind 30142
+- Snapshots und Cards würden dort abgelehnt werden
+- Normale Relays haben kein AUTH-Problem
+
+### Debug-Funktionen
+
+Für Debugging stehen folgende Console-Funktionen zur Verfügung:
+
+```javascript
+// Nostr-Status anzeigen (Relays, Signer, Auth-Status)
+debugNostrStatus()
+
+// AMB Relay Connection testen
+testAmbRelayConnection()
+
+// AUTH Relays manuell reconnecten
+reconnectAuthRelays()
+```
 
 ---
 
