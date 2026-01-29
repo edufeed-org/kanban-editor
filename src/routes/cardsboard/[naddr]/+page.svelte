@@ -13,6 +13,7 @@
      */
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
+    import { base } from '$app/paths';
     import { onMount } from 'svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/stores/authStore.svelte.js';
@@ -293,7 +294,7 @@
                                     boardStore.refreshBoardIds();
                                     boardStore.loadBoard(snapshotJson.id);
                                     status = 'success';
-                                    await goto('/cardsboard/', { replaceState: true });
+                                    await goto(`${base}/cardsboard/`, { replaceState: true });
                                     return;
                                 } catch (err) {
                                     console.warn('Fehler beim Parsen des Snapshot-Inhalts:', err);
@@ -320,7 +321,7 @@
                 
                 // Weiterleitung
                 status = 'success';
-                await goto('/cardsboard/', { replaceState: true });
+                await goto(`${base}/cardsboard/`, { replaceState: true });
                 return;
             }
 
@@ -358,7 +359,7 @@
             status = 'success';
             console.log('✅ Board geladen und gespeichert, leite weiter...');
             
-            await goto('/cardsboard/', { replaceState: true });
+            await goto(`${base}/cardsboard/`, { replaceState: true });
 
         } catch (error) {
             console.error('❌ Fehler beim Laden:', error);
@@ -386,7 +387,7 @@
                 <h1 class="text-xl font-semibold text-destructive">Fehler beim Laden</h1>
                 <p class="text-muted-foreground">{errorMessage}</p>
                 <a 
-                    href="/cardsboard/" 
+                    href="{base}/cardsboard/" 
                     class="mt-4 text-primary hover:underline"
                 >
                     Zurück zur Übersicht

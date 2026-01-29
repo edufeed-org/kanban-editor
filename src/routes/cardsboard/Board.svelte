@@ -24,6 +24,7 @@
 
 	// Intelligenter Modus-Wechsel für Add Column Button
 	let isAddColumnFixed = $state(false);
+	let checkScrollTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	function isEditableTarget(target: EventTarget | null): boolean {
 		if (!(target instanceof HTMLElement)) return false;
@@ -67,31 +68,52 @@
 	});
 
 	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
+	// Mit Debouncing und Hysterese um Flackern zu verhindern
 	$effect(() => {
 		if (!boardElement) return;
 
 		const checkScroll = () => {
-			if (boardElement) {
-				// Wenn scrollWidth > clientWidth, dann scrollt das Board horizontal
-				const hasScroll = boardElement.scrollWidth > boardElement.clientWidth;
-				isAddColumnFixed = hasScroll;
+			if (!boardElement) return;
+			
+			// Hysterese: Nur umschalten wenn Unterschied > 50px
+			// Das verhindert Flackern durch minimale Layout-Änderungen
+			const scrollDiff = boardElement.scrollWidth - boardElement.clientWidth;
+			const threshold = 50;
+			
+			// Nur auf "fixed" wechseln wenn deutlich scrollbar
+			// Nur auf "inline" wechseln wenn deutlich nicht scrollbar
+			if (!isAddColumnFixed && scrollDiff > threshold) {
+				isAddColumnFixed = true;
+			} else if (isAddColumnFixed && scrollDiff < -threshold) {
+				isAddColumnFixed = false;
 			}
 		};
 
-		// Initial check
+		// Debounced check - verhindert rapid-fire Updates
+		const debouncedCheck = () => {
+			if (checkScrollTimeout) {
+				clearTimeout(checkScrollTimeout);
+			}
+			checkScrollTimeout = setTimeout(checkScroll, 150);
+		};
+
+		// Initial check (einmalig, nicht debounced)
 		checkScroll();
 
-		// Observer für Größenänderungen
-		const resizeObserver = new ResizeObserver(checkScroll);
+		// Observer für Größenänderungen (debounced)
+		const resizeObserver = new ResizeObserver(debouncedCheck);
 		resizeObserver.observe(boardElement);
 
-		// Auch bei Spalten-Änderungen prüfen (mit kleinem Delay für Rendering)
+		// Auch bei Spalten-Änderungen prüfen
 		const columnsLength = columns.length; // ← Dependency tracking
-		setTimeout(checkScroll, 100);
+		debouncedCheck();
 
 		// Cleanup
 		return () => {
 			resizeObserver.disconnect();
+			if (checkScrollTimeout) {
+				clearTimeout(checkScrollTimeout);
+			}
 		};
 	});
 	

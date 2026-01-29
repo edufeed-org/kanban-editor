@@ -1,7 +1,36 @@
+<script context="module" lang="ts">
+  // 🔧 MODULE-LEVEL SINGLETON: Überlebt Re-Renders
+  // Muss in context="module" sein, damit es nicht bei jedem Render zurückgesetzt wird
+  import { NDKSvelte } from "@nostr-dev-kit/svelte";
+  
+  let _cachedNdk: NDKSvelte | null = null;
+  let _cachedRelays: string[] = [];
+  
+  export function getOrCreateNdk(relays: string[]): NDKSvelte {
+    // Falls bereits erstellt UND Relays identisch sind → cached zurückgeben
+    const relaysKey = relays.slice().sort().join(',');
+    const cachedKey = _cachedRelays.slice().sort().join(',');
+    
+    if (_cachedNdk && relaysKey === cachedKey) {
+      return _cachedNdk;
+    }
+    
+    // Neue Instanz nur wenn nötig
+    _cachedNdk = new NDKSvelte({
+      explicitRelayUrls: relays,
+      enableOutboxModel: false
+    });
+    _cachedRelays = [...relays];
+    _cachedNdk.connect();
+    console.log('🔌 NDK instance created (singleton)');
+    
+    return _cachedNdk;
+  }
+</script>
+
 <script lang="ts">
   import "../app.css";
   import { createReactivePool } from "@nostr-dev-kit/svelte/stores";
-  import { NDKSvelte } from "@nostr-dev-kit/svelte";
   import { setContext, onMount } from 'svelte';
   import { Toaster } from "svelte-sonner";
   // import "$lib/utils/demoBoardLoader.js"; // Demo-Funktionen für Browser-Console registrieren
@@ -12,7 +41,6 @@
   import { boardStore } from '$lib/stores/kanbanStore.svelte';
   import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
-
   const { children } = $props();
 
   // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden (public + private für vollständige Konnektivität)
@@ -21,29 +49,24 @@
     ...settingsStore.settings.relaysPrivate
   ].filter((url, index, arr) => arr.indexOf(url) === index); // Deduplizieren
   
-  const ndk = new NDKSvelte({
-    explicitRelayUrls: allRelays,
-    enableOutboxModel: false // Deaktiviert Standard-Outbox-Relays
-  });
-
-  // 🚀 Start connection immediately (async)
-  ndk.connect();
-
+  // 🔧 SINGLETON: Nutze module-level Cache (überlebt Re-Renders)
+  const ndk = getOrCreateNdk(allRelays);
   const authStore = initializeAuth(ndk);
 
   onMount(async () => {
     // 🔌 FIRST: Wait for NDK to connect before proceeding
     // This prevents "NDK not initialized" race conditions
     // ⚡ OPTIMIZATION: Connection timeout nach 3 Sekunden
+    // Note: ndk.connect() was already called in getOrCreateNdk(), this just waits
     try {
       console.log('⏳ Waiting for NDK connection...');
       
-      const connectPromise = ndk.connect();
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Connection timeout')), 3000)
       );
       
-      await Promise.race([connectPromise, timeoutPromise]);
+      // ndk.connect() returns a promise that resolves when connected
+      await Promise.race([ndk.connect(), timeoutPromise]);
       console.log('✅ NDK connected to relays');
     } catch (error) {
       console.warn('⚠️ NDK connection timeout or failed (continuing anyway):', error);
