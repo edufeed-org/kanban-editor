@@ -43,10 +43,12 @@
 
   const { children } = $props();
 
-  // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden (public + private für vollständige Konnektivität)
+  // ✅ FIX: Relay-URLs dynamisch aus settingsStore laden (public + private + edufeed für vollständige Konnektivität)
+  // ⚡ IMPORTANT: Edufeed relays MUST be included from the start for NIP-42 AUTH to work!
   const allRelays = [
     ...settingsStore.settings.relaysPublic,
-    ...settingsStore.settings.relaysPrivate
+    ...settingsStore.settings.relaysPrivate,
+    ...settingsStore.settings.relaysEdufeed  // ← NEU: Edufeed-Relays für AMB publishing
   ].filter((url, index, arr) => arr.indexOf(url) === index); // Deduplizieren
   
   // 🔧 SINGLETON: Nutze module-level Cache (überlebt Re-Renders)

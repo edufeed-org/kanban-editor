@@ -13,11 +13,15 @@
 
   "nostr": {
     "relaysPublic": [
-      "wss://relay-rpi.edufeed.org",
+      "wss://relay.edufeed.org",
       "wss://relay.primal.net",
       "wss://nos.lol"
     ],
-    "relaysPrivate": []
+    "relaysPrivate": [],
+    "relaysEdufeed": [
+      "wss://amb-relay.edufeed.org"
+    ],
+    "$comment_edufeed": "relaysEdufeed: Relays für AMB (Kind 30142) Publishing - nur amb-relay.edufeed.org akzeptiert diese Events!"
   },
 
   "llm": {

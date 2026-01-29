@@ -317,12 +317,19 @@
                 .filter(tag => tag.length > 0);
             
             // Publish to Edufeed using AMB protocol
+            // 🧪 Dry-run mode: Set window.EDUFEED_DRY_RUN = true in console to test without publishing
+            const dryRun = typeof window !== 'undefined' && (window as any).EDUFEED_DRY_RUN === true;
+            if (dryRun) {
+                console.log('🧪 [DRY-RUN MODE] Events werden nur in der Konsole angezeigt, nicht gesendet!')
+            }
+            
             const result = await publishBoardToEdufeed(board, {
                 pubkey,
                 title: metaForm.title,
                 description: metaForm.description,
                 tags: tagsArray,
-                license: metaForm.license
+                license: metaForm.license,
+                dryRun
             });
             
             // Dismiss loading toast

@@ -245,15 +245,36 @@ export class SyncManager {
                   if (relay.status !== NDKRelayStatus.CONNECTED) {
                     console.log(`[SyncManager] Waiting for relay connection: ${url}`);
                     await relay.connect();
+                    
+                    // Wait a bit for AUTH challenge to be processed
+                    await new Promise(resolve => setTimeout(resolve, 500));
                   }
                   
                   // ✅ CRITICAL: Verify relay is ACTUALLY connected after connect() call
-                  // Don't trust the status flag alone - check WebSocket connection
-                  if (relay.status === NDKRelayStatus.CONNECTED && relay.connectivity?.status === NDKRelayStatus.CONNECTED) {
+                  // Status 6 = AUTH_REQUIRED in NDK - relay requires NIP-42 authentication
+                  const STATUS_AUTH_REQUIRED = 6;
+                  if (relay.status === STATUS_AUTH_REQUIRED || relay.connectivity?.status === STATUS_AUTH_REQUIRED) {
+                    console.warn(`[SyncManager] ⚠️ Relay requires NIP-42 AUTH: ${url}`);
+                    console.warn(`[SyncManager]    → This relay may require authentication before accepting events`);
+                    console.warn(`[SyncManager]    → Try re-logging in or check relay configuration`);
+                    // Still try to add it - NDK might handle auth automatically
+                    connectedRelays.add(relay);
+                  } else if (relay.status === NDKRelayStatus.CONNECTED && relay.connectivity?.status === NDKRelayStatus.CONNECTED) {
                     connectedRelays.add(relay);
                     console.log(`[SyncManager] ✅ Relay verified connected: ${url}`);
                   } else {
                     console.warn(`[SyncManager] ⚠️ Relay NOT connected after connect() call: ${url} (status: ${relay.status}, connectivity: ${relay.connectivity?.status})`);
+                    // Log status name for debugging
+                    const statusNames: Record<number, string> = {
+                      0: 'DISCONNECTING',
+                      1: 'DISCONNECTED',
+                      2: 'CONNECTING',
+                      3: 'CONNECTED',
+                      4: 'RECONNECTING',
+                      5: 'FLAPPING',
+                      6: 'AUTH_REQUIRED'
+                    };
+                    console.warn(`[SyncManager]    Status name: ${statusNames[relay.status] || 'UNKNOWN'}`);
                   }
                 } else {
                   console.warn(`[SyncManager] Failed to add relay to pool: ${url}`);
@@ -755,7 +776,273 @@ export function startAutoReconnectMonitor(): void {
   sm.startAutoReconnectMonitoring();
 }
 
+/**
+ * 🐛 DEBUG: Get full debug status for troubleshooting
+ * Use in browser console: window.debugNostrStatus()
+ */
+export function debugNostrStatus(): void {
+  try {
+    const sm = getSyncManager();
+    const status = sm.status;
+    const ndk = sm.ndk;
+    
+    console.log('='.repeat(60));
+    console.log('🔍 NOSTR DEBUG STATUS');
+    console.log('='.repeat(60));
+    
+    console.log('\n📡 SyncManager Status:');
+    console.log('  isOnline:', status.isOnline);
+    console.log('  isSyncing:', status.isSyncing);
+    console.log('  queuedEvents:', status.queuedEvents);
+    console.log('  connectedRelays:', status.connectedRelays);
+    console.log('  totalRelays:', status.totalRelays);
+    console.log('  hasRelaySigner:', status.hasRelaySigner);
+    
+    console.log('\n🔑 NDK Signer:');
+    console.log('  ndk.signer:', ndk?.signer ? 'SET ✅' : 'UNDEFINED ❌');
+    if (ndk?.signer) {
+      console.log('  signer type:', ndk.signer.constructor.name);
+    }
+    
+    console.log('\n👤 AuthStore:');
+    console.log('  isAuthenticated:', authStore.isAuthenticated);
+    console.log('  pubkey:', authStore.getPubkey()?.substring(0, 16) + '...');
+    console.log('  signerType:', authStore.session?.signerType);
+    
+    console.log('\n🌐 Connected Relays:');
+    if (ndk?.pool?.relays) {
+      for (const [url, relay] of ndk.pool.relays) {
+        const statusNames: Record<number, string> = {
+          0: 'DISCONNECTING', 1: 'DISCONNECTED', 2: 'CONNECTING',
+          3: 'CONNECTED', 4: 'RECONNECTING', 5: 'FLAPPING', 6: 'AUTH_REQUIRED'
+        };
+        console.log(`  ${url}: ${statusNames[relay.status] || relay.status}`);
+      }
+    } else {
+      console.log('  No relay pool found');
+    }
+    
+    console.log('\n' + '='.repeat(60));
+  } catch (e) {
+    console.error('Debug error:', e);
+  }
+}
+
+/**
+ * Test AMB Relay connection specifically
+ * Call from browser console: testAmbRelayConnection()
+ */
+export async function testAmbRelayConnection(): Promise<void> {
+  const AMB_RELAY = 'wss://amb-relay.edufeed.org';
+  
+  console.log('\n' + '='.repeat(60));
+  console.log('🧪 TESTING AMB RELAY CONNECTION');
+  console.log('='.repeat(60));
+  console.log('Target:', AMB_RELAY);
+  
+  try {
+    const syncManager = getSyncManager();
+    const ndk = syncManager?.ndk;
+    
+    if (!ndk) {
+      console.error('❌ NDK not available');
+      return;
+    }
+    
+    // Check if relay already in pool
+    let relay = ndk.pool.getRelay(AMB_RELAY);
+    console.log('\n📡 Relay in pool:', relay ? 'YES' : 'NO');
+    
+    if (relay) {
+      const statusNames: Record<number, string> = {
+        0: 'DISCONNECTING', 1: 'DISCONNECTED', 2: 'CONNECTING',
+        3: 'CONNECTED', 4: 'RECONNECTING', 5: 'FLAPPING', 6: 'AUTH_REQUIRED'
+      };
+      console.log('  Current status:', statusNames[relay.status] || relay.status);
+      console.log('  Connectivity status:', relay.connectivity?.status);
+    }
+    
+    // Try to add and connect
+    console.log('\n🔌 Adding relay to pool...');
+    ndk.addExplicitRelay(AMB_RELAY);
+    
+    relay = ndk.pool.getRelay(AMB_RELAY);
+    if (!relay) {
+      console.error('❌ Failed to add relay to pool');
+      return;
+    }
+    
+    console.log('✅ Relay added, attempting connection...');
+    
+    // Listen for events
+    relay.on('connect', () => console.log('📗 Event: CONNECT'));
+    relay.on('disconnect', () => console.log('📕 Event: DISCONNECT'));
+    relay.on('auth', (challenge: string) => console.log('🔐 Event: AUTH challenge:', challenge?.substring(0, 50) + '...'));
+    relay.on('notice', (msg: string) => console.log('📢 Event: NOTICE:', msg));
+    
+    await relay.connect();
+    
+    // Wait for connection to stabilize
+    console.log('⏳ Waiting 2s for connection to stabilize...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Check final status
+    const statusNames: Record<number, string> = {
+      0: 'DISCONNECTING', 1: 'DISCONNECTED', 2: 'CONNECTING',
+      3: 'CONNECTED', 4: 'RECONNECTING', 5: 'FLAPPING', 6: 'AUTH_REQUIRED'
+    };
+    console.log('\n📊 Final Status:');
+    console.log('  relay.status:', statusNames[relay.status] || relay.status);
+    console.log('  connectivity.status:', relay.connectivity?.status);
+    
+    if (relay.status === 3) {
+      console.log('\n✅ SUCCESS: AMB Relay is CONNECTED!');
+    } else if (relay.status === 6) {
+      console.log('\n⚠️ AUTH_REQUIRED: Relay needs NIP-42 authentication');
+      console.log('   The NDK signer should handle this automatically...');
+      console.log('   signer available:', !!ndk.signer);
+    } else {
+      console.log('\n❌ Connection failed or unstable');
+    }
+    
+    console.log('\n' + '='.repeat(60));
+  } catch (e) {
+    console.error('Test error:', e);
+  }
+}
+
+/**
+ * 🔄 Reconnect AUTH_REQUIRED relays after signer is available
+ * This forces relays to re-send AUTH challenge which NDK can now answer
+ * Call from browser console: reconnectAuthRelays()
+ */
+export async function reconnectAuthRelays(): Promise<void> {
+  console.log('\n' + '='.repeat(60));
+  console.log('🔄 RECONNECTING AUTH_REQUIRED RELAYS');
+  console.log('='.repeat(60));
+  
+  try {
+    const syncManager = getSyncManager();
+    const ndk = syncManager?.ndk;
+    
+    if (!ndk) {
+      console.error('❌ NDK not available');
+      return;
+    }
+    
+    if (!ndk.signer) {
+      console.error('❌ No signer available - login first!');
+      return;
+    }
+    
+    console.log('✅ Signer available:', ndk.signer.constructor.name);
+    
+    const AUTH_REQUIRED = 6;
+    const relaysToReconnect: any[] = [];
+    
+    // Find all AUTH_REQUIRED relays
+    if (ndk.pool?.relays) {
+      for (const [url, relay] of ndk.pool.relays) {
+        if (relay.status === AUTH_REQUIRED) {
+          relaysToReconnect.push({ url, relay });
+          console.log(`📍 Found AUTH_REQUIRED relay: ${url}`);
+        }
+      }
+    }
+    
+    if (relaysToReconnect.length === 0) {
+      console.log('ℹ️ No AUTH_REQUIRED relays found');
+      return;
+    }
+    
+    console.log(`\n🔌 Reconnecting ${relaysToReconnect.length} relay(s) with manual AUTH handling...`);
+    
+    for (const { url, relay } of relaysToReconnect) {
+      try {
+        console.log(`  Disconnecting ${url}...`);
+        await relay.disconnect();
+        
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Set up AUTH handler BEFORE connecting
+        const authPromise = new Promise<boolean>((resolve) => {
+          const timeout = setTimeout(() => {
+            console.log(`  ⏱️ AUTH timeout for ${url} - relay may not require AUTH or AUTH failed`);
+            resolve(false);
+          }, 5000);
+          
+          // Listen for the 'auth' event which contains the challenge
+          relay.on('auth', async (challenge: string) => {
+            clearTimeout(timeout);
+            console.log(`  🔐 AUTH challenge received from ${url}:`, challenge.substring(0, 50) + '...');
+            
+            try {
+              // Create and sign AUTH response event (NIP-42)
+              const { NDKEvent } = await import('@nostr-dev-kit/ndk');
+              const authEvent = new NDKEvent(ndk);
+              authEvent.kind = 22242; // NIP-42 AUTH event kind
+              authEvent.created_at = Math.floor(Date.now() / 1000);
+              authEvent.tags = [
+                ['relay', url],
+                ['challenge', challenge]
+              ];
+              authEvent.content = '';
+              
+              // Sign the AUTH event
+              await authEvent.sign(ndk.signer!);
+              
+              console.log(`  ✍️ Signed AUTH response for ${url}`);
+              
+              // Send the signed AUTH event back to the relay
+              // NDK should handle this automatically via relay.auth()
+              if (typeof relay.auth === 'function') {
+                await relay.auth(authEvent);
+                console.log(`  📤 Sent AUTH response to ${url}`);
+              } else {
+                // Fallback: publish the auth event directly
+                await relay.publish(authEvent);
+                console.log(`  📤 Published AUTH event to ${url}`);
+              }
+              
+              resolve(true);
+            } catch (authError) {
+              console.error(`  ❌ AUTH signing failed for ${url}:`, authError);
+              resolve(false);
+            }
+          });
+        });
+        
+        console.log(`  Reconnecting ${url}...`);
+        await relay.connect();
+        
+        // Wait for AUTH handshake to complete
+        const authSuccess = await authPromise;
+        
+        // Give relay time to update status after AUTH
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const statusNames: Record<number, string> = {
+          0: 'DISCONNECTING', 1: 'DISCONNECTED', 2: 'CONNECTING',
+          3: 'CONNECTED', 4: 'RECONNECTING', 5: 'FLAPPING', 6: 'AUTH_REQUIRED'
+        };
+        const finalStatus = statusNames[relay.status] || String(relay.status);
+        console.log(`  ${authSuccess ? '✅' : '⚠️'} ${url}: ${finalStatus}`);
+      } catch (e) {
+        console.error(`  ❌ Failed to reconnect ${url}:`, e);
+      }
+    }
+    
+    console.log('\n' + '='.repeat(60));
+  } catch (e) {
+    console.error('Reconnect error:', e);
+  }
+}
+
 // 🌐 Expose to window for browser console debugging
 if (typeof window !== 'undefined') {
   (window as any).startAutoReconnectMonitor = startAutoReconnectMonitor;
+  (window as any).debugNostrStatus = debugNostrStatus;
+  (window as any).testAmbRelayConnection = testAmbRelayConnection;
+  (window as any).reconnectAuthRelays = reconnectAuthRelays;
 }

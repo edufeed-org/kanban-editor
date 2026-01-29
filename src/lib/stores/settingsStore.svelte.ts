@@ -31,6 +31,7 @@ export interface SettingsState {
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
+  relaysEdufeed: string[]; // Edufeed AMB Relays (Kind 30142) - nur amb-relay.edufeed.org akzeptiert diese!
   draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
   njumpUrl: string; // Web-Client URL für Nostr-Links (naddr, nevent, note)
 
@@ -72,11 +73,14 @@ export const DEFAULT_SETTINGS: SettingsState = {
 
   // Nostr Relays
   relaysPublic: [
-    'wss://relay-rpi.edufeed.org',
+    'wss://relay.edufeed.org',
     'wss://relay.primal.net',
     'wss://nos.lol',
   ],
   relaysPrivate: [],
+  relaysEdufeed: [
+    'wss://amb-relay.edufeed.org',
+  ],
   draftPublishingMode: 'private-relays', // Default: draft → private relays
   njumpUrl: 'https://njump.edufeed.org', // Default: edufeed njump instance
 
@@ -348,6 +352,12 @@ export class SettingsStore {
         this.settings = {
           ...this.settings,
           relaysPrivate: config.nostr.relaysPrivate
+        };
+      }
+      if (config.nostr.relaysEdufeed) {
+        this.settings = {
+          ...this.settings,
+          relaysEdufeed: config.nostr.relaysEdufeed
         };
       }
       if (config.nostr.draftPublishingMode) {
