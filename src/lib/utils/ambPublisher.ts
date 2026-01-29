@@ -9,6 +9,7 @@ import type { Board } from '$lib/classes/BoardModel';
 import { getSyncManager } from '$lib/stores/syncManager.svelte';
 import { authStore } from '$lib/stores/authStore.svelte';
 import { settingsStore } from '$lib/stores/settingsStore.svelte';
+import { llmRequest } from '$lib/agent/llmRequest';
 import NDK, { NDKEvent } from '@nostr-dev-kit/ndk';
 import { nip19 } from 'nostr-tools';
 import { makeDataUrl, sha256Hex } from '$lib/utils/ambEncoding';
@@ -163,6 +164,277 @@ export const LEARNING_RESOURCE_TYPES: AmbConcept[] = [
     { id: 'https://w3id.org/kim/hcrt/worksheet', prefLabel: { de: 'Arbeitsmaterial', en: 'Worksheet' }, type: 'Concept' },
     { id: 'https://w3id.org/kim/hcrt/other', prefLabel: { de: 'Sonstiges', en: 'Other' }, type: 'Concept' },
 ];
+
+/**
+ * Ergebnis der LLM-basierten Metadaten-Analyse
+ */
+export interface AmbMetadataSuggestion {
+    /** Vorgeschlagene Zielgruppen (audience role IDs) */
+    audience: string[];
+    /** Vorgeschlagene Bildungsstufen (educational level IDs) */
+    educationalLevel: string[];
+    /** Vorgeschlagene Ressourcentypen (HCRT IDs) */
+    learningResourceType: string[];
+    /** Vorgeschlagene Kompetenzen (Freitext) */
+    teaches: string[];
+    /** Vorgeschlagene Tags */
+    tags: string[];
+    /** Vorgeschlagene Beschreibung (falls aktuelle unpassend oder leer) */
+    suggestedDescription?: string;
+    /** Kurze Begründung des LLM */
+    reasoning?: string;
+}
+
+/**
+ * Analysiert ein Board mit einem LLM und schlägt passende AMB-Metadaten vor.
+ * Nutzt die in den Settings konfigurierte LLM-Instanz.
+ * 
+ * @param board - Das zu analysierende Board
+ * @returns Vorschläge für AMB-Metadaten
+ */
+export async function suggestAmbMetadata(board: Board): Promise<AmbMetadataSuggestion> {
+    const boardData = board.getContextData(true);
+    
+    // Erstelle eine kompakte Zusammenfassung des Boards
+    const boardSummary = {
+        name: boardData.name,
+        description: boardData.description,
+        columns: boardData.columns.map((col: { name: string; cards: Array<{ heading: string; content?: string }> }) => ({
+            name: col.name,
+            cards: col.cards.map((card: { heading: string; content?: string }) => ({
+                title: card.heading,
+                content: card.content?.substring(0, 200) // Begrenzen für Token-Effizienz
+            }))
+        })),
+        existingTags: boardData.tags || []
+    };
+    
+    // Verfügbare Vokabular-Optionen als kompakte Listen
+    const audienceOptions = AUDIENCE_ROLES.map(a => {
+        const label = typeof a.prefLabel === 'object' ? a.prefLabel.de : a.prefLabel;
+        const key = a.id.split('/').pop();
+        return `${key}: ${label}`;
+    }).join(', ');
+    
+    const levelOptions = EDUCATIONAL_LEVELS.map(l => {
+        const label = typeof l.prefLabel === 'object' ? l.prefLabel.de : l.prefLabel;
+        const key = l.id.split('/').pop();
+        return `${key}: ${label}`;
+    }).join(', ');
+    
+    const resourceTypeOptions = LEARNING_RESOURCE_TYPES.map(t => {
+        const label = typeof t.prefLabel === 'object' ? t.prefLabel.de : t.prefLabel;
+        const key = t.id.split('/').pop();
+        return `${key}: ${label}`;
+    }).join(', ');
+    
+    const systemPrompt = `Du bist ein Metadaten-Assistent. Analysiere das Kanban-Board und gib NUR ein JSON-Objekt zurück.
+
+⚠️ WICHTIG: Deine GESAMTE Antwort muss ein valides JSON-Objekt sein. KEIN Text davor oder danach!
+
+Format:
+{"audience":["key1"],"educationalLevel":["level_X"],"learningResourceType":["type1"],"teaches":["Kompetenz"],"tags":["tag1"],"suggestedDescription":"Kurze prägnante Beschreibung","reasoning":"Begründung"}
+
+Wähle aus:
+- audience: ${audienceOptions}
+- educationalLevel: ${levelOptions}  
+- learningResourceType: ${resourceTypeOptions}
+- teaches: 2-4 Kompetenzen auf Deutsch
+- tags: 3-6 Schlagworte auf Deutsch
+- suggestedDescription: Prüfe ob die aktuelle Beschreibung zum Board-Inhalt passt. Falls nicht oder leer, schlage eine bessere vor (1-2 Sätze, max 200 Zeichen)`;
+    
+    const userMessage = `Board: ${boardSummary.name}
+Beschreibung: ${boardSummary.description || 'Keine'}
+Spalten: ${boardSummary.columns.map((c: { name: string; cards: Array<{ title: string }> }) => 
+    `${c.name} (${c.cards.map((card: { title: string }) => card.title).join(', ')})`
+).join(' | ')}
+
+Antworte NUR mit JSON:`;
+    
+    // Interface für das erwartete LLM-Ergebnis
+    interface LlmMetadataResult {
+        audience?: string[];
+        educationalLevel?: string[];
+        learningResourceType?: string[];
+        teaches?: string[];
+        tags?: string[];
+        reasoning?: string;
+        suggestedDescription?: string;
+    }
+    
+    // Hilfsfunktion zum Extrahieren von JSON aus Text
+    const extractJson = (text: string): LlmMetadataResult | null => {
+        console.log('🔍 Versuche JSON zu extrahieren aus:', text.substring(0, 500));
+        
+        // Versuche verschiedene Patterns
+        const patterns = [
+            // Markdown Code-Block
+            /```(?:json)?\s*([\s\S]*?)```/,
+            // Einfaches JSON-Objekt
+            /(\{[\s\S]*?\})/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match) {
+                try {
+                    const cleaned = match[1].trim();
+                    console.log('📦 Gefundenes JSON-Match:', cleaned.substring(0, 200));
+                    return JSON.parse(cleaned);
+                } catch (e) {
+                    console.log('❌ JSON Parse fehlgeschlagen:', e);
+                    continue;
+                }
+            }
+        }
+        
+        // Fallback: Versuche strukturierte Daten aus Reasoning-Text zu extrahieren
+        // Suche nach Mustern wie: audience: ["key1", "key2"]
+        try {
+            const result: Partial<LlmMetadataResult> = {};
+            
+            // audience Array
+            const audienceMatch = text.match(/audience[:\s]*\[([^\]]+)\]/i);
+            if (audienceMatch) {
+                result.audience = audienceMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
+            // educationalLevel Array
+            const levelMatch = text.match(/educationalLevel[:\s]*\[([^\]]+)\]/i);
+            if (levelMatch) {
+                result.educationalLevel = levelMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
+            // learningResourceType Array
+            const typeMatch = text.match(/learningResourceType[:\s]*\[([^\]]+)\]/i);
+            if (typeMatch) {
+                result.learningResourceType = typeMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
+            // teaches Array (auch als kommagetrennte Liste)
+            const teachesMatch = text.match(/teaches[:\s]*\[([^\]]+)\]/i);
+            if (teachesMatch) {
+                result.teaches = teachesMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
+            // tags Array
+            const tagsMatch = text.match(/tags[:\s]*\[([^\]]+)\]/i);
+            if (tagsMatch) {
+                result.tags = tagsMatch[1].split(',').map(s => 
+                    s.trim().replace(/['"]/g, '')
+                ).filter(s => s);
+            }
+            
+            // reasoning (Text nach reasoning:)
+            const reasoningMatch = text.match(/reasoning[:\s]*["']([^"']+)["']/i);
+            if (reasoningMatch) {
+                result.reasoning = reasoningMatch[1];
+            }
+            
+            // Prüfe ob wir genug Daten haben
+            if (result.audience?.length || result.educationalLevel?.length || result.learningResourceType?.length) {
+                console.log('✅ Extrahierte Struktur aus Text:', result);
+                return result as LlmMetadataResult;
+            }
+        } catch (e) {
+            console.log('⚠️ Strukturierte Extraktion fehlgeschlagen:', e);
+        }
+        
+        // Letzter Versuch: Abgeschnittenes JSON reparieren
+        try {
+            let truncated = text.trim();
+            // Entferne abgeschnittene Strings und schließe JSON
+            truncated = truncated.replace(/,?\s*"[^"]*$/, '');  // Abgeschnittener String
+            truncated = truncated.replace(/,?\s*\[\s*$/, '');    // Abgeschnittenes Array
+            // Zähle offene Klammern und schließe sie
+            const openBrackets = (truncated.match(/\[/g) || []).length - (truncated.match(/\]/g) || []).length;
+            const openBraces = (truncated.match(/\{/g) || []).length - (truncated.match(/\}/g) || []).length;
+            truncated += ']'.repeat(Math.max(0, openBrackets));
+            truncated += '}'.repeat(Math.max(0, openBraces));
+            
+            console.log('🔧 Repariertes JSON:', truncated.substring(0, 300));
+            const repaired = JSON.parse(truncated);
+            if (repaired.audience || repaired.educationalLevel || repaired.learningResourceType) {
+                console.log('✅ Abgeschnittenes JSON erfolgreich repariert');
+                return repaired;
+            }
+        } catch (e) {
+            console.log('⚠️ JSON-Reparatur fehlgeschlagen:', e);
+        }
+        
+        return null;
+    };
+    
+    try {
+        const rawResult = await llmRequest<LlmMetadataResult>({
+            systemPrompt,
+            userMessage,
+            returnType: 'json',
+            temperature: 0.3,
+            maxTokens: 8000  // Reasoning-Modelle brauchen mehr Tokens
+        });
+        
+        console.log('🤖 LLM raw response:', typeof rawResult, rawResult);
+        
+        // Stelle sicher, dass wir ein Objekt haben
+        let result: LlmMetadataResult;
+        
+        if (typeof rawResult === 'object' && rawResult !== null) {
+            result = rawResult as LlmMetadataResult;
+        } else if (typeof rawResult === 'string') {
+            // Versuche JSON zu parsen
+            try {
+                result = JSON.parse(rawResult);
+            } catch {
+                // Versuche JSON aus dem Text zu extrahieren
+                const extracted = extractJson(rawResult);
+                if (extracted) {
+                    result = extracted;
+                } else {
+                    throw new Error('Konnte kein gültiges JSON aus der LLM-Antwort extrahieren');
+                }
+            }
+        } else {
+            throw new Error('Unerwarteter Antworttyp vom LLM');
+        }
+        
+        // Map die Keys zu vollständigen IDs
+        const mapToFullIds = (keys: string[] | undefined, vocabulary: AmbConcept[]): string[] => {
+            if (!keys) return [];
+            return keys
+                .map(key => {
+                    // Prüfe ob bereits volle ID
+                    if (key.startsWith('http')) return key;
+                    // Suche nach Key am Ende der ID
+                    const found = vocabulary.find(v => v.id.endsWith('/' + key) || v.id.endsWith('#' + key));
+                    return found?.id;
+                })
+                .filter((id): id is string => !!id);
+        };
+        
+        return {
+            audience: mapToFullIds(result.audience, AUDIENCE_ROLES),
+            educationalLevel: mapToFullIds(result.educationalLevel, EDUCATIONAL_LEVELS),
+            learningResourceType: mapToFullIds(result.learningResourceType, LEARNING_RESOURCE_TYPES),
+            teaches: result.teaches || [],
+            tags: result.tags || [],
+            reasoning: result.reasoning,
+            suggestedDescription: result.suggestedDescription
+        };
+    } catch (error) {
+        console.error('LLM metadata suggestion failed:', error);
+        // Wirf den Fehler weiter, damit die UI ihn anzeigen kann
+        throw error;
+    }
+}
 
 export interface AmbPublishOptions {
     /**

@@ -125,7 +125,7 @@
     import * as Field from "$lib/components/ui/field/index.js";
     import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
     import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import { TrashIcon } from 'lucide-svelte';
+    import { BotIcon, TrashIcon } from 'lucide-svelte';
     
     onMount(() => {
         applyTheme(currentTheme);
@@ -188,18 +188,6 @@
             
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
-            <!-- Edufeed Publish Button -->
-            <Button
-                variant="outline"
-                size="sm"
-                onclick={() => showEdufeedDialog = true}
-                class="hidden sm:flex items-center gap-1.5 h-8 text-xs"
-                title="Board als OER zu Edufeed teilen"
-            >
-                <ShareIcon class="h-3.5 w-3.5" />
-                <span class="hidden md:inline">Zu Edufeed teilen</span>
-            </Button>
-            
             <!-- Mobile: Icon-only Button -->
             <Button
                 variant="outline"
@@ -220,7 +208,7 @@
                 onclick={onToggleRightSidebar}
                 class="  h-8 w-8 bg-secondary"
             >
-                <PanelRightIcon class="h-4 w-4"/>
+                <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
         </div>

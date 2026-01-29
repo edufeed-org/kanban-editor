@@ -24,6 +24,7 @@
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import { VersionHistory, ShareButton } from '$lib/components/board';
     import ShareIcon2 from '@lucide/svelte/icons/share-2';
+    import ShareIcon from '@lucide/svelte/icons/share';
     import HistoryIcon from '@lucide/svelte/icons/history';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
@@ -482,8 +483,8 @@
                                 publishToEdufeedDialogOpen = true;
                             }}
                         >
-                            <SendIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Zu Nostr publizieren</span>
+                            <SendIcon class="h-3.5 w-3.5" />
+                            <span class="hidden md:inline">An edufeed.org senden</span>
                         </button>
                     </div>
                 </Popover.Content>
@@ -648,12 +649,14 @@
             
             <div class="space-y-2">
                 <Label for="board-description">Beschreibung</Label>
-                <Input
+                <textarea
                     id="board-description"
                     bind:value={metaForm.description}
                     placeholder="Projekt-Beschreibung"
                     readonly={!canEditBoardMeta}
-                />
+                    rows="4"
+                    class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                ></textarea>
             </div>
             
             <div class="space-y-2">

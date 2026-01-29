@@ -24,7 +24,8 @@ import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
 import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 import { authStore } from '$lib/stores/authStore.svelte.js';
-import { publishBoardToEdufeed, type AmbPublishResult, AUDIENCE_ROLES, EDUCATIONAL_LEVELS, LEARNING_RESOURCE_TYPES } from '$lib/utils/ambPublisher.js';
+import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
+import { publishBoardToEdufeed, suggestAmbMetadata, type AmbPublishResult, type AmbMetadataSuggestion, AUDIENCE_ROLES, EDUCATIONAL_LEVELS, LEARNING_RESOURCE_TYPES } from '$lib/utils/ambPublisher.js';
 import { toast } from 'svelte-sonner';
 
 // Icons
@@ -37,6 +38,7 @@ import TagIcon from "@lucide/svelte/icons/tag";
 import InfoIcon from "@lucide/svelte/icons/info";
 import AlertTriangleIcon from "@lucide/svelte/icons/alert-triangle";
 import LoaderIcon from "@lucide/svelte/icons/loader";
+import SparklesIcon from "@lucide/svelte/icons/sparkles";
 import UsersIcon from "@lucide/svelte/icons/users";
 import GraduationCapIcon from "@lucide/svelte/icons/graduation-cap";
 import BookOpenIcon from "@lucide/svelte/icons/book-open";
@@ -70,11 +72,16 @@ let formData = $state<{
 
 // UI State
 let isPublishing = $state(false);
+let isAnalyzing = $state(false);
 let publishResult = $state<AmbPublishResult | null>(null);
+let llmSuggestion = $state<AmbMetadataSuggestion | null>(null);
 let newTag = $state('');
 let newTeaches = $state('');
 let showAdvanced = $state(false);
 let showAmbFields = $state(true);
+
+// LLM-Konfiguration prüfen
+let isLlmConfigured = $derived(settingsStore.isLlmConfigured);
 
 // Board-Daten reaktiv laden
 let board = $derived(boardStore.data);
@@ -186,6 +193,63 @@ async function copyToClipboard(text: string, label: string) {
         toast.success(`${label} kopiert!`);
     } catch (err) {
         toast.error('Kopieren fehlgeschlagen');
+    }
+}
+
+// LLM-basierte Metadaten-Analyse
+async function analyzeBoardWithLLM() {
+    if (!board) {
+        toast.error('Kein Board geladen');
+        return;
+    }
+    
+    if (!isLlmConfigured) {
+        toast.error('LLM nicht konfiguriert. Bitte in den Einstellungen konfigurieren.');
+        return;
+    }
+    
+    isAnalyzing = true;
+    llmSuggestion = null;
+    
+    try {
+        toast.info('Analysiere Board mit KI...', { duration: 2000 });
+        const suggestion = await suggestAmbMetadata(board);
+        llmSuggestion = suggestion;
+        
+        // Übernehme die Vorschläge in das Formular
+        if (suggestion.audience.length > 0) {
+            formData.audience = [...suggestion.audience];
+        }
+        if (suggestion.educationalLevel.length > 0) {
+            formData.educationalLevel = [...suggestion.educationalLevel];
+        }
+        if (suggestion.learningResourceType.length > 0) {
+            formData.learningResourceType = [...suggestion.learningResourceType];
+        }
+        if (suggestion.teaches.length > 0) {
+            formData.teaches = [...suggestion.teaches];
+        }
+        // Tags zu bestehenden hinzufügen (ohne Duplikate)
+        if (suggestion.tags.length > 0) {
+            const newTags = suggestion.tags.filter(t => !formData.tags.includes(t.toLowerCase()));
+            formData.tags = [...formData.tags, ...newTags.map(t => t.toLowerCase())];
+        }
+        
+        // Beschreibung vorschlagen wenn vorhanden und anzeigen (nicht automatisch übernehmen)
+        if (suggestion.suggestedDescription) {
+            console.log('🤖 Beschreibungsvorschlag:', suggestion.suggestedDescription);
+        }
+        
+        toast.success('KI-Vorschläge übernommen!');
+        
+        if (suggestion.reasoning) {
+            console.log('🤖 LLM Reasoning:', suggestion.reasoning);
+        }
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler';
+        toast.error(`Analyse fehlgeschlagen: ${errorMsg}`);
+    } finally {
+        isAnalyzing = false;
     }
 }
 
@@ -395,12 +459,38 @@ function handleClose() {
                 <Field>
                     <FieldLabel>Beschreibung</FieldLabel>
                     <FieldContent>
-                        <Textarea 
-                            bind:value={formData.description}
-                            placeholder="Kurze Beschreibung des Boards..."
-                            rows={3}
-                            disabled={isPublishing}
-                        />
+                        <div class="space-y-2">
+                            <Textarea 
+                                bind:value={formData.description}
+                                placeholder="Kurze Beschreibung des Boards..."
+                                rows={3}
+                                disabled={isPublishing}
+                            />
+                            {#if llmSuggestion?.suggestedDescription}
+                                <div class="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex-1">
+                                            <p class="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                                🤖 KI-Vorschlag für Beschreibung:
+                                            </p>
+                                            <p class="text-sm text-blue-900 dark:text-blue-100">
+                                                {llmSuggestion.suggestedDescription}
+                                            </p>
+                                        </div>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onclick={() => {
+                                                formData.description = llmSuggestion?.suggestedDescription || '';
+                                                toast.success('Beschreibung übernommen');
+                                            }}
+                                        >
+                                            Übernehmen
+                                        </Button>
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
                     </FieldContent>
                 </Field>
 
@@ -454,14 +544,35 @@ function handleClose() {
 
                 <!-- AMB-Felder Toggle -->
                 <div class="border-t pt-4">
-                    <button
-                        type="button"
-                        class="text-sm font-medium text-foreground hover:text-primary flex items-center gap-2"
-                        onclick={() => showAmbFields = !showAmbFields}
-                    >
-                        <BookOpenIcon class="h-4 w-4" />
-                        {showAmbFields ? 'AMB-Metadaten ausblenden' : 'AMB-Metadaten anzeigen'}
-                    </button>
+                    <div class="flex items-center justify-between mb-2">
+                        <button
+                            type="button"
+                            class="text-sm font-medium text-foreground hover:text-primary flex items-center gap-2"
+                            onclick={() => showAmbFields = !showAmbFields}
+                        >
+                            <BookOpenIcon class="h-4 w-4" />
+                            {showAmbFields ? 'AMB-Metadaten ausblenden' : 'AMB-Metadaten anzeigen'}
+                        </button>
+                        
+                        {#if showAmbFields}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onclick={analyzeBoardWithLLM}
+                                disabled={!isLlmConfigured || isAnalyzing || isPublishing}
+                                title={!isLlmConfigured ? 'LLM nicht konfiguriert - bitte in Einstellungen konfigurieren' : 'Board mit KI analysieren'}
+                            >
+                                {#if isAnalyzing}
+                                    <LoaderIcon class="h-4 w-4 mr-2 animate-spin" />
+                                    Analysiere...
+                                {:else}
+                                    <SparklesIcon class="h-4 w-4 mr-2" />
+                                    KI-Vorschläge
+                                {/if}
+                            </Button>
+                        {/if}
+                    </div>
                     
                     {#if showAmbFields}
                         <div class="mt-4 space-y-4 p-4 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
