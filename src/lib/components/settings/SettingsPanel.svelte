@@ -460,35 +460,6 @@
               </Button>
             </div>
           </div>
-          
-          <!-- Card Publish State -->
-          <div class="space-y-2">
-            <Label>Standard Card Publish State</Label>
-            <div class="flex items-center gap-2">
-              <Button 
-                variant={settings.defaultCardPublishState === 'draft' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultCardPublishState('draft')}
-                class="flex-1"
-              >
-                Draft
-              </Button>
-              <Button 
-                variant={settings.defaultCardPublishState === 'private' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultCardPublishState('private')}
-                class="flex-1"
-              >
-                Private
-              </Button>
-              <Button 
-                variant={settings.defaultCardPublishState === 'published' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultCardPublishState('published')}
-                class="flex-1"
-              >
-                Published
-              </Button>
-            </div>
-          </div>
-          
         </Card.Content>
       </Card.Root>
     </Tabs.Content>

@@ -39,8 +39,7 @@
 
   "defaults": {
     "columns": ["To Do", "In Progress", "Done"],
-    "boardPublishState": "draft",
-    "cardPublishState": "draft"
+    "boardPublishState": "draft"
   },
 
   "sidebar": {

@@ -10,6 +10,7 @@
 	import ColorSelector from './ColorSelector.svelte';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
+	import MarkdownEditor from '$lib/components/ui/markdown-editor/MarkdownEditor.svelte';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import TrashIcon from '@lucide/svelte/icons/trash';
@@ -24,6 +25,7 @@
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import { onMount, onDestroy } from 'svelte';
+	import { fade, slide } from 'svelte/transition';
 
 	interface Props {
 		cardId: string | number;
@@ -46,6 +48,12 @@
 	let editImageUrl = $state('');
 	let imageMode = $state<'url' | 'oer'>('url');
 	let isAddingLink = $state(false);
+	let isEditingDescription = $state(false);
+	let isImageModalOpen = $state(false);
+
+	// Reference for scrolling
+	// svelte-ignore non_reactive_update
+	let actionBarRef: HTMLDivElement;
 
 	// Subscription cleanup function
 	let unsubscribeComments: (() => void) | undefined;
@@ -140,20 +148,6 @@
 				? [card.authorName]
 				: []
 	);
-
-	// Auto-adjust textarea height when description changes
-	$effect(() => {
-		if (!readOnly && editDescription !== undefined) {
-			// Small delay to ensure DOM is updated
-			setTimeout(() => {
-				const textarea = document.querySelector('textarea[placeholder="Beschreibung eingeben..."]') as HTMLTextAreaElement;
-				if (textarea) {
-					textarea.style.height = 'auto';
-					textarea.style.height = textarea.scrollHeight + 'px';
-				}
-			}, 0);
-		}
-	});
 
 	/**
 	 * Handles comment submission
@@ -304,6 +298,7 @@
 		if (editDescription !== card.description) {
 			boardStore.updateCard(card.id as string, { content: editDescription });
 		}
+		isEditingDescription = false;
 	}
 	
 	/**
@@ -494,29 +489,9 @@
 
 		<!-- Main Content: Scrollable -->
 		<div class="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-			<!-- Image Section -->
+			<!-- Image Display Section (only shows existing image, not for editing) -->
+			{#if card.image && !isEditingImage}
 			<div class="space-y-2">
-					{#if !isEditingImage && !card.image}
-						<!-- Kein Bild: Button zum Hinzufügen (hidden in readOnly mode) -->
-						{#if !readOnly}
-						<div class="flex items-center justify-between">
-							<h3 class="text-sm font-semibold text-muted-foreground">Karteninhalt</h3>
-							<Button
-								variant="outline"
-								size="sm"
-								onclick={() => {
-									isEditingImage = true;
-									editImageUrl = '';
-									imageMode = 'url';
-								}}
-								class="h-7 px-2 text-xs text-muted-foreground"
-							>
-								<ImageIcon class="h-3 w-3 mr-1" />
-								Bild hinzufügen
-							</Button>
-						</div>
-						{/if}
-					{/if}
 
 					{#if isEditingImage && !readOnly}
 						<!-- Edit Mode: URL oder OER -->
@@ -627,16 +602,21 @@
 					{#if card.image && !isEditingImage}
 						<!-- Display Mode: Bild anzeigen mit Hover-Edit -->
 						<div class="relative group">
-							<div class="rounded-md overflow-hidden max-h-96 bg-muted border">
+							<button
+								type="button"
+								class="rounded-md overflow-hidden bg-muted border cursor-pointer hover:opacity-90 transition-opacity w-full block p-0"
+								onclick={() => isImageModalOpen = true}
+								title="Klicken zum Vergrößern"
+							>
 								<img
 									src={card.image}
 									alt="Kartenbild"
-									class="w-full h-full object-cover"
+									class="w-full h-auto object-contain max-h-[200px]"
 									onerror={(e) => {
 										(e.target as HTMLImageElement).style.display = 'none';
 									}}
 								/>
-							</div>
+							</button>
 							<!-- Edit-Button Overlay (hidden in readOnly mode) -->
 							{#if !readOnly}
 							<Button
@@ -646,6 +626,10 @@
 									isEditingImage = true;
 									editImageUrl = card.image || '';
 									imageMode = 'url';
+									// Scroll to action bar after a short delay to ensure DOM is updated
+									setTimeout(() => {
+										actionBarRef?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+									}, 100);
 								}}
 								class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 px-2 text-xs"
 							>
@@ -656,53 +640,251 @@
 						</div>
 					{/if}
 				</div>
+			{/if}
 
-			<!-- Description Field - Inline Editing -->
-			<div class="space-y-2">
-				<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
-				{#if readOnly}
-					{#if card.description}
-						<div class="min-h-[4rem] p-3 bg-muted/50 rounded-md text-sm border">
-							<MarkdownRenderer content={card.description} />
-						</div>
-					{:else}
-						<p class="text-sm text-muted-foreground italic p-3">Keine Beschreibung vorhanden</p>
-					{/if}
-				{:else}
-					<Textarea
-						bind:value={editDescription}
-						onblur={handleSaveDescription}
-						oninput={(e) => {
-							const target = e.target as HTMLTextAreaElement;
-							target.style.height = 'auto';
-							target.style.height = target.scrollHeight + 'px';
-						}}
-						placeholder="Beschreibung eingeben..."
-						class="min-h-[4rem] resize-none text-sm hover:bg-muted/50 transition-colors overflow-hidden"
-						style="height: auto;"
-					/>
-				{/if}
-			</div>
-
-			<!-- 🆕 Links Section mit Inline-Add -->
+			<!-- Description Section -->
 			<div class="space-y-2">
 				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-semibold text-muted-foreground">Links</h3>
-					{#if !readOnly}
-					<Button
-						variant="ghost"
-						size="sm"
-						onclick={() => isAddingLink = !isAddingLink}
-						class="h-6 px-2 text-xs"
-					>
-						<PlusIcon class="h-3 w-3 mr-1" />
-						Link hinzufügen
-					</Button>
+					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
+					{#if !readOnly && !isEditingDescription}
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => isEditingDescription = true}
+							class="h-6 px-2 text-xs"
+						>
+							<PencilIcon class="h-3 w-3 mr-1" />
+							Bearbeiten
+						</Button>
 					{/if}
 				</div>
 				
-				{#if isAddingLink && !readOnly}
-					<div class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border border-dashed">
+				{#if isEditingDescription && !readOnly}
+					<!-- Edit Mode: MarkdownEditor with toolbar -->
+					<div 
+						class="border rounded-md overflow-hidden"
+						in:fade={{ duration: 200, delay: 50 }}
+						out:fade={{ duration: 150 }}
+					>
+						<MarkdownEditor
+							value={editDescription}
+							onchange={(content) => {
+								editDescription = content;
+							}}
+							placeholder="Beschreibung eingeben..."
+							disabled={false}
+						/>
+					</div>
+					<!-- Save/Cancel Buttons -->
+					<div class="flex justify-end gap-2 pt-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								editDescription = card.description || '';
+								isEditingDescription = false;
+							}}
+						>
+							Abbrechen
+						</Button>
+						<Button
+							size="sm"
+							onclick={handleSaveDescription}
+						>
+							<CheckIcon class="h-3 w-3 mr-1" />
+							Speichern
+						</Button>
+					</div>
+				{:else}
+					<!-- View Mode: Clean MarkdownRenderer -->
+					{#if card.description}
+						<div 
+							class="min-h-[4rem] p-3 bg-muted/50 rounded-md text-sm border {readOnly ? '' : 'cursor-pointer hover:bg-muted transition-colors'}"
+							in:fade={{ duration: 200, delay: 50 }}
+							out:fade={{ duration: 150 }}
+							onclick={() => !readOnly && (isEditingDescription = true)}
+							role={readOnly ? undefined : 'button'}
+							onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
+						>
+							<MarkdownRenderer content={card.description} />
+						</div>
+					{:else}
+						<div 
+							class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center {readOnly ? '' : 'cursor-pointer hover:bg-muted/50 transition-colors'}"
+							in:fade={{ duration: 200, delay: 50 }}
+							out:fade={{ duration: 150 }}
+							onclick={() => !readOnly && (isEditingDescription = true)}
+							role={readOnly ? undefined : 'button'}
+							onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
+						>
+							{readOnly ? 'Keine Beschreibung vorhanden' : 'Klicken um Beschreibung hinzuzufügen...'}
+						</div>
+					{/if}
+				{/if}
+			</div>
+
+			<!-- 🆕 Centered Action Bar (Icons with hover text) - Mutually Exclusive -->
+			{#if !readOnly}
+			<div bind:this={actionBarRef} class="flex justify-center gap-3 py-2">
+				<Button
+					variant={isEditingImage ? 'default' : 'ghost'}
+					size="sm"
+					onclick={() => {
+						isEditingImage = !isEditingImage;
+						if (isEditingImage) {
+							isAddingLink = false;
+							editImageUrl = card.image || '';
+							imageMode = 'url';
+						} else {
+							editImageUrl = '';
+						}
+					}}
+					class="group h-9 transition-all {isEditingImage ? 'px-4' : 'px-3'}"
+				>
+					<ImageIcon class="h-4 w-4" />
+					<span class="{isEditingImage ? 'ml-2' : 'max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2'} transition-all duration-200">
+						Bild {isEditingImage ? 'schließen' : 'hinzufügen'}
+					</span>
+				</Button>
+				<Button
+					variant={isAddingLink ? 'default' : 'ghost'}
+					size="sm"
+					onclick={() => {
+						isAddingLink = !isAddingLink;
+						if (isAddingLink) {
+							isEditingImage = false;
+						} else {
+							newLinkUrl = '';
+							newLinkTitle = '';
+						}
+					}}
+					class="group h-9 transition-all {isAddingLink ? 'px-4' : 'px-3'}"
+				>
+					<LinkIcon class="h-4 w-4" />
+					<span class="{isAddingLink ? 'ml-2' : 'max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2'} transition-all duration-200">
+						Link {isAddingLink ? 'schließen' : 'hinzufügen'}
+					</span>
+				</Button>
+			</div>
+			{/if}
+
+			<!-- Image Editing Form (appears below action bar) -->
+			{#if isEditingImage && !readOnly}
+			<div 
+				class="space-y-3 p-3 border rounded-md bg-muted/30"
+				in:slide={{ duration: 250, axis: 'y' }}
+				out:slide={{ duration: 200, axis: 'y' }}
+			>
+				<!-- Mode Toggle -->
+				<div class="flex gap-1">
+					<Button
+						type="button"
+						variant={imageMode === 'url' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (imageMode = 'url')}
+					>
+						URL eingeben
+					</Button>
+					<Button
+						type="button"
+						variant={imageMode === 'oer' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (imageMode = 'oer')}
+					>
+						OER suchen
+					</Button>
+				</div>
+
+				{#if imageMode === 'url'}
+					<!-- URL Input -->
+					<div class="flex gap-2">
+						<Input
+							bind:value={editImageUrl}
+							placeholder="https://example.com/image.jpg"
+							class="flex-1"
+						/>
+					</div>
+					
+					<!-- URL Preview -->
+					{#if editImageUrl && editImageUrl !== card.image}
+						<div class="rounded-md overflow-hidden bg-muted border-2 border-blue-400">
+							<img
+								src={editImageUrl}
+								alt="Vorschau"
+								class="w-full h-auto max-h-48 object-contain"
+								onerror={(e) => {
+									(e.target as HTMLImageElement).style.display = 'none';
+								}}
+							/>
+							<div class="text-xs text-muted-foreground p-1 text-center bg-blue-400/20">
+								Vorschau - noch nicht gespeichert
+							</div>
+						</div>
+					{/if}
+				{:else}
+					<!-- OER Picker -->
+					<OerImagePicker
+						onSelect={(url) => {
+							editImageUrl = url;
+							imageMode = 'url';
+						}}
+					/>
+				{/if}
+
+				<!-- Action Buttons -->
+				<div class="flex justify-between items-center pt-2 border-t">
+					<div>
+						{#if card.image}
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={() => {
+									boardStore.editCard(String(card.id), { image: '' });
+									isEditingImage = false;
+								}}
+								class="text-destructive hover:text-destructive"
+							>
+								<TrashIcon class="h-3 w-3 mr-1" />
+								Bild entfernen
+							</Button>
+						{/if}
+					</div>
+					<div class="flex gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => {
+								isEditingImage = false;
+								editImageUrl = '';
+							}}
+						>
+							Abbrechen
+						</Button>
+						<Button
+							size="sm"
+							onclick={() => {
+								if (editImageUrl !== card.image) {
+									boardStore.editCard(String(card.id), { image: editImageUrl });
+								}
+								isEditingImage = false;
+							}}
+							disabled={!editImageUrl && !card.image}
+						>
+							<CheckIcon class="h-3 w-3 mr-1" />
+							Speichern
+						</Button>
+					</div>
+				</div>
+			</div>
+			{/if}
+
+			<!-- Link Add Form (appears below action bar) -->
+			{#if isAddingLink && !readOnly}
+					<div 
+						class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border border-dashed"
+						in:slide={{ duration: 250, axis: 'y' }}
+						out:slide={{ duration: 200, axis: 'y' }}
+					>
 						<Input 
 							bind:value={newLinkTitle} 
 							placeholder="Titel"
@@ -755,24 +937,7 @@
 							</div>
 						{/each}
 					</div>
-			{:else if !isAddingLink}
-				{#if !readOnly}
-				<div 
-					class="p-3 bg-muted/30 rounded-md text-sm border border-dashed cursor-pointer hover:bg-muted/50 transition-colors text-muted-foreground text-center"
-					onclick={() => isAddingLink = true}
-					role="button"
-					tabindex="0"
-					onkeydown={(e) => e.key === 'Enter' && (isAddingLink = true)}
-				>
-					Klicken um Link hinzuzufügen...
-				</div>
-				{:else}
-				<div class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center">
-					Keine Links vorhanden
-				</div>
-				{/if}
 			{/if}
-			</div>
 
 			<!-- Attendees / AvatarStack - mit Popover auf Avatar Click -->
 			{#if attendees.length > 0}
@@ -962,6 +1127,31 @@
 				</div>
 			</div>
 			{/if}
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Image Modal for full-size view -->
+<Dialog.Root bind:open={isImageModalOpen}>
+	<Dialog.Content class="max-w-[90vw] max-h-[90vh] p-0">
+		<div class="relative w-full h-full flex items-center justify-center bg-black/90 rounded-lg overflow-hidden">
+			<img
+				src={card.image}
+				alt="Kartenbild (vergrößert)"
+				class="max-w-full max-h-[85vh] object-contain"
+				onerror={(e) => {
+					(e.target as HTMLImageElement).style.display = 'none';
+				}}
+			/>
+			<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => isImageModalOpen = false}
+				class="absolute top-4 right-4"
+				title="Schließen"
+			>
+				✕
+			</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

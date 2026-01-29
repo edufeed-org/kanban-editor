@@ -45,8 +45,7 @@
 
   "defaults": {
     "columns": ["Material", "Einstieg","Erarbeitung", "Sicherung"],
-    "boardPublishState": "private",
-    "cardPublishState": "private"
+    "boardPublishState": "private"
   },
 
   "sidebar": {

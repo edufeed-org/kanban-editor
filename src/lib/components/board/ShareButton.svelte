@@ -60,42 +60,39 @@
 <div class="flex items-center gap-2">
     {#if isOwnerOrEditor}
         <!-- Owner/Editor sehen Share-Button -->
-        <Button 
-            variant={variant}
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={() => showShareDialog = true}
-            class={`gap-2 ${className}`}
             data-testid="share-button"
         >
             <ShareIcon2 class="h-4 w-4" />
             {#if showLabel}<span>Board teilen</span>{/if}
-        </Button>
+        </button>
     {:else if isViewer}
         <!-- Viewer sehen Unfollow-Button -->
-        <Button 
-            variant={variant}
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class={`gap-2 ${className}`}
             data-testid="unfollow-button"
         >
             <EyeOffIcon class="h-4 w-4" />
             {isLoading ? 'Lädt...' : 'Ausblenden'}
-        </Button>
+        </button>
     {:else}
         <!-- Non-participant sehen Follow-Button -->
-        <Button 
-            variant={variant}
-            size="sm" 
+        <button 
+            type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
             onclick={handleToggleFollow}
             disabled={isLoading}
-            class={`gap-2 ${className}`}
             data-testid="follow-button"
         >
             <HeartIcon class="h-4 w-4" />
             {isLoading ? 'Lädt...' : 'Beobachten'}
-        </Button>
+        </button>
     {/if}
 </div>
 

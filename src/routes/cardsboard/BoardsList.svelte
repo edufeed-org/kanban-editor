@@ -6,6 +6,7 @@
     import { Separator } from '$lib/components/ui/separator/index.js';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+    import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
@@ -30,6 +31,13 @@
     import FileTextIcon from '@lucide/svelte/icons/file-text';
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import RelayStatusInfo from './RelayStatusInfo.svelte';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+    import UploadIcon from '@lucide/svelte/icons/upload';
+    import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+    import ImportPopover from '$lib/components/ImportPopover.svelte';
+    import ExportButton from '$lib/components/ExportButton.svelte';
+    import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
+    import SendIcon from '@lucide/svelte/icons/send';
 
     // Props
     let { currentBoardId = '' }: { currentBoardId?: string } = $props();
@@ -52,6 +60,13 @@
     let llmSettingsOpen = $state(false);
     let nostrSettingsOpen = $state(false);
     let defaultsSettingsOpen = $state(false);
+    
+    // Import & Export States
+    let importExportPopoverOpen = $state(false);
+    let liaScriptExportDialogOpen = $state(false);
+    let importDialogOpen = $state(false);
+    let importFile = $state<File | null>(null);
+    let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
     
     // Board Settings Form
     let metaForm = $state({
@@ -377,11 +392,127 @@
                 <span>Standard-Werte</span>
             </button>
             <div class="border-t"></div>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
-                <ShareButton class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
-            </div>
+            
+            <!-- Import & Export Menu Item with Popover Submenu -->
+            <Popover.Root bind:open={importExportPopoverOpen}>
+                <Popover.Trigger>
+                    <button
+                        type="button"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                        title="Import & Export"
+                    >
+                        <div class="flex items-center gap-3">
+                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Import & Export</span>
+                        </div>
+                        <ChevronRightIcon class="h-4 w-4 text-muted-foreground" />
+                    </button>
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-56 p-1">
+                    <div class="space-y-0">
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="JSON importieren"
+                            onclick={() => { 
+                                importDialogOpen = true;
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        >
+                            <UploadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>JSON importieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Als JSON exportieren"
+                            onclick={() => { 
+                                try {
+                                    const jsonString = boardStore.exportBoardAsJson(true);
+                                    const blob = new Blob([jsonString], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const boardName = boardStore.data?.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'board';
+                                    const dateStr = new Date().toISOString().split('T')[0];
+                                    const filename = `${boardName}_${dateStr}.json`;
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = filename;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast.success('Board als JSON exportiert');
+                                    importExportPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                } catch (error) {
+                                    console.error('❌ Export fehlgeschlagen:', error);
+                                    toast.error('Export fehlgeschlagen');
+                                }
+                            }}
+                        >
+                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Als JSON exportieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Als LiaScript exportieren"
+                            onclick={() => { 
+                                liaScriptExportDialogOpen = true;
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        >
+                            <FileTextIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Als LiaScript exportieren</span>
+                        </button>
+                        
+                        <button
+                            type="button"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
+                            title="Zu Nostr publizieren"
+                            onclick={async () => { 
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                                
+                                try {
+                                    const eventId = await boardStore.publishBoardAndGetEventId();
+                                    if (eventId) {
+                                        toast.success('Board erfolgreich als Learning Resource publiziert!', {
+                                            description: `Event ID: ${eventId.substring(0, 8)}...`
+                                        });
+                                    } else {
+                                        toast.error('Fehler beim Publizieren', {
+                                            description: 'Board konnte nicht zu Nostr publiziert werden'
+                                        });
+                                    }
+                                } catch (error) {
+                                    console.error('❌ Nostr publish fehlgeschlagen:', error);
+                                    toast.error('Fehler beim Publizieren', {
+                                        description: error instanceof Error ? error.message : 'Unbekannter Fehler'
+                                    });
+                                }
+                            }}
+                        >
+                            <SendIcon class="h-4 w-4 text-muted-foreground" />
+                            <span>Zu Nostr publizieren</span>
+                        </button>
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
+            
             <div class="border-t"></div>
-            <div class="w-full" onclick={() => { hamburgerMenuOpen = false; }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && (hamburgerMenuOpen = false)}>
+            <ShareButton 
+                variant="default"
+                class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
+                showLabel={true}
+
+            />
+            <div class="border-t"></div>
+            <div class="w-full">
                 <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
             </div>
         </div>
@@ -664,6 +795,88 @@
         </div>
     </Dialog.Content>
 </Dialog.Root>
+
+<!-- Import Dialog -->
+<Dialog.Root bind:open={importDialogOpen}>
+    <Dialog.Content class="sm:max-w-md">
+        <Dialog.Header>
+            <Dialog.Title>Board importieren</Dialog.Title>
+            <Dialog.Description>
+                Wählen Sie eine JSON-Datei zum Importieren
+            </Dialog.Description>
+        </Dialog.Header>
+        <div class="space-y-4 py-4">
+            <div class="space-y-2">
+                <Label>Import-Modus</Label>
+                <RadioGroup.Root bind:value={importMode}>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="merge" id="mode-merge" />
+                        <Label for="mode-merge" class="font-normal">Zusammenführen (neue IDs)</Label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="new" id="mode-new" />
+                        <Label for="mode-new" class="font-normal">Als neue Kopie</Label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <RadioGroup.Item value="overwrite" id="mode-overwrite" />
+                        <Label for="mode-overwrite" class="font-normal">Überschreiben (Vorsicht!)</Label>
+                    </div>
+                </RadioGroup.Root>
+            </div>
+            <div class="space-y-2">
+                <Label for="import-file">JSON-Datei</Label>
+                <Input
+                    id="import-file"
+                    type="file"
+                    accept=".json"
+                    onchange={(e) => {
+                        const input = e.target as HTMLInputElement;
+                        importFile = input.files?.[0] || null;
+                    }}
+                />
+            </div>
+        </div>
+        <Dialog.Footer>
+            <Button
+                variant="outline"
+                onclick={() => { importDialogOpen = false; importFile = null; }}
+            >
+                Abbrechen
+            </Button>
+            <Button
+                onclick={async () => {
+                    if (!importFile) {
+                        toast.error('Bitte wählen Sie eine Datei');
+                        return;
+                    }
+                    try {
+                        const jsonString = await importFile.text();
+                        const result = await boardStore.importBoardFromJson(jsonString, importMode);
+                        if (result.success) {
+                            toast.success(`Board erfolgreich importiert: ${result.board?.name}`);
+                            importDialogOpen = false;
+                            importFile = null;
+                            if (result.board?.id) {
+                                boardStore.loadBoard(result.board.id);
+                            }
+                        } else {
+                            toast.error(`Import fehlgeschlagen: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Import error:', error);
+                        toast.error('Import fehlgeschlagen');
+                    }
+                }}
+                disabled={!importFile}
+            >
+                Importieren
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<!-- LiaScript Export Dialog -->
+<LiaScriptExportDialog bind:open={liaScriptExportDialogOpen} />
 
 <style>
     div {
