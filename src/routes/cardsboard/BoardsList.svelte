@@ -13,6 +13,10 @@
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
 
+    import MenuItem from './MenuItem.svelte';
+    import SubmenuItem from './SubmenuItem.svelte';
+    import SettingsDialog from './SettingsDialog.svelte';
+
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
     import LoaderIcon from '@lucide/svelte/icons/loader';
@@ -312,122 +316,91 @@
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
         <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Profil"
+            <MenuItem 
+                icon={UserIcon} 
+                label="Profil" 
                 onclick={() => { 
                     profileEditorOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
-            >
-                <UserIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Profil</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Board-Einstellungen"
+                showBorder={false}
+            />
+            
+            <MenuItem 
+                icon={SettingsIcon} 
+                label="Board-Einstellungen" 
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
-            >
-                <SettingsIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Board-Einstellungen</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="UI & Layout"
+            />
+            
+            <MenuItem 
+                icon={PaletteIcon} 
+                label="UI & Layout" 
                 onclick={() => { 
                     uiSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
-            >
-                <PaletteIcon class="h-4 w-4 text-muted-foreground" />
-                <span>UI & Layout</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="LLM Einstellungen"
+            />
+            
+            <MenuItem 
+                icon={BotIcon} 
+                label="LLM Einstellungen" 
                 onclick={() => { 
                     llmSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
-            >
-                <BotIcon class="h-4 w-4 text-muted-foreground" />
-                <span>LLM Einstellungen</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="Nostr Relays"
+            />
+            
+            <MenuItem 
+                icon={WifiIcon} 
+                label="Nostr Relays" 
                 onclick={() => { 
                     nostrSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
-            >
-                <WifiIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Nostr Relays</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="Standard-Werte"
+            />
+            
+            <MenuItem 
+                icon={FileTextIcon} 
+                label="Standard-Werte" 
                 onclick={() => { 
                     defaultsSettingsOpen = true;
                     hamburgerMenuOpen = false;
                 }}
-            >
-                <FileTextIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Standard-Werte</span>
-            </button>
+            />
+            
             <div class="border-t"></div>
             
             <!-- Import & Export Menu Item with Popover Submenu -->
             <Popover.Root bind:open={importExportPopoverOpen}>
                 <Popover.Trigger>
-                    <button
-                        type="button"
-                        class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                        title="Import & Export"
-                    >
-                        <div class="flex items-center gap-3">
-                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Import & Export</span>
-                        </div>
-                        <ChevronRightIcon class="h-4 w-4 text-muted-foreground" />
-                    </button>
+                    <MenuItem 
+                        icon={DownloadIcon} 
+                        label="Import & Export" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
                 </Popover.Trigger>
                 <Popover.Content side="right" align="start" class="w-56 p-1">
                     <div class="space-y-0">
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="JSON importieren"
+                        <SubmenuItem 
+                            icon={UploadIcon} 
+                            label="JSON importieren" 
                             onclick={() => { 
                                 importDialogOpen = true;
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
                             }}
-                        >
-                            <UploadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>JSON importieren</span>
-                        </button>
+                        />
                         
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Als JSON exportieren"
+                        <SubmenuItem 
+                            icon={DownloadIcon} 
+                            label="Als JSON exportieren" 
                             onclick={() => { 
                                 try {
                                     const jsonString = boardStore.exportBoardAsJson(true);
@@ -451,29 +424,21 @@
                                     toast.error('Export fehlgeschlagen');
                                 }
                             }}
-                        >
-                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Als JSON exportieren</span>
-                        </button>
+                        />
                         
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Als LiaScript exportieren"
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Als LiaScript exportieren" 
                             onclick={() => { 
                                 liaScriptExportDialogOpen = true;
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
                             }}
-                        >
-                            <FileTextIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Als LiaScript exportieren</span>
-                        </button>
+                        />
                         
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Zu Nostr publizieren"
+                        <SubmenuItem 
+                            icon={SendIcon} 
+                            label="Zu Nostr publizieren" 
                             onclick={async () => { 
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
@@ -496,10 +461,7 @@
                                     });
                                 }
                             }}
-                        >
-                            <SendIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Zu Nostr publizieren</span>
-                        </button>
+                        />
                     </div>
                 </Popover.Content>
             </Popover.Root>
@@ -509,7 +471,6 @@
                 variant="default"
                 class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
                 showLabel={true}
-
             />
             <div class="border-t"></div>
             <div class="w-full">
@@ -731,34 +692,10 @@
 <ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
 
 <!-- UI/UX Settings Dialog -->
-<Dialog.Root bind:open={uiSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <PaletteIcon class="h-5 w-5" />
-                UI & Layout Einstellungen
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="ui" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={uiSettingsOpen} title="UI & Layout Einstellungen" icon={PaletteIcon} tab="ui" />
 
 <!-- LLM Settings Dialog -->
-<Dialog.Root bind:open={llmSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <BotIcon class="h-5 w-5" />
-                LLM Einstellungen
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="llm" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
 
 <!-- Nostr Relay Settings Dialog -->
 <Dialog.Root bind:open={nostrSettingsOpen}>
@@ -782,19 +719,7 @@
 </Dialog.Root>
 
 <!-- Defaults Settings Dialog -->
-<Dialog.Root bind:open={defaultsSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <FileTextIcon class="h-5 w-5" />
-                Standard-Werte
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="defaults" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={defaultsSettingsOpen} title="Standard-Werte" icon={FileTextIcon} tab="defaults" />
 
 <!-- Import Dialog -->
 <Dialog.Root bind:open={importDialogOpen}>
