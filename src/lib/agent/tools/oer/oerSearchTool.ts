@@ -119,6 +119,8 @@ export async function executeSearchOer(
         description: r.description?.substring(0, 150) + (r.description && r.description.length > 150 ? '...' : ''),
         type: r.type,
         source: r.source,
+        publisher: r.publisher,
+        creator: r.creator,
         license: r.licenseShort || r.license,
         url: r.url,
         image: r.image
@@ -147,6 +149,8 @@ export async function executeSearchOer(
 
 /**
  * Formatiert Suchergebnisse für die Chat-Ausgabe
+ * 
+ * Nur kurze Statuszeile - die interaktiven OER-Cards zeigen die Details
  */
 function formatSearchResultsForChat(
     results: Array<{
@@ -155,6 +159,8 @@ function formatSearchResultsForChat(
         description: string;
         type: string;
         source: string;
+        publisher?: string;
+        creator?: string;
         license?: string;
         url: string;
         image?: string;
@@ -162,26 +168,10 @@ function formatSearchResultsForChat(
     query: string,
     totalCount: number
 ): string {
-    const lines: string[] = [];
+    // Kurze Statuszeile - Details werden in den interaktiven Cards angezeigt
+    const moreInfo = totalCount > results.length 
+        ? ` _(${totalCount - results.length} weitere verfügbar)_` 
+        : '';
     
-    lines.push(`📚 **${results.length} OER-Materialien** gefunden für "${query}":`);
-    lines.push('');
-    
-    for (const r of results) {
-        lines.push(`**${r.number}. ${r.title}**`);
-        if (r.description) {
-            lines.push(`   ${r.description}`);
-        }
-        lines.push(`   📎 ${r.type} | 🏷️ ${r.source}${r.license ? ` | ⚖️ ${r.license}` : ''}`);
-        lines.push('');
-    }
-    
-    if (totalCount > results.length) {
-        lines.push(`_(${totalCount - results.length} weitere Ergebnisse verfügbar)_`);
-        lines.push('');
-    }
-    
-    lines.push('💡 **Tipp:** Sage z.B. "Füge Material 1 und 3 zur Spalte Material hinzu"');
-    
-    return lines.join('\n');
+    return `📚 **${results.length} OER-Materialien** für "${query}"${moreInfo}`;
 }

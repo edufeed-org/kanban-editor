@@ -15,6 +15,22 @@ function generateTimestamp(): number {
 export type MessageRole = 'user' | 'assistant' | 'system';
 export type MemoryType = 'entity' | 'preference' | 'fact' | 'context';
 
+/**
+ * OER-Suchergebnis für interaktive Anzeige im Chat
+ */
+export interface OerResultData {
+	number: number;
+	title: string;
+	description: string;
+	type: string;
+	publisher?: string;
+	creator?: string;
+	source: string;
+	license?: string;
+	url: string;
+	image?: string;
+}
+
 export interface MessageProps {
 	id?: string;
 	role: MessageRole;
@@ -22,6 +38,8 @@ export interface MessageProps {
 	timestamp?: number;
 	tokens?: number;
 	attachments?: string[];
+	/** Optional: Strukturierte OER-Suchergebnisse für interaktive Buttons */
+	oerResults?: OerResultData[];
 }
 
 export interface MemoryProps {
@@ -64,6 +82,7 @@ export class Message {
 	public timestamp: number;
 	public tokens: number;
 	public attachments: string[];
+	public oerResults?: OerResultData[];
 
 	constructor(props: MessageProps) {
 		this.id = props.id || generateDTag();
@@ -72,6 +91,7 @@ export class Message {
 		this.timestamp = props.timestamp || generateTimestamp();
 		this.tokens = props.tokens || 0;
 		this.attachments = props.attachments || [];
+		this.oerResults = props.oerResults;
 	}
 
 	getContextData(): MessageProps {
@@ -81,7 +101,8 @@ export class Message {
 			content: this.content,
 			timestamp: this.timestamp,
 			tokens: this.tokens,
-			attachments: this.attachments
+			attachments: this.attachments,
+			oerResults: this.oerResults
 		};
 	}
 }
