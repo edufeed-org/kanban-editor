@@ -50,6 +50,9 @@
 	let isAddingLink = $state(false);
 	let isEditingDescription = $state(false);
 	let isImageModalOpen = $state(false);
+	let editingLinkIndex = $state<number | null>(null);
+	let editLinkUrl = $state('');
+	let editLinkTitle = $state('');
 
 	// Reference for scrolling
 	// svelte-ignore non_reactive_update
@@ -361,6 +364,49 @@
 		const currentLinks = card.links || [];
 		const updatedLinks = currentLinks.filter((_, i) => i !== index);
 		boardStore.updateCard(card.id as string, { links: updatedLinks });
+	}
+	
+	/**
+	 * Link bearbeiten starten
+	 */
+	function handleStartEditLink(index: number) {
+		const currentLinks = card.links || [];
+		const link = currentLinks[index];
+		if (link) {
+			editingLinkIndex = index;
+			editLinkUrl = link.url;
+			editLinkTitle = link.title;
+		}
+	}
+	
+	/**
+	 * Link bearbeiten abbrechen
+	 */
+	function handleCancelEditLink() {
+		editingLinkIndex = null;
+		editLinkUrl = '';
+		editLinkTitle = '';
+	}
+	
+	/**
+	 * Link bearbeiten speichern
+	 */
+	function handleSaveEditLink() {
+		if (editingLinkIndex === null || !editLinkUrl.trim() || !editLinkTitle.trim()) return;
+		
+		const currentLinks = card.links || [];
+		const updatedLinks = [...currentLinks];
+		updatedLinks[editingLinkIndex] = {
+			id: updatedLinks[editingLinkIndex].id,
+			url: editLinkUrl.trim(),
+			title: editLinkTitle.trim()
+		};
+		
+		boardStore.updateCard(card.id as string, { links: updatedLinks });
+		
+		editingLinkIndex = null;
+		editLinkUrl = '';
+		editLinkTitle = '';
 	}
 
 	function getCardColor(colorName: string | undefined): string {
@@ -910,31 +956,71 @@
 				{#if card.links && card.links.length > 0}
 				<div class="space-y-2">
 						{#each card.links as link, index (link.id || `link-${index}`)}
-							<div class="group flex items-center gap-2 p-2 bg-muted/50 rounded-md hover:bg-muted transition-colors border text-sm">
-								<a
-									href={link.url}
-									target="_blank"
-									rel="noopener noreferrer"
-									class="flex items-center gap-2 flex-1 min-w-0"
-									onclick={(e) => e.stopPropagation()}
+							{#if editingLinkIndex === index}
+								<!-- Edit Mode -->
+								<div 
+									class="flex flex-col gap-2 p-3 bg-muted/30 rounded-md border"
+									in:slide={{ duration: 250, axis: 'y' }}
+									out:slide={{ duration: 200, axis: 'y' }}
 								>
-									<LinkIcon class="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-									<div class="flex-1 min-w-0">
-										<div class="font-medium truncate">{link.title}</div>
-										<div class="text-xs text-muted-foreground truncate">{link.url}</div>
+									<Input 
+										bind:value={editLinkTitle} 
+										placeholder="Titel"
+										class="text-sm"
+									/>
+									<Input 
+										bind:value={editLinkUrl} 
+										placeholder="https://..."
+										class="text-sm"
+									/>
+									<div class="flex justify-end gap-2">
+										<Button variant="outline" size="sm" onclick={handleCancelEditLink}>
+											Abbrechen
+										</Button>
+										<Button size="sm" onclick={handleSaveEditLink} disabled={!editLinkUrl.trim() || !editLinkTitle.trim()}>
+											<CheckIcon class="h-4 w-4 mr-1" />
+											Speichern
+										</Button>
 									</div>
-								</a>
-								{#if !readOnly}
-								<button
-									type="button"
-									onclick={() => handleRemoveLink(index)}
-									class="p-1 rounded hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-									title="Link entfernen"
-								>
-									<XIcon class="h-3.5 w-3.5" />
-								</button>
-								{/if}
-							</div>
+								</div>
+							{:else}
+								<!-- Display Mode -->
+								<div class="group flex items-center gap-2 p-2 bg-muted/50 rounded-md hover:bg-muted transition-colors border text-sm">
+									<a
+										href={link.url}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="flex items-center gap-2 flex-1 min-w-0"
+										onclick={(e) => e.stopPropagation()}
+									>
+										<LinkIcon class="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+										<div class="flex-1 min-w-0">
+											<div class="font-medium truncate">{link.title}</div>
+											<div class="text-xs text-muted-foreground truncate">{link.url}</div>
+										</div>
+									</a>
+									{#if !readOnly}
+									<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+										<button
+											type="button"
+											onclick={() => handleStartEditLink(index)}
+											class="p-1 rounded hover:bg-primary/10 hover:text-primary transition-all"
+											title="Link bearbeiten"
+										>
+											<PencilIcon class="h-3.5 w-3.5" />
+										</button>
+										<button
+											type="button"
+											onclick={() => handleRemoveLink(index)}
+											class="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all"
+											title="Link entfernen"
+										>
+											<XIcon class="h-3.5 w-3.5" />
+										</button>
+									</div>
+									{/if}
+								</div>
+							{/if}
 						{/each}
 					</div>
 			{/if}
