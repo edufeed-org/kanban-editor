@@ -272,9 +272,6 @@ import { authStore } from '$lib';
 		<Sheet.Root bind:open={leftSidebarOpen}>
 			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0">
 				<div class="p-4 h-full flex flex-col overflow-hidden">
-					<Sheet.Header class="mb-4">
-						<Sheet.Title>Meine Boards</Sheet.Title>
-					</Sheet.Header>
 					<div class="flex-1 overflow-y-auto min-h-0">
 						<BoardsList {currentBoardId} />
 					</div>
@@ -306,7 +303,6 @@ import { authStore } from '$lib';
 					onResize={(size: number) => { leftSidebarSize = size; }}
 				>
 					<div class="p-4 h-full flex flex-col overflow-hidden">
-						<h2 class="text-sm font-semibold mb-4">Meine Boards</h2>
 						<div class="flex-1 overflow-y-auto min-h-0">
 							<BoardsList {currentBoardId} />
 						</div>

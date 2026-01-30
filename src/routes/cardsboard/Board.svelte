@@ -24,7 +24,7 @@
 
 	// Sticky button - nur zeigen wenn scrollable button nicht sichtbar ist
 	let showStickyButton = $state(false);
-	let scrollableButtonElement: HTMLElement | undefined;
+	let scrollableButtonElement = $state<HTMLElement | undefined>(undefined);
 
 	function isEditableTarget(target: EventTarget | null): boolean {
 		if (!(target instanceof HTMLElement)) return false;
@@ -68,6 +68,7 @@
 	});
 
 	// Prüfe ob Board horizontal scrollt (zu viele Spalten)
+	// Verwende IntersectionObserver für saubere Sticky-Button Logik
 	$effect(() => {
 		if (!scrollableButtonElement) return;
 
@@ -314,7 +315,7 @@
 		align-items: stretch;  /* Spalten dehnen sich vertikal */
 		height: 100%;
 		width: 100%;
-		position: relative;
+		position: relative; /* Enables absolute positioning for sticky button */
 	}
 
     /* Dickes Scrollbar in Chrome/Edge/Safari */
@@ -383,12 +384,19 @@
 
 	/* Sticky button - appears when scrollable button is not visible */
 	.sticky-add-column {
-		position: fixed;
-		right: 1rem;
-		top: 50%;
+		position: sticky;
+		right: 0.5rem;
+		top: 50vh;
 		transform: translateY(-50%);
+		margin-left: auto;
 		z-index: 100;
 		transition: opacity 0.2s ease, transform 0.2s ease;
+		pointer-events: none; /* Allow clicks through the container */
+		align-self: center;
+	}
+	
+	.sticky-add-column button {
+		pointer-events: auto; /* Re-enable clicks on the button itself */
 	}
 
 	.sticky-add-column button {
@@ -410,6 +418,13 @@
 		background: var(--accent);
 		transform: scale(1.1);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+	}
+
+	/* Hide sticky button on mobile screens */
+	@media (max-width: 768px) {
+		.sticky-add-column {
+			display: none;
+		}
 	}
 	
 </style>
@@ -464,35 +479,35 @@
 		</button>
 	</div>
 	{/if}
-</section>
-
-<!-- Sticky Add Column Button - only visible when scrollable button is out of view -->
-{#if !readOnly && showStickyButton}
-	<div class="sticky-add-column">
-		<button
-			title="Neue Spalte hinzufügen"
-			aria-label="Neue Spalte hinzufügen"
-			onclick={() => {
-				console.log('➕ Adding new column (sticky)...');
-				try {
-					boardStore.createColumn('Neue Spalte');
-					// Scroll to the end to show the new column
-					if (boardElement) {
-						setTimeout(() => {
-							if (boardElement) {
-								boardElement.scrollLeft = boardElement.scrollWidth;
-							}
-						}, 100);
+	
+	<!-- Sticky Add Column Button - only visible when scrollable button is out of view -->
+	{#if !readOnly && showStickyButton}
+		<div class="sticky-add-column">
+			<button
+				title="Neue Spalte hinzufügen"
+				aria-label="Neue Spalte hinzufügen"
+				onclick={() => {
+					console.log('➕ Adding new column (sticky)...');
+					try {
+						boardStore.createColumn('Neue Spalte');
+						// Scroll to the end to show the new column
+						if (boardElement) {
+							setTimeout(() => {
+								if (boardElement) {
+									boardElement.scrollLeft = boardElement.scrollWidth;
+								}
+							}, 100);
+						}
+					} catch (error) {
+						console.error('❌ Fehler beim Erstellen der Spalte:', error);
+						toast.error('Keine Berechtigung', {
+							description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
+						});
 					}
-				} catch (error) {
-					console.error('❌ Fehler beim Erstellen der Spalte:', error);
-					toast.error('Keine Berechtigung', {
-						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
-					});
-				}
-			}}
-		>
-			<SquarePlusIcon class="h-6 w-6" />
-		</button>
-	</div>
-{/if}
+				}}
+			>
+				<SquarePlusIcon class="h-6 w-6" />
+			</button>
+		</div>
+	{/if}
+</section>

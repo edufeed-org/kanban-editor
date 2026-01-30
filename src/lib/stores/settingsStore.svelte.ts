@@ -31,6 +31,7 @@ export interface SettingsState {
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
+  relaysEdufeed: string[]; // Edufeed AMB Relays (Kind 30142) - nur amb-relay.edufeed.org akzeptiert diese!
   draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
   njumpUrl: string; // Web-Client URL für Nostr-Links (naddr, nevent, note)
 
@@ -46,7 +47,6 @@ export interface SettingsState {
   // Board Defaults
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
   defaultBoardPublishState: PublishState; // "published" | "draft" | "private"
-  defaultCardPublishState: PublishState; // "published" | "draft" | "private"
 
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
@@ -56,6 +56,15 @@ export interface SettingsState {
   // OER Finder Plugin Configuration
   apiUrl: string,
   language: string
+
+  // AMB Vocabulary URLs (für verschiedene Bildungskontexte)
+  vocabularyUrls: {
+    audience: string | null;         // LRMI educationalAudienceRole
+    educationalLevel: string | null; // KIM educationalLevel
+    learningResourceType: string | null; // KIM HCRT
+    about: string | null;            // KIM Schulfächer oder Hochschulfächersystematik
+  };
+  vocabularyCacheTTL: number;        // Cache-Dauer in Millisekunden
 
 }
 
@@ -72,11 +81,14 @@ export const DEFAULT_SETTINGS: SettingsState = {
 
   // Nostr Relays
   relaysPublic: [
-    'wss://relay-rpi.edufeed.org',
+    'wss://relay.edufeed.org',
     'wss://relay.primal.net',
     'wss://nos.lol',
   ],
   relaysPrivate: [],
+  relaysEdufeed: [
+    'wss://amb-relay.edufeed.org',
+  ],
   draftPublishingMode: 'private-relays', // Default: draft → private relays
   njumpUrl: 'https://njump.edufeed.org', // Default: edufeed njump instance
 
@@ -154,7 +166,6 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // Board Defaults
   defaultColumns: ['To Do', 'In Progress', 'Done'],
   defaultBoardPublishState: 'draft',
-  defaultCardPublishState: 'draft',
 
   // Sidebar
   showLeftSidebar: true,
@@ -163,7 +174,16 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
 
   // OER Finder Plugin
   apiUrl: "http://localhost:3001",
-  language: "de"
+  language: "de",
+
+  // AMB Vocabulary URLs (null = use defaults from vocabularyLoader.ts)
+  vocabularyUrls: {
+    audience: null,
+    educationalLevel: null,
+    learningResourceType: null,
+    about: null,
+  },
+  vocabularyCacheTTL: 86400000, // 24 hours
 };
 
 /**
@@ -350,6 +370,12 @@ export class SettingsStore {
           relaysPrivate: config.nostr.relaysPrivate
         };
       }
+      if (config.nostr.relaysEdufeed) {
+        this.settings = {
+          ...this.settings,
+          relaysEdufeed: config.nostr.relaysEdufeed
+        };
+      }
       if (config.nostr.draftPublishingMode) {
         this.settings = {
           ...this.settings,
@@ -404,10 +430,6 @@ export class SettingsStore {
       if (config.defaults.boardPublishState) {
         defaultsPartial.defaultBoardPublishState = config.defaults.boardPublishState;
       }
-      if (config.defaults.cardPublishState) {
-        defaultsPartial.defaultCardPublishState = config.defaults.cardPublishState;
-      }
-
       if (Object.keys(defaultsPartial).length > 0) {
         this.settings = { ...this.settings, ...defaultsPartial };
       }
@@ -448,6 +470,29 @@ export class SettingsStore {
         console.log('📚 OER Finder Plugin configuration loaded from config.json');
       }
 
+    }
+
+    // AMB Vocabulary Configuration
+    if (config.amb) {
+      const ambPartial: Partial<SettingsState> = {};
+      
+      if (config.amb.vocabularies) {
+        ambPartial.vocabularyUrls = {
+          audience: config.amb.vocabularies.audience ?? null,
+          educationalLevel: config.amb.vocabularies.educationalLevel ?? null,
+          learningResourceType: config.amb.vocabularies.learningResourceType ?? null,
+          about: config.amb.vocabularies.about ?? null,
+        };
+      }
+      
+      if (config.amb.cacheTTL !== undefined) {
+        ambPartial.vocabularyCacheTTL = config.amb.cacheTTL;
+      }
+      
+      if (Object.keys(ambPartial).length > 0) {
+        this.settings = { ...this.settings, ...ambPartial };
+        console.log('📚 AMB Vocabulary configuration loaded from config.json');
+      }
     }
 
     // Speichere die gemergten Settings
@@ -740,16 +785,6 @@ export class SettingsStore {
     }
     // ✅ Reassignment für Reaktivität
     this.settings = { ...this.settings, defaultBoardPublishState: state };
-    this.saveToStorage();
-  }
-
-  public setDefaultCardPublishState(state: PublishState): void {
-    if (!['published', 'draft', 'private'].includes(state)) {
-      console.warn('Invalid publishState:', state);
-      return;
-    }
-    // ✅ Reassignment für Reaktivität
-    this.settings = { ...this.settings, defaultCardPublishState: state };
     this.saveToStorage();
   }
 

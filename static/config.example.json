@@ -1,7 +1,7 @@
 {
   "$comment": "Kanban Board Configuration - Single Source of Truth",
-  "$schema_version": "1.1.0",
-  "$last_updated": "2025-11-04",
+  "$schema_version": "1.2.0",
+  "$last_updated": "2025-01-29",
 
   "ui": {
     "maxCardsBeforeScroll": 20,
@@ -13,11 +13,15 @@
 
   "nostr": {
     "relaysPublic": [
-      "wss://relay-rpi.edufeed.org",
+      "wss://relay.edufeed.org",
       "wss://relay.primal.net",
       "wss://nos.lol"
     ],
-    "relaysPrivate": []
+    "relaysPrivate": [],
+    "relaysEdufeed": [
+      "wss://amb-relay.edufeed.org"
+    ],
+    "$comment_edufeed": "relaysEdufeed: Relays für AMB (Kind 30142) Publishing - nur amb-relay.edufeed.org akzeptiert diese Events!"
   },
 
   "llm": {
@@ -37,10 +41,21 @@
     "urls": []
   },
 
+  "amb": {
+    "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) - Vokabular-URLs für dynamisches Laden",
+    "vocabularyUrls": {
+      "audience": "https://skohub.io/dini-ag-kim/lrmi-audience-role/heads/master/w3id.org/kim/lrmi-audience-role/index.json",
+      "educationalLevel": "https://skohub.io/dini-ag-kim/educationalLevel/heads/main/w3id.org/kim/educationalLevel/index.json",
+      "learningResourceType": "https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/index.json",
+      "about": "https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json"
+    },
+    "cacheTtlHours": 24,
+    "$comment_vocabularies": "audience=Zielgruppen, educationalLevel=Bildungsstufen, learningResourceType=Ressourcentypen (HCRT), about=Fächer/Themen (Schulfächer)"
+  },
+
   "defaults": {
     "columns": ["To Do", "In Progress", "Done"],
-    "boardPublishState": "draft",
-    "cardPublishState": "draft"
+    "boardPublishState": "draft"
   },
 
   "sidebar": {

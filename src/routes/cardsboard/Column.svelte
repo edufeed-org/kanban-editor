@@ -10,6 +10,7 @@
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { toast } from "svelte-sonner";
+	import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';	
 
@@ -452,6 +453,11 @@
 									{/each}
 								</div>
 							</div>
+							
+							<Separator />
+							
+							<!-- Link hinzufügen -->
+							<LinkAddPopover columnId={columnId || ''} />
 							
 							<Separator />
 							

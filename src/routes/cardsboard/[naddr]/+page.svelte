@@ -13,6 +13,7 @@
      */
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
+    import { base } from '$app/paths';
     import { onMount } from 'svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/stores/authStore.svelte.js';
@@ -264,6 +265,49 @@
             loadingStep = 'Verbinde zu Relays...';
             await connectToRelayHints(ndk, naddrData.relays);
 
+            // 3b. Versuche zuerst AMB (30142) zu finden, die ['a', <naddr>] oder ['a', address] enthält
+            loadingStep = 'Suche AMB Snapshot...';
+            const aTagCandidates: string[] = [];
+            // include naddr (ensure prefix)
+            const cleanNaddr = naddrParam.startsWith('naddr1') ? naddrParam : `naddr1${naddrParam}`;
+            aTagCandidates.push(cleanNaddr);
+            // include address string fallback
+            const addressString = `30301:${naddrData.pubkey}:${naddrData.identifier}`;
+            aTagCandidates.push(addressString);
+
+            for (const aCandidate of aTagCandidates) {
+                try {
+                    const ambFilter = { kinds: [30142], '#a': [aCandidate] };
+                    const ambEvent = await ndk.fetchEvent(ambFilter);
+                    if (ambEvent) {
+                        console.log('✅ Found AMB event via a-tag:', aCandidate, ambEvent.id);
+                        // Check for snapshot-eventid tag
+                        const snapshotTag = ambEvent.tags.find(t => t[0] === 'snapshot-eventid')?.[1];
+                        if (snapshotTag) {
+                            loadingStep = 'Snapshot laden...';
+                            const snapshotEvent = await ndk.fetchEvent({ ids: [snapshotTag] });
+                            if (snapshotEvent) {
+                                try {
+                                    const snapshotJson = JSON.parse(snapshotEvent.content);
+                                    // Import into store and redirect
+                                    BoardStorage.saveBoard(new Board(snapshotJson));
+                                    boardStore.refreshBoardIds();
+                                    boardStore.loadBoard(snapshotJson.id);
+                                    status = 'success';
+                                    await goto(`${base}/cardsboard/`, { replaceState: true });
+                                    return;
+                                } catch (err) {
+                                    console.warn('Fehler beim Parsen des Snapshot-Inhalts:', err);
+                                }
+                            }
+                        }
+                        // If AMB found but no snapshot-eventid, try other candidates or fallback to 30301
+                    }
+                } catch (err) {
+                    console.warn('Error while searching AMB for a-tag', aCandidate, err);
+                }
+            }
+
             // 4. Prüfe ob Board bereits lokal existiert
             const boardId = naddrData.identifier;
             const existingBoard = BoardStorage.loadBoard(boardId);
@@ -277,7 +321,7 @@
                 
                 // Weiterleitung
                 status = 'success';
-                await goto('/cardsboard/', { replaceState: true });
+                await goto(`${base}/cardsboard/`, { replaceState: true });
                 return;
             }
 
@@ -315,7 +359,7 @@
             status = 'success';
             console.log('✅ Board geladen und gespeichert, leite weiter...');
             
-            await goto('/cardsboard/', { replaceState: true });
+            await goto(`${base}/cardsboard/`, { replaceState: true });
 
         } catch (error) {
             console.error('❌ Fehler beim Laden:', error);
@@ -343,7 +387,7 @@
                 <h1 class="text-xl font-semibold text-destructive">Fehler beim Laden</h1>
                 <p class="text-muted-foreground">{errorMessage}</p>
                 <a 
-                    href="/cardsboard/" 
+                    href="{base}/cardsboard/" 
                     class="mt-4 text-primary hover:underline"
                 >
                     Zurück zur Übersicht
