@@ -57,6 +57,11 @@ export interface SettingsState {
   apiUrl: string,
   language: string
 
+  // Wissenswertes Links
+  sourceCodeUrl: string; // GitHub Repository URL
+  documentationUrl: string; // Documentation/Docs URL
+  aboutUrl: string; // About/Über URL
+
   // AMB Vocabulary URLs (für verschiedene Bildungskontexte)
   vocabularyUrls: {
     audience: string | null;         // LRMI educationalAudienceRole
@@ -175,6 +180,11 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // OER Finder Plugin
   apiUrl: "http://localhost:3001",
   language: "de",
+
+  // Wissenswertes Links
+  sourceCodeUrl: 'https://github.com/edufeed-org/kanban-editor',
+  documentationUrl: 'https://github.com/edufeed-org/kanban-editor/tree/main/docs',
+  aboutUrl: 'https://github.com/edufeed-org/kanban-editor#readme',
 
   // AMB Vocabulary URLs (null = use defaults from vocabularyLoader.ts)
   vocabularyUrls: {
@@ -488,6 +498,26 @@ export class SettingsStore {
       if (Object.keys(ambPartial).length > 0) {
         this.settings = { ...this.settings, ...ambPartial };
         console.log('📚 AMB Vocabulary configuration loaded from config.json');
+      }
+    }
+
+    // Wissenswertes Links Configuration
+    if (config.wissenswertes) {
+      const wissenswertesPartial: Partial<SettingsState> = {};
+      
+      if (config.wissenswertes.sourceCodeUrl !== undefined) {
+        wissenswertesPartial.sourceCodeUrl = config.wissenswertes.sourceCodeUrl;
+      }
+      if (config.wissenswertes.documentationUrl !== undefined) {
+        wissenswertesPartial.documentationUrl = config.wissenswertes.documentationUrl;
+      }
+      if (config.wissenswertes.aboutUrl !== undefined) {
+        wissenswertesPartial.aboutUrl = config.wissenswertes.aboutUrl;
+      }
+      
+      if (Object.keys(wissenswertesPartial).length > 0) {
+        this.settings = { ...this.settings, ...wissenswertesPartial };
+        console.log('🔗 Wissenswertes Links loaded from config.json');
       }
     }
 

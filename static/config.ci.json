@@ -51,5 +51,29 @@
   
   "allow_demo_session": {
     "enabled": false
+  },
+
+  "wissenswertes": {
+    "sourceCodeUrl": "https://github.com/edufeed-org/kanban-editor",
+    "documentationUrl": "https://github.com/edufeed-org/kanban-editor/tree/main/docs",
+    "aboutUrl": "https://github.com/edufeed-org/kanban-editor#readme",
+    "$comment": "Konfigurierbare Links für das Wissenswertes-Menü"
+  },
+
+  "amb": {
+    "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) Konfiguration",
+    "$comment_vocabularies": "URLs können angepasst werden für verschiedene Kontexte (Schule, Hochschule, Beruf). Setze auf null für Default-URL.",
+    "vocabularies": {
+      "audience": null,
+      "educationalLevel": null,
+      "learningResourceType": null,
+      "about": null
+    },
+    "$comment_example_hochschule": {
+      "about": "https://skohub.io/dini-ag-kim/hochschulfaechersystematik/heads/main/w3id.org/kim/hochschulfaechersystematik/index.json",
+      "$note": "Beispiel für Hochschulkontext: Hochschulfächersystematik statt Schulfächer"
+    },
+    "cacheTTL": 86400000,
+    "$comment_cacheTTL": "Cache-Dauer in Millisekunden (86400000 = 24 Stunden)"
   }
 }

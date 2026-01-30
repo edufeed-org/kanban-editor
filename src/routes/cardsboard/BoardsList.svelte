@@ -9,6 +9,7 @@
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
@@ -31,6 +32,8 @@
     import BotIcon from '@lucide/svelte/icons/bot';
     import WifiIcon from '@lucide/svelte/icons/wifi';
     import FileTextIcon from '@lucide/svelte/icons/file-text';
+    import BookIcon from '@lucide/svelte/icons/book';
+    import InfoIcon from '@lucide/svelte/icons/info';
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import RelayStatusInfo from './RelayStatusInfo.svelte';
     import DownloadIcon from '@lucide/svelte/icons/download';
@@ -554,7 +557,23 @@
                             icon={FileTextIcon} 
                             label="Source Code" 
                             onclick={() => { 
-                                window.open('https://github.com/edufeed-org/kanban-editor', '_blank');
+                                window.open(settingsStore.settings.sourceCodeUrl, '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        <SubmenuItem 
+                            icon={BookIcon} 
+                            label="Dokumentation" 
+                            onclick={() => { 
+                                window.open(settingsStore.settings.documentationUrl, '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        <SubmenuItem 
+                            icon={InfoIcon} 
+                            label="Über" 
+                            onclick={() => { 
+                                window.open(settingsStore.settings.aboutUrl, '_blank');
                                 hamburgerMenuOpen = false;
                             }}
                         />
