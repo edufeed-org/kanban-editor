@@ -403,7 +403,33 @@
                 showLabel={true}
             />
             
-            <!-- 4. Board löschen -->
+            <!-- 4. Board duplizieren -->
+            <MenuItem 
+                icon={SquarePlusIcon} 
+                label="Board duplizieren" 
+                onclick={() => {
+                    if (!currentBoardId) {
+                        toast.error('Kein Board ausgewählt');
+                        return;
+                    }
+                    
+                    hamburgerMenuOpen = false;
+                    
+                    try {
+                        const newBoardId = boardStore.duplicateBoard(currentBoardId);
+                        if (newBoardId) {
+                            // Switch to the duplicated board
+                            window.location.href = `/cardsboard?board=${newBoardId}`;
+                        }
+                    } catch (error) {
+                        console.error('❌ Fehler beim Duplizieren:', error);
+                        toast.error('Fehler beim Duplizieren des Boards');
+                    }
+                }}
+                showBorder={false}
+            />
+            
+            <!-- 5. Board löschen -->
             <MenuItem 
                 icon={TrashIcon} 
                 label="Board löschen" 

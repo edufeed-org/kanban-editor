@@ -16,6 +16,7 @@
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import CheckIcon from '@lucide/svelte/icons/check';
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
@@ -445,6 +446,25 @@
 				/>
 				<div class="flex items-center gap-1 flex-shrink-0">
 					{#if !readOnly}
+					<Button 
+						variant="ghost" 
+						size="sm"
+						onclick={() => {
+							const newCardId = boardStore.duplicateCard(String(card.id));
+							if (newCardId) {
+								open = false;
+								// Optional: Open the duplicated card
+								// setTimeout(() => {
+								// 	window.location.href = `/cardsboard?card=${newCardId}`;
+								// }, 100);
+							}
+						}}
+						class="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+						aria-label="Karte duplizieren"
+						title="Karte duplizieren"
+					>
+						<SquarePlusIcon class="h-4 w-4" />
+					</Button>
 					<Button 
 						variant="ghost" 
 						size="sm"
