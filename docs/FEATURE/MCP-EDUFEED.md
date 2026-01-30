@@ -1,9 +1,10 @@
 # 🔍 MCP-EDUFEED: Intelligente OER-Suche für das Kanban-Board
 
-**Version:** 1.0 (Proposal)  
-**Datum:** 27. Januar 2026  
-**Status:** 🟡 PROPOSAL  
-**Abhängigkeiten:** `@edufeed-org/oer-finder-api-client`, Tool-Based AI System
+**Version:** 1.1 (Approved)  
+**Datum:** 30. Januar 2026  
+**Status:** 🟢 APPROVED - Ready for Implementation  
+**Abhängigkeiten:** `@edufeed-org/oer-finder-api-client`, Tool-Based AI System  
+**Referenz:** Siehe auch `F:\code\docker\mcp-oer-finder\konzept.md` für MCP-Server-Details
 
 ---
 
@@ -62,6 +63,38 @@ Integration einer **KI-gesteuerten OER-Suche** in den Chat-Assistenten, die:
 | `@edufeed-org/amb-nostr-converter` | ✅ Vorhanden | Nostr ↔ AMB Konvertierung |
 | Tool-Based AI System | ✅ Vorhanden | OpenAI Function Calling in AIPanel |
 | Paste-System (Kind 30142) | ✅ Vorhanden | Verarbeitet bereits naddr-Links |
+
+### API-Endpoint Referenz
+
+| Endpoint | Methode | Beschreibung |
+|----------|---------|---------------|
+| `/api/v1/oer` | GET | Suche mit `searchTerm`, `source`, `pageSize`, `page` |
+| `/api/v1/sources` | GET | Liste aller verfügbaren OER-Quellen |
+| `/api/v1/oer/{id}` | GET | Details zu einer Ressource |
+
+**Response-Format (AMB):**
+```typescript
+interface ApiResponse {
+  data: Array<{
+    amb: {
+      name: string;           // Titel
+      description: string;    // Beschreibung
+      id: string;             // URL zur Ressource
+      license?: { id: string };
+      creator?: Array<{ name: string }>;
+      publisher?: { name: string };
+      educationalLevel?: Array<{ name: string }>;
+      learningResourceType?: Array<{ name: string }>;
+      keywords?: string[];
+    };
+  }>;
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+  };
+}
+```
 
 ---
 
@@ -195,7 +228,34 @@ Beispiele:
 
 ---
 
-### Tool 3: `search_oer_for_card` (Kontext-basiert)
+### Tool 3: `list_oer_sources`
+
+**Beschreibung:** Listet alle verfügbaren OER-Quellen auf (basierend auf konzept.md).
+
+```typescript
+{
+  type: 'function',
+  function: {
+    name: 'list_oer_sources',
+    description: `Listet alle verfügbaren OER-Quellen auf.
+
+Nutze dieses Tool, um dem Nutzer zu zeigen, welche Materialquellen
+durchsucht werden können. Hilfreich wenn der Nutzer fragt:
+- "Welche Quellen gibt es?"
+- "Woher kommen die Materialien?"
+- "Was ist rpi-virtuell?"`,
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  }
+}
+```
+
+---
+
+### Tool 4: `search_oer_for_card` (Kontext-basiert)
 
 **Beschreibung:** Sucht automatisch passende Materialien basierend auf einer Karte.
 
@@ -260,28 +320,21 @@ src/lib/agent/tools/
 ```typescript
 // src/lib/agent/tools/oer/oerClient.ts
 
-import { createOerClient, type OerResource } from '@edufeed-org/oer-finder-api-client';
 import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 
-// Singleton Client
-let client: ReturnType<typeof createOerClient> | null = null;
-
-function getClient() {
-  if (!client) {
-    // API URL aus Settings oder Default
-    const baseUrl = settingsStore.settings.oerFinderApiUrl || 'https://finder.edufeed.org';
-    client = createOerClient({ baseUrl });
-  }
-  return client;
+// Konfiguration - API URL aus Settings oder Environment
+function getApiBaseUrl(): string {
+  return settingsStore.settings.oerFinderApiUrl 
+    || import.meta.env.VITE_OER_API_URL 
+    || 'http://localhost:3001';  // Lokale Entwicklung
 }
 
 export interface OerSearchParams {
-  query: string;
-  type?: 'LearningResource' | 'VideoObject' | 'ImageObject' | 'AudioObject' | 'Document';
-  source?: 'nostr' | 'openverse' | 'all';
-  license?: string;
-  educational_level?: string;
-  limit?: number;
+  searchTerm: string;
+  source?: string;      // z.B. "rpi-virtuell", "wirlernenonline"
+  pageSize?: number;    // Default: 10, Max: 50
+  page?: number;
+  educationalLevel?: string;
 }
 
 export interface OerSearchResult {
@@ -294,50 +347,57 @@ export interface OerSearchResult {
   license?: string;
   creator?: string;
   source: string;
+  educationalLevel?: string;
+  keywords?: string[];
   naddr?: string;  // Falls Nostr-Ressource
 }
 
+export interface OerSource {
+  id: string;
+  name: string;
+  url: string;
+  description?: string;
+}
+
 /**
- * Sucht OER-Materialien
+ * Sucht OER-Materialien über die OER Finder API
+ * API-Endpoint: GET /api/v1/oer
  */
 export async function searchOer(params: OerSearchParams): Promise<{
   results: OerSearchResult[];
   totalCount: number;
+  page: number;
   error?: string;
 }> {
   try {
-    const client = getClient();
-    
-    const response = await client.GET('/search', {
-      params: {
-        query: {
-          searchTerm: params.query,
-          source: params.source || 'nostr',
-          type: params.type,
-          license: params.license,
-          educational_level: params.educational_level,
-          pageSize: Math.min(params.limit || 5, 10),
-          page: 1
-        }
-      }
-    });
+    const url = new URL(`${getApiBaseUrl()}/api/v1/oer`);
+    url.searchParams.set('searchTerm', params.searchTerm);
+    if (params.source) url.searchParams.set('source', params.source);
+    if (params.pageSize) url.searchParams.set('pageSize', String(Math.min(params.pageSize, 50)));
+    if (params.page) url.searchParams.set('page', String(params.page));
 
-    if (response.error) {
-      return { results: [], totalCount: 0, error: response.error.message };
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = response.data;
+    const data = await response.json();
     
+    // AMB-Format Response mappen (siehe konzept.md)
     return {
-      results: (data?.items || []).map(item => ({
-        id: item.id || item.naddr || crypto.randomUUID(),
-        title: item.name || 'Unbenannt',
-        description: item.description || '',
-        type: item.type || 'LearningResource',
-        image: item.image,
-        url: item.url || '',
-        license: item.license?.id,
-        creator: item.creator?.name,
+      results: (data.data || []).map((item: any) => ({
+        id: item.amb.id || crypto.randomUUID(),
+        title: item.amb.name || 'Unbenannt',
+        description: item.amb.description || '',
+        type: item.amb.learningResourceType?.[0]?.name || 'LearningResource',
+        image: item.amb.image,
+        url: item.amb.id,  // AMB id ist die URL
+        license: item.amb.license?.id,
+        creator: item.amb.creator?.[0]?.name || item.amb.publisher?.name,
+        source: params.source || 'all',
+        educationalLevel: item.amb.educationalLevel?.map((l: any) => l.name).join(', '),
+        keywords: item.amb.keywords,
         source: item.source || 'nostr',
         naddr: item.naddr
       })),
@@ -1012,7 +1072,19 @@ interface SettingsState {
 
 ---
 
-**Status:** 🟡 PROPOSAL  
+**Status:** � APPROVED - Ready for Implementation  
 **Autor:** AI Assistant  
-**Review erforderlich:** ✅ Ja  
-**Nächster Schritt:** Review + Freigabe für Phase 1 Implementation
+**Review erforderlich:** ❌ Abgeschlossen (30.01.2026)  
+**Nächster Schritt:** Implementation Phase 1.1 starten (oerClient.ts + search_oer Tool)
+
+### Implementierungsplan (ROADMAP-Integration)
+
+Siehe [`ROADMAP.md`](../COLLABORATION/ROADMAP.md) **Meilenstein 3.2: OER-Content Discovery**
+
+| Phase | Dauer | Aufgaben |
+|-------|-------|----------|
+| **1.1** | 2-3 Tage | `oerClient.ts` + `search_oer` Tool + Integration |
+| **1.2** | 2 Tage | `add_cards_from_oer` Tool mit Batch & KI-Relevanz |
+| **1.3** | 1-2 Tage | `list_oer_sources` + `search_oer_for_card` |
+| **1.4** | 1 Tag | Tests + Dokumentation + CHANGELOG |
+| **Gesamt** | **6-8 Tage** | Tool-Integration abgeschlossen |
