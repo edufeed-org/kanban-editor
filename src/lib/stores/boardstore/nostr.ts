@@ -27,6 +27,7 @@ import {
     subscribeToComments as subscribeToCommentsImpl
 } from './nostr/comments.js';
 import {
+    publishBoard as publishBoardImpl,
     deleteBoard as deleteBoardImpl,
     deleteCard as deleteCardImpl,
     publishSnapshot as publishSnapshotImpl
@@ -485,61 +486,7 @@ export class NostrIntegration {
      * @returns Event-ID des publizierten Events oder null bei Fehler
      */
     public async publishBoard(board: Board): Promise<string | null> {
-        if (!this.ndk) return null;
-
-        try {
-            const event = boardToNostrEvent(board, this.ndk);
-            const publishState = board.publishState || 'private';
-            const normalizedState = publishState as 'published' | 'private';
-            
-            const targetRelays = getTargetRelays({
-                publishState: normalizedState,
-                privatePublishingMode: settingsStore.settings.privatePublishingMode,
-                relaysPublic: settingsStore.settings.relaysPublic,
-                relaysPrivate: settingsStore.settings.relaysPrivate
-            });
-
-            // ⚠️ SICHERHEITS-CHECK: Warne wenn private nicht publiziert werden kann
-            if (normalizedState === 'private' && targetRelays.length === 0) {
-                const mode = settingsStore.settings.privatePublishingMode;
-                
-                if (mode === 'private-relays') {
-                    toast.warning('🔒 Keine privaten Relays konfiguriert', {
-                        description: 'Board-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
-                        duration: 6000
-                    });
-                    console.warn('[NostrIntegration] 🔒 private board cannot be published - no private relays configured');
-                }
-                // Falls local-only: Kein Toast (das ist erwartetes Verhalten)
-            }
-
-            const syncManager = getSyncManager();
-            const publishedEvent = await syncManager.publishOrQueue(
-                event, 
-                'board', 
-                'normal',
-                normalizedState,
-                targetRelays
-            );
-            
-            // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
-            if (publishedEvent?.id) {
-                board.eventId = publishedEvent.id;
-                console.log(`[NostrIntegration] 🔑 Board Event-ID: ${board.eventId}`);
-                
-                // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
-                const { BoardStorage } = await import('./storage.js');
-                await BoardStorage.saveBoard(board);
-                
-                // ⚡ RÜCKGABE: Event-ID für LiaScript-Link-Generierung
-                return publishedEvent.id;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error(`❌ Error publishing board:`, error);
-            return null;
-        }
+        return publishBoardImpl(this.ndk, board);
     }
 
     /**
