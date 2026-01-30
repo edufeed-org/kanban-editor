@@ -154,25 +154,18 @@
             <Label>Theme</Label>
             <div class="flex items-center gap-2">
               <Button 
-                variant={settings.theme === 'default' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setTheme('default')}
+                variant="default"
+                onclick={() => settingsStore.setTheme('light')}
                 class="flex-1"
               >
                 Hell
               </Button>
               <Button 
-                variant={settings.theme === 'dark' ? 'default' : 'outline'}
+                variant="default"
                 onclick={() => settingsStore.setTheme('dark')}
                 class="flex-1"
               >
                 Dunkel
-              </Button>
-              <Button 
-                variant={settings.theme === 'auto' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setTheme('auto')}
-                class="flex-1"
-              >
-                Auto
               </Button>
             </div>
           </div>

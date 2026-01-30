@@ -7,7 +7,6 @@
     "maxCardsBeforeScroll": 20,
     "alignColumnsToMaxHeight": true,
     "columnWidth": 350,
-    "theme": "auto",
     "$comment": "UI-spezifische Einstellungen für Layout und Darstellung"
   },
 

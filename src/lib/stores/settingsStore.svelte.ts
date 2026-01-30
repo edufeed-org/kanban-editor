@@ -14,7 +14,7 @@
  * LLMApiKey wird NUR bei lokaler Ollama-Nutzung lokal gespeichert
  */
 
-export type Theme = 'dark' | 'default' | 'auto';
+export type Theme = 'dark' | 'light';
 export type PublishState = 'published' | 'draft';
 export type DraftPublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
@@ -26,7 +26,7 @@ export interface SettingsState {
   maxCardsBeforeScroll: number; // Max. Karten pro Spalte (bevor gescrollt wird), Default: 20
   alignColumnsToMaxHeight: boolean; // Alle Karten auf maximale Höhe ausrichten, Default: true
   columnWidth: number; // Breite der Spalten in Pixeln, Default: 350
-  theme: Theme; // 'dark' | 'default' | 'auto', Default: 'auto'
+  theme: Theme;
 
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
@@ -77,7 +77,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   maxCardsBeforeScroll: 20,
   alignColumnsToMaxHeight: true,
   columnWidth: 350,
-  theme: 'auto',
+  theme: 'light',
 
   // Nostr Relays
   relaysPublic: [
@@ -205,8 +205,7 @@ export class SettingsStore {
 
   // Derived Values (automatisch berechnet)
   public isDarkMode = $derived(
-    this.settings.theme === 'dark' ||
-      (this.settings.theme === 'auto' && this.prefersDarkMode())
+    this.settings.theme === 'dark'
   );
 
   public isLlmConfigured = $derived(
@@ -345,9 +344,6 @@ export class SettingsStore {
       }
       if (config.ui.columnWidth !== undefined) {
         partial.columnWidth = config.ui.columnWidth;
-      }
-      if (config.ui.theme !== undefined) {
-        partial.theme = config.ui.theme;
       }
 
       // Merge UI settings
@@ -537,12 +533,7 @@ export class SettingsStore {
     this.saveToStorage();
   }
 
-  public setTheme(theme: Theme): void {
-    if (!['dark', 'default', 'auto'].includes(theme)) {
-      console.warn('Invalid theme value:', theme);
-      return;
-    }
-    // ✅ Reassignment für Reaktivität
+  public setTheme(theme: Theme) {
     this.settings = { ...this.settings, theme };
     this.updateTheme(theme);
     this.saveToStorage();
@@ -555,28 +546,10 @@ export class SettingsStore {
     if (typeof document === 'undefined') return;
 
     const root = document.documentElement;
+
     root.classList.remove('dark', 'light');
 
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'default') {
-      root.classList.add('light');
-    } else {
-      // 'auto': check system preference
-      if (this.prefersDarkMode()) {
-        root.classList.add('dark');
-      } else {
-        root.classList.add('light');
-      }
-    }
-  }
-
-  /**
-   * Prüfe System-Preference für Dark Mode
-   */
-  private prefersDarkMode(): boolean {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.classList.add(theme);
   }
 
   /**
