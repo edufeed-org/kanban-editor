@@ -169,13 +169,9 @@
         isCreating = true;
         try {
             const newBoardId = boardStore.createBoard('Neues Board');
-            console.log('✅ Board erstellt:', newBoardId);
-            
-            // Lade das neue Board
             boardStore.loadBoard(newBoardId);
             currentBoardId = newBoardId;
-            
-            // Optional: Reset Suchfeld
+
             searchQuery = '';
         } catch (error) {
             console.error('❌ Fehler beim Erstellen:', error);

@@ -414,18 +414,14 @@ export class BoardStore {
     }
 
     public createBoard(name: string, description?: string): string {
-        // WICHTIG: Keine Permission-Check für createBoard!
-        // Jeder Benutzer kann eigene Boards erstellen, unabhängig von Rollen auf anderen Boards.
-        // Ein Viewer auf Board A kann trotzdem sein eigenes Board B erstellen.
-        
         const { author, authorName } = this.getAuthorFields();
         const board = new Board({
             name,
             description,
             author,
-            authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
-            maintainers: [], // ← FIX: Author should NOT be in maintainers (they're already the owner)
-            publishState: 'private',
+            authorName: authorName || undefined,
+            maintainers: [],
+            publishState: settingsStore.settings.defaultBoardPublishState,
             columns: []
         });
 
@@ -777,7 +773,6 @@ export class BoardStore {
 
     public async loadBoardsFromNostr(): Promise<void> {
         await this.nostrIntegration.loadBoardsFromNostr(
-            this.boardIds,
             this.board,
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
                 // ⚡ FIX: Board IDs NICHT per Merge deduplizieren, sondern aus Storage ableiten.
