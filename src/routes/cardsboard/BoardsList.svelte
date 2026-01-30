@@ -313,7 +313,7 @@
     
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
+        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md mb-2 shadow-md max-h-[60vh] overflow-y-auto">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
                 icon={SettingsIcon} 
