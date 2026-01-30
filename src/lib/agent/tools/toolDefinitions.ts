@@ -457,6 +457,44 @@ export const toolDefinitions: ToolDefinition[] = [
                 required: ['cardId']
             }
         }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // URL CONTENT IMPORT TOOL
+    // ═══════════════════════════════════════════════════════════════════
+    {
+        type: 'function',
+        function: {
+            name: 'import_url_content',
+            description: 'Importiert Inhalt von einer URL (Webseite, PDF, YouTube-Video) und erstellt automatisch Karten im Board. Strukturiert den Inhalt basierend auf Überschriften/Kapiteln. Ideal für: Artikel als Lernmaterial aufbereiten, PDFs in Karten umwandeln, YouTube-Transkripte importieren.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    url: {
+                        type: 'string',
+                        description: 'Die URL zum Importieren (Webseite, PDF-Link, oder YouTube-Video URL)'
+                    },
+                    structureMode: {
+                        type: 'string',
+                        enum: ['auto', 'single-column', 'multi-column'],
+                        description: 'Wie der Inhalt strukturiert werden soll: auto (intelligente Erkennung), single-column (alle Karten in eine Spalte), multi-column (Hauptabschnitte werden zu eigenen Spalten). Default: auto'
+                    },
+                    targetColumn: {
+                        type: 'string',
+                        description: 'Optional: Name einer bestehenden Spalte, in die importiert werden soll'
+                    },
+                    columnName: {
+                        type: 'string',
+                        description: 'Optional: Name für die neue Spalte (bei single-column). Default: "Import: [Titel]"'
+                    },
+                    maxCardLength: {
+                        type: 'number',
+                        description: 'Maximale Textlänge pro Karte in Zeichen. Längere Abschnitte werden gekürzt. Default: 2000'
+                    }
+                },
+                required: ['url']
+            }
+        }
     }
 ];
 

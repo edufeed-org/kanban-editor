@@ -20,6 +20,12 @@ import {
     type SearchOerForCardArgs
 } from './oer/index.js';
 
+// URL Content Import Tool
+import {
+    executeImportUrlContent,
+    type ImportUrlContentArgs
+} from './url/index.js';
+
 // ============================================================================
 // JSON Repair Utilities
 // ============================================================================
@@ -1173,6 +1179,33 @@ async function executeSearchOerForCardTool(args: any, ctx: ExecutionContext): Pr
 }
 
 // ============================================================================
+// URL Content Import Tool Wrapper
+// ============================================================================
+
+/**
+ * Wrapper für import_url_content Tool
+ */
+async function executeImportUrlContentTool(args: any, ctx: ExecutionContext): Promise<ToolResult> {
+    const importArgs: ImportUrlContentArgs = {
+        url: args.url,
+        structureMode: args.structureMode || args.structure_mode || 'auto',
+        targetColumn: args.targetColumn || args.target_column || args.columnName,
+        columnName: args.columnName || args.column_name,
+        maxCardLength: args.maxCardLength || args.max_card_length || 2000
+    };
+    
+    const result = await executeImportUrlContent(importArgs, ctx);
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'import_url_content',
+        success: result.success,
+        result: result.result,
+        error: result.error
+    };
+}
+
+// ============================================================================
 // Main Executor
 // ============================================================================
 
@@ -1263,6 +1296,11 @@ export async function executeToolCall(
             break;
         case 'search_oer_for_card':
             result = await executeSearchOerForCardTool(args, ctx);
+            break;
+        
+        // URL Content Import Tool
+        case 'import_url_content':
+            result = await executeImportUrlContentTool(args, ctx);
             break;
             
         default:
@@ -1388,6 +1426,19 @@ export function summarizeResults(results: ToolResult[]): string {
                 case 'search_oer_for_card': {
                     const cardResult = r.result as { message?: string; totalCount?: number };
                     lines.push(`  • ${cardResult?.message || `OER-Suche für Karte: ${cardResult?.totalCount || 0} Ergebnisse`}`);
+                    break;
+                }
+                case 'import_url_content': {
+                    const importResult = r.result as { message?: string; cardsCreated?: number; columnsCreated?: number; title?: string };
+                    if (importResult) {
+                        const summary = [];
+                        if (importResult.title) summary.push(`"${importResult.title}"`);
+                        if (importResult.cardsCreated) summary.push(`${importResult.cardsCreated} Karte(n)`);
+                        if (importResult.columnsCreated) summary.push(`${importResult.columnsCreated} Spalte(n)`);
+                        lines.push(`  • URL importiert: ${summary.join(', ') || importResult.message || 'Erfolgreich'}`);
+                    } else {
+                        lines.push(`  • URL-Import durchgeführt`);
+                    }
                     break;
                 }
                 default:
