@@ -1,35 +1,45 @@
 // Client test setup (jsdom)
 // - Provides small browser API polyfills that jsdom doesn't implement by default
 // - Keeps localStorage available for stores during tests
-if (typeof localStorage === 'undefined') {
-  const localStorageMock: Storage = (() => {
-    let store: Record<string, string> = {};
-    
-    return {
-      getItem(key: string): string | null {
-        return store[key] || null;
-      },
-      setItem(key: string, value: string): void {
-        store[key] = String(value);
-      },
-      removeItem(key: string): void {
-        delete store[key];
-      },
-      clear(): void {
-        store = {};
-      },
-      key(index: number): string | null {
-        const keys = Object.keys(store);
-        return keys[index] || null;
-      },
-      get length(): number {
-        return Object.keys(store).length;
-      }
-    };
-  })();
+
+// Create a proper localStorage mock implementation
+const createLocalStorageMock = (): Storage => {
+  let store: Record<string, string> = {};
   
+  return {
+    getItem(key: string): string | null {
+      return store[key] || null;
+    },
+    setItem(key: string, value: string): void {
+      store[key] = String(value);
+    },
+    removeItem(key: string): void {
+      delete store[key];
+    },
+    clear(): void {
+      store = {};
+    },
+    key(index: number): string | null {
+      const keys = Object.keys(store);
+      return keys[index] || null;
+    },
+    get length(): number {
+      return Object.keys(store).length;
+    }
+  };
+};
+
+// Always ensure localStorage has all required methods
+// jsdom might provide localStorage but with incomplete implementation
+if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
+  const localStorageMock = createLocalStorageMock();
   // @ts-ignore - global polyfill for Node environment
   global.localStorage = localStorageMock;
+  // Also set on window for jsdom
+  if (typeof window !== 'undefined') {
+    // @ts-ignore
+    window.localStorage = localStorageMock;
+  }
 }
 
 // jsdom does not implement matchMedia by default.
