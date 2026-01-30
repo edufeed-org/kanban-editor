@@ -116,7 +116,7 @@ const attendees = pTags
 - [x] Merge-Logik designed
 - [x] Test-Cases definiert
 - [ ] Implementation in nostr.ts (Phase 2)
-- [ ] Integration in CardViewDialog (Phase 2)
+- [ ] Integration in CardDetailsDialog (Phase 2)
 - [ ] Tests schreiben (Phase 2)
 
 ---
@@ -248,7 +248,7 @@ pnpm check
 ### 2. UI Integration
 
 **Dateien zu ändern:**
-- `src/routes/cardsboard/CardViewDialog.svelte`
+- `src/routes/cardsboard/CardDetailsDialog.svelte`
   - Sync-Status Icons anzeigen
   - "Load more comments" implementieren
 

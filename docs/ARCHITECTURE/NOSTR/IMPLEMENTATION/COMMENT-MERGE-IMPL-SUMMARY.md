@@ -34,7 +34,7 @@
 - ✅ 11 unit tests (all passing)
 
 ### Phase 4: UI Integration (COMPLETED ✅)
-- ✅ Auto-subscribe on CardViewDialog mount (onMount hook)
+- ✅ Auto-subscribe on CardDetailsDialog mount (onMount hook)
 - ✅ Cleanup on unmount (onDestroy hook)
 - ✅ Load Comments button für manual fetch
 - ✅ Sync status icons für jeden Kommentar:
@@ -51,7 +51,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Files Modified** | 7 (NostrIntegration + BoardStore + CardModel + CardViewDialog + 3 Tests) |
+| **Files Modified** | 7 (NostrIntegration + BoardStore + CardModel + CardDetailsDialog + 3 Tests) |
 | **New Functions** | 6 (mergeComments, loadComments, subscribeToComments, handleLoadComments, handleRetryComment, cleanup) |
 | **Lines Added** | ~680 (~480 backend + ~200 UI) |
 | **Tests Written** | 29 (8 merge + 10 load + 11 subscribe) |
@@ -214,7 +214,7 @@ private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comm
 ### ⏳ Pending (Phase 3B)
 
 - [ ] subscribeToComments() - Live updates subscription
-- [ ] Integration in CardViewDialog.svelte
+- [ ] Integration in CardDetailsDialog.svelte
 - [ ] UI sync status icons (🔄 syncing, ✅ synced, ❌ failed)
 - [ ] Retry button for failed comments
 - [ ] "Load more comments" pagination
@@ -226,7 +226,7 @@ private mergeComments(localComments: Comment[], remoteComments: Comment[]): Comm
 ```
 USER ACTION (Add Comment)
     ↓
-CardViewDialog.svelte
+CardDetailsDialog.svelte
     ↓
 boardStore.addComment(cardId, text)
     ↓
@@ -263,7 +263,7 @@ loadComments(cardId)
 ### Add Comment (Local)
 
 ```typescript
-// In CardViewDialog.svelte
+// In CardDetailsDialog.svelte
 function handleAddComment() {
     const text = commentInput.value;
     boardStore.addComment(card.id, text);
@@ -411,7 +411,7 @@ public async loadComments(board: Board, cardId: string): Promise<void> {
 - ✅ Public API in kanbanStore.svelte.ts
 - ✅ 11 unit tests (all passing)
 
-### 3. ✅ UI Integration in CardViewDialog.svelte (COMPLETED)
+### 3. ✅ UI Integration in CardDetailsDialog.svelte (COMPLETED)
 
 **Status:** ✅ **DONE** - Implemented + Tested (Phase 4 - THIS COMMIT)
 
@@ -434,12 +434,12 @@ public async loadComments(board: Board, cardId: string): Promise<void> {
 let unsubscribeComments: (() => void) | undefined;
 
 onMount(() => {
-    console.log('[CardViewDialog] Mounting - subscribing to comments');
+    console.log('[CardDetailsDialog] Mounting - subscribing to comments');
     unsubscribeComments = boardStore.subscribeToComments(String(cardId));
 });
 
 onDestroy(() => {
-    console.log('[CardViewDialog] Unmounting - cleaning up');
+    console.log('[CardDetailsDialog] Unmounting - cleaning up');
     unsubscribeComments?.();
 });
 
@@ -506,7 +506,7 @@ async function handleRetryComment(commentId: string) {
 ```
 
 **Files Modified:**
-- `src/routes/cardsboard/CardViewDialog.svelte` (+80 lines)
+- `src/routes/cardsboard/CardDetailsDialog.svelte` (+80 lines)
   - Added imports: onMount, onDestroy, CheckIcon, CircleAlertIcon, WifiOffIcon, RefreshCwIcon, DownloadIcon
   - Added state: isLoadingComments, unsubscribeComments
   - Added lifecycle hooks: onMount (auto-subscribe), onDestroy (cleanup)
@@ -540,7 +540,7 @@ async function handleRetryComment(commentId: string) {
 
 | Metric | Value |
 |--------|-------|
-| **Files Modified** | 7 (+ CardViewDialog.svelte) |
+| **Files Modified** | 7 (+ CardDetailsDialog.svelte) |
 | **New Functions** | 6 (merge, load, subscribe + 3 UI handlers) |
 | **Lines Added** | ~560 |
 | **Tests Written** | 29 (8 merge + 10 load + 11 subscribe) |
@@ -584,7 +584,7 @@ From [`COMMENT-MERGE-STRATEGY.md`](../COMMENT-MERGE-STRATEGY.md):
 - [x] Unit tests (11/11 passing)
 
 ### Phase 4: UI Integration (COMPLETED ✅)
-- [x] UI integration in CardViewDialog.svelte
+- [x] UI integration in CardDetailsDialog.svelte
 - [x] Sync status icons in UI (syncing/synced/failed/local)
 - [x] Retry mechanism for failed comments
 - [x] Load Comments button with loading state
@@ -599,7 +599,7 @@ From [`COMMENT-MERGE-STRATEGY.md`](../COMMENT-MERGE-STRATEGY.md):
 - **State Management**: isLoadingComments, isRetrying Map, unsubscribe function
 - **Functions**: handleLoadComments() for manual fetch, handleRetryComment() with delete+add pattern
 - **UI Components**: Load Comments button, 4 sync status icons, retry button with loading state
-- **Files Modified**: CardViewDialog.svelte (~200 lines added)
+- **Files Modified**: CardDetailsDialog.svelte (~200 lines added)
 
 ---
 

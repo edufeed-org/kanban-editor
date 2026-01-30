@@ -1983,7 +1983,7 @@ export class BoardStore {
      * 
      * @example
      * ```typescript
-     * // In CardViewDialog.svelte:
+     * // In CardDetailsDialog.svelte:
      * let unsubscribe: () => void;
      * 
      * onMount(() => {

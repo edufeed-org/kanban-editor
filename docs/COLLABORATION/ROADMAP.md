@@ -89,7 +89,7 @@
 
 #### ✅ 1.3: Kommentar-System (DONE - Phase A+B, 25.10.)
 - Phase A: Model `Comment` in BoardModel.ts
-- Phase B: UI `CardViewDialog.svelte` mit Comment-Form
+- Phase B: UI `CardDetailsDialog.svelte` mit Comment-Form
 - Phase C (ausstehend): AuthStore Integration
 - Phase D (ausstehend): Nostr Event Publishing
 - Phase E (ausstehend): Offline-First Sync
@@ -147,7 +147,7 @@
 - ✅ Card.svelte - Drag-and-Drop mit Icons
 - ✅ Column.svelte - mit $effect Auto-Sync
 - ✅ CardDialog.svelte - Edit Modal
-- ✅ CardViewDialog.svelte - View Modal mit Kommentaren
+- ✅ CardDetailsDialog.svelte - View Modal mit Kommentaren
 - ✅ Topbar.svelte - mit Settings + Share-Link
 - ✅ BoardsList.svelte - Board-Auswahl
 - ✅ SettingsPanel.svelte - neuer Settings-Component
@@ -237,7 +237,7 @@
 - ❌ **Live-Notifications** - Toast für Kommentare/Moves (1-2 Tage)
 - ❌ **NIP-51 Integration** - Board-Sharing API (2-3 Tage)
 - ❌ **BoardRole enum** - Permission System (Owner/Editor/Viewer) (1 Tag)
-- ❌ **Soft-Lock UI Integration** - CardViewDialog warnings (1-2 Tage)
+- ❌ **Soft-Lock UI Integration** - CardDetailsDialog warnings (1-2 Tage)
 - ❌ **E2E Tests** - Multi-Browser Playwright Tests (3-4 Tage)
 
 **Verbleibender Aufwand: ~12-17 Tage (nicht 26-30!)**
@@ -850,7 +850,7 @@ JANUAR 2026
   - ✅ `deleteComment(cardId, commentId): void` mit `triggerUpdate()`
   - ✅ Vollständige Reaktivitätskette (Storage, UI, Nostr vorbereitet)
 
-- ✅ **UI-Formular implementiert** (`src/routes/cardsboard/CardViewDialog.svelte`)
+- ✅ **UI-Formular implementiert** (`src/routes/cardsboard/CardDetailsDialog.svelte`)
   - ✅ Kommentar-Input (Textarea) mit Icons (@lucide/svelte/icons/*)
   - ✅ "Kommentar absenden" Button (SendIcon, default variant)
   - ✅ Delete-Buttons mit TrashIcon pro Kommentar (ghost variant)
@@ -1381,7 +1381,7 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - ✅ Backend: Auto-Release nach TTL
   - ✅ Backend: 3-Way Merge bei Conflicts (mergeEngine.ts)
   - ✅ UI: MergeConflictDialog existiert bereits
-  - ❌ **UI-Integration fehlt:** CardViewDialog muss SoftLockManager nutzen
+  - ❌ **UI-Integration fehlt:** CardDetailsDialog muss SoftLockManager nutzen
   - ❌ **Warnung anzeigen:** "Alice editiert gerade diese Karte" Badge
 
 - [ ] **Tests**

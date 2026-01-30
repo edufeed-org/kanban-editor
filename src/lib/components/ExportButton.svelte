@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { boardStore } from '$lib/stores/kanbanStore.svelte';
 
-	// Wird von Parent (CardViewDialog) kontrolliert
+	// Wird von Parent (CardDetailsDialog) kontrolliert
 	let { onclick }: { onclick?: () => void } = $props();
 
 	function downloadBoardAsJson() {

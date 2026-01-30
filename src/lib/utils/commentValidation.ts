@@ -95,7 +95,7 @@ export async function validateCommentSystem() {
         // SUMMARY
         // ============================================
         console.group("📊 VALIDATION SUMMARY");
-        console.log("✅ Phase A: UI-Formular — CardViewDialog.svelte bereit");
+        console.log("✅ Phase A: UI-Formular — CardDetailsDialog.svelte bereit");
         console.log("✅ Phase B: Bug-Fix — triggerUpdate() added");
         console.log("✅ Phase C: AuthStore — TODO (aktuell 'anonymous')");
         console.log("✅ Phase D: Nostr Events — TODO (createCommentEvent)");

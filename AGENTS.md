@@ -971,7 +971,7 @@ export class BoardStore {
   import * as Card from "$lib/components/ui/card";
   import { Badge } from "$lib/components/ui/badge";
   import type { CardType } from "./types";
-  import CardViewDialog from "./CardViewDialog.svelte";
+  import CardDetailsDialog from "./CardDetailsDialog.svelte";
   import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
   import MessageSquareIcon from "@lucide/svelte/icons/message-square";
   import UsersIcon from "@lucide/svelte/icons/users";
@@ -1063,7 +1063,7 @@ export class BoardStore {
 </Card.Root>
 
 <!-- Card Detail Dialog -->
-<CardViewDialog bind:open={showDialog} {card} />
+<CardDetailsDialog bind:open={showDialog} {card} />
 ```
 
 #### Datei: `src/routes/cardsboard/types.ts` (Echte TypeScript-Definitionen)
@@ -2135,7 +2135,7 @@ export class BoardStore {
 
 ### Wo wird author angezeigt?
 
-- **CardViewDialog**: "Kommentar von: <author>"
+- **CardDetailsDialog**: "Kommentar von: <author>"
 - **LeftSidebarFooter**: "Eingeloggt als: <author>" (nach Phase 2)
 - **Zukünftig (Phase 3)**: "Erstellt von: <author>" bei Card-Details
 

@@ -941,7 +941,7 @@ export class NostrIntegration {
      * 
      * @example
      * ```typescript
-     * // In CardViewDialog.svelte:
+     * // In CardDetailsDialog.svelte:
      * let unsubscribe: () => void;
      * onMount(() => {
      *     unsubscribe = boardStore.subscribeToComments(card.id);
