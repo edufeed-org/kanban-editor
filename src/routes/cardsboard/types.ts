@@ -1,6 +1,6 @@
 // TypeScript-Typdefinitionen für das Kanban-Board
 
-export type PublishState = 'draft' | 'published';
+export type PublishState = 'private' | 'published';
 
 // ============================================================================
 // SNAPSHOT TYPES (Phase 1.5 - Board Versioning)

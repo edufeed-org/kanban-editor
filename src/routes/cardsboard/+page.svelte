@@ -249,12 +249,6 @@ import { authStore } from '$lib';
 		<!-- Mobile Layout: Sidebars as overlay sheets -->
 		<main class="flex flex-1 flex-col overflow-hidden">
 			<Topbar
-				title={boardTitle}
-				boardMeta={{
-					title: boardTitle,
-					description: '',
-					tags: []
-				}}
 				onToggleLeftSidebar={toggleLeftSidebar}
 				onToggleRightSidebar={toggleRightSidebar}
 				{isMobile}
@@ -317,12 +311,6 @@ import { authStore } from '$lib';
 			<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
 				<main class="flex flex-1 flex-col overflow-hidden min-w-0">
 					<Topbar
-						title={boardTitle}
-						boardMeta={{
-							title: boardTitle,
-							description: '',
-							tags: []
-						}}
 						onToggleLeftSidebar={toggleLeftSidebar}
 						onToggleRightSidebar={toggleRightSidebar}
 						{isMobile}

@@ -425,7 +425,7 @@ export class BoardStore {
             author,
             authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
             maintainers: [], // ← FIX: Author should NOT be in maintainers (they're already the owner)
-            publishState: 'draft',
+            publishState: 'private',
             columns: []
         });
 
@@ -455,7 +455,7 @@ export class BoardStore {
         //     description: board.description || '',
         //     lastAccessed: new Date().toISOString(),
         //     author: board.author || '',
-        //     publishState: board.publishState || 'draft'
+        //     publishState: board.publishState || 'private'
         // });
 
         this.board = board;
@@ -1313,7 +1313,7 @@ export class BoardStore {
         this.triggerUpdate({ publish: false });
     }
 
-    public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'draft' | 'published'; tags?: string[]; ccLicense?: string }): void {
+    public updateCurrentBoardMeta(updates: { name?: string; description?: string; publishState?: 'private' | 'published'; tags?: string[]; ccLicense?: string }): void {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -1339,7 +1339,7 @@ export class BoardStore {
         }
     }
 
-    public setPublishState(state: 'draft' | 'published'): void {
+    public setPublishState(state: 'private' | 'published'): void {
         // Permission Check: Kann Benutzer Board-Einstellungen ändern?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -2674,7 +2674,7 @@ export class BoardStore {
             description: 'Willkommen! Dies ist ein Demo-Board zum Ausprobieren. Erstellen Sie Karten, verschieben Sie sie zwischen Spalten und testen Sie alle Funktionen. Nach der Anmeldung können Sie echte Boards erstellen.',
             author: 'demo',
             authorName: 'Demo User',
-            publishState: 'draft',
+            publishState: 'private',
             columns: []
         });
         

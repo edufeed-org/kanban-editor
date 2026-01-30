@@ -184,7 +184,7 @@ export class BoardStorage {
                     labels: cardData.labels || [],
                     links: cardData.links || [],
                     attendees: cardData.attendees || [],
-                    publishState: cardData.publishState || 'draft'
+                    publishState: cardData.publishState || 'private'
                 })) || []
             })) || []
         };

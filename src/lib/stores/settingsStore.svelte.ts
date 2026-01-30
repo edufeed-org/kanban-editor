@@ -14,9 +14,9 @@
  * LLMApiKey wird NUR bei lokaler Ollama-Nutzung lokal gespeichert
  */
 
-export type Theme = 'dark' | 'default' | 'auto';
-export type PublishState = 'published' | 'draft' | 'private';
-export type DraftPublishingMode = 'private-relays' | 'local-only' | 'public-relays';
+export type Theme = 'dark' | 'light';
+export type PublishState = 'published' | 'private';
+export type PrivatePublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
 /**
  * SettingsState Interface - alle verfügbaren Einstellungen
@@ -26,13 +26,13 @@ export interface SettingsState {
   maxCardsBeforeScroll: number; // Max. Karten pro Spalte (bevor gescrollt wird), Default: 20
   alignColumnsToMaxHeight: boolean; // Alle Karten auf maximale Höhe ausrichten, Default: true
   columnWidth: number; // Breite der Spalten in Pixeln, Default: 350
-  theme: Theme; // 'dark' | 'default' | 'auto', Default: 'auto'
+  theme: Theme;
 
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
   relaysEdufeed: string[]; // Edufeed AMB Relays (Kind 30142) - nur amb-relay.edufeed.org akzeptiert diese!
-  draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
+  privatePublishingMode: PrivatePublishingMode; // NEU: Wie werden private Events behandelt?
   njumpUrl: string; // Web-Client URL für Nostr-Links (naddr, nevent, note)
 
   // LLM Model Integration
@@ -46,7 +46,7 @@ export interface SettingsState {
 
   // Board Defaults
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
-  defaultBoardPublishState: PublishState; // "published" | "draft" | "private"
+  defaultBoardPublishState: PublishState; // "published" | "private"
 
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
@@ -56,6 +56,11 @@ export interface SettingsState {
   // OER Finder Plugin Configuration
   apiUrl: string,
   language: string
+
+  // Wissenswertes Links
+  sourceCodeUrl: string; // GitHub Repository URL
+  documentationUrl: string; // Documentation/Docs URL
+  aboutUrl: string; // About/Über URL
 
   // AMB Vocabulary URLs (für verschiedene Bildungskontexte)
   vocabularyUrls: {
@@ -77,7 +82,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   maxCardsBeforeScroll: 20,
   alignColumnsToMaxHeight: true,
   columnWidth: 350,
-  theme: 'auto',
+  theme: 'light',
 
   // Nostr Relays
   relaysPublic: [
@@ -89,7 +94,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   relaysEdufeed: [
     'wss://amb-relay.edufeed.org',
   ],
-  draftPublishingMode: 'private-relays', // Default: draft → private relays
+  privatePublishingMode: 'private-relays', // Default: private → private relays
   njumpUrl: 'https://njump.edufeed.org', // Default: edufeed njump instance
 
   // LLM Settings
@@ -165,7 +170,7 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
 
   // Board Defaults
   defaultColumns: ['To Do', 'In Progress', 'Done'],
-  defaultBoardPublishState: 'draft',
+  defaultBoardPublishState: 'private',
 
   // Sidebar
   showLeftSidebar: true,
@@ -175,6 +180,11 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // OER Finder Plugin
   apiUrl: "http://localhost:3001",
   language: "de",
+
+  // Wissenswertes Links
+  sourceCodeUrl: 'https://github.com/edufeed-org/kanban-editor',
+  documentationUrl: 'https://github.com/edufeed-org/kanban-editor/tree/main/docs',
+  aboutUrl: 'https://github.com/edufeed-org/kanban-editor#readme',
 
   // AMB Vocabulary URLs (null = use defaults from vocabularyLoader.ts)
   vocabularyUrls: {
@@ -205,8 +215,7 @@ export class SettingsStore {
 
   // Derived Values (automatisch berechnet)
   public isDarkMode = $derived(
-    this.settings.theme === 'dark' ||
-      (this.settings.theme === 'auto' && this.prefersDarkMode())
+    this.settings.theme === 'dark'
   );
 
   public isLlmConfigured = $derived(
@@ -346,9 +355,6 @@ export class SettingsStore {
       if (config.ui.columnWidth !== undefined) {
         partial.columnWidth = config.ui.columnWidth;
       }
-      if (config.ui.theme !== undefined) {
-        partial.theme = config.ui.theme;
-      }
 
       // Merge UI settings
       if (Object.keys(partial).length > 0) {
@@ -376,10 +382,10 @@ export class SettingsStore {
           relaysEdufeed: config.nostr.relaysEdufeed
         };
       }
-      if (config.nostr.draftPublishingMode) {
+      if (config.nostr.privatePublishingMode) {
         this.settings = {
           ...this.settings,
-          draftPublishingMode: config.nostr.draftPublishingMode
+          privatePublishingMode: config.nostr.privatePublishingMode
         };
       }
       if (config.nostr.njumpUrl) {
@@ -495,6 +501,26 @@ export class SettingsStore {
       }
     }
 
+    // Wissenswertes Links Configuration
+    if (config.wissenswertes) {
+      const wissenswertesPartial: Partial<SettingsState> = {};
+      
+      if (config.wissenswertes.sourceCodeUrl !== undefined) {
+        wissenswertesPartial.sourceCodeUrl = config.wissenswertes.sourceCodeUrl;
+      }
+      if (config.wissenswertes.documentationUrl !== undefined) {
+        wissenswertesPartial.documentationUrl = config.wissenswertes.documentationUrl;
+      }
+      if (config.wissenswertes.aboutUrl !== undefined) {
+        wissenswertesPartial.aboutUrl = config.wissenswertes.aboutUrl;
+      }
+      
+      if (Object.keys(wissenswertesPartial).length > 0) {
+        this.settings = { ...this.settings, ...wissenswertesPartial };
+        console.log('🔗 Wissenswertes Links loaded from config.json');
+      }
+    }
+
     // Speichere die gemergten Settings
     this.saveToStorage();
     
@@ -537,12 +563,7 @@ export class SettingsStore {
     this.saveToStorage();
   }
 
-  public setTheme(theme: Theme): void {
-    if (!['dark', 'default', 'auto'].includes(theme)) {
-      console.warn('Invalid theme value:', theme);
-      return;
-    }
-    // ✅ Reassignment für Reaktivität
+  public setTheme(theme: Theme) {
     this.settings = { ...this.settings, theme };
     this.updateTheme(theme);
     this.saveToStorage();
@@ -555,28 +576,10 @@ export class SettingsStore {
     if (typeof document === 'undefined') return;
 
     const root = document.documentElement;
+
     root.classList.remove('dark', 'light');
 
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'default') {
-      root.classList.add('light');
-    } else {
-      // 'auto': check system preference
-      if (this.prefersDarkMode()) {
-        root.classList.add('dark');
-      } else {
-        root.classList.add('light');
-      }
-    }
-  }
-
-  /**
-   * Prüfe System-Preference für Dark Mode
-   */
-  private prefersDarkMode(): boolean {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.classList.add(theme);
   }
 
   /**
@@ -628,19 +631,19 @@ export class SettingsStore {
 
   /**
    * ────────────────────────────────────────────
-   * Draft Publishing Mode
+   * Private Publishing Mode
    * ────────────────────────────────────────────
    */
 
-  public setDraftPublishingMode(mode: DraftPublishingMode): void {
+  public setPrivatePublishingMode(mode: PrivatePublishingMode): void {
     if (!['private-relays', 'local-only', 'public-relays'].includes(mode)) {
-      console.warn('Invalid draftPublishingMode:', mode);
+      console.warn('Invalid privatePublishingMode:', mode);
       return;
     }
     // ✅ Reassignment für Reaktivität
-    this.settings = { ...this.settings, draftPublishingMode: mode };
+    this.settings = { ...this.settings, privatePublishingMode: mode };
     this.saveToStorage();
-    console.log(`📝 Draft publishing mode set to: ${mode}`);
+    console.log(`📝 Private publishing mode set to: ${mode}`);
   }
 
   /**
@@ -779,7 +782,7 @@ export class SettingsStore {
   }
 
   public setDefaultBoardPublishState(state: PublishState): void {
-    if (!['published', 'draft', 'private'].includes(state)) {
+    if (!['published', 'private'].includes(state)) {
       console.warn('Invalid publishState:', state);
       return;
     }

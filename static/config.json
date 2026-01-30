@@ -7,7 +7,6 @@
     "maxCardsBeforeScroll": 20,
     "alignColumnsToMaxHeight": true,
     "columnWidth": 350,
-    "theme": "auto",
     "$comment": "UI-spezifische Einstellungen für Layout und Darstellung"
   },
 
@@ -64,6 +63,13 @@
   
   "allow_demo_session": {
     "enabled": false
+  },
+
+  "wissenswertes": {
+    "sourceCodeUrl": "https://github.com/edufeed-org/kanban-editor",
+    "documentationUrl": "https://github.com/edufeed-org/kanban-editor/tree/main/docs",
+    "aboutUrl": "https://github.com/edufeed-org/kanban-editor#readme",
+    "$comment": "Konfigurierbare Links für das Wissenswertes-Menü"
   },
 
   "amb": {

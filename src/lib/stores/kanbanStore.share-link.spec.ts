@@ -729,13 +729,13 @@ describe('BoardStore Share-Link Funktionalität', () => {
 			// Act - Simuliere Defaults
 			const withDefaults = {
 				...incompleteBoard,
-				publishState: incompleteBoard.publishState || 'draft',
+				publishState: incompleteBoard.publishState || 'private',
 				columns: incompleteBoard.columns || [],
 				author: incompleteBoard.author || 'unknown'
 			};
 
 			// Assert
-			expect(withDefaults.publishState).toBe('draft');
+			expect(withDefaults.publishState).toBe('private');
 			expect(withDefaults.columns).toEqual([]);
 			expect(withDefaults.author).toBe('unknown');
 		});

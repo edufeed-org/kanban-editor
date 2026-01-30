@@ -65,7 +65,7 @@ export interface CardContent {
   color?: string;
   image?: string;
   labels?: string[];
-  publishState?: 'draft' | 'published';
+  publishState?: 'private' | 'published';
   author?: string;
   updatedAt: string;
   [key: string]: any; // ← CRITICAL: Erlaubt dynamische Zugriffe

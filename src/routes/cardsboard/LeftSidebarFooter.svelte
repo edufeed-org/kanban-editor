@@ -112,17 +112,6 @@
 				</Button>
 			{/if}
 		</div>
-		
-		<!-- GitHub Repository Link (always visible) -->
-		<a
-			href="https://github.com/edufeed-org/kanban-editor?tab=readme-ov-file#%EF%B8%8F-documentation-map-f%C3%BCr-entwickler"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="inline-flex items-center justify-center rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 w-9 transition-colors flex-shrink-0"
-			title="Siehe den Source Code"
-		>
-			<GithubIcon class="h-4 w-4" />
-		</a>
 	</div>
 	
 	{#if !isAuthenticated}

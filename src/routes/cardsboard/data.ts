@@ -25,7 +25,7 @@ const rawData: Column[] = [
 				attendees: ["max@example.com", "anna@example.com"],
 				labels: ["Architecture", "Milestone 2"],
 				color: "chart-4",
-				publishState: "draft",
+				publishState: "private",
 				author: "max@example.com",
 				image: "https://picsum.photos/400/200?random=1",
 				link: "https://example.com/task1"
