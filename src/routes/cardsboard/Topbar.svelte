@@ -28,49 +28,52 @@
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
 
+    const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
+    const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
+
     // CC License Badge Helper with proper symbols
     function getLicenseInfo(license: string) {
         const licenses: Record<string, { symbol: string; name: string; color: string; url: string }> = {
             'cc0': { 
                 symbol: 'CC0',
                 name: 'Public Domain Dedication',
-                color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/publicdomain/zero/1.0/'
             },
             'cc-by-4.0': { 
                 symbol: 'CC BY',
                 name: 'Attribution 4.0',
-                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/licenses/by/4.0/'
             },
             'cc-by-sa-4.0': { 
                 symbol: 'CC BY-SA',
                 name: 'Attribution-ShareAlike 4.0',
-                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/licenses/by-sa/4.0/'
             },
             'cc-by-nc-4.0': { 
                 symbol: 'CC BY-NC',
                 name: 'Attribution-NonCommercial 4.0',
-                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc/4.0/'
             },
             'cc-by-nd-4.0': { 
                 symbol: 'CC BY-ND',
                 name: 'Attribution-NoDerivatives 4.0',
-                color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nd/4.0/'
             },
             'cc-by-nc-sa-4.0': { 
                 symbol: 'CC BY-NC-SA',
                 name: 'Attribution-NonCommercial-ShareAlike 4.0',
-                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
             },
             'cc-by-nc-nd-4.0': { 
                 symbol: 'CC BY-NC-ND',
                 name: 'Attribution-NonCommercial-NoDerivatives 4.0',
-                color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-300 dark:border-red-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/'
             }
         };

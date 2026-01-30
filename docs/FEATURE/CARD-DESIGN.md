@@ -65,7 +65,7 @@ Das Kanban-Board erhält ein umfassendes UI/UX Update für bessere Nutzererfahru
 **Phase Completion:**
 - Phase 1 (Visual): ✅ 100% COMPLETE (45 min)
 - Phase 2 (AvatarStack): ✅ 100% COMPLETE (30 min) 
-- Phase 3 (CardViewDialog UI): ⏳ PLANNED (90 min)
+- Phase 3 (CardDetailsDialog UI): ⏳ PLANNED (90 min)
 
 **Timeline Results:**
 - Expected: 2.5-3 hours
@@ -189,7 +189,7 @@ Das Kanban-Board erhält ein umfassendes UI/UX Update für bessere Nutzererfahru
 </Card.Footer>
 ```
 
-#### 1.4: CardViewDialog Redesign (Verhalten)
+#### 1.4: CardDetailsDialog Redesign (Verhalten)
 - [x] Neues Verhalten: `bind:open` statt `isOpen={...} onClose={...}`
 - [x] Card Status bleibt IMMER selected solange Dialog offen
 - [x] Unabhängig vom User-Click
@@ -201,7 +201,7 @@ Das Kanban-Board erhält ein umfassendes UI/UX Update für bessere Nutzererfahru
 let isDialogOpen = $state(false);
 
 <!-- Dialog wird mit bind:open gesteuert -->
-<CardViewDialog
+<CardDetailsDialog
   cardId={card.id}
   bind:open={isDialogOpen}
 />
@@ -212,7 +212,7 @@ let isDialogOpen = $state(false);
 </button>
 ```
 
-**Code-Struktur in CardViewDialog.svelte (KORREKT für Svelte 5):**
+**Code-Struktur in CardDetailsDialog.svelte (KORREKT für Svelte 5):**
 ```svelte
 <script lang="ts">
   interface Props {
@@ -294,7 +294,7 @@ In Svelte 5 ist dies die **richtige und einzige Weise** um zwei-Wege Bindings zu
 </style>
 ```
 
-### 🟡 Phase 3: CardViewDialog Content (Pending)
+### 🟡 Phase 3: CardDetailsDialog Content (Pending)
 
 **Struktur:**
 - Tab 1: Content (Image, Description, Labels, Author/Attendees)
@@ -436,7 +436,7 @@ import { authStore } from "$lib/stores/authStore.svelte.js";
 
 ### Svelte 5 Runes Pattern
 
-**CardViewDialog Props mit `$bindable`:**
+**CardDetailsDialog Props mit `$bindable`:**
 ```typescript
 const { cardId, open = $bindable(false) }: Props = $props();
 ```
@@ -474,7 +474,7 @@ let displayComments = $derived(currentCard?.comments || []);
 - [x] Author-Info ins Menu
 - [x] Content optimiert (Image 80px, Description 2-line)
 - [x] Footer mit Comment Icon
-- [x] CardViewDialog Verhalten (bind:open)
+- [x] CardDetailsDialog Verhalten (bind:open)
 
 ### Phase 2: AvatarStack (⏳ PENDING)
 - [ ] Komponente erstellen
@@ -482,7 +482,7 @@ let displayComments = $derived(currentCard?.comments || []);
 - [ ] "+N" Indicator
 - [ ] Integration in Card.svelte Footer
 
-### Phase 3: CardViewDialog (⏳ PENDING)
+### Phase 3: CardDetailsDialog (⏳ PENDING)
 - [ ] Tab 1: Content (Image, Description, Labels, Author/Attendees)
 - [ ] Tab 2: Kommentare (List + Form)
 - [ ] Responsive Layout
@@ -506,7 +506,7 @@ let displayComments = $derived(currentCard?.comments || []);
 - [ ] Description abgeschnitten nach 2 Zeilen
 
 ### Funktional Tests
-- [ ] CardViewDialog öffnet/schließt
+- [ ] CardDetailsDialog öffnet/schließt
 - [ ] Card Status selected während Dialog offen
 - [ ] Kommentar-Submit funktioniert
 - [ ] Kommentar-Löschung funktioniert
@@ -534,7 +534,7 @@ let displayComments = $derived(currentCard?.comments || []);
 
 **Code Files:**
 - Primary: `src/routes/cardsboard/Card.svelte` (700 lines)
-- Dialog: `src/routes/cardsboard/CardViewDialog.svelte` (280 lines)
+- Dialog: `src/routes/cardsboard/CardDetailsDialog.svelte` (280 lines)
 - Types: `src/routes/cardsboard/types.ts`
 - Store: `src/lib/stores/kanbanStore.svelte.ts`
 
@@ -543,7 +543,7 @@ let displayComments = $derived(currentCard?.comments || []);
 ## 🚀 Next Steps
 
 1. **Phase 2 starten:** AvatarStack Komponente
-2. **Phase 3 starten:** CardViewDialog Content/Kommentare
+2. **Phase 3 starten:** CardDetailsDialog Content/Kommentare
 3. **Phase 4:** Testing & Polish
 4. **Merge:** Feature Branch → main
 
@@ -555,7 +555,7 @@ let displayComments = $derived(currentCard?.comments || []);
 
 | Datum | Phase | Status | Änderungen |
 |-------|-------|--------|-----------|
-| 29.10.2025 | Implementation Start | 🔄 IN PROGRESS | Phase 1 Code Complete, CardViewDialog bind:open, Dokumentation Konsolidierung |
+| 29.10.2025 | Implementation Start | 🔄 IN PROGRESS | Phase 1 Code Complete, CardDetailsDialog bind:open, Dokumentation Konsolidierung |
 | 29.10.2025 | Design Phase | ✅ COMPLETE | Options Analysis, Final Decision (Option 3 with shadcn Badges) |
 | 26.10.2025 | Planning | ✅ COMPLETE | Design Concept, 4-Phase Roadmap |
 

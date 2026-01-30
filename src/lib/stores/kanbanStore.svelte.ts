@@ -1,6 +1,3 @@
-// src/lib/stores/kanbanStore.svelte.ts
-// REFACTORED: Hauptstore der alle Module zusammenführt
-
 import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../types/sharing.js';
 import { authStore } from './authStore.svelte.js';
@@ -9,8 +6,6 @@ import { initializeSyncManager } from './syncManager.svelte.js';
 import { generateDTag } from '../utils/idGenerator.js';
 import type NDK from '@nostr-dev-kit/ndk';
 import type { NDKKind } from '@nostr-dev-kit/ndk';
-
-// Module imports
 import {
     BoardStorage,
     NostrIntegration,
@@ -22,20 +17,12 @@ import {
     type CardItem,
     type UIColumn
 } from './boardstore/index.js';
-
 import { pasteHandler } from '$lib/paste/PasteHandler.js';
-
-// ✅ NEW (REFACTORING): Migration import
 import { MetadataMigration } from './boardstore/migration.js';
-
-// Permission checks import
 import { PermissionChecks } from '$lib/utils/permissionCheck.js';
 import { toast } from 'svelte-sonner';
-
-// ✅ Anti-Resurrection: Prevent loading/reconstructing tombstoned boards
 import { clearAllBoardTombstones, clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
 
-// Re-export types für Komponenten
 export type { CardItem, UIColumn };
 
 // ============================================================================
@@ -414,18 +401,14 @@ export class BoardStore {
     }
 
     public createBoard(name: string, description?: string): string {
-        // WICHTIG: Keine Permission-Check für createBoard!
-        // Jeder Benutzer kann eigene Boards erstellen, unabhängig von Rollen auf anderen Boards.
-        // Ein Viewer auf Board A kann trotzdem sein eigenes Board B erstellen.
-        
         const { author, authorName } = this.getAuthorFields();
         const board = new Board({
             name,
             description,
             author,
-            authorName: authorName || undefined, // ← NEU: Display name (null → undefined für TypeScript)
-            maintainers: [], // ← FIX: Author should NOT be in maintainers (they're already the owner)
-            publishState: 'private',
+            authorName: authorName || undefined,
+            maintainers: [],
+            publishState: settingsStore.settings.defaultBoardPublishState,
             columns: []
         });
 
@@ -695,6 +678,78 @@ export class BoardStore {
         }
     }
 
+    /**
+     * 🔄 Dupliziert ein Board mit allen Spalten und Karten
+     * @param boardId Optional - Board ID to duplicate (default: current board)
+     * @param newName Optional - Name for duplicated board (default: "Copy of [original name]")
+     * @returns Board ID of the newly created board
+     */
+    public duplicateBoard(boardId?: string, newName?: string): string {
+        const sourceBoardId = boardId || this.board.id;
+        const sourceBoard = sourceBoardId === this.board.id 
+            ? this.board 
+            : this.loadBoardById(sourceBoardId);
+        
+        if (!sourceBoard) {
+            console.error('❌ Source board not found:', sourceBoardId);
+            toast.error('Board nicht gefunden');
+            return '';
+        }
+        
+        const { author, authorName } = this.getAuthorFields();
+        const boardName = newName || `Kopie von ${sourceBoard.name}`;
+        
+        // Create new board with same structure
+        const newBoard = new Board({
+            name: boardName,
+            description: sourceBoard.description,
+            author,
+            authorName: authorName || undefined,
+            maintainers: [], // Don't copy maintainers
+            publishState: sourceBoard.publishState,
+            columns: []
+        });
+        
+        // Duplicate all columns and cards
+        sourceBoard.columns.forEach(column => {
+            const newColumn = newBoard.addColumn({
+                name: column.name,
+                color: column.color
+            });
+            
+            // Duplicate all cards in the column
+            column.cards.forEach(card => {
+                newColumn.addCard({
+                    heading: card.heading,
+                    content: card.content,
+                    color: card.color,
+                    labels: [...(card.labels || [])],
+                    links: card.links?.map(link => ({ ...link })) || [],
+                    image: card.image,
+                    author,
+                    authorName: authorName || undefined,
+                    publishState: card.publishState
+                    // Don't copy comments and attendees
+                });
+            });
+        });
+        
+        // Save the new board
+        BoardStorage.saveBoard(newBoard);
+        
+        // Add to board list
+        if (!this.boardIds.includes(newBoard.id)) {
+            this.boardIds = [...this.boardIds, newBoard.id];
+            console.log(`✅ Board "${boardName}" duplicated - ID: ${newBoard.id}`);
+        }
+        
+        toast.success('Board erfolgreich dupliziert', {
+            description: `"${boardName}" wurde erstellt`
+        });
+        
+        return newBoard.id;
+    }
+
     public deleteBoard(boardId?: string): boolean {
         // Permission Check: Kann Benutzer das Board löschen?
         const userRole = this.getCurrentUserRole();
@@ -777,7 +832,6 @@ export class BoardStore {
 
     public async loadBoardsFromNostr(): Promise<void> {
         await this.nostrIntegration.loadBoardsFromNostr(
-            this.boardIds,
             this.board,
             (updatedBoardIds: string[], switched: boolean, newBoard?: Board) => {
                 // ⚡ FIX: Board IDs NICHT per Merge deduplizieren, sondern aus Storage ableiten.
@@ -1497,6 +1551,48 @@ export class BoardStore {
         }
     }
 
+    /**
+     * 🔄 Dupliziert eine Karte innerhalb derselben Spalte
+     * @param cardId Card ID to duplicate
+     * @returns Card ID of the newly created card
+     */
+    public duplicateCard(cardId: string): string {
+        const result = this.board.findCardAndColumn(cardId);
+        if (!result) {
+            console.error('❌ Card not found:', cardId);
+            toast.error('Karte nicht gefunden');
+            return '';
+        }
+        
+        const { card, column } = result;
+        const { author, authorName } = this.getAuthorFields();
+        
+        // Create duplicate with "Kopie" prefix
+        const duplicatedCard = column.addCard({
+            heading: `Kopie von ${card.heading}`,
+            content: card.content,
+            color: card.color,
+            labels: [...(card.labels || [])],
+            links: card.links?.map(link => ({ ...link })) || [],
+            image: card.image,
+            author,
+            authorName: authorName || undefined,
+            publishState: card.publishState
+            // Don't copy comments and attendees
+        });
+        
+        if (duplicatedCard) {
+            this.board.updateLastAccessed();
+            this.triggerUpdate();
+            this.publishCardAsync(duplicatedCard.id);
+            
+            toast.success('Karte erfolgreich dupliziert');
+            return duplicatedCard.id;
+        }
+        
+        return '';
+    }
+    
     public async deleteCard(cardId: string): Promise<void> {
         // Permission Check: Kann Benutzer Karten löschen?
         const userRole = this.getCurrentUserRole();
@@ -1983,7 +2079,7 @@ export class BoardStore {
      * 
      * @example
      * ```typescript
-     * // In CardViewDialog.svelte:
+     * // In CardDetailsDialog.svelte:
      * let unsubscribe: () => void;
      * 
      * onMount(() => {

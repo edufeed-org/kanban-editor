@@ -13,9 +13,7 @@
  * 5. User resolved Konflikt → speichern via BoardStore.editCard()
  */
 
-import type { NDKEvent } from '@nostr-dev-kit/ndk';
 import type NDK from '@nostr-dev-kit/ndk';
-import type { CardProps } from '$lib/classes/BoardModel.js';
 import {
   detectConflict,
   threeWayMerge,

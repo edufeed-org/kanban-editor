@@ -270,8 +270,8 @@ describe('AuthStore - Profile Cache System', () => {
             expect(mockNdk.getUser).not.toHaveBeenCalled();
         });
 
-        it('should work correctly in CardViewDialog scenario', () => {
-            // Simulate CardViewDialog.formatAuthorName() usage
+        it('should work correctly in CardDetailsDialog scenario', () => {
+            // Simulate CardDetailsDialog.formatAuthorName() usage
             const commentAuthor = '0a1b2c3d4e5f6789abcdefghijklmnopqrstuvwxyz1234567890abcd';
             
             // formatAuthorName() logic:

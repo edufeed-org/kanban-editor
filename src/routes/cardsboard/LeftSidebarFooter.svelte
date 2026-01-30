@@ -1,12 +1,7 @@
 <script lang="ts">
 /**
- * Left Sidebar Footer - User Authentication & Profile
- * 
- * 🎯 Integriert LoginDialog unten in der linken Sidebar
- * Zeigt aktuellen User mit Avatar oder Login-Button
- * Mit Demo-Session-Unterstützung (optional, config-gesteuert)
+ * Left Sidebar Footer
  */
-
 
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
@@ -15,9 +10,7 @@
 	import LoginDialog from "./LoginDialog.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
-	import SettingsIcon from "@lucide/svelte/icons/settings";
 	import PlayIcon from "@lucide/svelte/icons/play";
-	import GithubIcon from "@lucide/svelte/icons/github";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 

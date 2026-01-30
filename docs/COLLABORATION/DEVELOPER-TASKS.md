@@ -1510,11 +1510,11 @@ public async addComment(cardId: string, text: string): Promise<void> {
 **Status:** ❌ UI FEHLT
 
 **Beschreibung:**
-CardViewDialog zeigt Warnung wenn andere editiert.
+CardDetailsDialog zeigt Warnung wenn andere editiert.
 
 **Technische Details:**
 ```svelte
-<!-- CardViewDialog.svelte -->
+<!-- CardDetailsDialog.svelte -->
 <script lang="ts">
   import { softLockManager } from '$lib/utils/softLockManager.svelte';
   import AlertTriangleIcon from "@lucide/svelte/icons/alert-triangle";

@@ -2,23 +2,19 @@
 // Nostr-Integration und Event-Publishing
 
 import type { Board, Card, Comment } from '../../classes/BoardModel.js';
-import type { BoardProps, ColumnProps } from '../../classes/BoardModel.js';
 import {
-    boardToNostrEvent,
     cardToNostrEvent,
     createCommentEvent,
     createDeletionEvent,
     createColumnOrderPatchEvent,
     EVENT_KINDS
 } from '../../utils/nostrEvents.js';
-import { generateDTag } from '../../utils/idGenerator.js';
 import { getTargetRelays } from '../../utils/relaySelection.js';
 import { getSyncManager } from '../syncManager.svelte.js';
 import { settingsStore } from '../settingsStore.svelte.js';
-import { authStore } from '../authStore.svelte.js';
 import { BoardStorage } from './storage.js';
 import { getCurrentPubkeyOrNull, hasCurrentPubkey } from './nostr/auth.js';
-import { loadProcessedDeletions, saveProcessedDeletions } from './nostr/deletionEventsCache.js';
+import { loadProcessedDeletions } from './nostr/deletionEventsCache.js';
 import { unixSecondsToMs, unknownTimestampToMs } from './nostr/time.js';
 import {
     loadComments as loadCommentsImpl,
@@ -27,6 +23,7 @@ import {
     subscribeToComments as subscribeToCommentsImpl
 } from './nostr/comments.js';
 import {
+    publishBoard as publishBoardImpl,
     deleteBoard as deleteBoardImpl,
     deleteCard as deleteCardImpl,
     publishSnapshot as publishSnapshotImpl
@@ -61,21 +58,16 @@ export class NostrIntegration {
      */
     public async initialize(ndk: NDK, onBoardLoad?: () => Promise<void>): Promise<void> {
         this.ndk = ndk;
-        console.log('[BoardStore] ✅ Nostr initialized - SyncManager ready');
 
-        // ⚡ Load processed deletions from localStorage
         this.processedDeletionEvents = loadProcessedDeletions();
 
-        // Wenn bereits ein User authentifiziert ist, sofort Boards laden
         try {
             if (hasCurrentPubkey() && onBoardLoad) {
-                console.log('[BoardStore] 🛰️ User detected on Nostr init - loading boards from Nostr...');
                 await onBoardLoad();
             } else {
-                console.log('[BoardStore] ℹ️ No authenticated user on Nostr init - skipping initial Nostr board loading');
             }
         } catch (error) {
-            console.warn('[BoardStore] ⚠️ Error during initial Nostr loading:', error);
+            console.warn('[NostrIntegration] ⚠️ Error during initial Nostr loading:', error);
         }
     }
 
@@ -90,28 +82,25 @@ export class NostrIntegration {
      * Lädt Boards des aktuellen Users aus Nostr
      */
     public async loadBoardsFromNostr(
-        boardIds: string[],
         currentBoard: Board,
         onBoardsLoaded: (boardIds: string[], shouldSwitchBoard: boolean, newBoard?: Board) => void
     ): Promise<void> {
         if (!this.ndk) {
-            console.log('[BoardStore] ℹ️ Nostr not initialized, skip loadBoardsFromNostr');
+            console.log('[NostrIntegration] ℹ️ Nostr not initialized, skip loadBoardsFromNostr');
             return;
         }
 
         const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey) {
-            console.log('[BoardStore] ℹ️ No pubkey available, skipping Nostr board loading');
+            console.log('[NostrIntegration] ℹ️ No pubkey available, skipping Nostr board loading');
             return;
         }
 
         try {
             const startTime = Date.now();
-            console.log('[BoardStore] 🛰️ Fetching boards from Nostr for pubkey:', pubkey);
+            console.log('[NostrIntegration] 🛰️ Fetching boards from Nostr for pubkey:', pubkey);
 
-            // 1. Fetch Board Events (Kind 30301)
-            // ⚡ OPTIMIZATION: Limit to recent boards (last 90 days) für schnelleren Load
             const ninetyDaysAgo = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
             
             const boardFilter = {
@@ -122,35 +111,22 @@ export class NostrIntegration {
 
             const boardEvents = await this.ndk.fetchEvents(boardFilter as any);
             
-            console.log(`[BoardStore] ⏱️ Fetched ${boardEvents.size} board event(s) in ${Date.now() - startTime}ms`);
-
             if (!boardEvents || boardEvents.size === 0) {
-                console.log('[BoardStore] ℹ️ No boards found on Nostr for current user');
+                console.log('[NostrIntegration] ℹ️ No boards found on Nostr for current user');
                 return;
             }
 
-            // 2. ⚡ SIMPLIFIED: Relay versteckt gelöschte Events automatisch!
-            //    Wir brauchen KEINE lokale Deletion-Tracking mehr!
-            //    Der Relay gibt nur nicht-gelöschte Events zurück.
-            
-            console.log('[BoardStore] �️ Relay will automatically hide deleted boards (NIP-09)');
-
-            // 3. Initialisiere loadedBoardIds
             const loadedBoardIds: string[] = [];
         
-            // 4. Sammle Board-IDs die auf dem Relay existieren
             const relayBoardIds = new Set<string>();
             
-            // ⚡ OPTIMIZATION: Import dependencies einmalig vor der Loop
             const { nostrEventToBoard } = await import('../../utils/nostrEvents.js');
             const { Board: BoardClass } = await import('../../classes/BoardModel.js');
             
-            // ⚡ OPTIMIZATION: Parallele Verarbeitung aller Board-Events
             const boardProcessingPromises = Array.from(boardEvents).map(async (event) => {
                 if (event.kind !== 30301) return null;
 
                 try {
-                    // Check ob Board mit deleted=true Tag markiert ist
                     const deletedTag = event.tags.find((t: any) => t[0] === 'deleted' && t[1] === 'true');
                     if (deletedTag) {
                         return null;
@@ -159,12 +135,10 @@ export class NostrIntegration {
                     const boardProps = nostrEventToBoard(event);
                     const board = new BoardClass(boardProps);
 
-                    // ✅ Anti-Resurrection: Tombstone schlägt Relay-Discovery
                     if (isBoardTombstoned(board.id)) {
                         return null;
                     }
 
-                    // Merke dass dieses Board auf dem Relay existiert
                     relayBoardIds.add(board.id);
 
                     const storageKey = `kanban-${board.id}`;
@@ -199,7 +173,6 @@ export class NostrIntegration {
                         return { boardId: board.id, needsStorage: false };
                     }
 
-                    // Prepare storage data
                     const context = board.getContextData(true) as any;
                     const remoteCreated = event.created_at
                         ? new Date(unixSecondsToMs(event.created_at)).toISOString()
@@ -253,7 +226,7 @@ export class NostrIntegration {
                         context 
                     };
                 } catch (err) {
-                    console.error('[BoardStore] ❌ Failed to import Nostr board event:', err);
+                    console.error('[NostrIntegration] ❌ Failed to import Nostr board event:', err);
                     return null;
                 }
             });
@@ -283,10 +256,8 @@ export class NostrIntegration {
                 }
             }
             
-            console.log(`[BoardStore] ✅ Processed ${loadedBoardIds.length} board(s) in parallel`);
 
             // MRU-Heuristik: Neuestes Board wählen wenn aktuelles Board anonym ist
-            // ⚡ OPTIMIZATION: Early exit wenn nicht nötig
             const currentIsAnonymous = !currentBoard.author || currentBoard.author === 'anonymous';
             
             if (currentIsAnonymous && loadedBoardIds.length > 0 && typeof window !== 'undefined') {
@@ -319,17 +290,17 @@ export class NostrIntegration {
                     try {
                         const newBoard = BoardStorage.reconstructBoard(best.data);
                         onBoardsLoaded(loadedBoardIds, true, newBoard);
-                        console.log('[BoardStore] ✅ Switched active board to newest Nostr board:', best.id);
+                        console.log('[NostrIntegration] ✅ Switched active board to newest Nostr board:', best.id);
                         return;
                     } catch (err) {
-                        console.warn('[BoardStore] ⚠️ Failed to switch active board to Nostr board:', err);
+                        console.warn('[NostrIntegration] ⚠️ Failed to switch active board to Nostr board:', err);
                     }
                 }
             }
 
             onBoardsLoaded(loadedBoardIds, false);
         } catch (error) {
-            console.error('[BoardStore] ❌ Error while loading boards from Nostr:', error);
+            console.error('[NostrIntegration] ❌ Error while loading boards from Nostr:', error);
         }
     }
 
@@ -343,14 +314,14 @@ export class NostrIntegration {
         onCardLoaded: (cardProps: any) => void
     ): Promise<void> {
         if (!this.ndk) {
-            console.log('[BoardStore] ℹ️ Nostr not initialized, skip loadCardsForBoard');
+            console.log('[NostrIntegration] ℹ️ Nostr not initialized, skip loadCardsForBoard');
             return;
         }
 
         const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey) {
-            console.log('[BoardStore] ℹ️ No pubkey, skip loadCardsForBoard');
+            console.log('[NostrIntegration] ℹ️ No pubkey, skip loadCardsForBoard');
             return;
         }
 
@@ -364,16 +335,13 @@ export class NostrIntegration {
         );
 
         if (boardRefAuthors.length === 0) {
-            console.log('[BoardStore] ℹ️ No boardRef authors available, skip loadCardsForBoard');
+            console.log('[NostrIntegration] ℹ️ No boardRef authors available, skip loadCardsForBoard');
             return;
         }
 
         try {
             const boardRefs = boardRefAuthors.map((author) => `30301:${author}:${board.id}`);
             
-            // console.log('[BoardStore] 🃏 Fetching cards for board:', board.name, 'Ref:', boardRef);
-
-            // Fetch alle Card-Events (Kind 30302) die zu diesem Board gehören
             const cardFilter = {
                 kinds: [30302],
 				'#a': boardRefs
@@ -382,19 +350,15 @@ export class NostrIntegration {
             const cardEvents = await this.ndk.fetchEvents(cardFilter as any);
 
             if (!cardEvents || cardEvents.size === 0) {
-                console.log('[BoardStore] ℹ️ No cards found on Nostr for board:', board.id);
+                console.log('[NostrIntegration] ℹ️ No cards found on Nostr for board:', board.id);
                 return;
             }
 
-            console.log('[BoardStore] 🃏 Found', cardEvents.size, 'card(s) on relay for board:', board.name);
+            console.log('[NostrIntegration] 🃏 Found', cardEvents.size, 'card(s) on relay for board:', board.name);
 
             // ⚡ RELAY FILTERT GELÖSCHTE CARDS: Keine lokale Deletion-Tracking mehr nötig!
-            // Relay gibt per NIP-09 nur nicht-gelöschte Events zurück
-
-            // Deserialisiere alle Card-Events
             const { nostrEventToCard } = await import('../../utils/nostrEvents.js');
             
-            // ⚡ OPTIMIZATION: Parallele Verarbeitung aller Card-Events
             const cardProcessingPromises = Array.from(cardEvents).map(async (cardEvent) => {
                 try {
                     const cardProps = nostrEventToCard(cardEvent);
@@ -406,14 +370,13 @@ export class NostrIntegration {
                     
                     return cardProps;
                 } catch (err) {
-                    console.error('[BoardStore] ❌ Failed to deserialize card event:', err);
+                    console.error('[NostrIntegration] ❌ Failed to deserialize card event:', err);
                     return null;
                 }
             });
             
             const processedCards = await Promise.all(cardProcessingPromises);
             
-            // Batch-Verarbeitung aller Cards
             let loadedCount = 0;
             for (const cardProps of processedCards) {
                 if (cardProps) {
@@ -422,9 +385,9 @@ export class NostrIntegration {
                 }
             }
 
-            console.log('[BoardStore] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded in parallel)`);
+            console.log('[NostrIntegration] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded in parallel)`);
         } catch (error) {
-            console.error('[BoardStore] ❌ Error while loading cards from Nostr:', error);
+            console.error('[NostrIntegration] ❌ Error while loading cards from Nostr:', error);
         }
     }
 
@@ -440,17 +403,17 @@ export class NostrIntegration {
      */
     public subscribeToUpdates(
         currentBoard: Board,
-        boardStore: any // ⚡ v2.0: Store-Referenz statt Callbacks!
+        boardStore: any
     ): void {
         if (!this.ndk) {
-            console.log('[BoardStore] ℹ️ Nostr not initialized, skip subscribe');
+            console.log('[NostrIntegration] ℹ️ Nostr not initialized, skip subscribe');
             return;
         }
 
         const pubkey = getCurrentPubkeyOrNull();
 
         if (!pubkey) {
-            console.log('[BoardStore] ℹ️ No pubkey available, skip board subscription');
+            console.log('[NostrIntegration] ℹ️ No pubkey available, skip board subscription');
             return;
         }
 
@@ -485,61 +448,7 @@ export class NostrIntegration {
      * @returns Event-ID des publizierten Events oder null bei Fehler
      */
     public async publishBoard(board: Board): Promise<string | null> {
-        if (!this.ndk) return null;
-
-        try {
-            const event = boardToNostrEvent(board, this.ndk);
-            const publishState = board.publishState || 'private';
-            const normalizedState = publishState as 'published' | 'private';
-            
-            const targetRelays = getTargetRelays({
-                publishState: normalizedState,
-                privatePublishingMode: settingsStore.settings.privatePublishingMode,
-                relaysPublic: settingsStore.settings.relaysPublic,
-                relaysPrivate: settingsStore.settings.relaysPrivate
-            });
-
-            // ⚠️ SICHERHEITS-CHECK: Warne wenn private nicht publiziert werden kann
-            if (normalizedState === 'private' && targetRelays.length === 0) {
-                const mode = settingsStore.settings.privatePublishingMode;
-                
-                if (mode === 'private-relays') {
-                    toast.warning('🔒 Keine privaten Relays konfiguriert', {
-                        description: 'Board-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
-                        duration: 6000
-                    });
-                    console.warn('[NostrIntegration] 🔒 private board cannot be published - no private relays configured');
-                }
-                // Falls local-only: Kein Toast (das ist erwartetes Verhalten)
-            }
-
-            const syncManager = getSyncManager();
-            const publishedEvent = await syncManager.publishOrQueue(
-                event, 
-                'board', 
-                'normal',
-                normalizedState,
-                targetRelays
-            );
-            
-            // ⚡ NEU: Event-ID erfassen nach erfolgreichem Publish!
-            if (publishedEvent?.id) {
-                board.eventId = publishedEvent.id;
-                console.log(`[NostrIntegration] 🔑 Board Event-ID: ${board.eventId}`);
-                
-                // ⚡ KRITISCH: Speichere eventId SOFORT zu localStorage!
-                const { BoardStorage } = await import('./storage.js');
-                await BoardStorage.saveBoard(board);
-                
-                // ⚡ RÜCKGABE: Event-ID für LiaScript-Link-Generierung
-                return publishedEvent.id;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error(`❌ Error publishing board:`, error);
-            return null;
-        }
+        return publishBoardImpl(this.ndk, board);
     }
 
     /**
@@ -941,7 +850,7 @@ export class NostrIntegration {
      * 
      * @example
      * ```typescript
-     * // In CardViewDialog.svelte:
+     * // In CardDetailsDialog.svelte:
      * let unsubscribe: () => void;
      * onMount(() => {
      *     unsubscribe = boardStore.subscribeToComments(card.id);

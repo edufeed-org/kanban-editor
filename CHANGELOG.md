@@ -2178,7 +2178,7 @@ public createCard(columnId: string, heading: string): string {
 
 ---
 
-#### Fix 5: CardViewDialog.svelte - Comment Author Display
+#### Fix 5: CardDetailsDialog.svelte - Comment Author Display
 
 **Problem:** Kommentare zeigten `authStore.getPubkey()` statt lesbarer Namen
 - ❌ VORHER: Kommentar-Autor: "0000abc123..." (Hex)
@@ -2318,7 +2318,7 @@ After Reload: board.author = 'Alice' ✓ (WIEDERHERGESTELLT!)
 |-------|----------|--------|
 | `src/lib/classes/BoardModel.ts` | 2 Fixes (Card + Board getContextData Line ~145, ~373) | ✅ |
 | `src/lib/stores/kanbanStore.svelte.ts` | 3 Fixes (reconstructBoard ~264, createBoard ~401, createCard ~716) | ✅ |
-| `src/routes/cardsboard/CardViewDialog.svelte` | 1 Fix (comment author display) | ✅ |
+| `src/routes/cardsboard/CardDetailsDialog.svelte` | 1 Fix (comment author display) | ✅ |
 | `AGENTS.md` | 2 neue Sections X & XI (~350 Zeilen) | ✅ |
 | `copilot-instructions.md` | 2 neue Sections 21 & 22 (~250 Zeilen) | ✅ |
 | `docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md` | NEW (~300 Zeilen) | ✅ |
@@ -2409,7 +2409,7 @@ Der `feature/comments` Branch implementiert das **Meilenstein 1.3 Kommentar-Syst
 
 #### 1. UI-Formular für Kommentare (Phase A) ✅
 
-**Datei:** `src/routes/cardsboard/CardViewDialog.svelte`
+**Datei:** `src/routes/cardsboard/CardDetailsDialog.svelte`
 
 - Textarea für Kommentar-Input mit Validierung
 - Kommentare-Liste mit Scroll-Bereich
@@ -2544,7 +2544,7 @@ board.columns.forEach(col => {
 
 | Kriterium | Status | Details |
 |-----------|--------|---------|
-| UI-Formular implementiert | ✅ | CardViewDialog.svelte mit vollständiger Funktionalität |
+| UI-Formular implementiert | ✅ | CardDetailsDialog.svelte mit vollständiger Funktionalität |
 | Kommentare persistent (localStorage) | ✅ | triggerUpdate() integriert, saveToStorage() funktioniert |
 | Reaktivität funktioniert | ✅ | Kommentar-Anzahl aktualisiert sofort |
 | Tests durchgeführt | ✅ | Manuelle Tests in Browser bestätigt |
