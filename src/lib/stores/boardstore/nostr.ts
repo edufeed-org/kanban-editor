@@ -489,26 +489,26 @@ export class NostrIntegration {
 
         try {
             const event = boardToNostrEvent(board, this.ndk);
-            const publishState = board.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft';
+            const publishState = board.publishState || 'private';
+            const normalizedState = publishState as 'published' | 'private';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                privatePublishingMode: settingsStore.settings.privatePublishingMode,
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
 
-            // ⚠️ SICHERHEITS-CHECK: Warne wenn Draft nicht publiziert werden kann
-            if (normalizedState === 'draft' && targetRelays.length === 0) {
-                const mode = settingsStore.settings.draftPublishingMode;
+            // ⚠️ SICHERHEITS-CHECK: Warne wenn private nicht publiziert werden kann
+            if (normalizedState === 'private' && targetRelays.length === 0) {
+                const mode = settingsStore.settings.privatePublishingMode;
                 
                 if (mode === 'private-relays') {
                     toast.warning('🔒 Keine privaten Relays konfiguriert', {
                         description: 'Board-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
                         duration: 6000
                     });
-                    console.warn('[NostrIntegration] 🔒 Draft board cannot be published - no private relays configured');
+                    console.warn('[NostrIntegration] 🔒 private board cannot be published - no private relays configured');
                 }
                 // Falls local-only: Kein Toast (das ist erwartetes Verhalten)
             }
@@ -583,12 +583,12 @@ export class NostrIntegration {
             // Card-eigener publishState wird nur als Fallback verwendet.
             const effectivePublishState = board.publishState === 'published' 
                 ? 'published' 
-                : (card.publishState || 'draft');
-            const normalizedState = effectivePublishState as 'published' | 'draft';
+                : (card.publishState || 'private');
+            const normalizedState = effectivePublishState as 'published' | 'private';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                privatePublishingMode: settingsStore.settings.privatePublishingMode,
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
@@ -637,7 +637,7 @@ export class NostrIntegration {
         // Wenn keine spezifischen Relays angegeben, nutze öffentliche Relays
         const relays = targetRelays ?? getTargetRelays({
             publishState: 'published',
-            draftPublishingMode: settingsStore.settings.draftPublishingMode,
+            privatePublishingMode: settingsStore.settings.privatePublishingMode,
             relaysPublic: settingsStore.settings.relaysPublic,
             relaysPrivate: settingsStore.settings.relaysPrivate
         });
@@ -744,14 +744,14 @@ export class NostrIntegration {
                 colsLen: Array.isArray(args.columns) ? args.columns.length : 0,
             });
 
-            const publishState = board.publishState || 'draft';
+            const publishState = board.publishState || 'private';
             const normalizedState = publishState as
                 | 'published'
-                | 'draft';
+                | 'private';
 
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                privatePublishingMode: settingsStore.settings.privatePublishingMode,
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate,
             });
@@ -796,12 +796,12 @@ export class NostrIntegration {
 
             // IMPORTANT: `e`-tag must reference the actual Nostr event id of the card (not the d-tag)
             const event = createCommentEvent(comment.text, cardRef, card.eventId || '', this.ndk);
-            const publishState = card.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft';
+            const publishState = card.publishState || 'private';
+            const normalizedState = publishState as 'published' | 'private';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                privatePublishingMode: settingsStore.settings.privatePublishingMode,
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });
@@ -876,12 +876,12 @@ export class NostrIntegration {
             );
 
             // Bestimme Target-Relays basierend auf Card's publishState
-            const publishState = card.publishState || 'draft';
-            const normalizedState = publishState as 'published' | 'draft';
+            const publishState = card.publishState || 'private';
+            const normalizedState = publishState as 'published' | 'private';
             
             const targetRelays = getTargetRelays({
                 publishState: normalizedState,
-                draftPublishingMode: settingsStore.settings.draftPublishingMode,
+                privatePublishingMode: settingsStore.settings.privatePublishingMode,
                 relaysPublic: settingsStore.settings.relaysPublic,
                 relaysPrivate: settingsStore.settings.relaysPrivate
             });

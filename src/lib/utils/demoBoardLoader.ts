@@ -124,7 +124,7 @@ export function add_democontent(): void {
 						content: demoCard.content,
 						color: demoCard.color,
 						labels: demoCard.labels || [],
-						publishState: 'draft'
+						publishState: 'private'
 					});
 
 					cardCount++;
@@ -295,7 +295,7 @@ export function test_upsert(): void {
 		heading: 'Test-Karte für Upsert',
 		content: 'Initial content',
 		author: 'npub1test0000000000000000000000000001',
-		publishState: 'draft'
+		publishState: 'private'
 	});
 	console.log('✅ Karte erstellt:', testCardId);
 

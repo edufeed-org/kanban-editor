@@ -87,12 +87,12 @@ describe('Kanban Board Tests', () => {
 
         it('should manage publish states', () => {
             // Test card publish state
-            expect(card1.publishState).toBe('draft');
+            expect(card1.publishState).toBe('private');
             card1.setPublishState('published');
             expect(card1.publishState).toBe('published');
 
             // Test board publish state
-            expect(board.publishState).toBe('draft');
+            expect(board.publishState).toBe('private');
             board.setPublishState('published');
             expect(board.publishState).toBe('published');
         });

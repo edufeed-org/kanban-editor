@@ -125,7 +125,7 @@ export function createColumnOrderPatchEvent(
  *     ["d", "board-id"],  // d-tag: unique identifier
  *     ["title", "Board Name"],
  *     ["description", "..."],
- *     ["state", "draft|published"],
+ *     ["state", "private|published"],
  *     ["col", "col-id", "Column Name", "order", "color"],
  *     ["col", "col-id-2", "Column Name 2", "order", "color"],
  *     ["p", "maintainer-pubkey"],  // co-editors (NIP-51)
@@ -221,7 +221,7 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
 
   // Publish state
   const stateTag = tags.find(t => t[0] === 'state');
-  const publishState = stateTag ? (stateTag[1] as any) : 'draft';
+  const publishState = stateTag ? (stateTag[1] as any) : 'private';
 
   // p-tags (NIP-51 compliant): First p-tag is always the canonical owner (author)
   // Remaining p-tags are maintainers/editors
@@ -300,7 +300,7 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
  *     ["col_label", "Column Name"],  // SECONDARY: Human-readable name
  *     ["title", "Card Title"],
  *     ["description", "..."],
- *     ["state", "draft|published"],
+ *     ["state", "private|published"],
  *     ["rank", "0"],  // Position in column
  *     ["image", "https://..."],  // Optional image
  *     ["p", "author-pubkey"],  // Card author
@@ -430,7 +430,7 @@ export function nostrEventToCard(event: NDKEvent): CardProps {
 
   // Extract state
   const stateTag = tags.find(t => t[0] === 'state');
-  const publishState = stateTag ? (stateTag[1] as any) : 'draft';
+  const publishState = stateTag ? (stateTag[1] as any) : 'private';
 
   // Extract color
   const colorTag = tags.find(t => t[0] === 'color');

@@ -160,7 +160,7 @@ describe('BoardStore Export/Import Funktionalität', () => {
 			const boardData = {
 				id: 'board-1',
 				name: 'Board',
-				publishState: 'draft',
+				publishState: 'private',
 				columns: [
 					{
 						id: 'col-1',
@@ -169,7 +169,7 @@ describe('BoardStore Export/Import Funktionalität', () => {
 							{
 								id: 'card-1',
 								heading: 'Task',
-								publishState: 'draft',
+								publishState: 'private',
 								comments: []
 							}
 						]
@@ -183,8 +183,8 @@ describe('BoardStore Export/Import Funktionalität', () => {
 
 			// Assert
 			const stored = JSON.parse(localStorage.getItem('kanban-board-1')!);
-			expect(stored.publishState).toBe('draft');
-			expect(stored.columns[0].cards[0].publishState).toBe('draft');
+			expect(stored.publishState).toBe('private');
+			expect(stored.columns[0].cards[0].publishState).toBe('private');
 		});
 
 		it('ist JSON-serialisierbar ohne Fehler', () => {

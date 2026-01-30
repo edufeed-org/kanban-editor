@@ -60,7 +60,7 @@ export class ExportImport {
                         ? `${boardData.name} (Imported)`
                         : boardData.name,
                     description: boardData.description,
-                    publishState: boardData.publishState || 'draft',
+                    publishState: boardData.publishState || 'private',
                     // Share-Link = Fork: Aktueller Benutzer wird Owner
                     author: currentUserPubkey,
                     maintainers: [], // Keine Maintainer bei Fork
@@ -90,7 +90,7 @@ export class ExportImport {
                             labels: cardData.labels || [],
                             links: cardData.links || [],
                             attendees: cardData.attendees || [],
-                            publishState: cardData.publishState || 'draft'
+                            publishState: cardData.publishState || 'private'
                         });
                     });
                     

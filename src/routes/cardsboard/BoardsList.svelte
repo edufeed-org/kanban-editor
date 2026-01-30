@@ -78,13 +78,13 @@
         description: '',
         tags: '',
         license: 'cc-by-4.0',
-        publishState: 'draft' as 'draft' | 'published'
+        publishState: 'private' as 'private' | 'published'
     });
     
     // Derived values for board settings
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
-    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'private');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
     let currentUserRole = $derived(boardStore.getCurrentUserRole());
     let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
@@ -742,8 +742,8 @@
                 <Label>Veröffentlichungsstatus</Label>
                 <RadioGroup.Root bind:value={metaForm.publishState} disabled={!canEditBoardMeta}>
                     <div class="flex items-center space-x-2">
-                        <RadioGroup.Item value="draft" id="state-draft" />
-                        <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
+                        <RadioGroup.Item value="private" id="state-private" />
+                        <Label for="state-private" class="font-normal">Privat (nur lokal)</Label>
                     </div>
                     <div class="flex items-center space-x-2">
                         <RadioGroup.Item value="published" id="state-published" />

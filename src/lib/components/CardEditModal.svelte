@@ -18,7 +18,7 @@
         color: '',
         labels: [],
         links: [],
-        publishState: 'draft'
+        publishState: 'private'
     });
 
     // Neues Label für die Labels-Liste
@@ -40,7 +40,7 @@
                 color: card.color || '',
                 labels: [...(card.labels || [])],
                 links: [...(card.links || [])],
-                publishState: card.publishState || 'draft'
+                publishState: card.publishState || 'private'
             };
         }
     });
@@ -107,7 +107,7 @@
 
     // Publish state options
     const publishOptions = [
-        { value: 'draft', label: 'Entwurf' },
+        { value: 'private', label: 'Privat' },
         { value: 'published', label: 'Veröffentlicht' }
     ];
 </script>

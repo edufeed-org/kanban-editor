@@ -438,7 +438,7 @@
                             </Button>
                         {:else}
                             <div class="flex-1 p-2 text-sm text-muted-foreground bg-muted rounded-md">
-                                ⚠️ Board muss veröffentlicht sein (nicht Draft) und einen Author haben.
+                                ⚠️ Board muss veröffentlicht sein (nicht Privat) und einen Author haben.
                             </div>
                         {/if}
                     </div>

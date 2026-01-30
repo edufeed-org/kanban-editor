@@ -430,14 +430,14 @@
             <Label>Standard Board Publish State</Label>
             <div class="flex items-center gap-2">
               <Button 
-                variant={settings.defaultBoardPublishState === 'draft' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultBoardPublishState('draft')}
+                variant="default"
+                onclick={() => settingsStore.setDefaultBoardPublishState('private')}
                 class="flex-1"
               >
-                Draft
+                Privat
               </Button>
               <Button 
-                variant={settings.defaultBoardPublishState === 'published' ? 'default' : 'outline'}
+                variant="default"
                 onclick={() => settingsStore.setDefaultBoardPublishState('published')}
                 class="flex-1"
               >

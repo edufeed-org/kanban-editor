@@ -15,8 +15,8 @@
  */
 
 export type Theme = 'dark' | 'light';
-export type PublishState = 'published' | 'draft';
-export type DraftPublishingMode = 'private-relays' | 'local-only' | 'public-relays';
+export type PublishState = 'published' | 'private';
+export type PrivatePublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
 /**
  * SettingsState Interface - alle verfügbaren Einstellungen
@@ -32,7 +32,7 @@ export interface SettingsState {
   relaysPublic: string[]; // Öffentliche Relays für Publishing
   relaysPrivate: string[]; // Private Relays (falls konfiguriert)
   relaysEdufeed: string[]; // Edufeed AMB Relays (Kind 30142) - nur amb-relay.edufeed.org akzeptiert diese!
-  draftPublishingMode: DraftPublishingMode; // NEU: Wie werden draft Events behandelt?
+  privatePublishingMode: PrivatePublishingMode; // NEU: Wie werden private Events behandelt?
   njumpUrl: string; // Web-Client URL für Nostr-Links (naddr, nevent, note)
 
   // LLM Model Integration
@@ -46,7 +46,7 @@ export interface SettingsState {
 
   // Board Defaults
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
-  defaultBoardPublishState: PublishState; // "published" | "draft"
+  defaultBoardPublishState: PublishState; // "published" | "private"
 
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
@@ -94,7 +94,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   relaysEdufeed: [
     'wss://amb-relay.edufeed.org',
   ],
-  draftPublishingMode: 'private-relays', // Default: draft → private relays
+  privatePublishingMode: 'private-relays', // Default: private → private relays
   njumpUrl: 'https://njump.edufeed.org', // Default: edufeed njump instance
 
   // LLM Settings
@@ -170,7 +170,7 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
 
   // Board Defaults
   defaultColumns: ['To Do', 'In Progress', 'Done'],
-  defaultBoardPublishState: 'draft',
+  defaultBoardPublishState: 'private',
 
   // Sidebar
   showLeftSidebar: true,
@@ -382,10 +382,10 @@ export class SettingsStore {
           relaysEdufeed: config.nostr.relaysEdufeed
         };
       }
-      if (config.nostr.draftPublishingMode) {
+      if (config.nostr.privatePublishingMode) {
         this.settings = {
           ...this.settings,
-          draftPublishingMode: config.nostr.draftPublishingMode
+          privatePublishingMode: config.nostr.privatePublishingMode
         };
       }
       if (config.nostr.njumpUrl) {
@@ -635,13 +635,13 @@ export class SettingsStore {
    * ────────────────────────────────────────────
    */
 
-  public setDraftPublishingMode(mode: DraftPublishingMode): void {
+  public setPrivatePublishingMode(mode: PrivatePublishingMode): void {
     if (!['private-relays', 'local-only', 'public-relays'].includes(mode)) {
-      console.warn('Invalid draftPublishingMode:', mode);
+      console.warn('Invalid privatePublishingMode:', mode);
       return;
     }
     // ✅ Reassignment für Reaktivität
-    this.settings = { ...this.settings, draftPublishingMode: mode };
+    this.settings = { ...this.settings, privatePublishingMode: mode };
     this.saveToStorage();
     console.log(`📝 Private publishing mode set to: ${mode}`);
   }
@@ -782,7 +782,7 @@ export class SettingsStore {
   }
 
   public setDefaultBoardPublishState(state: PublishState): void {
-    if (!['published', 'draft'].includes(state)) {
+    if (!['published', 'private'].includes(state)) {
       console.warn('Invalid publishState:', state);
       return;
     }

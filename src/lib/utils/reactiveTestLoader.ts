@@ -48,7 +48,7 @@ Achte auf die UI - alle Änderungen sollten SOFORT sichtbar sein (ohne Reload)!`
 				heading: '🧪 Reaktivitäts-Test Karte',
 				content: 'Diese Karte wurde LIVE hinzugefügt - ohne Reload!',
 				color: 'chart-1',
-				publishState: 'draft'
+				publishState: 'private'
 			});
 			
 			console.log(`✅ Karte erstellt: "${card.heading}"`);

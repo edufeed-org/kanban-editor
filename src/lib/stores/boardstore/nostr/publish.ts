@@ -22,19 +22,19 @@ export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<
 
 	try {
 		const event = boardToNostrEvent(board, ndk);
-		const publishState = board.publishState || 'draft';
-		const normalizedState = publishState as 'published' | 'draft';
+		const publishState = board.publishState || 'private';
+		const normalizedState = publishState as 'published' | 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
-			draftPublishingMode: settingsStore.settings.draftPublishingMode,
+			privatePublishingMode: settingsStore.settings.privatePublishingMode,
 			relaysPublic: settingsStore.settings.relaysPublic,
 			relaysPrivate: settingsStore.settings.relaysPrivate
 		});
 
-		// ⚠️ SICHERHEITS-CHECK: Warne wenn Draft nicht publiziert werden kann
-		if (normalizedState === 'draft' && targetRelays.length === 0) {
-			const mode = settingsStore.settings.draftPublishingMode;
+		// ⚠️ SICHERHEITS-CHECK: Warne wenn private nicht publiziert werden kann
+		if (normalizedState === 'private' && targetRelays.length === 0) {
+			const mode = settingsStore.settings.privatePublishingMode;
 
 			if (mode === 'private-relays') {
 				toast.warning('🔒 Keine privaten Relays konfiguriert', {
@@ -43,7 +43,7 @@ export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<
 					duration: 6000
 				});
 				console.warn(
-					'[NostrIntegration] 🔒 Draft board cannot be published - no private relays configured'
+					'[NostrIntegration] 🔒 private board cannot be published - no private relays configured'
 				);
 			}
 			// Falls local-only: Kein Toast (das ist erwartetes Verhalten)
@@ -114,14 +114,14 @@ export async function publishCard(ndk: NDK | undefined, board: Board, cardId: st
 			ndk
 		);
 
-		const publishState = card.publishState || 'draft';
+		const publishState = card.publishState || 'private';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft';
+			| 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
-			draftPublishingMode: settingsStore.settings.draftPublishingMode,
+			privatePublishingMode: settingsStore.settings.privatePublishingMode,
 			relaysPublic: settingsStore.settings.relaysPublic,
 			relaysPrivate: settingsStore.settings.relaysPrivate
 		});
@@ -179,14 +179,14 @@ export async function publishComment(
 		const cardRef = buildCardRef(board, cardId, card.author);
 		// IMPORTANT: `e`-tag should reference the actual Nostr event id of the card (not the d-tag)
 		const event = createCommentEvent(comment.text, cardRef, card.eventId || '', ndk);
-		const publishState = card.publishState || 'draft';
+		const publishState = card.publishState || 'private';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft';
+			| 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
-			draftPublishingMode: settingsStore.settings.draftPublishingMode,
+			privatePublishingMode: settingsStore.settings.privatePublishingMode,
 			relaysPublic: settingsStore.settings.relaysPublic,
 			relaysPrivate: settingsStore.settings.relaysPrivate
 		});
@@ -257,14 +257,14 @@ export async function deleteComment(ndk: NDK | undefined, comment: Comment, card
 		);
 
 		// Bestimme Target-Relays basierend auf Card's publishState
-		const publishState = card.publishState || 'draft';
+		const publishState = card.publishState || 'private';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft';
+			| 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
-			draftPublishingMode: settingsStore.settings.draftPublishingMode,
+			privatePublishingMode: settingsStore.settings.privatePublishingMode,
 			relaysPublic: settingsStore.settings.relaysPublic,
 			relaysPrivate: settingsStore.settings.relaysPrivate
 		});
@@ -448,14 +448,14 @@ export async function deleteCard(ndk: NDK | undefined, card: Card): Promise<void
 		console.log('  ⚠️ Note: Event will be signed by SyncManager before publishing');
 
 		// 3. Bestimme Target-Relays basierend auf Card's publishState
-		const publishState = card.publishState || 'draft';
+		const publishState = card.publishState || 'private';
 		const normalizedState = publishState as
 			| 'published'
-			| 'draft';
+			| 'private';
 
 		const targetRelays = getTargetRelays({
 			publishState: normalizedState,
-			draftPublishingMode: settingsStore.settings.draftPublishingMode,
+			privatePublishingMode: settingsStore.settings.privatePublishingMode,
 			relaysPublic: settingsStore.settings.relaysPublic,
 			relaysPrivate: settingsStore.settings.relaysPrivate
 		});
@@ -516,7 +516,7 @@ export async function publishSnapshot(
 
 		// Publish via SyncManager
 		const syncManager = getSyncManager();
-		await syncManager.publishOrQueue(snapshotEvent, 'board', 'normal', 'draft', targetRelays);
+		await syncManager.publishOrQueue(snapshotEvent, 'board', 'normal', 'private', targetRelays);
 
 		console.log(`✅ [NostrIntegration] Snapshot "${label}" published for board ${board.id}`);
 		console.log(
