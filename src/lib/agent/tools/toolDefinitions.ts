@@ -371,7 +371,16 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     source: {
                         type: 'string',
-                        description: 'Optional: Spezifische OER-Quelle (z.B. "wlo", "oersi"). Nutze list_oer_sources für verfügbare Quellen.'
+                        description: 'Optional: Spezifische OER-Quelle (z.B. "rpi-virtuell", "nostr-amb-relay"). Nutze list_oer_sources für verfügbare Quellen.'
+                    },
+                    sources: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Optional: Mehrere OER-Quellen (z.B. ["rpi-virtuell", "nostr-amb-relay"])'
+                    },
+                    educational_level: {
+                        type: 'string',
+                        description: 'Optional: Bildungsstufe (z.B. "Grundschule", "Sekundarstufe", "Oberstufe")'
                     },
                     limit: {
                         type: 'number',

@@ -65,29 +65,42 @@ export async function executeSearchOerForCard(
     }
     
     try {
-        // OER-Suche durchführen
-        const searchParams: OerSearchParams = {
-            searchTerm: searchTerms,
-            pageSize: maxResults
-        };
-        
-        if (source) {
-            searchParams.source = source;
-        }
-        
-        const searchResponse = await searchOer(searchParams);
+        const sources = source ? [source] : ['rpi-virtuell', 'nostr-amb-relay'];
 
-        // Fehler von der API prüfen
-        if (searchResponse.error) {
+        const responses = await Promise.all(
+            sources.map(src => searchOer({
+                searchTerm: searchTerms,
+                pageSize: maxResults,
+                source: src
+            }))
+        );
+
+        const successfulResponses = responses.filter(r => !r.error);
+        const firstError = responses.find(r => r.error)?.error;
+
+        // Fehler von der API prüfen (alle fehlgeschlagen)
+        if (successfulResponses.length === 0) {
             return {
                 tool_call_id: '',
                 tool_name: 'search_oer_for_card',
                 success: false,
-                error: `❌ Fehler bei der OER-Suche: ${searchResponse.error}`
+                error: `❌ Fehler bei der OER-Suche: ${firstError || 'Unbekannter Fehler'}`
             };
         }
-        
-        const searchResults = searchResponse.results;
+
+        // Ergebnisse zusammenführen + deduplizieren
+        const searchResults: OerSearchResult[] = [];
+        const seen = new Set<string>();
+
+        for (const response of successfulResponses) {
+            for (const result of response.results) {
+                const key = result.url || result.id;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    searchResults.push(result);
+                }
+            }
+        }
         
         if (searchResults.length === 0) {
             return {

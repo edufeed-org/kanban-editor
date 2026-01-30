@@ -42,6 +42,8 @@ export interface OerSearchParams {
     searchTerm: string;
     /** Datenquelle (z.B. "rpi-virtuell", "wirlernenonline") */
     source?: string;
+    /** Bildungsstufe (z.B. "Grundschule", "Sekundarstufe", "Oberstufe") */
+    educationalLevel?: string;
     /** Ergebnisse pro Seite (default: 10, max: 50) */
     pageSize?: number;
     /** Seitennummer (default: 1) */
@@ -165,6 +167,9 @@ export async function searchOer(params: OerSearchParams): Promise<OerApiResponse
         
         if (params.source) {
             url.searchParams.set('source', params.source);
+        }
+        if (params.educationalLevel) {
+            url.searchParams.set('educationalLevel', params.educationalLevel);
         }
         if (params.pageSize) {
             url.searchParams.set('pageSize', String(Math.min(params.pageSize, 50)));

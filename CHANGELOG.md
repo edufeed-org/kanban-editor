@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 4.7.24 - OER Search: Multi-Source + Bildungsstufe 🎯
+
+**Datum:** 30. Januar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Multi-Source Suche:** `search_oer` durchsucht jetzt standardmäßig **rpi-virtuell** und **nostr-amb-relay**
+- **Bildungsstufe filterbar:** `educational_level` wird an die API übergeben
+- **Auto-Detection:** „Oberstufe/Sekundarstufe/Grundschule“ im Query setzt `educational_level` automatisch
+- **Klassenstufen:** „Klasse 11/12/13“ → `educational_level = Oberstufe` (1–4 Grundschule, 5–10 Sekundarstufe)
+- **Fallback:** Wenn keine Treffer mit Bildungsstufe gefunden werden, wird ohne Filter erneut gesucht
+- **Tool-Schema erweitert:** `sources[]` und `educational_level` als optionale Parameter
+- **Konsistent für Karten-Kontext:** `search_oer_for_card` nutzt ebenfalls beide Quellen
+
 ## Version 4.7.23 - Edufeed Publishing: Cards auf öffentlichen Relays 📤
 
 **Datum:** 29. Januar 2026  

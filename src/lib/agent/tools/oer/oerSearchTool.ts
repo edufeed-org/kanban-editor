@@ -52,6 +52,7 @@ export interface SearchOerArgs {
     query: string;
     type?: string;
     source?: string;
+    sources?: string[];
     license?: string;
     educational_level?: string;
     limit?: number;
@@ -76,27 +77,113 @@ export async function executeSearchOer(
     
     // Parameter aufbereiten
     // WICHTIG: Die OER Finder API benötigt eine source, sonst 0 Ergebnisse!
-    const params: OerSearchParams = {
-        searchTerm: args.query,
-        source: args.source || 'rpi-virtuell',  // Default: rpi-virtuell
-        pageSize: Math.min(args.limit || 10, 20)  // Max 20 Ergebnisse
-    };
+    const sources = args.sources?.length
+        ? args.sources
+        : (args.source ? [args.source] : ['rpi-virtuell', 'nostr-amb-relay']);
 
-    // API-Aufruf
-    const response = await searchOer(params);
+    const pageSize = Math.min(args.limit || 10, 20);
 
-    // Fehlerbehandlung
-    if (response.error) {
+    // API-Aufruf (mehrere Quellen)
+    const responses = await Promise.all(
+        sources.map(source => searchOer({
+            searchTerm: args.query,
+            source,
+            educationalLevel: args.educational_level,
+            pageSize
+        }))
+    );
+
+    const successfulResponses = responses.filter(r => !r.error);
+    const firstError = responses.find(r => r.error)?.error;
+
+    // Fehlerbehandlung (alle fehlgeschlagen)
+    if (successfulResponses.length === 0) {
         return {
             tool_call_id: '',
             tool_name: 'search_oer',
             success: false,
-            error: `❌ OER-Suche fehlgeschlagen: ${response.error}`
+            error: `❌ OER-Suche fehlgeschlagen: ${firstError || 'Unbekannter Fehler'}`
         };
     }
 
+    // Ergebnisse zusammenführen + deduplizieren
+    const combinedResults: OerSearchResult[] = [];
+    const seen = new Set<string>();
+
+    for (const response of successfulResponses) {
+        for (const result of response.results) {
+            const key = result.url || result.id;
+            if (!seen.has(key)) {
+                seen.add(key);
+                combinedResults.push(result);
+            }
+        }
+    }
+
+    // Keine Ergebnisse: Fallback ohne educational_level
+    if (combinedResults.length === 0 && args.educational_level) {
+        const fallbackResponses = await Promise.all(
+            sources.map(source => searchOer({
+                searchTerm: args.query,
+                source,
+                pageSize
+            }))
+        );
+
+        const fallbackSuccessful = fallbackResponses.filter(r => !r.error);
+        const fallbackResults: OerSearchResult[] = [];
+        const fallbackSeen = new Set<string>();
+
+        for (const response of fallbackSuccessful) {
+            for (const result of response.results) {
+                const key = result.url || result.id;
+                if (!fallbackSeen.has(key)) {
+                    fallbackSeen.add(key);
+                    fallbackResults.push(result);
+                }
+            }
+        }
+
+        if (fallbackResults.length > 0) {
+            lastSearchResults = fallbackResults;
+
+            const formattedFallback = fallbackResults.map((r, index) => ({
+                number: index + 1,
+                title: r.title,
+                description: r.description?.substring(0, 150) + (r.description && r.description.length > 150 ? '...' : ''),
+                type: r.type,
+                source: r.source,
+                publisher: r.publisher,
+                creator: r.creator,
+                license: r.licenseShort || r.license,
+                url: r.url,
+                image: r.image
+            }));
+
+            const totalFallback = fallbackSuccessful.reduce(
+                (sum, r) => sum + (r.totalCount || 0),
+                0
+            ) || fallbackResults.length;
+
+            const summary = formatSearchResultsForChat(formattedFallback, args.query, totalFallback);
+
+            return {
+                tool_call_id: '',
+                tool_name: 'search_oer',
+                success: true,
+                result: {
+                    message: summary,
+                    results: formattedFallback,
+                    totalCount: totalFallback,
+                    query: args.query,
+                    hint: 'Hinweis: Kein expliziter Treffer für die Bildungsstufe gefunden, daher ohne Filter gesucht.'
+                }
+            };
+        }
+    }
+
     // Keine Ergebnisse
-    if (response.results.length === 0) {
+    if (combinedResults.length === 0) {
         return {
             tool_call_id: '',
             tool_name: 'search_oer',
@@ -110,10 +197,10 @@ export async function executeSearchOer(
     }
 
     // Ergebnisse im Cache speichern (für add_cards_from_oer)
-    lastSearchResults = response.results;
+    lastSearchResults = combinedResults;
 
     // Formatierte Ausgabe für den Chat
-    const formattedResults = response.results.map((r, index) => ({
+    const formattedResults = combinedResults.map((r, index) => ({
         number: index + 1,
         title: r.title,
         description: r.description?.substring(0, 150) + (r.description && r.description.length > 150 ? '...' : ''),
@@ -127,7 +214,12 @@ export async function executeSearchOer(
     }));
 
     // Menschenlesbare Zusammenfassung
-    const summary = formatSearchResultsForChat(formattedResults, args.query, response.totalCount);
+    const totalCount = successfulResponses.reduce(
+        (sum, r) => sum + (r.totalCount || 0),
+        0
+    ) || combinedResults.length;
+
+    const summary = formatSearchResultsForChat(formattedResults, args.query, totalCount);
 
     return {
         tool_call_id: '',
@@ -136,7 +228,7 @@ export async function executeSearchOer(
         result: {
             message: summary,
             results: formattedResults,
-            totalCount: response.totalCount,
+            totalCount,
             query: args.query,
             hint: 'Nutze add_cards_from_oer um Ergebnisse als Karten hinzuzufügen, z.B. "Füge Material 1 und 3 zur Spalte Material hinzu"'
         }

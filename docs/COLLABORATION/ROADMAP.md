@@ -1232,6 +1232,7 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] `executeSearchOer(args, context)` Implementierung
   - [ ] Ergebnis-Cache für `add_cards_from_oer`
   - [ ] Formatierte Chat-Ausgabe
+  - [x] Multi-Source Suche (rpi-virtuell + nostr-amb-relay) + Bildungsstufe-Filter
 
 - [ ] **Integration in `toolDefinitions.ts`**
   - [ ] `search_oer` Tool-Definition hinzufügen

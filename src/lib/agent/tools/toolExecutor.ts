@@ -1057,13 +1057,48 @@ function executeAskClarification(args: any): ToolResult {
 // OER Tool Wrappers
 // ============================================================================
 
+function inferEducationalLevel(query?: string): string | undefined {
+    if (!query) return undefined;
+
+    const q = query.toLowerCase();
+
+    const gradeMatch = q.match(/(?:klasse|kl\.?|jahrgang|jg\.?|jgst\.?|jahrgangsstufe)\s*(\d{1,2})/);
+    if (gradeMatch) {
+        const grade = Number(gradeMatch[1]);
+        if (!Number.isNaN(grade)) {
+            if (grade >= 1 && grade <= 4) return 'Grundschule';
+            if (grade >= 5 && grade <= 10) return 'Sekundarstufe';
+            if (grade >= 11 && grade <= 13) return 'Oberstufe';
+        }
+    }
+
+    if (q.includes('oberstufe') || q.includes('sek ii') || q.includes('sekundarstufe ii') || q.includes('sekundarstufe 2')) {
+        return 'Oberstufe';
+    }
+
+    if (q.includes('grundschule') || q.includes('primarstufe')) {
+        return 'Grundschule';
+    }
+
+    if (q.includes('sekundarstufe') || q.includes('sek i') || q.includes('sekundarstufe i') || q.includes('sekundarstufe 1') || q.includes('mittelstufe')) {
+        return 'Sekundarstufe';
+    }
+
+    return undefined;
+}
+
 /**
  * Wrapper für search_oer Tool
  */
 async function executeSearchOerTool(args: any): Promise<ToolResult> {
+    const query = args.query || args.searchTerm || '';
+    const inferredLevel = args.educational_level || args.educationalLevel || inferEducationalLevel(query);
+
     const searchArgs: SearchOerArgs = {
-        query: args.query || args.searchTerm || '',
+        query,
         source: args.source,
+        sources: args.sources,
+        educational_level: inferredLevel,
         limit: args.maxResults || args.limit || 10
     };
     

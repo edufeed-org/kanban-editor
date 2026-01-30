@@ -68,7 +68,7 @@ Integration einer **KI-gesteuerten OER-Suche** in den Chat-Assistenten, die:
 
 | Endpoint | Methode | Beschreibung |
 |----------|---------|---------------|
-| `/api/v1/oer` | GET | Suche mit `searchTerm`, `source`, `pageSize`, `page` |
+| `/api/v1/oer` | GET | Suche mit `searchTerm`, `source`, `pageSize`, `page`, `educationalLevel` |
 | `/api/v1/sources` | GET | Liste aller verfügbaren OER-Quellen |
 | `/api/v1/oer/{id}` | GET | Details zu einer Ressource |
 
@@ -104,6 +104,10 @@ interface ApiResponse {
 
 **Beschreibung:** Sucht OER-Materialien im Edufeed-Netzwerk und externen Quellen.
 
+**Auto-Detection:** Wenn der Nutzer im Query Begriffe wie „Oberstufe“, „Sekundarstufe“, „Grundschule“ oder „Klasse 11“ nennt, wird `educational_level` automatisch gesetzt.
+
+**Fallback:** Falls die API keine Treffer mit Bildungsstufe liefert, wird automatisch ohne `educational_level` erneut gesucht.
+
 ```typescript
 // src/lib/agent/tools/toolDefinitions.ts
 
@@ -134,8 +138,12 @@ Beispiele:
         },
         source: {
           type: 'string',
-          enum: ['nostr', 'openverse', 'all'],
-          description: 'Datenquelle (optional, default: "nostr")'
+          description: 'Optionale Quelle (z.B. "rpi-virtuell", "nostr-amb-relay")'
+        },
+        sources: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optionale Mehrfachauswahl von Quellen (z.B. ["rpi-virtuell", "nostr-amb-relay"])'
         },
         license: {
           type: 'string',
@@ -144,8 +152,7 @@ Beispiele:
         },
         educational_level: {
           type: 'string',
-          enum: ['primary', 'secondary', 'tertiary'],
-          description: 'Bildungsstufe (optional)'
+          description: 'Bildungsstufe (optional, z.B. "Grundschule", "Sekundarstufe", "Oberstufe")'
         },
         limit: {
           type: 'number',
