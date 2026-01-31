@@ -191,6 +191,14 @@
 		border: none;
 		border-top: 1px solid hsl(var(--border));
 		margin: 1em 0;
+		height: 0;
+		display: block;
+	}
+	
+	/* Teaser Separator (+++  Marker) */
+	.markdown-rendered :global(hr.teaser-separator) {
+		border-top: 2px dashed hsl(var(--muted-foreground) / 0.4);
+		margin: 1.5em 0;
 	}
 	
 	/* Strong/Bold */

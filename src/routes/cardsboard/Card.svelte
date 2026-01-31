@@ -111,6 +111,28 @@
 		? localAttendees
 		: (localAuthor ? [localAuthor] : []));
 
+	// 🆕 Teaser-Logik: Text vor '+++' als Vorschau, sonst vollständiger Text
+	const descriptionTeaser = $derived.by(() => {
+		const desc = card.description;
+		if (!desc) return '';
+		
+		// Einfache Suche nach +++ (egal wo)
+		const separatorIndex = desc.indexOf('+++');
+		if (separatorIndex > 0) {
+			const teaser = desc.substring(0, separatorIndex).trim();
+			console.log('✅ Teaser gefunden:', teaser.substring(0, 50) + '...');
+			return teaser;
+		}
+		
+		// +++ am Anfang = kein Teaser
+		if (separatorIndex === 0) {
+			return '';
+		}
+		
+		// Kein Trennzeichen gefunden - vollständigen Text
+		return desc;
+	});
+
 	// the nostr pubkey of the author of the card
 	// Converting to array provides more consistency and reusability for UI components
 	let authors = $derived(localAuthor ? [localAuthor] : []);
@@ -453,8 +475,8 @@
 
 		<!-- Description Section (Markdown Content) -->
 		{#if card.description}
-			<div class="card-description line-clamp-3">
-				<MarkdownRenderer content={card.description} class="prose-sm prose-card" />
+			<div class="card-description" class:line-clamp-3={descriptionTeaser === card.description}>
+				<MarkdownRenderer content={descriptionTeaser} class="prose-sm prose-card" />
 			</div>
 		{/if}
 
@@ -548,26 +570,16 @@
 			color: var(--foreground);
 			line-height: 1.4;
 			flex: 1;
-			display: -webkit-box;
-			-webkit-line-clamp: 2;
-			line-clamp: 2;
-			-webkit-box-orient: vertical;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-		
-		/* Footer styling */
-		/* .footer-content {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 1em;
-			flex-grow: 1;
-
-		} */
-		
-		
-
-		
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 	
-	</style>
+	/* Line-clamp nur wenn KEIN Teaser gefunden wurde (Fallback) */
+	.card-description.line-clamp-3 {
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		-webkit-box-orient: vertical;
+	}
+	
+</style>

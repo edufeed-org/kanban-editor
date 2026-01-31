@@ -137,6 +137,15 @@
 		authorName: ''
 	});
 
+	// Beschreibung aufgeteilt nach Teaser-Marker (+++)
+	let descriptionParts = $derived.by(() => {
+		const desc = card.description;
+		if (!desc) return [];
+		// Splitte bei +++
+		const parts = desc.split(/\s*\+\+\+\s*/);
+		return parts.filter(p => p.trim().length > 0);
+	});
+
 	// Sync editName und selectedColor mit Card
 	$effect(() => {
 		editName = card.name;
@@ -772,7 +781,13 @@
 							role={readOnly ? undefined : 'button'}
 							onkeydown={(e) => !readOnly && e.key === 'Enter' && (isEditingDescription = true)}
 						>
-							<MarkdownRenderer content={card.description} />
+							{#each descriptionParts as part, i}
+								<MarkdownRenderer content={part} />
+								{#if i < descriptionParts.length - 1}
+									<!-- Teaser-Trennlinie zwischen den Teilen -->
+									<hr class="my-4 border-t-2 border-dashed border-muted-foreground/30" />
+								{/if}
+							{/each}
 						</div>
 					{:else}
 						<div 
