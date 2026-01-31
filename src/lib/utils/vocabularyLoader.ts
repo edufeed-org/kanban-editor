@@ -53,6 +53,13 @@ export const DEFAULT_VOCABULARY_URLS: Record<VocabularyType, string> = {
 };
 
 /**
+ * CORS-Proxy URL für Cross-Origin Requests
+ * skohub.io erlaubt keine direkten Browser-Anfragen (CORS)
+ * Wir nutzen corsproxy.io als Fallback
+ */
+const CORS_PROXY_URL = 'https://corsproxy.io/?';
+
+/**
  * Cache TTL: 24 Stunden (in Millisekunden)
  */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -332,11 +339,16 @@ export async function loadVocabulary(
         }
     }
     
-    // 3. Von URL laden
+    // 3. Von URL laden (mit CORS-Proxy für skohub.io)
+    // skohub.io erlaubt keine direkten Browser-Anfragen
+    const fetchUrl = url.includes('skohub.io') 
+        ? CORS_PROXY_URL + encodeURIComponent(url)
+        : url;
+    
     console.log(`[VocabLoader] Fetching ${type} from ${url}`);
     
     try {
-        const response = await fetch(url, {
+        const response = await fetch(fetchUrl, {
             headers: {
                 'Accept': 'application/json, application/ld+json'
             }
@@ -365,12 +377,12 @@ export async function loadVocabulary(
         memoryCache.set(type, entry);
         saveToLocalStorage(type, entry);
         
-        console.log(`[VocabLoader] Loaded ${concepts.length} concepts for ${type}`);
+        console.log(`[VocabLoader] ✅ Loaded ${concepts.length} concepts for ${type}`);
         return concepts;
         
     } catch (error) {
-        console.error(`[VocabLoader] Failed to load ${type}:`, error);
-        console.log(`[VocabLoader] Using fallback vocabulary for ${type}`);
+        // Nur als Info loggen, da Fallback funktioniert
+        console.info(`[VocabLoader] Network unavailable for ${type}, using built-in vocabulary`);
         return FALLBACK_VOCABULARIES[type];
     }
 }
