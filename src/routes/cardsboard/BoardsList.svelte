@@ -301,9 +301,9 @@
 
 <div class="flex flex-col gap-3 h-full overflow-hidden p-2">
     
-    <!-- Expandable Menu -->
+    <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md mb-2 shadow-md max-h-[60vh] overflow-y-auto">
+        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b -mx-2 -mt-2 mb-1 max-h-[60vh] overflow-y-auto">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 

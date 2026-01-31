@@ -270,9 +270,9 @@ import { authStore } from '$lib';
 		
 		<!-- Left Sidebar Sheet (Mobile) -->
 		<Sheet.Root bind:open={leftSidebarOpen}>
-			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0 [&>button]:hidden">
+			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0 [&>button]:hidden flex flex-col">
 				<!-- Header mit Titel und Menü-Button -->
-				<div class="px-4 py-3 border-b-4 flex items-center justify-between">
+				<div class="px-4 py-3 border-b-4 flex items-center justify-between shrink-0">
 					<div class="flex items-center gap-2">
 						<SquareKanbanIcon class="h-5 w-5" />
 						<h2 class="font-semibold">Kanban-Editor</h2>
@@ -280,15 +280,16 @@ import { authStore } from '$lib';
 					<Button
 						variant="ghost"
 						size="icon"
-						class="h-9 w-9"
+						class="h-8 w-8"
 						title="Board Einstellungen"
 						onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 					>
-						<MenuIcon class="h-5 w-5" />
+						<MenuIcon class="h-4 w-4" />
 					</Button>
 				</div>
-				<div class="p-4 h-[calc(100%-3.5rem)] flex flex-col overflow-hidden">
-					<div class="flex-1 overflow-y-auto min-h-0">
+				<!-- Content Bereich - flex-1 für den restlichen Platz -->
+				<div class="flex-1 flex flex-col overflow-hidden">
+					<div class="flex-1 overflow-y-auto min-h-0 p-2">
 						<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 					</div>
 					<LeftSidebarFooter />
@@ -317,26 +318,26 @@ import { authStore } from '$lib';
 					defaultSize={20} 
 					minSize={15} 
 					maxSize={40} 
-					class="border-r bg-muted/10 overflow-y-auto"
+					class="border-r bg-muted/10 flex flex-col overflow-hidden"
 					onResize={(size: number) => { leftSidebarSize = size; }}
 				>
 					<!-- Header der linken Sidebar -->
-					<div class="p-4 border-b-4 max-h-15 flex items-center justify-between">
+					<div class="p-4 border-b-4 max-h-15 flex items-center justify-between shrink-0">
 						<div class="flex items-center gap-2">
 							<SquareKanbanIcon /><h2 class="text-lg font-semibold">Kanban-Editor</h2>
 						</div>
 						<Button
 							variant="ghost"
 							size="icon"
-							class="h-9 w-9"
+							class="h-8 w-8"
 							title="Board Einstellungen"
 							onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 						>
 							<MenuIcon class="h-5 w-5" />
 						</Button>
 					</div>
-					<div class="p-4 h-[calc(100%-3.75rem)] flex flex-col overflow-hidden">
-						<div class="flex-1 overflow-y-auto min-h-0">
+					<div class="flex-1 flex flex-col overflow-hidden">
+						<div class="flex-1 overflow-y-auto min-h-0 p-2">
 							<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 						</div>
 						<LeftSidebarFooter />
