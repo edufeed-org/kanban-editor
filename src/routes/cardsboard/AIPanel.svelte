@@ -464,7 +464,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
 <div class="flex h-full flex-col overflow-hidden">
   
   <!-- Header -->
-  <div class="p-4 border-b-4 max-h-15 overflow-hidden">
+  <div class="p-4 border-b-2 max-h-14.5 overflow-hidden">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <BrainIcon class="h-5 w-5 text-primary" />
@@ -478,7 +478,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         class="h-7 gap-2"
       >
         <SquareSigmaIcon class="h-3 w-3" />
-        <span class="text-xs hidden sm:inline">Zusammenfassung</span>
+        <span class="text-xs hidden sm:inline">Summary</span>
       </Button>
     </div>
   </div>

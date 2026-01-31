@@ -189,7 +189,7 @@
           <Separator />
           
           <!-- Max Cards Before Scroll -->
-          <div class="space-y-2">
+          <!-- <div class="space-y-2">
             <Label for="maxCards">
               Maximale Karten pro Spalte (vor Scrolling)
               <span class="text-muted-foreground ml-2">{localMaxCards}</span>
@@ -206,10 +206,10 @@
             <p class="text-sm text-muted-foreground">
               Nach wie vielen Karten soll eine Spalte scrollbar werden?
             </p>
-          </div>
+          </div> -->
           
           <!-- Column Width -->
-          <div class="space-y-2">
+          <!-- <div class="space-y-2">
             <Label for="columnWidth">
               Spaltenbreite (Pixel)
               <span class="text-muted-foreground ml-2">{localColumnWidth}px</span>
@@ -224,10 +224,10 @@
               onchange={handleColumnWidthChange}
               class="w-32"
             />
-          </div>
+          </div> -->
           
           <!-- Align Columns -->
-          <div class="flex items-center justify-between">
+          <!-- <div class="flex items-center justify-between">
             <div class="space-y-0.5">
               <Label>Spalten an maximale Höhe ausrichten</Label>
               <p class="text-sm text-muted-foreground">
@@ -238,13 +238,13 @@
               checked={settings.alignColumnsToMaxHeight}
               onCheckedChange={(checked) => settingsStore.setAlignColumnsToMaxHeight(checked)}
             />
-          </div>
+          </div> -->
           
-          <Separator />
+          <!-- <Separator /> -->
           
           <!-- Sidebar Visibility -->
           <div class="space-y-4">
-            <Label>Sidebar Sichtbarkeit</Label>
+            <!-- <Label>Sidebar Sichtbarkeit</Label>
             
             <div class="flex items-center justify-between">
               <div class="space-y-0.5">
@@ -264,7 +264,7 @@
                 checked={settings.showRightSidebar}
                 onCheckedChange={() => settingsStore.toggleRightSidebar()}
               />
-            </div>
+            </div> -->
             
             <!-- Max Boards in Sidebar -->
             <div class="space-y-2">

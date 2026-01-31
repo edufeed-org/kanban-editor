@@ -302,9 +302,9 @@ import { authStore } from '$lib';
 			
 			<!-- Linke Sidebar (Board-Liste) - feste Breite, außerhalb der PaneGroup -->
 			{#if leftSidebarOpen}
-				<aside class="w-[320px] border-r bg-background flex flex-col shrink-0">
+				<aside class="w-[320px] border-r-2 bg-background flex flex-col shrink-0">
 					<!-- Header mit Titel und Menü-Button -->
-					<div class="px-4 py-3 border-b-4 flex items-center justify-between shrink-0">
+					<div class="px-4 py-3 border-b-2 flex items-center justify-between shrink-0">
 						<Button
 							variant="ghost"
 							size="icon"
@@ -359,7 +359,7 @@ import { authStore } from '$lib';
 						defaultSize={25} 
 						minSize={15} 
 						maxSize={50}
-						class="border-l bg-background"
+						class="bg-background border-l-2"
 					>
 						<AIPanel boardId={currentBoardId} />
 					</Resizable.Pane>
