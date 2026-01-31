@@ -139,31 +139,34 @@
 - **Dokumentation:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md` (vollständige Spezifikation)
 - **Tests:** TypeScript 0 errors, Development Server läuft erfolgreich
 
-### PHASE 2: UI COMPONENTS & UX (⚠️ 5% COMPLETE)
+### PHASE 2: UI COMPONENTS & UX (🔄 20% COMPLETE)
 
-#### Status: **UI Komponenten vorhanden, aber nicht vollständig integriert**
+#### Status: **UI Komponenten vorhanden, Inline-Editing implementiert!**
 
 **Was bereits implementiert ist:**
 - ✅ Card.svelte - Drag-and-Drop mit Icons
-- ✅ Column.svelte - mit $effect Auto-Sync
+- ✅ Column.svelte - mit $effect Auto-Sync + **Inline-Editing für Spaltentitel** 🆕
 - ✅ CardDialog.svelte - Edit Modal
-- ✅ CardDetailsDialog.svelte - View Modal mit Kommentaren
-- ✅ Topbar.svelte - mit Settings + Share-Link
-- ✅ BoardsList.svelte - Board-Auswahl
+- ✅ CardDetailsDialog.svelte - View Modal mit Kommentaren + **AI-Kontext-Button** 🆕
+- ✅ Topbar.svelte - mit Settings + Share-Link + **Inline-Editing für Board-Titel** 🆕
+- ✅ BoardsList.svelte - Board-Auswahl + **Hamburger-Menü** 🆕
 - ✅ SettingsPanel.svelte - neuer Settings-Component
 - ✅ UI Components: Progress, Slider, Switch, Spinner (neu!)
 - ✅ ActionConfirmationDialog.svelte (Bestätigung für Aktionen)
+- ✅ **aiContextStore.svelte.ts** - Globaler Store für AI-Kontext-Karten 🆕
+- ✅ **LeftSidebarFooter.svelte** - Profilbearbeitungsoption 🆕
 
 **Was noch fehlt:**
-- ❌ Vollständige Responsive Design (Mobile-First)
+- 🟡 Vollständige Responsive Design (Mobile-First) - **Mobile AI-Kontext verbessert** 🆕
 - 🟡 CSS Button Handling teilweise schlecht gelöst
 - ✅ **Dark Mode** - IMPLEMENTIERT! (settingsStore.theme, Topbar.svelte, 🟡 Settings wird aber nicht berücksichtigt beim reload)
 - ✅ **Settings Store** - KOMPLETT VORHANDEN! (971 Zeilen, alle Features)
+- ✅ **Inline-Editing** - Board-Titel + Spaltentitel (Klick zum Bearbeiten) 🆕
 - ❌ Accessibility (A11y) vollständig durchgetest
 - ❌ Performance Optimization (virtualization, lazy loading)
 - ❌ Error Boundaries implementieren
 - 🟡 **Paste System** - DUPLIKAT! (lib/paste/ UND boardstore/paste.ts)
-- ToDo: **8-12 Tage** (Mobile, A11y, Performance, Paste-Konsolidierung)
+- ToDo: **6-10 Tage** (Mobile, A11y, Performance, Paste-Konsolidierung)
 
 ### PHASE 3: KI-INTEGRATION (✅ 95% COMPLETE!)
 
@@ -1723,5 +1726,5 @@ FEBRUAR 2026:
 
 ---
 
-**Zuletzt aktualisiert:** 10. November 2025 (Nostr Sync Sprint Complete!)  
-**Nächste Überprüfung:** Nach Merge-LWW Integration (15.11.2025)
+**Zuletzt aktualisiert:** 31. Januar 2026
+
