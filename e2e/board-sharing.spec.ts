@@ -249,10 +249,16 @@ async function createSharedBoard(page: Page, boardName: string) {
     const newBoardButton = page.getByTestId('create-board-button');
     await newBoardButton.click();
 
+    // Wait for menu button to become visible after board creation
+    await expect(page.getByTitle('Menü')).toBeVisible({ timeout: 5000 });
     await page.getByTitle('Menü').click({timeout: 2000});
+    
+    // Wait for properties option to become visible
+    await expect(page.getByTitle('Eigenschaften')).toBeVisible({ timeout: 5000 });
     await page.getByTitle('Eigenschaften').click({timeout: 2000});
 
     const titleInput = page.locator('#board-title');
+    await expect(titleInput).toBeVisible({ timeout: 5000 });
     
     await titleInput.fill(boardName);
     await page.getByText('Speichern').click({timeout: 2000});
@@ -262,7 +268,12 @@ async function createSharedBoard(page: Page, boardName: string) {
 }
 
 async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' | 'viewer') {
+    // Wait for menu button to be visible before clicking
+    await expect(page.getByTitle('Menü')).toBeVisible({ timeout: 5000 });
     await page.getByTitle('Menü').click();
+    
+    // Wait for share option to be visible
+    await expect(page.getByText('Board teilen')).toBeVisible({ timeout: 5000 });
     await page.getByText('Board teilen').click();
     
     await expect(page.getByTestId('share-dialog')).toBeVisible();
