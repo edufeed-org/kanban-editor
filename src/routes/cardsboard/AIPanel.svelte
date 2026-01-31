@@ -5,6 +5,7 @@
   - Chat-Interface für AI-Interaktion
   - Tool-Based AI System (MCP-Style OpenAI Function Calling)
   - 12 verfügbare Tools für Board-Operationen
+  - OER-Suchergebnisse mit interaktiven Buttons
 -->
 
 <script lang="ts">
@@ -36,6 +37,10 @@
     type ToolResult,
     type SelectedCardContext
   } from '$lib/agent/tools';
+  
+  // OER Results Component
+  import OerResultCard from './OerResultCard.svelte';
+  import type { OerResultData } from '$lib/classes/ChatModel.js';
   
   // Props
   let {
@@ -351,9 +356,13 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         // Show action results summary (if any actions were performed)
         if (actionResults.length > 0) {
           const summary = summarizeResults(actionResults);
-          console.log('?? [Tool-Based] Action results:', summary);
+          console.log('📋 [Tool-Based] Action results:', summary);
           if (summary.trim()) {
-            chatStore.addMessage(summary, 'assistant');
+            // 📚 Check for OER search results to show interactive buttons
+            const oerSearchResult = actionResults.find(r => r.tool_name === 'search_oer');
+            const oerResults = oerSearchResult?.result?.results as OerResultData[] | undefined;
+            
+            chatStore.addMessage(summary, 'assistant', oerResults);
           }
         }
         
@@ -361,7 +370,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         for (const r of responseResults) {
           if (r.success && r.result) {
             if (r.tool_name === 'respond' && r.result.message) {
-              console.log('?? [Tool-Based] Showing respond message');
+              console.log('💬 [Tool-Based] Showing respond message');
               chatStore.addMessage(r.result.message, 'assistant');
             } else if (r.tool_name === 'ask_clarification' && r.result.question) {
               console.log('? [Tool-Based] Showing clarification question');
@@ -614,6 +623,19 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 <p class="message-content text-xs whitespace-pre-wrap break-words">
                   {message.content}
                 </p>
+                
+                <!-- 📚 OER Results mit interaktiven Buttons -->
+                {#if message.oerResults && message.oerResults.length > 0}
+                  <div class="oer-results mt-3 space-y-2">
+                    <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">
+                      OER-Ergebnisse ({message.oerResults.length}):
+                    </p>
+                    {#each message.oerResults as result (result.number)}
+                      <OerResultCard {result} />
+                    {/each}
+                  </div>
+                {/if}
+                
                 <p class="message-timestamp text-[10px] mt-1 opacity-70">
                   {new Date(message.timestamp).toLocaleTimeString('de-DE', { 
                     hour: '2-digit', 

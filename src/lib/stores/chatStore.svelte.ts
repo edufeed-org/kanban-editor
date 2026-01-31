@@ -174,13 +174,20 @@ export class ChatStore {
 
 	/**
 	 * Fügt eine neue Message hinzu
+	 * @param content - Nachrichtentext
+	 * @param role - 'user' oder 'assistant'
+	 * @param oerResults - Optional: OER-Suchergebnisse für interaktive Anzeige
 	 */
-	public addMessage(content: string, role: 'user' | 'assistant'): void {
+	public addMessage(
+		content: string, 
+		role: 'user' | 'assistant',
+		oerResults?: import('$lib/classes/ChatModel.js').OerResultData[]
+	): void {
 		if (!this.session) {
 			throw new Error('No active session. Call loadSession(boardId) first!');
 		}
 
-		this.session.addMessage({ content, role });
+		this.session.addMessage({ content, role, oerResults });
 		this.triggerUpdate();
 	}
 

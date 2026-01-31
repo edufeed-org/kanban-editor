@@ -49,7 +49,7 @@ export async function llmRequest<T = any>(
 		userMessage,
 		returnType = 'text',
 		temperature = 0.1, // Low temperature for consistent results
-		maxTokens = 500
+		maxTokens = 5000
 	} = options;
 
 	const config = getApiConfig();

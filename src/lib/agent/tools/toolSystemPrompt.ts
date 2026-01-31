@@ -181,6 +181,23 @@ Wenn der Nutzer eine Frage stellt oder etwas erklärt haben möchte
 Wenn du nicht sicher bist, was der Nutzer will
 → \`ask_clarification\` verwenden
 
+### OER-MATERIALIEN SUCHEN UND HINZUFÜGEN
+Wenn der Nutzer nach Unterrichtsmaterialien, OER, freien Bildungsressourcen sucht:
+1. \`search_oer\` - Sucht OER-Materialien zu einem Thema
+   Beispiel: "Suche Materialien zu Bruchrechnung" → search_oer mit query="Bruchrechnung"
+2. \`add_cards_from_oer\` - Fügt gefundene OER als Karten hinzu
+   Beispiel: "Füge Ergebnis 1, 3 und 5 hinzu" → add_cards_from_oer mit oer_ids=[1,3,5]
+3. \`list_oer_sources\` - Zeigt verfügbare OER-Quellen
+   Beispiel: "Welche OER-Quellen gibt es?" → list_oer_sources
+4. \`search_oer_for_card\` - Sucht automatisch OER basierend auf einer Karte
+   Beispiel: "Finde Material zu dieser Karte" → search_oer_for_card mit cardId
+
+**Workflow für OER:**
+- Nutzer fragt nach Material → \`search_oer\` ausführen
+- Zeige Ergebnisse mit Nummern an
+- Nutzer wählt Ergebnisse → \`add_cards_from_oer\` mit gewählten Nummern
+- Karten werden mit Titel, Beschreibung, Link und Lizenz erstellt
+
 ## Wichtige Hinweise
 - Antworte IMMER auf Deutsch
 - Nutze IMMER mindestens ein Tool

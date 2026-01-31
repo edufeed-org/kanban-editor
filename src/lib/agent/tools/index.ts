@@ -29,3 +29,32 @@ export {
     type ToolResult,
     type ExecutionContext
 } from './toolExecutor';
+
+// OER Tools (Open Educational Resources)
+export {
+    // API Client
+    searchOer,
+    getOerDetails,
+    listOerSources,
+    checkApiHealth,
+    getApiBaseUrl,
+    type OerSearchParams,
+    type OerSearchResult,
+    type OerSource,
+    
+    // Tool Functions
+    executeSearchOer,
+    executeAddCardsFromOer,
+    executeListOerSources,
+    executeSearchOerForCard,
+    
+    // Tool Args Types
+    type SearchOerArgs,
+    type AddCardsFromOerArgs,
+    type ListOerSourcesArgs,
+    type SearchOerForCardArgs,
+    
+    // Cache Management
+    getLastSearchResults,
+    clearSearchCache
+} from './oer/index';

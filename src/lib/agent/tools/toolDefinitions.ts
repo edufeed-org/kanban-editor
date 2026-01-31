@@ -352,6 +352,149 @@ export const toolDefinitions: ToolDefinition[] = [
                 required: ['question']
             }
         }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // OER TOOLS (Open Educational Resources)
+    // ═══════════════════════════════════════════════════════════════════
+    {
+        type: 'function',
+        function: {
+            name: 'search_oer',
+            description: 'Sucht nach Open Educational Resources (OER) wie Lernmaterialien, Arbeitsblätter, Videos. Ergebnisse können dann mit add_cards_from_oer als Karten hinzugefügt werden.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: {
+                        type: 'string',
+                        description: 'Der Suchbegriff für OER-Materialien (z.B. "Bruchrechnung", "Photosynthese")'
+                    },
+                    source: {
+                        type: 'string',
+                        description: 'Optional: Spezifische OER-Quelle (z.B. "rpi-virtuell", "nostr-amb-relay"). Nutze list_oer_sources für verfügbare Quellen.'
+                    },
+                    sources: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Optional: Mehrere OER-Quellen (z.B. ["rpi-virtuell", "nostr-amb-relay"])'
+                    },
+                    educational_level: {
+                        type: 'string',
+                        description: 'Optional: Bildungsstufe (z.B. "Grundschule", "Sekundarstufe", "Oberstufe")'
+                    },
+                    limit: {
+                        type: 'number',
+                        description: 'Maximale Anzahl der Ergebnisse (default: 10, max: 20)'
+                    }
+                },
+                required: ['query']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'add_cards_from_oer',
+            description: 'Fügt OER-Materialien aus der letzten Suche als Karten zum Board hinzu. Erfordert vorherige search_oer Ausführung.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    resultNumbers: {
+                        type: 'array',
+                        items: { type: 'number' },
+                        description: 'Nummern der Suchergebnisse die hinzugefügt werden sollen (z.B. [1, 3, 5] für Ergebnis 1, 3 und 5)'
+                    },
+                    targetColumnId: {
+                        type: 'string',
+                        description: 'Optional: ID der Zielspalte. Falls nicht angegeben, wird eine "OER Materialien" Spalte erstellt oder verwendet.'
+                    },
+                    targetColumnName: {
+                        type: 'string',
+                        description: 'Optional: Name für neue Spalte falls targetColumnId nicht existiert (default: "OER Materialien")'
+                    }
+                },
+                required: ['resultNumbers']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_oer_sources',
+            description: 'Listet alle verfügbaren OER-Quellen auf (z.B. WirLernenOnline, OERSI). Nützlich um zu sehen, welche Quellen für search_oer verfügbar sind.',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'search_oer_for_card',
+            description: 'Sucht automatisch nach passenden OER-Materialien basierend auf einer bestehenden Karte. Extrahiert Suchbegriffe aus Titel, Beschreibung und Labels.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    cardId: {
+                        type: 'string',
+                        description: 'ID der Karte, für die OER-Materialien gesucht werden sollen'
+                    },
+                    additionalTerms: {
+                        type: 'string',
+                        description: 'Optional: Zusätzliche Suchbegriffe'
+                    },
+                    maxResults: {
+                        type: 'number',
+                        description: 'Maximale Anzahl der Ergebnisse (default: 5)'
+                    },
+                    source: {
+                        type: 'string',
+                        description: 'Optional: Spezifische OER-Quelle'
+                    }
+                },
+                required: ['cardId']
+            }
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // URL CONTENT IMPORT TOOL
+    // ═══════════════════════════════════════════════════════════════════
+    {
+        type: 'function',
+        function: {
+            name: 'import_url_content',
+            description: 'Importiert Inhalt von einer URL (Webseite, PDF, YouTube-Video) und erstellt automatisch Karten im Board. Strukturiert den Inhalt basierend auf Überschriften/Kapiteln. Ideal für: Artikel als Lernmaterial aufbereiten, PDFs in Karten umwandeln, YouTube-Transkripte importieren.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    url: {
+                        type: 'string',
+                        description: 'Die URL zum Importieren (Webseite, PDF-Link, oder YouTube-Video URL)'
+                    },
+                    structureMode: {
+                        type: 'string',
+                        enum: ['auto', 'single-column', 'multi-column'],
+                        description: 'Wie der Inhalt strukturiert werden soll: auto (intelligente Erkennung), single-column (alle Karten in eine Spalte), multi-column (Hauptabschnitte werden zu eigenen Spalten). Default: auto'
+                    },
+                    targetColumn: {
+                        type: 'string',
+                        description: 'Optional: Name einer bestehenden Spalte, in die importiert werden soll'
+                    },
+                    columnName: {
+                        type: 'string',
+                        description: 'Optional: Name für die neue Spalte (bei single-column). Default: "Import: [Titel]"'
+                    },
+                    maxCardLength: {
+                        type: 'number',
+                        description: 'Maximale Textlänge pro Karte in Zeichen. Längere Abschnitte werden gekürzt. Default: 2000'
+                    }
+                },
+                required: ['url']
+            }
+        }
     }
 ];
 

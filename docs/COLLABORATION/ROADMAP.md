@@ -1,13 +1,13 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.15 (Permissions UX: Board-Metadaten sind für Nicht-Owner read-only - 16. Dezember 2025)  
-**Aktualisiert:** 16. Dezember 2025 (Im Board-Einstellungen-Dialog sind Metadaten-Felder für Editoren/Viewers deaktiviert/read-only; nur Owner kann Titel/Beschreibung/Status/Tags/CC-Lizenz speichern. Store-Level Permission Guard bleibt bestehen.)  
-**Status:** ✅ **PHASE 1: 100% COMPLETE** | ✅ **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
+**Version:** 3.22 (OER-Content Discovery Approved - 30. Januar 2026)  
+**Aktualisiert:** 30. Januar 2026 (Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1.)  
+**Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**🆕 PHASE 1 COMPLETE (3.12.2025):**
-- ✅ **Phase 1 Status:** **100% COMPLETE** (alle Meilensteine 1.0-1.6 + 1.5C DONE!)
-- ✅ **Phase 3 Status:** **90% Complete** (ChatStore, AIPanel, LLM ALL DONE, 3 AI Actions fehlen!)
+**🆕 PHASE 3.2 OER-CONTENT DISCOVERY (30.01.2026):**
+- 🔄 **Meilenstein 3.2 Status:** **APPROVED** - Implementation gestartet!
+- ✅ **Spec:** `MCP-EDUFEED.md` v1.1 finalisiert
 - 🟡 **Phase 2 Status:** **15% Complete** (Settings+Dark Mode DONE, Mobile+A11y offen)
 - 🟡 **Phase 4 Status:** **85% Infrastructure Ready** (SoftLockManager, MergeEngine, SyncManager ✅! Nur UI fehlt)
 - ✅ **MEILENSTEIN 1.5C COMPLETE:** Board Snapshots / Versionshistorie Feature FERTIG!
@@ -1195,38 +1195,102 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ---
 
-### Meilenstein 3.2: OER-Content Discovery (Priorität: Geplant)
+### Meilenstein 3.2: OER-Content Discovery (Priorität: Hoch)
 
-**Ziel:** KI kann Materialien im Nostr-Netzwerk finden  
-**Status:** ⚪ PLANNED  
-**Abhängig von:** [NDK.md](./NDK.md) – OER Event Kind Definition
+**Ziel:** KI kann OER-Materialien finden und als Karten ins Board einfügen  
+**Status:** 🔄 **IN PROGRESS** - Implementation gestartet  
+**Spezifikation:** [`docs/FEATURE/MCP-EDUFEED.md`](../FEATURE/MCP-EDUFEED.md)  
+**API-Referenz:** `F:\code\docker\mcp-oer-finder\konzept.md`
 
-#### Zu implementieren:
+#### Architektur (Tool-Based, NICHT MCP)
 
-- [ ] **OER Event Schema**
-  - [ ] Standard-Kind für OER-Materialien definieren
-  - [ ] Tags für Metadaten (Fach, Klassenstufe, Typ, Lizenz)
-  - [ ] Content-Index mit Suchbarkeit
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   AIPanel.svelte │────▶│   oerClient.ts  │────▶│  OER Finder API │
+│   (Tool Calls)   │◀────│   (fetch)       │◀────│  localhost:3001 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+         │                      │
+         ▼                      ▼
+   Tools:                  Endpoints:
+   - search_oer            - /api/v1/oer
+   - add_cards_from_oer    - /api/v1/sources
+   - list_oer_sources      - /api/v1/oer/{id}
+   - search_oer_for_card
+```
 
-- [ ] **Content Search API**
-  - [ ] NDK Filter für OER-Material
-  - [ ] Suchfunktion nach Keyword, Fach, Klassenstufe
-  - [ ] KI-Ranking nach Relevanz
+#### Phase 3.2.1: oerClient.ts + search_oer (2-3 Tage)
 
-- [ ] **Integration in Chat**
-  - [ ] Nutzer: _„Finde Material zu Römisches Reich, Klasse 7"_
-  - [ ] KI sucht OER-Events
-  - [ ] Ergebnisse als Cards im `Materialideen`-Spalte
+- [ ] **`src/lib/agent/tools/oer/oerClient.ts`** erstellen
+  - [ ] `getApiBaseUrl()` aus settingsStore oder ENV
+  - [ ] `searchOer(params)` - Suche über `/api/v1/oer`
+  - [ ] `getOerDetails(id)` - Details über `/api/v1/oer/{id}`
+  - [ ] `listOerSources()` - Quellen über `/api/v1/sources`
+  - [ ] AMB Response-Format Mapping (konzept.md)
+  - [ ] Error Handling mit User-Friendly Messages
 
-- [ ] **Tests**
-  - [ ] Mock-OER-Events erstellen
-  - [ ] Search-Query Tests
-  - [ ] Ranking-Algorithmus Tests
+- [ ] **`src/lib/agent/tools/oer/oerSearchTool.ts`** erstellen
+  - [ ] `executeSearchOer(args, context)` Implementierung
+  - [ ] Ergebnis-Cache für `add_cards_from_oer`
+  - [ ] Formatierte Chat-Ausgabe
+  - [x] Multi-Source Suche (rpi-virtuell + nostr-amb-relay) + Bildungsstufe-Filter
+
+- [ ] **Integration in `toolDefinitions.ts`**
+  - [ ] `search_oer` Tool-Definition hinzufügen
+
+- [ ] **Integration in `toolExecutor.ts`**
+  - [ ] Handler für `search_oer` hinzufügen
+
+#### Phase 3.2.2: add_cards_from_oer (2 Tage)
+
+- [ ] **`src/lib/agent/tools/oer/oerCardsTool.ts`** erstellen
+  - [ ] `executeAddCardsFromOer(args, context)` Implementierung
+  - [ ] Batch-Verarbeitung (mehrere IDs gleichzeitig)
+  - [ ] Nutzung des Ergebnis-Cache aus search_oer
+  - [ ] Karten-Erstellung analog zu NostrEventHandler
+  - [ ] Metadaten: Bild, Link, Labels, Lizenz, Autor
+  - [ ] KI-Relevanz-Auswahl basierend auf Board-Kontext
+
+- [ ] **Integration**
+  - [ ] Tool-Definition in `toolDefinitions.ts`
+  - [ ] Handler in `toolExecutor.ts`
+
+#### Phase 3.2.3: list_oer_sources + search_oer_for_card (1-2 Tage)
+
+- [ ] **`src/lib/agent/tools/oer/oerSourcesTool.ts`** erstellen
+  - [ ] `executeListOerSources(args, context)` Implementierung
+  - [ ] Formatierte Liste aller verfügbaren Quellen
+
+- [ ] **`src/lib/agent/tools/oer/oerContextTool.ts`** erstellen
+  - [ ] `executeSearchOerForCard(args, context)` Implementierung
+  - [ ] Kontext-Extraktion aus Karten (Titel, Beschreibung, Labels)
+  - [ ] Automatische Suchbegriff-Generierung
+
+- [ ] **Integration**
+  - [ ] Tool-Definitionen in `toolDefinitions.ts`
+  - [ ] Handler in `toolExecutor.ts`
+
+#### Phase 3.2.4: Tests + Dokumentation (1 Tag)
+
+- [ ] **Unit Tests**
+  - [ ] `oerClient.spec.ts` - API-Calls mit MSW Mock
+  - [ ] `oerSearchTool.spec.ts` - Tool-Ausführung
+  - [ ] `oerCardsTool.spec.ts` - Batch-Karten-Erstellung
+
+- [ ] **Dokumentation**
+  - [ ] MCP-EDUFEED.md finalisieren
+  - [ ] CHANGELOG.md Eintrag
+  - [ ] System-Prompt Update (`toolSystemPrompt.ts`)
 
 **Acceptance Criteria:**
-- ✅ KI kann Materialien finden
-- ✅ Suchergebnisse sind relevant
-- ✅ Cards werden automatisch hinzugefügt
+- ✅ `search_oer` findet Materialien über OER Finder API
+- ✅ Suchergebnisse werden formatiert im Chat angezeigt
+- ✅ `add_cards_from_oer` erstellt Karten mit Bild, Link, Labels
+- ✅ `list_oer_sources` zeigt verfügbare Quellen
+- ✅ `search_oer_for_card` generiert kontextbasierte Suche
+- ✅ Fehlerbehandlung bei API-Fehlern funktioniert
+- ✅ Tests bestehen (min. 80% Coverage)
+
+**Timeline:** 6-8 Tage (30.01. - 07.02.2026)
 
 ---
 
@@ -1587,6 +1651,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.22 | 30.01.2026 | 🔍 **OER-Content Discovery Approved:** Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1. Timeline: 6-8 Tage. |
 | 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
 | 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
 | 3.19 | 26.01.2026 | 🧩 **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |

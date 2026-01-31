@@ -9,6 +9,23 @@ import type { Board, Column, Card, Comment as CommentType } from '$lib/classes/B
 import { BoardOperations } from '$lib/stores/boardstore/operations';
 import type { NostrIntegration } from '$lib/stores/boardstore/nostr';
 
+// OER Tool Imports
+import {
+    executeSearchOer,
+    executeAddCardsFromOer,
+    executeListOerSources,
+    executeSearchOerForCard,
+    type SearchOerArgs,
+    type AddCardsFromOerArgs,
+    type SearchOerForCardArgs
+} from './oer/index.js';
+
+// URL Content Import Tool
+import {
+    executeImportUrlContent,
+    type ImportUrlContentArgs
+} from './url/index.js';
+
 // ============================================================================
 // JSON Repair Utilities
 // ============================================================================
@@ -1043,16 +1060,162 @@ function executeAskClarification(args: any): ToolResult {
 }
 
 // ============================================================================
+// OER Tool Wrappers
+// ============================================================================
+
+function inferEducationalLevel(query?: string): string | undefined {
+    if (!query) return undefined;
+
+    const q = query.toLowerCase();
+
+    const gradeMatch = q.match(/(?:klasse|kl\.?|jahrgang|jg\.?|jgst\.?|jahrgangsstufe)\s*(\d{1,2})/);
+    if (gradeMatch) {
+        const grade = Number(gradeMatch[1]);
+        if (!Number.isNaN(grade)) {
+            if (grade >= 1 && grade <= 4) return 'Grundschule';
+            if (grade >= 5 && grade <= 10) return 'Sekundarstufe';
+            if (grade >= 11 && grade <= 13) return 'Oberstufe';
+        }
+    }
+
+    if (q.includes('oberstufe') || q.includes('sek ii') || q.includes('sekundarstufe ii') || q.includes('sekundarstufe 2')) {
+        return 'Oberstufe';
+    }
+
+    if (q.includes('grundschule') || q.includes('primarstufe')) {
+        return 'Grundschule';
+    }
+
+    if (q.includes('sekundarstufe') || q.includes('sek i') || q.includes('sekundarstufe i') || q.includes('sekundarstufe 1') || q.includes('mittelstufe')) {
+        return 'Sekundarstufe';
+    }
+
+    return undefined;
+}
+
+/**
+ * Wrapper für search_oer Tool
+ */
+async function executeSearchOerTool(args: any): Promise<ToolResult> {
+    const query = args.query || args.searchTerm || '';
+    const inferredLevel = args.educational_level || args.educationalLevel || inferEducationalLevel(query);
+
+    const searchArgs: SearchOerArgs = {
+        query,
+        source: args.source,
+        sources: args.sources,
+        educational_level: inferredLevel,
+        limit: args.maxResults || args.limit || 10
+    };
+    
+    const result = await executeSearchOer(searchArgs);
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'search_oer',
+        success: result.success,
+        result: result.result,
+        error: result.error
+    };
+}
+
+/**
+ * Wrapper für add_cards_from_oer Tool
+ */
+async function executeAddCardsFromOerTool(args: any, ctx: ExecutionContext): Promise<ToolResult> {
+    // Map verschiedene mögliche Parameter-Namen zu unserem Interface
+    const addCardsArgs: AddCardsFromOerArgs = {
+        oer_ids: args.oer_ids || args.resultNumbers || args.numbers || [],
+        column_name: args.column_name || args.targetColumnName || args.columnName || '',
+        include_metadata: args.include_metadata ?? true
+    };
+    
+    const result = await executeAddCardsFromOer(addCardsArgs, ctx);
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'add_cards_from_oer',
+        success: result.success,
+        result: result.result,
+        error: result.error
+    };
+}
+
+/**
+ * Wrapper für list_oer_sources Tool
+ */
+async function executeListOerSourcesTool(): Promise<ToolResult> {
+    const result = await executeListOerSources({});
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'list_oer_sources',
+        success: result.success,
+        result: result,
+        error: result.error
+    };
+}
+
+/**
+ * Wrapper für search_oer_for_card Tool
+ */
+async function executeSearchOerForCardTool(args: any, ctx: ExecutionContext): Promise<ToolResult> {
+    const searchArgs: SearchOerForCardArgs = {
+        cardId: args.cardId || args.card_id,
+        additionalTerms: args.additionalTerms || args.additional_terms,
+        maxResults: args.maxResults || args.max_results || 5,
+        source: args.source
+    };
+    
+    const result = await executeSearchOerForCard(searchArgs, ctx);
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'search_oer_for_card',
+        success: result.success,
+        result: result,
+        error: result.error
+    };
+}
+
+// ============================================================================
+// URL Content Import Tool Wrapper
+// ============================================================================
+
+/**
+ * Wrapper für import_url_content Tool
+ */
+async function executeImportUrlContentTool(args: any, ctx: ExecutionContext): Promise<ToolResult> {
+    const importArgs: ImportUrlContentArgs = {
+        url: args.url,
+        structureMode: args.structureMode || args.structure_mode || 'auto',
+        targetColumn: args.targetColumn || args.target_column || args.columnName,
+        columnName: args.columnName || args.column_name,
+        maxCardLength: args.maxCardLength || args.max_card_length || 2000
+    };
+    
+    const result = await executeImportUrlContent(importArgs, ctx);
+    
+    return {
+        tool_call_id: '',
+        tool_name: 'import_url_content',
+        success: result.success,
+        result: result.result,
+        error: result.error
+    };
+}
+
+// ============================================================================
 // Main Executor
 // ============================================================================
 
 /**
  * Führt einen einzelnen Tool-Call aus
  */
-export function executeToolCall(
+export async function executeToolCall(
     toolCall: ToolCall,
     ctx: ExecutionContext
-): ToolResult {
+): Promise<ToolResult> {
     const toolName = toolCall.function.name;
     
     let args: any;
@@ -1120,6 +1283,26 @@ export function executeToolCall(
         case 'ask_clarification':
             result = executeAskClarification(args);
             break;
+        
+        // OER Tools
+        case 'search_oer':
+            result = await executeSearchOerTool(args);
+            break;
+        case 'add_cards_from_oer':
+            result = await executeAddCardsFromOerTool(args, ctx);
+            break;
+        case 'list_oer_sources':
+            result = await executeListOerSourcesTool();
+            break;
+        case 'search_oer_for_card':
+            result = await executeSearchOerForCardTool(args, ctx);
+            break;
+        
+        // URL Content Import Tool
+        case 'import_url_content':
+            result = await executeImportUrlContentTool(args, ctx);
+            break;
+            
         default:
             result = {
                 tool_call_id: toolCall.id,
@@ -1140,14 +1323,14 @@ export function executeToolCall(
 /**
  * Führt mehrere Tool-Calls aus (für Batch-Operationen)
  */
-export function executeToolCalls(
+export async function executeToolCalls(
     toolCalls: ToolCall[],
     ctx: ExecutionContext
-): ToolResult[] {
+): Promise<ToolResult[]> {
     const results: ToolResult[] = [];
     
     for (const toolCall of toolCalls) {
-        const result = executeToolCall(toolCall, ctx);
+        const result = await executeToolCall(toolCall, ctx);
         results.push(result);
         
         // Bei kritischen Fehlern abbrechen
@@ -1203,6 +1386,61 @@ export function summarizeResults(results: ToolResult[]): string {
                 case 'ask_clarification':
                     // Rückfrage - nicht in Summary
                     break;
+                case 'search_oer': {
+                    // OER-Suchergebnisse anzeigen - die message ist bereits perfekt formatiert
+                    const oerResult = r.result as { message?: string; results?: any[]; totalCount?: number };
+                    if (oerResult?.message) {
+                        // Die formatierte message direkt anzeigen
+                        lines.push(`  • ${oerResult.message}`);
+                    } else if (oerResult?.totalCount === 0 || oerResult?.results?.length === 0) {
+                        lines.push(`  • OER-Suche: Keine Ergebnisse gefunden`);
+                    } else {
+                        lines.push(`  • OER-Suche: ${oerResult?.totalCount || 0} Ergebnis(se) gefunden`);
+                    }
+                    break;
+                }
+                case 'add_cards_from_oer': {
+                    const addResult = r.result as { addedCards?: any[]; message?: string };
+                    if (addResult?.addedCards && addResult.addedCards.length > 0) {
+                        lines.push(`  • ${addResult.addedCards.length} OER-Karte(n) hinzugefügt:`);
+                        for (const card of addResult.addedCards) {
+                            lines.push(`    - "${card.title}" in Spalte "${card.columnName}"`);
+                        }
+                    } else {
+                        lines.push(`  • ${addResult?.message || 'OER-Karten hinzugefügt'}`);
+                    }
+                    break;
+                }
+                case 'list_oer_sources': {
+                    const sourcesResult = r.result as { sources?: any[]; message?: string };
+                    if (sourcesResult?.sources && sourcesResult.sources.length > 0) {
+                        lines.push(`  • ${sourcesResult.sources.length} OER-Quellen verfügbar:`);
+                        for (const src of sourcesResult.sources.slice(0, 5)) {
+                            lines.push(`    - ${src.name || src.id}`);
+                        }
+                    } else {
+                        lines.push(`  • ${sourcesResult?.message || 'OER-Quellen abgerufen'}`);
+                    }
+                    break;
+                }
+                case 'search_oer_for_card': {
+                    const cardResult = r.result as { message?: string; totalCount?: number };
+                    lines.push(`  • ${cardResult?.message || `OER-Suche für Karte: ${cardResult?.totalCount || 0} Ergebnisse`}`);
+                    break;
+                }
+                case 'import_url_content': {
+                    const importResult = r.result as { message?: string; cardsCreated?: number; columnsCreated?: number; title?: string };
+                    if (importResult) {
+                        const summary = [];
+                        if (importResult.title) summary.push(`"${importResult.title}"`);
+                        if (importResult.cardsCreated) summary.push(`${importResult.cardsCreated} Karte(n)`);
+                        if (importResult.columnsCreated) summary.push(`${importResult.columnsCreated} Spalte(n)`);
+                        lines.push(`  • URL importiert: ${summary.join(', ') || importResult.message || 'Erfolgreich'}`);
+                    } else {
+                        lines.push(`  • URL-Import durchgeführt`);
+                    }
+                    break;
+                }
                 default:
                     lines.push(`  • ${r.tool_name} ausgeführt`);
             }
