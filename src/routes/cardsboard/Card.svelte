@@ -119,9 +119,7 @@
 		// Einfache Suche nach +++ (egal wo)
 		const separatorIndex = desc.indexOf('+++');
 		if (separatorIndex > 0) {
-			const teaser = desc.substring(0, separatorIndex).trim();
-			console.log('✅ Teaser gefunden:', teaser.substring(0, 50) + '...');
-			return teaser;
+			return desc.substring(0, separatorIndex).trim();
 		}
 		
 		// +++ am Anfang = kein Teaser

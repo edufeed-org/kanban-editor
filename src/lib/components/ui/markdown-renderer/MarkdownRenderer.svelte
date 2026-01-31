@@ -44,22 +44,34 @@
 		return defaultRender(tokens, idx, options, env, self);
 	};
 	
-	// Prüfe ob der Content bereits HTML ist
-	function isHtml(text: string): boolean {
+	// Prüfe ob der Content VOLLSTÄNDIG HTML ist (nicht gemischt)
+	function isFullyHtml(text: string): boolean {
 		if (!text) return false;
 		const trimmed = text.trim();
-		// Wenn es mit einem HTML-Tag beginnt und strukturiertes HTML enthält
-		return trimmed.startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(trimmed);
+		// Nur wenn es mit HTML-Tag beginnt UND endet (vollständiges HTML-Dokument)
+		// UND keine Markdown-Syntax enthält
+		const startsWithHtml = trimmed.startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(trimmed);
+		const hasMarkdownSyntax = /\*\*|__|\[.*\]\(|\#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s/m.test(trimmed);
+		
+		// Wenn Markdown-Syntax erkannt wird, IMMER als Markdown behandeln
+		if (hasMarkdownSyntax) {
+			return false;
+		}
+		
+		return startsWithHtml;
 	}
 	
-	// Intelligentes Rendering: HTML direkt anzeigen, Markdown konvertieren
+	// Intelligentes Rendering: Markdown konvertieren, HTML durchlassen nur wenn vollständig HTML
 	let renderedHtml = $derived.by(() => {
 		if (!content) return '';
-		// Wenn der Content bereits HTML ist, direkt verwenden
-		if (isHtml(content)) {
+		
+		// Wenn Markdown-Syntax erkannt wird, IMMER konvertieren
+		// Das stellt sicher, dass **text** auch in gemischtem Content funktioniert
+		if (isFullyHtml(content)) {
 			return content;
 		}
-		// Sonst Markdown zu HTML konvertieren
+		
+		// Markdown zu HTML konvertieren (auch wenn es gemischtes HTML/Markdown ist)
 		return md.render(content);
 	});
 </script>

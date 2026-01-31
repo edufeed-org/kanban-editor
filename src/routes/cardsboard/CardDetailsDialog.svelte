@@ -141,7 +141,7 @@
 	let descriptionParts = $derived.by(() => {
 		const desc = card.description;
 		if (!desc) return [];
-		// Splitte bei +++
+		// Splitte bei +++ und filtere leere Teile
 		const parts = desc.split(/\s*\+\+\+\s*/);
 		return parts.filter(p => p.trim().length > 0);
 	});
