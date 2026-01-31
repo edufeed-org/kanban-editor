@@ -41,15 +41,21 @@
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
+    import { PackageOpenIcon } from 'lucide-svelte';
 
     // Props
-    let { currentBoardId = '' }: { currentBoardId?: string } = $props();
+    let { 
+        currentBoardId = '', 
+        hamburgerMenuOpen = $bindable(false)
+    }: { 
+        currentBoardId?: string;
+        hamburgerMenuOpen?: boolean;
+    } = $props();
 
     // State
     let searchQuery = $state('');
     let isCreating = $state(false);
     let isLoading = $state(false);
-    let hamburgerMenuOpen = $state(false);
     
     // Board Settings Dialog State
     let settingsDialogOpen = $state(false);
@@ -294,26 +300,13 @@
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden p-2">
-    <!-- Hamburger Menu Header -->
-    <div class="flex items-center gap-2 mb-2">
-        <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9"
-            title="Menü"
-            onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
-        >
-            <MenuIcon class="h-5 w-5" />
-        </Button>
-        <div class="flex-1">Board Einstellungen</div>
-    </div>
     
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
         <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md mb-2 shadow-md max-h-[60vh] overflow-y-auto">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
-                icon={SettingsIcon} 
+                icon={PackageOpenIcon} 
                 label="Eigenschaften" 
                 onclick={() => { 
                     settingsDialogOpen = true;

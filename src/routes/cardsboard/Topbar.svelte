@@ -150,7 +150,14 @@
             
             <Separator orientation="vertical" class="min-w-4 hidden sm:block" />
             
-            <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
+            <!-- Mobile: Kompakter Titel (Menü ist in der Sidebar) -->
+            {#if isMobile}
+                <span class="font-semibold text-sm truncate max-w-[150px]">
+                    {currentBoardTitle}
+                </span>
+            {/if}
+            
+            <!-- Desktop: Voller Titel mit Inline-Editing -->
             <div class="hidden md:flex items-baseline gap-1">
                 {#if isEditingTitle}
                     <input

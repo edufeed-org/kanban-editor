@@ -11,13 +11,18 @@ import AIPanel from "./AIPanel.svelte";
 import type { Column } from "./types.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
+import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
 import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
+import MenuIcon from '@lucide/svelte/icons/menu';
 import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
+	
+	// Hamburger Menu State für Board-Einstellungen
+	let hamburgerMenuOpen = $state(false);
 	
 	// Share-Link Dialog State
 	let showFollowDialog = $state(false);
@@ -265,10 +270,26 @@ import { authStore } from '$lib';
 		
 		<!-- Left Sidebar Sheet (Mobile) -->
 		<Sheet.Root bind:open={leftSidebarOpen}>
-			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0">
-				<div class="p-4 h-full flex flex-col overflow-hidden">
+			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0 [&>button]:hidden">
+				<!-- Header mit Titel und Menü-Button -->
+				<div class="px-4 py-3 border-b-4 flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<SquareKanbanIcon class="h-5 w-5" />
+						<h2 class="font-semibold">Kanban-Editor</h2>
+					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						class="h-9 w-9"
+						title="Board Einstellungen"
+						onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
+					>
+						<MenuIcon class="h-5 w-5" />
+					</Button>
+				</div>
+				<div class="p-4 h-[calc(100%-3.5rem)] flex flex-col overflow-hidden">
 					<div class="flex-1 overflow-y-auto min-h-0">
-						<BoardsList {currentBoardId} />
+						<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 					</div>
 					<LeftSidebarFooter />
 				</div>
@@ -299,14 +320,24 @@ import { authStore } from '$lib';
 					class="border-r bg-muted/10 overflow-y-auto"
 					onResize={(size: number) => { leftSidebarSize = size; }}
 				>
-					<div class="p-4 border-b-4 max-h-15 flex">
+					<!-- Header der linken Sidebar -->
+					<div class="p-4 border-b-4 max-h-15 flex items-center justify-between">
 						<div class="flex items-center gap-2">
 							<SquareKanbanIcon /><h2 class="text-lg font-semibold">Kanban-Editor</h2>
 						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							class="h-9 w-9"
+							title="Board Einstellungen"
+							onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
+						>
+							<MenuIcon class="h-5 w-5" />
+						</Button>
 					</div>
 					<div class="p-4 h-[calc(100%-3.75rem)] flex flex-col overflow-hidden">
 						<div class="flex-1 overflow-y-auto min-h-0">
-							<BoardsList {currentBoardId} />
+							<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 						</div>
 						<LeftSidebarFooter />
 					</div>
