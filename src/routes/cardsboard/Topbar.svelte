@@ -7,11 +7,18 @@
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
-  import { onMount } from 'svelte';
-  import { settingsStore } from '$lib/stores/settingsStore.svelte';
+    import { onMount } from 'svelte';
+    import { settingsStore } from '$lib/stores/settingsStore.svelte';
+    import { toast } from 'svelte-sonner';
+    import PencilIcon from '@lucide/svelte/icons/pencil';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
+    
+    // State für Inline-Editing des Board-Titels
+    let isEditingTitle = $state(false);
+    let editTitleValue = $state('');
+    let titleInputRef: HTMLInputElement | null = $state(null);
 	
     // Props für Sidebar-Toggle, Title und Board-Meta
     let {
@@ -84,6 +91,42 @@
     onMount(() => {
         settingsStore.setTheme(settingsStore.settings.theme);
     })
+    
+    // Funktionen für Inline-Editing des Board-Titels
+    function startEditingTitle() {
+        editTitleValue = currentBoardTitle;
+        isEditingTitle = true;
+        // Focus auf Input nach dem Rendern
+        setTimeout(() => titleInputRef?.focus(), 10);
+    }
+    
+    function saveTitle() {
+        if (editTitleValue.trim() && editTitleValue !== currentBoardTitle) {
+            try {
+                boardStore.updateCurrentBoardMeta({ name: editTitleValue.trim() });
+                toast.success('Board-Titel gespeichert');
+            } catch (error) {
+                console.error('❌ Fehler beim Speichern des Titels:', error);
+                toast.error('Titel konnte nicht gespeichert werden');
+            }
+        }
+        isEditingTitle = false;
+    }
+    
+    function cancelEditTitle() {
+        isEditingTitle = false;
+        editTitleValue = currentBoardTitle;
+    }
+    
+    function handleTitleKeydown(e: KeyboardEvent) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTitle();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEditTitle();
+        }
+    }
 </script>
 
 <header class="sticky top-0 z-50 w-full max-w-full border-b-4 shrink-0 overflow-x-auto">
@@ -109,7 +152,25 @@
             
             <!-- 🔥 WICHTIG: Zeige Titel direkt vom Store an, nicht über Props! -->
             <div class="hidden md:flex items-baseline gap-1">
-                <span class="font-semibold text-lg">{currentBoardTitle}</span>
+                {#if isEditingTitle}
+                    <input
+                        bind:this={titleInputRef}
+                        bind:value={editTitleValue}
+                        onblur={saveTitle}
+                        onkeydown={handleTitleKeydown}
+                        class="font-semibold text-lg bg-transparent border-b-2 border-primary outline-none px-1 min-w-[150px] max-w-[400px]"
+                        style="width: {Math.max(150, editTitleValue.length * 10)}px"
+                    />
+                {:else}
+                    <button
+                        onclick={startEditingTitle}
+                        class="font-semibold text-lg hover:bg-muted px-1 rounded cursor-text transition-colors group flex items-center gap-1"
+                        title="Klicken zum Bearbeiten"
+                    >
+                        {currentBoardTitle}
+                        <PencilIcon class="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                    </button>
+                {/if}
                 
                 <!-- CC License Badge (superscript style) -->
                 {#if currentBoardLicense}

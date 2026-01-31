@@ -61,6 +61,10 @@
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
 	
+	// State für Inline-Editing des Column-Titels
+	let isEditingTitle = $state(false);
+	let titleInputRef: HTMLInputElement | null = $state(null);
+	
 	// Global popover state management - ensures only one popover is open at a time
 	const popoverId = `column-popover-${columnId}`;
 
@@ -211,6 +215,27 @@
 				// Setze den Namen zurück
 				editName = name;
 			}
+		}
+		isEditingTitle = false;
+	}
+	
+	// Funktionen für Inline-Editing des Column-Titels
+	function startEditingColumnTitle(e: MouseEvent) {
+		if (readOnly) return;
+		e.stopPropagation();
+		editName = name;
+		isEditingTitle = true;
+		setTimeout(() => titleInputRef?.focus(), 10);
+	}
+	
+	function handleColumnTitleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			handleRenameChange();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			editName = name;
+			isEditingTitle = false;
 		}
 	}
 
@@ -380,11 +405,30 @@
 	<div class="column-header">
 		<div class="flex items-center justify-between w-full">
 			<!-- Drag Handle + Title -->
-			<div class="flex items-center gap-2 flex-1 cursor-grab active:cursor-grabbing" title="Spalte verschieben" data-dnd-handle>
-				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+			<div class="flex items-center gap-2 flex-1" data-dnd-handle>
+				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24" title="Spalte verschieben">
 					<path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
 				</svg>
-				<div class="column-title">{name}</div>
+				{#if isEditingTitle && !readOnly}
+					<input
+						bind:this={titleInputRef}
+						bind:value={editName}
+						onblur={handleRenameChange}
+						onkeydown={handleColumnTitleKeydown}
+						onpointerdown={(e) => e.stopPropagation()}
+						class="column-title bg-transparent border-b-2 border-primary outline-none px-1 min-w-[80px]"
+					/>
+				{:else}
+					<button
+						onclick={startEditingColumnTitle}
+						onpointerdown={(e) => e.stopPropagation()}
+						class="column-title hover:bg-muted/50 px-1 rounded cursor-text transition-colors text-left"
+						title={readOnly ? name : "Klicken zum Bearbeiten"}
+						disabled={readOnly}
+					>
+						{name}
+					</button>
+				{/if}
 			</div>
 			
 			<!-- Header Toolbar: Menu (click-only, no drag) -->
