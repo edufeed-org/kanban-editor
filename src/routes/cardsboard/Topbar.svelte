@@ -141,7 +141,8 @@
                 class="h-8 w-8 bg-secondary"
             >
                 {#if isMobile}
-                    <MenuIcon class="h-4 w-4" />
+                    <!-- <MenuIcon class="h-4 w-4" /> -->
+                    <PanelLeftIcon class="h-4 w-4" />
                 {:else}
                     <PanelLeftIcon class="h-4 w-4" />
                 {/if}
@@ -152,7 +153,7 @@
             
             <!-- Mobile: Kompakter Titel (Menü ist in der Sidebar) -->
             {#if isMobile}
-                <span class="font-semibold text-sm truncate max-w-[150px]">
+                <span class="font-semibold text-sm truncate max-w-[150px] pl-2">
                     {currentBoardTitle}
                 </span>
             {/if}

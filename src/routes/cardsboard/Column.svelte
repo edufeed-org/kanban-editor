@@ -406,7 +406,8 @@
 		<div class="flex items-center justify-between w-full">
 			<!-- Drag Handle + Title -->
 			<div class="flex items-center gap-2 flex-1" data-dnd-handle>
-				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24" title="Spalte verschieben">
+				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24" aria-label="Spalte verschieben">
+					<title>Spalte verschieben</title>
 					<path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
 				</svg>
 				{#if isEditingTitle && !readOnly}

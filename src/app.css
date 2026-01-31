@@ -179,10 +179,19 @@ button.btn, .menu-item{
   color: var(--destructive-foreground) !important;
   border-color: var(--destructive) !important;
 }
-
+.editor-menu button.menu-item{
+  background-color: transparent;
+}
+.editor-menu button.menu-item:hover{
+  border-radius: 0!important;
+}
 button.btn:hover{
   border: 2px solid var(--border);
   border-color: var(--accent);
+}
+.hamburger-menu-button:hover, .hamburger-menu-button:active{
+  background-color: var(--primary) !important;
+  color: var(--foreground) !important;
 }
 
 button.btn:focus-visible,
