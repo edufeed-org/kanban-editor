@@ -486,7 +486,7 @@ public async verifyNip05(identifier: string): Promise<boolean> {
 const author = authStore.getPubkey() || 'anonymous';
 const board = new Board({ name, author });
 
-// CardViewDialog.svelte - Nutzt komplexe Fallback-Chain
+// CardDetailsDialog.svelte - Nutzt komplexe Fallback-Chain
 const author = authStore.getUserName() || authStore.getDisplayName() || authStore.getPubkey() || 'anonymous';
 ```
 
@@ -586,7 +586,7 @@ public async addComment(cardId: string, text: string): Promise<void> {
 ```
 
 ```svelte
-<!-- CardViewDialog.svelte - Kommentar-Liste -->
+<!-- CardDetailsDialog.svelte - Kommentar-Liste -->
 {#each card.comments as comment}
     <div class="comment">
         <p class="comment-author">

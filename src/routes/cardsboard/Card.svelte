@@ -3,8 +3,7 @@
 	import * as Card from "../../lib/components/ui/card/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Badge } from "$lib/components/ui/badge/index.js";
-	import CardDialog from "./CardDialog.svelte";
-	import CardViewDialog from "./CardViewDialog.svelte";
+	import CardDetailsDialog from "./CardDetailsDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
@@ -25,13 +24,12 @@
 	let showModal = $state(false);
 	let showSidebar = $state(false);
 	let showPopover = $state(false);
-	let showMenu = $state(true);
 	
 	// Global popover state management - ensures only one popover is open at a time
 	let currentOpenPopover = $state<string | null>(null);
 	const popoverId = `popover-${card.id}`;
 	
-	// 🆕 VERHALT: CardViewDialog bleibt IMMER selected solange offen
+	// 🆕 VERHALT: CardDetailsDialog bleibt IMMER selected solange offen
 	// Der Dialog wird von Card.svelte gesteuert, nicht vom User-Click
 	let isDialogOpen = $state(false);
 	
@@ -395,7 +393,7 @@
 			return;
 		}
 		e.stopPropagation();
-		// Klick auf Card öffnet direkt CardViewDialog
+		// Klick auf Card öffnet direkt CardDetailsDialog
 		isDialogOpen = true;
 	}}
 >
@@ -436,118 +434,6 @@
 						{/if}
 					</div>
 				{/if}
-			</div>
-			
-			<div class="header-actions">
-				<!-- Karten-Aktionen Popover deprecated -->
-				<!-- {#if showMenu}
-					<Popover.Root bind:open={showPopover} onOpenChange={handlePopoverOpenChange}>
-						<Popover.Trigger
-								class="popover-trigger w-6 h-6 bg-secondary btn flex items-center justify-center hover:bg-accent group btn"
-								onclick={(e) => {
-									e.stopPropagation();
-								}}
-								type="button"
-								aria-label="Karten-Aktionen"
-							>
-								<EllipsisVerticalIcon/>
-							</Popover.Trigger>
-						<Popover.Content align="end" class="w-64" onclick={(e) => {
-							e.stopPropagation();
-						}}>
-							<div class="space-y-4">
-								{#if card.author && card.authorName}
-									<div class="space-y-2">
-										<h4 class="font-medium text-sm">Erstellt von</h4>
-										<div class="flex items-center gap-2 p-2 bg-muted rounded">
-											<UserIcon class="h-4 w-4 text-muted-foreground" />
-											<div class="flex-1 min-w-0">
-												<p class="text-sm font-medium truncate">{card.authorName}</p>
-												<code class="text-xs text-muted-foreground">{card.author.slice(0, 8)}…</code>
-											</div>
-										</div>
-									</div>
-									<Separator />
-								{/if}
-								
-								<div class="space-y-2">
-									<h4 class="font-medium text-sm">Karte umbenennen</h4>
-									<Input 
-										bind:value={editName} 
-										placeholder="Kartenname"
-									oninput={handleRenameChange}
-									onblur={handleRenameChange}
-								/>
-							</div>
-							
-							<Separator />
-							
-							<ColorSelector selectedColor={selectedColor} onColorChange={(colorValue) => {
-									selectedColor = colorValue;
-									boardStore.editCard(String(card.id), { color: colorValue });
-								}} 
-							/>
-
-							<div class="space-y-2">
-								<h4 class="font-medium text-sm">Labels</h4>
-								<div class="flex gap-2">
-									<Input 
-										bind:value={newLabelInput} 
-										placeholder="Neues Label"
-										onkeydown={handleLabelKeyDown}
-										class="flex-1"
-									/>
-									<Button 
-										variant="outline" 
-										size="sm"
-										onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddLabel(); }}
-										disabled={!newLabelInput.trim()}
-									>
-										<PlusIcon class="h-4 w-4" />
-									</Button>
-								</div>
-								{#if localLabels.length > 0}
-									<div class="flex flex-wrap gap-1 mt-2">
-										{#each localLabels as label}
-											<Badge 
-												variant="secondary" 
-												class="text-xs px-2 py-1 bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100 flex items-center gap-1"
-											>
-												{label}
-												<button
-													onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveLabel(label); }}
-													class="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
-													aria-label="Label entfernen"
-												>
-													<XIcon class="h-3 w-3" />
-												</button>
-											</Badge>
-										{/each}
-									</div>
-								{/if}
-							</div>
-							
-							<Separator />
-								
-								<Separator />
-								
-								<Button variant="outline" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(); }} class="w-full">
-									Karte bearbeiten
-								</Button>
-
-								<Button 
-									variant="destructive"
-									size="sm"
-									onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(); }}
-									class="w-full btn"
-								>
-									<TrashIcon class="h-4 w-4" />
-									Karte löschen
-								</Button>
-							</div>
-						</Popover.Content>
-					</Popover.Root>
-				{/if} -->
 			</div>
 		</div>
 	</Card.Header>
@@ -599,9 +485,7 @@
 		{/if}
 	</Card.Content>
 
-	<!-- Card View Dialog (Read-Only View with Tabs) -->
-	<!-- CardViewDialog mit bind:open für automatisches Selection -->
-	<CardViewDialog
+	<CardDetailsDialog
 		cardId={card.id}
 		bind:open={isDialogOpen}
 		{readOnly}
@@ -609,22 +493,6 @@
 			isDialogOpen = false;
 			showModal = true;
 		}}
-	/>
-	
-	<!-- Card Dialog (View & Edit with Tabs) -->
-	<CardDialog
-		card={{
-			id: String(card.id),
-			heading: card.name,
-			content: card.description,
-			color: localColor,
-			comments: card.comments,
-			labels: card.labels,
-			attendees: card.attendees
-		}}
-		isOpen={showModal}
-		onClose={closeModal}
-		onSave={handleEditSave}
 	/>
 </Card.Root>
 	

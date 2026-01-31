@@ -12,7 +12,7 @@
  * - 'private' → ALWAYS private relays
  *   - Warnung wenn keine Private Relays → local-only Fallback
  * 
- * - 'draft' → Depends on draftPublishingMode setting:
+ * - 'private' → Depends on privatePublishingMode setting:
  *   - 'private-relays' → Use private relays (default)
  *   - 'local-only' → Return empty array (no Nostr publishing)
  *   - 'public-relays' → Use public relays (not recommended for privacy)
@@ -21,11 +21,11 @@
  * @module relaySelection
  */
 
-import type { PublishState, DraftPublishingMode } from '$lib/stores/settingsStore.svelte';
+import type { PublishState, PrivatePublishingMode } from '$lib/stores/settingsStore.svelte';
 
 export interface RelaySelectionOptions {
   publishState: PublishState;
-  draftPublishingMode: DraftPublishingMode;
+  privatePublishingMode: PrivatePublishingMode;
   relaysPublic: string[];
   relaysPrivate: string[];
 }
@@ -40,27 +40,27 @@ export interface RelaySelectionOptions {
  * // Published content → public relays
  * getTargetRelays({
  *   publishState: 'published',
- *   draftPublishingMode: 'private-relays',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
  * // → ['wss://relay.damus.io']
  * 
  * @example
- * // Draft content with private-relays mode → private relays
+ * // private content with private-relays mode → private relays
  * getTargetRelays({
- *   publishState: 'draft',
- *   draftPublishingMode: 'private-relays',
+ *   publishState: 'private',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
  * // → ['wss://private.relay']
  * 
  * @example
- * // Draft content with local-only mode → no publishing
+ * // private content with local-only mode → no publishing
  * getTargetRelays({
- *   publishState: 'draft',
- *   draftPublishingMode: 'local-only',
+ *   publishState: 'private',
+ *   privatePublishingMode: 'local-only',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: []
  * })
@@ -76,34 +76,34 @@ export interface RelaySelectionOptions {
  * // Published content → public + private relays (vollständiges Backup!)
  * getTargetRelays({
  *   publishState: 'published',
- *   draftPublishingMode: 'private-relays',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
  * // → ['wss://relay.damus.io', 'wss://private.relay']
  * 
  * @example
- * // Draft content with private-relays mode → private relays only
+ * // private content with private-relays mode → private relays only
  * getTargetRelays({
- *   publishState: 'draft',
- *   draftPublishingMode: 'private-relays',
+ *   publishState: 'private',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
  * // → ['wss://private.relay']
  * 
  * @example
- * // Draft content with local-only mode → no publishing
+ * // private content with local-only mode → no publishing
  * getTargetRelays({
- *   publishState: 'draft',
- *   draftPublishingMode: 'local-only',
+ *   publishState: 'private',
+ *   privatePublishingMode: 'local-only',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: []
  * })
  * // → []
  */
 export function getTargetRelays(options: RelaySelectionOptions): string[] {
-  const { publishState, draftPublishingMode, relaysPublic, relaysPrivate } = options;
+  const { publishState, privatePublishingMode, relaysPublic, relaysPrivate } = options;
 
   // Rule 1: 'published' → Public + Private relays (vollständiges Backup!)
   if (publishState === 'published') {
@@ -132,45 +132,36 @@ export function getTargetRelays(options: RelaySelectionOptions): string[] {
     return uniqueRelays;
   }
 
-  // Rule 2: 'private' → ALWAYS private relays
-  if (publishState === 'private') {
-    if (relaysPrivate.length === 0) {
-      console.error('[RelaySelection] ⚠️ CRITICAL: No private relays configured for private content! Event will be local-only.');
-      return [];
-    }
-    console.log('[RelaySelection] publishState=private → Using private relays');
-    return relaysPrivate;
-  }
 
-  // Rule 3: 'draft' → Depends on draftPublishingMode
-  if (publishState === 'draft') {
-    switch (draftPublishingMode) {
+  // Rule 2: 'private' → Depends on privatePublishingMode
+  if (publishState === 'private') {
+    switch (privatePublishingMode) {
       case 'private-relays':
         if (relaysPrivate.length === 0) {
-          // ⚠️ SICHERHEIT: KEIN Fallback zu public relays für Drafts!
-          console.error('[RelaySelection] 🔒 SECURITY: No private relays configured! Draft will be local-only to prevent leaking private content.');
+          // ⚠️ SICHERHEIT: KEIN Fallback zu public relays für privates!
+          console.error('[RelaySelection] 🔒 SECURITY: No private relays configured! private will be local-only to prevent leaking private content.');
           return [];
         }
-        console.log('[RelaySelection] publishState=draft + mode=private-relays → Using private relays');
+        console.log('[RelaySelection] publishState=private + mode=private-relays → Using private relays');
         return relaysPrivate;
 
       case 'local-only':
-        console.log('[RelaySelection] publishState=draft + mode=local-only → No Nostr publishing');
+        console.log('[RelaySelection] publishState=private + mode=local-only → No Nostr publishing');
         return [];
 
       case 'public-relays':
         if (relaysPublic.length === 0) {
-          console.warn('[RelaySelection] ⚠️ No public relays configured! Draft will be local-only.');
+          console.warn('[RelaySelection] ⚠️ No public relays configured! private will be local-only.');
           return [];
         }
-        console.warn('[RelaySelection] ⚠️ publishState=draft + mode=public-relays → Using public relays (NOT RECOMMENDED for privacy!)');
+        console.warn('[RelaySelection] ⚠️ publishState=private + mode=public-relays → Using public relays (NOT RECOMMENDED for privacy!)');
         return relaysPublic;
 
       default:
         // Fallback to private-relays if mode is invalid
-        console.warn(`[RelaySelection] Unknown draftPublishingMode: ${draftPublishingMode}, falling back to private-relays`);
+        console.warn(`[RelaySelection] Unknown privatePublishingMode: ${privatePublishingMode}, falling back to private-relays`);
         if (relaysPrivate.length === 0) {
-          console.warn('[RelaySelection] ⚠️ No private relays configured! Draft will be local-only.');
+          console.warn('[RelaySelection] ⚠️ No private relays configured! private will be local-only.');
           return [];
         }
         return relaysPrivate;
@@ -186,26 +177,26 @@ export function getTargetRelays(options: RelaySelectionOptions): string[] {
  * Check if event should be published to Nostr
  * 
  * @param publishState - Event's publish state
- * @param draftPublishingMode - Current draft publishing mode setting
+ * @param privatePublishingMode - Current private publishing mode setting
  * @returns true if event should be published to Nostr, false if local-only
  * 
  * @example
  * shouldPublishToNostr('published', 'private-relays') // → true
- * shouldPublishToNostr('draft', 'local-only') // → false
- * shouldPublishToNostr('draft', 'private-relays') // → true
+ * shouldPublishToNostr('private', 'local-only') // → false
+ * shouldPublishToNostr('private', 'private-relays') // → true
  */
 export function shouldPublishToNostr(
   publishState: PublishState,
-  draftPublishingMode: DraftPublishingMode
+  privatePublishingMode: PrivatePublishingMode
 ): boolean {
   // Published and private always publish to Nostr
-  if (publishState === 'published' || publishState === 'private') {
+  if (publishState === 'published') {
     return true;
   }
 
-  // Draft depends on mode
-  if (publishState === 'draft') {
-    return draftPublishingMode !== 'local-only';
+  // private depends on mode
+  if (publishState === 'private') {
+    return privatePublishingMode !== 'local-only';
   }
 
   // Unknown publishState → don't publish
@@ -221,7 +212,7 @@ export function shouldPublishToNostr(
  * @example
  * getRelaySelectionDescription({
  *   publishState: 'published',
- *   draftPublishingMode: 'private-relays',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
@@ -229,15 +220,15 @@ export function shouldPublishToNostr(
  * 
  * @example
  * getRelaySelectionDescription({
- *   publishState: 'draft',
- *   draftPublishingMode: 'private-relays',
+ *   publishState: 'private',
+ *   privatePublishingMode: 'private-relays',
  *   relaysPublic: ['wss://relay.damus.io'],
  *   relaysPrivate: ['wss://private.relay']
  * })
- * // → "Draft content → 1 private relay(s)"
+ * // → "private content → 1 private relay(s)"
  */
 export function getRelaySelectionDescription(options: RelaySelectionOptions): string {
-  const { publishState, draftPublishingMode, relaysPublic, relaysPrivate } = options;
+  const { publishState, privatePublishingMode, relaysPublic, relaysPrivate } = options;
   const targetRelays = getTargetRelays(options);
 
   if (targetRelays.length === 0) {
@@ -259,17 +250,13 @@ export function getRelaySelectionDescription(options: RelaySelectionOptions): st
   }
 
   if (publishState === 'private') {
-    return `Private content → ${targetRelays.length} private relay(s)`;
-  }
-
-  if (publishState === 'draft') {
-    switch (draftPublishingMode) {
+    switch (privatePublishingMode) {
       case 'private-relays':
-        return `Draft content → ${targetRelays.length} private relay(s)`;
+        return `private content → ${targetRelays.length} private relay(s)`;
       case 'public-relays':
-        return `Draft content → ${targetRelays.length} public relay(s) ⚠️ (not private!)`;
+        return `private content → ${targetRelays.length} public relay(s) ⚠️ (not private!)`;
       default:
-        return 'Draft content → local-only';
+        return 'private content → local-only';
     }
   }
 

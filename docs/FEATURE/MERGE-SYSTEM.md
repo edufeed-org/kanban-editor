@@ -55,7 +55,7 @@ Dieses System implementiert **Git-ähnliche Konflikt-Erkennung und -Auflösung**
 
 ### Step 1: CardDialog.svelte - Exakte Implementierung
 
-**Datei:** `src/routes/cardsboard/CardDialog.svelte` (oder CardViewDialog.svelte)
+**Datei:** `src/routes/cardsboard/CardDialog.svelte` (oder CardDetailsDialog.svelte)
 
 ```svelte
 <script lang="ts">

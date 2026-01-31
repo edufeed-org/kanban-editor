@@ -43,7 +43,7 @@ export class BoardOperations {
             content: description,
             author: author || 'anonymous',
             authorName, // ← NEU: Display name speichern
-            publishState: 'draft'
+            publishState: 'private'
         };
 
         const card = column.addCard(cardProps);
@@ -522,7 +522,7 @@ export class BoardOperations {
      */
     public static setBoardPublishState(
         board: Board,
-        state: 'draft' | 'published'
+        state: 'private' | 'published'
     ): void {
         board.setPublishState(state);
         console.log(`✅ Board publishState gesetzt: ${state}`);
@@ -902,7 +902,7 @@ export class BoardOperations {
                 author: boardProps.author || '',
                 maintainers: boardProps.maintainers || [], // ⚡ CRITICAL FIX: Include maintainers
                 followers: boardProps.followers || [], // ⚡ CRITICAL FIX: Include followers
-                publishState: (boardProps.publishState as any) || 'draft',
+                publishState: (boardProps.publishState as any) || 'private',
                 tags: boardProps.tags || [],
                 columns: boardProps.columns || [],
                 // 🔴 FIX: Neues Board von Nostr → KEIN lastAccessedAt!

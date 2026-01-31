@@ -2,41 +2,34 @@
     import { Button } from '$lib/components/ui/button/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
-    import PanelRightIcon from "@lucide/svelte/icons/panel-right";
     import MenuIcon from "@lucide/svelte/icons/menu";
     import ShareIcon from "@lucide/svelte/icons/share-2";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { toast } from 'svelte-sonner';
-    import { chatStore } from '$lib/stores/chatStore.svelte.js';
-    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
+    import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
+  import { onMount } from 'svelte';
+  import { settingsStore } from '$lib/stores/settingsStore.svelte';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
 	
-    
-
     // Props für Sidebar-Toggle, Title und Board-Meta
     let {
-        title = 'Kanbanboard',
         onToggleLeftSidebar,
         onToggleRightSidebar,
-        boardMeta,
         isMobile = false
     }: {
-        title?: string;
         onToggleLeftSidebar?: () => void;
         onToggleRightSidebar?: () => void;
-        boardMeta?: { title: string; description: string; tags: string[] };
         isMobile?: boolean;
     } = $props();
 
-    let currentTheme = $state<'light' | 'dark' | 'auto'>('auto');
-    
     // Derived values for displaying board info
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
-    let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
+
+    const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
+    const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
 
     // CC License Badge Helper with proper symbols
     function getLicenseInfo(license: string) {
@@ -44,101 +37,53 @@
             'cc0': { 
                 symbol: 'CC0',
                 name: 'Public Domain Dedication',
-                color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/publicdomain/zero/1.0/'
             },
             'cc-by-4.0': { 
                 symbol: 'CC BY',
                 name: 'Attribution 4.0',
-                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/licenses/by/4.0/'
             },
             'cc-by-sa-4.0': { 
                 symbol: 'CC BY-SA',
                 name: 'Attribution-ShareAlike 4.0',
-                color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                color: greenStyling,
                 url: 'https://creativecommons.org/licenses/by-sa/4.0/'
             },
             'cc-by-nc-4.0': { 
                 symbol: 'CC BY-NC',
                 name: 'Attribution-NonCommercial 4.0',
-                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc/4.0/'
             },
             'cc-by-nd-4.0': { 
                 symbol: 'CC BY-ND',
                 name: 'Attribution-NoDerivatives 4.0',
-                color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-300 dark:border-purple-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nd/4.0/'
             },
             'cc-by-nc-sa-4.0': { 
                 symbol: 'CC BY-NC-SA',
                 name: 'Attribution-NonCommercial-ShareAlike 4.0',
-                color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
             },
             'cc-by-nc-nd-4.0': { 
                 symbol: 'CC BY-NC-ND',
                 name: 'Attribution-NonCommercial-NoDerivatives 4.0',
-                color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-300 dark:border-red-700',
+                color: yellowStyling,
                 url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/'
             }
         };
         
         return licenses[license] || licenses['cc-by-4.0'];
     }
-    
-    let relays = $state([
-        // { url: 'ws://localhost:7000', type: 'local', enabled: true },
-        // { url: 'wss://relay-rpi.edufeed.org/', type: 'public', enabled: true }
-    ]);
-    
-    let webhookUrl = $state('');
 
-    const currentUser = {
-        name: 'Max Mustermann',
-        email: 'max@example.com',
-        avatar: ''
-    };
-
-    function applyTheme(theme: 'light' | 'dark' | 'auto') {
-        let effectiveTheme = theme;
-
-        // Bei 'auto': Systemeinstellungen abfragen
-        if (theme === 'auto') {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            effectiveTheme = prefersDark ? 'dark' : 'light';
-        }
-
-        // CSS-Klassen anpassen
-        if (effectiveTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-            document.documentElement.classList.remove('light');
-        } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
-        }
-    }
-
-    // Beim Mount: Theme initialisieren und Systemänderungen überwachen
-    import { onMount } from 'svelte';
-    import * as Field from "$lib/components/ui/field/index.js";
-    import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
-    import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import { BotIcon, TrashIcon } from 'lucide-svelte';
-    
     onMount(() => {
-        applyTheme(currentTheme);
-
-        // Systemeinstellungen überwachen (falls 'auto' aktiv ist)
-        if (currentTheme === 'auto') {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            const handleChange = () => applyTheme('auto');
-            mediaQuery.addEventListener('change', handleChange);
-            return () => mediaQuery.removeEventListener('change', handleChange);
-        }
-    });
-
+        settingsStore.setTheme(settingsStore.settings.theme);
+    })
 </script>
 
 <header class="sticky top-0 z-50 w-full max-w-full border-b-4 shrink-0 overflow-x-auto">

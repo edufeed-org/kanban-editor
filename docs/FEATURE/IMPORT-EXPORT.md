@@ -78,7 +78,7 @@ Akzeptanzkriterien
 
 Bekannte nächste Schritte (Kurz)
 -------------------------------
-- Integration: Einbau `ExportButton` in `CardViewDialog.svelte` (Topbar)
+- Integration: Einbau `ExportButton` in `CardDetailsDialog.svelte` (Topbar)
 - Integration: Topbar → Backup All Menu Item
 - Integration: BoardsList → `ImportPopover`
 - Phase 1.5E: Share-Link Modus (jsoncrush Kompression + `?import=` URL)

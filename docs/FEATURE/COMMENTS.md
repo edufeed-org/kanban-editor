@@ -26,7 +26,7 @@
 
 ### Phase A: UI-Formular ✅
 
-**Datei:** `src/routes/cardsboard/CardViewDialog.svelte`
+**Datei:** `src/routes/cardsboard/CardDetailsDialog.svelte`
 
 ```svelte
 <!-- Kommentare Tab mit Input & Liste -->
@@ -136,7 +136,7 @@ public deleteComment(cardId: string, commentId: string): void {
 - Die Board-Page startet eine Background-Subscription über alle Karten:
   - Store-API: `boardStore.subscribeToAllComments()`
   - Einstiegspunkt: `src/routes/cardsboard/+page.svelte`
-- Zusätzlich bleibt das per-Card Verhalten erhalten (CardViewDialog lädt + subscribed beim Öffnen).
+- Zusätzlich bleibt das per-Card Verhalten erhalten (CardDetailsDialog lädt + subscribed beim Öffnen).
   - Intern wird pro Karte nur **eine** NDK-Subscription gehalten.
   - Mehrere Konsumenten (Background + Dialog) werden über Ref-Counting + Callback-Multiplexing unterstützt.
 
@@ -168,7 +168,7 @@ card.addComment() (Model-Layer)
     ↓
 ✅ Card.svelte re-rendert
     ↓
-✅ CardViewDialog zeigt neuen Kommentar SOFORT
+✅ CardDetailsDialog zeigt neuen Kommentar SOFORT
     ↓
 ✅ Card zeigt veränderte Anzahl der Kommentare SOFORT
     ↓
@@ -204,7 +204,7 @@ card.addComment() (Model-Layer)
 5. UI Reaktivität via Svelte Runes
    ├─ Column.svelte $effect() getriggert [beobachtet boardStore.uiData]
    ├─ items Prop wird aktualisiert [neue UIColumn mit Card]
-   ├─ CardViewDialog.svelte re-rendert [zeigt neue Kommentare]
+   ├─ CardDetailsDialog.svelte re-rendert [zeigt neue Kommentare]
    └─ displayComments $derived zeigt neue Comment
 
 6. Persistierung
@@ -269,7 +269,7 @@ Nach Kommentar-Hinzufügen sieht die gespeicherte Struktur so aus:
    Keine Type-Fehler, vollständige Typisierung
 
 ✅ Syntax
-   CardViewDialog.svelte: 0 Fehler ✅
+   CardDetailsDialog.svelte: 0 Fehler ✅
    kanbanStore.svelte.ts: 0 Fehler ✅
 ```
 
@@ -369,7 +369,7 @@ boardStats();
 | Icon-Import Syntax | ✅ | SendIcon, TrashIcon, LoaderIcon von `@lucide/svelte/icons/*` |
 | Button Varianten | ✅ | default (primary), outline (secondary), ghost (delete) |
 | $effect statt subscribe | ✅ | Column.svelte hat $effect mit boardStore.uiData |
-| Keine Prop-Mutationen | ✅ | CardViewDialog.svelte mutiert `card` Prop NICHT |
+| Keine Prop-Mutationen | ✅ | CardDetailsDialog.svelte mutiert `card` Prop NICHT |
 | getContextData() | ✅ | Wird für KI-Serialisierung genutzt |
 | Error Handling | ✅ | try/catch in handleAddComment() |
 | Form Validation | ✅ | Buttons deaktiviert bei leerem Text & isSubmitting |
@@ -404,7 +404,7 @@ const author = authStore.currentUser?.pubkey || 'anonymous';
 - [ ] `getCurrentUser()` gibt `{ pubkey: string }` zurück
 - [ ] Integration mit NIP-07 Signer (window.nostr)
 - [ ] Session-Management mit TTL
-- [ ] cardViewDialog.handleAddComment() nutzt authStore
+- [ ] CardDetailsDialog.handleAddComment() nutzt authStore
 
 ---
 
@@ -503,7 +503,7 @@ export class SyncManager {
 ## 📚 Architektur-Übersicht
 
 ```
-UI-Layer (CardViewDialog.svelte)
+UI-Layer (CardDetailsDialog.svelte)
     │
     ├─ handleAddComment() Event-Handler
     │  └─ boardStore.addComment(cardId, text, author)
@@ -541,7 +541,7 @@ Comment-Model-Layer (BoardModel.ts)
 ```
 Dateien modifiziert:        2
   - src/lib/stores/kanbanStore.svelte.ts (+2 lines, critical bug-fix)
-  - src/routes/cardsboard/CardViewDialog.svelte (+120 lines, UI)
+  - src/routes/cardsboard/CardDetailsDialog.svelte (+120 lines, UI)
 
 Test Pass Rate:             100% ✅
 Syntax-Fehler:              0 ❌

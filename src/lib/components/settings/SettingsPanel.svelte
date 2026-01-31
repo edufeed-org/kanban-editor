@@ -19,7 +19,6 @@
   import { Label } from '$lib/components/ui/label';
   import { Input } from '$lib/components/ui/input';
   import { Switch } from '$lib/components/ui/switch';
-  import { Slider } from '$lib/components/ui/slider';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
@@ -155,25 +154,18 @@
             <Label>Theme</Label>
             <div class="flex items-center gap-2">
               <Button 
-                variant={settings.theme === 'default' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setTheme('default')}
+                variant="default"
+                onclick={() => settingsStore.setTheme('light')}
                 class="flex-1"
               >
                 Hell
               </Button>
               <Button 
-                variant={settings.theme === 'dark' ? 'default' : 'outline'}
+                variant="default"
                 onclick={() => settingsStore.setTheme('dark')}
                 class="flex-1"
               >
                 Dunkel
-              </Button>
-              <Button 
-                variant={settings.theme === 'auto' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setTheme('auto')}
-                class="flex-1"
-              >
-                Auto
               </Button>
             </div>
           </div>
@@ -438,21 +430,14 @@
             <Label>Standard Board Publish State</Label>
             <div class="flex items-center gap-2">
               <Button 
-                variant={settings.defaultBoardPublishState === 'draft' ? 'default' : 'outline'}
-                onclick={() => settingsStore.setDefaultBoardPublishState('draft')}
-                class="flex-1"
-              >
-                Draft
-              </Button>
-              <Button 
-                variant={settings.defaultBoardPublishState === 'private' ? 'default' : 'outline'}
+                variant="default"
                 onclick={() => settingsStore.setDefaultBoardPublishState('private')}
                 class="flex-1"
               >
-                Private
+                Privat
               </Button>
               <Button 
-                variant={settings.defaultBoardPublishState === 'published' ? 'default' : 'outline'}
+                variant="default"
                 onclick={() => settingsStore.setDefaultBoardPublishState('published')}
                 class="flex-1"
               >

@@ -462,7 +462,7 @@ it('should update eventId after publish', async () => {
 
 - [ ] 5. loadComments() mit mergeComments()
 - [ ] 6. subscribeToComments() für Live-Updates
-- [ ] 7. Integration in CardViewDialog.svelte
+- [ ] 7. Integration in CardDetailsDialog.svelte
 
 ### Phase 3: Testing (Priority Medium)
 
@@ -532,7 +532,7 @@ it('should update eventId after publish', async () => {
 **Nächste Schritte:**
 1. Phase 1 implementieren (eventId + mergeComments)
 2. Tests schreiben
-3. Integration in CardViewDialog
+3. Integration in CardDetailsDialog
 
 ---
 

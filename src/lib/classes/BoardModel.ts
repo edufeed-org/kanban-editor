@@ -7,7 +7,7 @@ import { BoardRole } from '../types/sharing.js';
 // INTERFACES UND TYPEN
 // ============================================================================
 
-export type PublishState = 'draft' | 'published';
+export type PublishState = 'private' | 'published';
 
 // Basis-Interface für alle Elemente, die eine Nostr-d-tag-ID benötigen
 export interface NostrElement {
@@ -97,7 +97,7 @@ export class Card {
     public labels: string[] = [];
     public links: Link[] = [];
     public attendees: string[] = [];
-    public publishState: PublishState = 'draft';
+    public publishState: PublishState = 'private';
     public author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
     public authorName?: string; // ← NEU: Lesbar Display Name für UI
     public createdAt: string;
@@ -114,7 +114,7 @@ export class Card {
         this.labels = props.labels || [];
         this.links = props.links || [];
         this.attendees = props.attendees || [];
-        this.publishState = props.publishState || 'draft';
+        this.publishState = props.publishState || 'private';
         this.author = props.author;
         this.authorName = props.authorName; // ← NEU: authorName laden
         
@@ -289,7 +289,7 @@ export class Board {
     public name: string;
     public description?: string;
     public columns: Column[] = [];
-    public publishState: PublishState = 'draft';
+    public publishState: PublishState = 'private';
     public author?: string; // Nostr Public Key (hex pubkey)
     public authorName?: string; // 🆕 Display Name (optional, für UI)
     public maintainers: string[] = []; // ← NEU: Array von Pubkeys mit Edit-Berechtigung
@@ -307,7 +307,7 @@ export class Board {
         this.name = props.name;
         this.description = props.description;
         this.columns = (props.columns || []).map(colProps => new Column(colProps));
-        this.publishState = props.publishState || 'draft';
+        this.publishState = props.publishState || 'private';
         this.author = props.author;
         this.authorName = props.authorName; // 🆕 Display Name laden
         this.maintainers = props.maintainers || []; // ← NEU: Aus Props laden

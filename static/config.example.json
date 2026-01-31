@@ -7,7 +7,6 @@
     "maxCardsBeforeScroll": 20,
     "alignColumnsToMaxHeight": true,
     "columnWidth": 350,
-    "theme": "auto",
     "$comment": "UI-spezifische Einstellungen für Layout und Darstellung"
   },
 
@@ -41,21 +40,9 @@
     "urls": []
   },
 
-  "amb": {
-    "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) - Vokabular-URLs für dynamisches Laden",
-    "vocabularyUrls": {
-      "audience": "https://skohub.io/dini-ag-kim/lrmi-audience-role/heads/master/w3id.org/kim/lrmi-audience-role/index.json",
-      "educationalLevel": "https://skohub.io/dini-ag-kim/educationalLevel/heads/main/w3id.org/kim/educationalLevel/index.json",
-      "learningResourceType": "https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/index.json",
-      "about": "https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json"
-    },
-    "cacheTtlHours": 24,
-    "$comment_vocabularies": "audience=Zielgruppen, educationalLevel=Bildungsstufen, learningResourceType=Ressourcentypen (HCRT), about=Fächer/Themen (Schulfächer)"
-  },
-
   "defaults": {
     "columns": ["To Do", "In Progress", "Done"],
-    "boardPublishState": "draft"
+    "boardPublishState": "private"
   },
 
   "sidebar": {
@@ -70,5 +57,24 @@
   
   "allow_demo_session": {
     "enabled": false
+  },
+
+  "wissenswertes": {
+    "sourceCodeUrl": "https://github.com/edufeed-org/kanban-editor",
+    "documentationUrl": "https://github.com/edufeed-org/kanban-editor/tree/main/docs",
+    "aboutUrl": "https://github.com/edufeed-org/kanban-editor#readme",
+    "$comment": "Konfigurierbare Links für das Wissenswertes-Menü"
+  },
+
+  "amb": {
+    "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) - Vokabular-URLs für dynamisches Laden",
+    "vocabularyUrls": {
+      "audience": "https://skohub.io/dini-ag-kim/lrmi-audience-role/heads/master/w3id.org/kim/lrmi-audience-role/index.json",
+      "educationalLevel": "https://skohub.io/dini-ag-kim/educationalLevel/heads/main/w3id.org/kim/educationalLevel/index.json",
+      "learningResourceType": "https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/index.json",
+      "about": "https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json"
+    },
+    "cacheTtlHours": 24,
+    "$comment_vocabularies": "audience=Zielgruppen, educationalLevel=Bildungsstufen, learningResourceType=Ressourcentypen (HCRT), about=Fächer/Themen (Schulfächer)"
   }
 }

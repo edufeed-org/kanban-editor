@@ -59,7 +59,7 @@ kanbanStore.svelte.ts (State)
     ↓
 UI-Komponenten (Svelte)
   ├→ Board.svelte, Column.svelte, Card.svelte
-  ├→ CardDialog.svelte, CardViewDialog.svelte
+  ├→ CardDialog.svelte, CardDetailsDialog.svelte
   ├→ shadcn-svelte Komponenten (@lucide/svelte/icons/*)
   └→ $effect für Auto-Sync mit boardStore.uiData
 ```
@@ -403,7 +403,7 @@ src/
 │       ├── Column.svelte          🟡 Mit $effect sync
 │       ├── Card.svelte            🟡 Mit CardDialog integration
 │       ├── CardDialog.svelte      🟡 Edit modal
-│       ├── CardViewDialog.svelte  🟡 View modal
+│       ├── CardDetailsDialog.svelte  🟡 View modal
 │       ├── types.ts               🟡 Sollte durch BoardModel ersetzt werden
 │       ├── data.ts                🟡 Mock-Daten (zu entfernen)
 │       └── ...
@@ -1633,7 +1633,7 @@ public async addComment(cardId: string, text: string) {
 }
 ```
 
-### UI-Display (CardViewDialog.svelte)
+### UI-Display (CardDetailsDialog.svelte)
 
 ```svelte
 <!-- ✅ RICHTIG - Nutzt Fallback-Kette -->

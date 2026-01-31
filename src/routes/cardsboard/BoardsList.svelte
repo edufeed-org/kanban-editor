@@ -9,9 +9,14 @@
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
+
+    import MenuItem from './MenuItem.svelte';
+    import SubmenuItem from './SubmenuItem.svelte';
+    import SettingsDialog from './SettingsDialog.svelte';
 
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
@@ -22,21 +27,17 @@
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
     import { ProfileEditor } from '$lib/components/auth/index.js';
-    import { VersionHistory, ShareButton } from '$lib/components/board';
-    import ShareIcon2 from '@lucide/svelte/icons/share-2';
-    import ShareIcon from '@lucide/svelte/icons/share';
-    import HistoryIcon from '@lucide/svelte/icons/history';
+    import { ShareButton } from '$lib/components/board';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
     import WifiIcon from '@lucide/svelte/icons/wifi';
     import FileTextIcon from '@lucide/svelte/icons/file-text';
+    import BookIcon from '@lucide/svelte/icons/book';
+    import InfoIcon from '@lucide/svelte/icons/info';
     import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
     import RelayStatusInfo from './RelayStatusInfo.svelte';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import UploadIcon from '@lucide/svelte/icons/upload';
-    import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-    import ImportPopover from '$lib/components/ImportPopover.svelte';
-    import ExportButton from '$lib/components/ExportButton.svelte';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
@@ -77,13 +78,13 @@
         description: '',
         tags: '',
         license: 'cc-by-4.0',
-        publishState: 'draft' as 'draft' | 'published'
+        publishState: 'private' as 'private' | 'published'
     });
     
     // Derived values for board settings
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardDescription = $derived(boardStore.boardMeta.description || '');
-    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'draft');
+    let currentBoardPublishState = $derived(boardStore.data?.publishState || 'private');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
     let currentUserRole = $derived(boardStore.getCurrentUserRole());
     let canEditBoardMeta = $derived(currentUserRole === BoardRole.OWNER);
@@ -168,13 +169,9 @@
         isCreating = true;
         try {
             const newBoardId = boardStore.createBoard('Neues Board');
-            console.log('✅ Board erstellt:', newBoardId);
-            
-            // Lade das neue Board
             boardStore.loadBoard(newBoardId);
             currentBoardId = newBoardId;
-            
-            // Optional: Reset Suchfeld
+
             searchQuery = '';
         } catch (error) {
             console.error('❌ Fehler beim Erstellen:', error);
@@ -308,129 +305,49 @@
         >
             <MenuIcon class="h-5 w-5" />
         </Button>
-        
-        <h2 class="text-sm font-semibold flex-1">Meine Boards</h2>
     </div>
     
     <!-- Expandable Menu -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md overflow-hidden mb-2 shadow-md">
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Profil"
-                onclick={() => { 
-                    profileEditorOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-                disabled={!authStore.isAuthenticated}
-            >
-                <UserIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Profil</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Board-Einstellungen"
+        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md mb-2 shadow-md max-h-[60vh] overflow-y-auto">
+            <!-- 1. Eigenschaften (Board Settings) -->
+            <MenuItem 
+                icon={SettingsIcon} 
+                label="Eigenschaften" 
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
                 }}
                 disabled={!authStore.isAuthenticated}
-            >
-                <SettingsIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Board-Einstellungen</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="UI & Layout"
-                onclick={() => { 
-                    uiSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            >
-                <PaletteIcon class="h-4 w-4 text-muted-foreground" />
-                <span>UI & Layout</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="LLM Einstellungen"
-                onclick={() => { 
-                    llmSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            >
-                <BotIcon class="h-4 w-4 text-muted-foreground" />
-                <span>LLM Einstellungen</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="Nostr Relays"
-                onclick={() => { 
-                    nostrSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            >
-                <WifiIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Nostr Relays</span>
-            </button>
-            <div class="border-t"></div>
-            <button
-                type="button"
-                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                title="Standard-Werte"
-                onclick={() => { 
-                    defaultsSettingsOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-            >
-                <FileTextIcon class="h-4 w-4 text-muted-foreground" />
-                <span>Standard-Werte</span>
-            </button>
-            <div class="border-t"></div>
+                showBorder={false}
+            />
             
-            <!-- Import & Export Menu Item with Popover Submenu -->
+            <!-- 2. Import & Export Menu Item with Popover Submenu -->
             <Popover.Root bind:open={importExportPopoverOpen}>
-                <Popover.Trigger>
-                    <button
-                        type="button"
-                        class="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors"
-                        title="Import & Export"
-                    >
-                        <div class="flex items-center gap-3">
-                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Import & Export</span>
-                        </div>
-                        <ChevronRightIcon class="h-4 w-4 text-muted-foreground" />
-                    </button>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={DownloadIcon} 
+                        label="Import & Export" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
                 </Popover.Trigger>
                 <Popover.Content side="right" align="start" class="w-56 p-1">
                     <div class="space-y-0">
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="JSON importieren"
+                        <SubmenuItem 
+                            icon={UploadIcon} 
+                            label="Von JSON importieren" 
                             onclick={() => { 
                                 importDialogOpen = true;
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
                             }}
-                        >
-                            <UploadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>JSON importieren</span>
-                        </button>
+                        />
                         
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Als JSON exportieren"
+                        <SubmenuItem 
+                            icon={DownloadIcon} 
+                            label="Als JSON downloaden" 
                             onclick={() => { 
                                 try {
                                     const jsonString = boardStore.exportBoardAsJson(true);
@@ -454,72 +371,242 @@
                                     toast.error('Export fehlgeschlagen');
                                 }
                             }}
-                        >
-                            <DownloadIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Als JSON exportieren</span>
-                        </button>
+                        />
                         
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Als LiaScript exportieren"
+                        <SubmenuItem 
+                            icon={SendIcon} 
+                            label="An edufeed.org senden" 
+                            onclick={async () => { 
+                                importExportPopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                                publishToEdufeedDialogOpen = true;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Als Liascript exportieren" 
                             onclick={() => { 
                                 liaScriptExportDialogOpen = true;
                                 importExportPopoverOpen = false;
                                 hamburgerMenuOpen = false;
                             }}
-                        >
-                            <FileTextIcon class="h-4 w-4 text-muted-foreground" />
-                            <span>Als LiaScript exportieren</span>
-                        </button>
-                        
-                        <button
-                            type="button"
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent rounded transition-colors"
-                            title="Zu Nostr publizieren"
-                            onclick={() => { 
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                                publishToEdufeedDialogOpen = true;
-                            }}
-                        >
-                            <SendIcon class="h-3.5 w-3.5" />
-                            <span class="hidden md:inline">An edufeed.org senden</span>
-                        </button>
+                        />
                     </div>
                 </Popover.Content>
             </Popover.Root>
             
-            <div class="border-t"></div>
+            <!-- 3. Teilen (Share) -->
             <ShareButton 
                 variant="default"
                 class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
                 showLabel={true}
-
             />
+            
+            <!-- 4. Board duplizieren -->
+            <MenuItem 
+                icon={SquarePlusIcon} 
+                label="Board duplizieren" 
+                onclick={() => {
+                    if (!currentBoardId) {
+                        toast.error('Kein Board ausgewählt');
+                        return;
+                    }
+                    
+                    hamburgerMenuOpen = false;
+                    
+                    try {
+                        const newBoardId = boardStore.duplicateBoard(currentBoardId);
+                        if (newBoardId) {
+                            // Switch to the duplicated board
+                            window.location.href = `/cardsboard?board=${newBoardId}`;
+                        }
+                    } catch (error) {
+                        console.error('❌ Fehler beim Duplizieren:', error);
+                        toast.error('Fehler beim Duplizieren des Boards');
+                    }
+                }}
+                showBorder={false}
+            />
+            
+            <!-- 5. Board löschen -->
+            <MenuItem 
+                icon={TrashIcon} 
+                label="Board löschen" 
+                variant="danger"
+                onclick={() => {
+                    if (!currentBoardId) {
+                        toast.error('Kein Board ausgewählt');
+                        return;
+                    }
+                    
+                    const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
+                    const isShared = targetBoard?.isShared || false;
+                    const userRole = targetBoard?.userRole || 'owner';
+                    
+                    const warningText = isShared && userRole !== 'owner'
+                        ? '⚠️ Dieses Board wirklich verlassen? Sie verlieren den Zugang!'
+                        : '⚠️ Dieses Board wirklich löschen? Die Aktion kann nicht rückgängig gemacht werden!';
+                    
+                    if (!confirm(warningText)) {
+                        return;
+                    }
+                    
+                    hamburgerMenuOpen = false;
+                    
+                    try {
+                        if (isShared && userRole !== 'owner') {
+                            boardStore.leaveBoard(currentBoardId);
+                            console.log('🚪 Board verlassen:', currentBoardId);
+                            toast.success('Board erfolgreich verlassen');
+                        } else {
+                            const ok = boardStore.deleteBoard(currentBoardId);
+                            if (ok) {
+                                console.log('🗑️ Board gelöscht:', currentBoardId);
+                                toast.success('Board erfolgreich gelöscht');
+                            } else {
+                                console.log('🚫 Board NICHT gelöscht (fehlende Berechtigung):', currentBoardId);
+                                toast.error('Fehler: Board konnte nicht gelöscht werden');
+                                return;
+                            }
+                        }
+                        
+                        // Switch to another board
+                        const remaining = boardStore.getAllBoards();
+                        if (remaining.length > 0) {
+                            const newBoardId = remaining[0].id;
+                            boardStore.loadBoard(newBoardId);
+                            currentBoardId = newBoardId;
+                        } else {
+                            currentBoardId = '';
+                        }
+                    } catch (error) {
+                        console.error('❌ Fehler beim Löschen/Verlassen:', error);
+                        toast.error('Fehler beim Löschen des Boards');
+                    }
+                }}
+                disabled={!currentBoardId || !authStore.isAuthenticated}
+                showBorder={false}
+            />
+            
+            <!-- Separator 1 -->
             <div class="border-t"></div>
-            <div class="w-full">
-                <VersionHistory class="w-full justify-start hover:bg-accent rounded-none !bg-transparent" showLabel={true} />
-            </div>
+            
+            <!-- 5. Applikation Submenu -->
+            <Popover.Root>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={SettingsIcon} 
+                        label="Applikation" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-64 p-1">
+                    <div class="space-y-0">
+                        <SubmenuItem 
+                            icon={PaletteIcon} 
+                            label="UI & Layout" 
+                            onclick={() => { 
+                                uiSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={BotIcon} 
+                            label="KI-Anbindung" 
+                            onclick={() => { 
+                                llmSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={WifiIcon} 
+                            label="Nostr Relays" 
+                            onclick={() => { 
+                                nostrSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Standard-Werte" 
+                            onclick={() => { 
+                                defaultsSettingsOpen = true;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
+            
+            <!-- Separator 2 -->
+            <div class="border-t"></div>
+            
+            <!-- 6. User Nostr-Profil -->
+            <MenuItem 
+                icon={UserIcon} 
+                label="User Nostr-Profil" 
+                onclick={() => { 
+                    profileEditorOpen = true;
+                    hamburgerMenuOpen = false;
+                }}
+                disabled={!authStore.isAuthenticated}
+                showBorder={false}
+            />
+            
+            <!-- Separator 3 -->
+            <div class="border-t"></div>
+            
+            <!-- 7. Wissenswertes Submenu -->
+            <Popover.Root>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={FileTextIcon} 
+                        label="Wissenswertes" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-48 p-1">
+                    <div class="space-y-0">
+                        <SubmenuItem 
+                            icon={FileTextIcon} 
+                            label="Source Code" 
+                            onclick={() => { 
+                                window.open(settingsStore.settings.sourceCodeUrl, '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        <SubmenuItem 
+                            icon={BookIcon} 
+                            label="Dokumentation" 
+                            onclick={() => { 
+                                window.open(settingsStore.settings.documentationUrl, '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        <SubmenuItem 
+                            icon={InfoIcon} 
+                            label="Über" 
+                            onclick={() => { 
+                                window.open(settingsStore.settings.aboutUrl, '_blank');
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
         </div>
     {/if}
     
-    <Button
-        onclick={authStore.isAuthenticated ? handleCreateBoard : null}
-        disabled={authStore.isAuthenticated ? false : true}
-        class="w-full gap-2 h-auto py-2 whitespace-normal"
-        variant="default"
-        data-testid="create-board-button"
-    >
-        {#if isCreating}
-            <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
-        {:else}
-            <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
-        {/if}
-        <span class="break-words text-left">Neues Board</span>
-    </Button>
+    <h2 class="text-m font-semibold text-center upper">Meine Boards</h2>
 
-    <Separator />
     <div class="m-2 flex-shrink-0">
         <div class="relative">
             <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -623,6 +710,20 @@
         {/if}
     </div>
 
+    <Button
+        onclick={authStore.isAuthenticated ? handleCreateBoard : null}
+        disabled={authStore.isAuthenticated ? false : true}
+        class="w-full gap-2 h-auto py-2 whitespace-normal"
+        variant="default"
+        data-testid="create-board-button"
+    >
+        {#if isCreating}
+            <LoaderIcon class="h-4 w-4 animate-spin flex-shrink-0" />
+        {:else}
+            <SquarePlusIcon class="h-4 w-4 flex-shrink-0" />
+        {/if}
+        <span class="break-words text-left">Neues Board</span>
+    </Button>
 </div>
 
 <!-- Board Settings Dialog -->
@@ -663,8 +764,8 @@
                 <Label>Veröffentlichungsstatus</Label>
                 <RadioGroup.Root bind:value={metaForm.publishState} disabled={!canEditBoardMeta}>
                     <div class="flex items-center space-x-2">
-                        <RadioGroup.Item value="draft" id="state-draft" />
-                        <Label for="state-draft" class="font-normal">Draft (nur lokal)</Label>
+                        <RadioGroup.Item value="private" id="state-private" />
+                        <Label for="state-private" class="font-normal">Privat (nur lokal)</Label>
                     </div>
                     <div class="flex items-center space-x-2">
                         <RadioGroup.Item value="published" id="state-published" />
@@ -719,34 +820,10 @@
 <ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
 
 <!-- UI/UX Settings Dialog -->
-<Dialog.Root bind:open={uiSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <PaletteIcon class="h-5 w-5" />
-                UI & Layout Einstellungen
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="ui" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={uiSettingsOpen} title="UI & Layout Einstellungen" icon={PaletteIcon} tab="ui" />
 
 <!-- LLM Settings Dialog -->
-<Dialog.Root bind:open={llmSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <BotIcon class="h-5 w-5" />
-                LLM Einstellungen
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="llm" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
 
 <!-- Nostr Relay Settings Dialog -->
 <Dialog.Root bind:open={nostrSettingsOpen}>
@@ -770,19 +847,7 @@
 </Dialog.Root>
 
 <!-- Defaults Settings Dialog -->
-<Dialog.Root bind:open={defaultsSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <FileTextIcon class="h-5 w-5" />
-                Standard-Werte
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4">
-            <SettingsPanel defaultTab="defaults" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
+<SettingsDialog bind:open={defaultsSettingsOpen} title="Standard-Werte" icon={FileTextIcon} tab="defaults" />
 
 <!-- Import Dialog -->
 <Dialog.Root bind:open={importDialogOpen}>
