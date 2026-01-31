@@ -1,314 +1,350 @@
-# Agent Module - AI Integration
+# Agent Module - Tool-Based AI System
 
-**Version:** 2.0 (Nach aiActionGenerator.ts Migration)  
-**Datum:** 06. November 2025  
-**Status:** ✅ KONSOLIDIERT
+**Version:** 3.0 (Tool-Based Architecture)  
+**Datum:** 31. Januar 2026  
+**Status:** ✅ PRODUCTION READY
 
 ---
 
 ## Übersicht
 
-Das `agent/` Modul konsolidiert **alle AI-bezogenen Funktionen** für das KI-gestützte Kanban-Board.
+Das `agent/` Modul implementiert ein **Tool-Based AI System** mit OpenAI Function Calling. Das alte 3-Phasen System (Intent Detection → Content Proposal → Structure Generation) wurde **vollständig ersetzt**.
 
 **Architektur:**
 
 ```
 src/lib/agent/
 ├── index.ts                    ← Zentrale Exports (Public API)
-├── types.ts                    ← TypeScript Interfaces
-├── intentDetection.ts          ← User Intent Detection
-├── contentProposal.ts          ← Phase 1: Content Parsing
-├── structureGeneration.ts      ← Phase 2: JSON Validation & Parsing
-└── actionProcessing.ts         ← Phase 3: Board Actions Execution
+├── types.ts                    ← TypeScript Interfaces (Tool-Types)
+├── llmRequest.ts               ← LLM API Wrapper (OpenAI/Ollama)
+└── tools/                      ← Tool-Based AI System
+    ├── index.ts                ← Tool Exports
+    ├── toolDefinitions.ts      ← OpenAI Function Calling Schemas
+    ├── toolExecutor.ts         ← Tool Dispatcher & Execution
+    └── toolSystemPrompt.ts     ← Kontextbewusster System Prompt
 ```
 
 ---
 
-## Public API (`index.ts`)
+## Konzept: Tool-Based AI (OpenAI Function Calling)
 
-**Import alles via:**
-```typescript
-import { ... } from '$lib/agent';
+Statt manuell LLM-Responses zu parsen, verwendet das System **OpenAI Function Calling**:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  User: "Erstelle eine Karte zu Fake News"                       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  LLM + Tools: Wählt automatisch `add_card` Tool                 │
+│  Response: { tool_calls: [{ name: "add_card", args: {...} }] }  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  Tool Executor: Führt `add_card` mit BoardStore aus             │
+│  → Karte wird erstellt, User erhält Feedback                    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Types
-
-```typescript
-export type {
-  UserIntent,           // 'explicit' | 'confirmation' | 'vague'
-  ContentProposal,      // { content, canGenerate, reason? }
-  StructureProposal,    // { title, columns: [{ name, cards }] }
-  BoardPreview,         // { columns, totalCards }
-  AIAction,             // from BoardModel.ts
-  ValidationResult      // { valid, error?, data? }
-} from './types';
-```
-
-### Intent Detection
-
-```typescript
-export {
-  detectUserIntent,           // string → UserIntent
-  getIntentAwareSystemPrompt  // UserIntent → string
-} from './intentDetection';
-```
-
-### Phase 1: Content Proposal
-
-```typescript
-export {
-  parseContentProposal  // LLM Response → ContentProposal
-} from './contentProposal';
-```
-
-### Phase 2: Structure Generation
-
-```typescript
-export {
-  STRUCTURE_GENERATION_SYSTEM_PROMPT,  // System-Prompt Konstante
-  generateStructurePrompt,             // Content → User-Prompt
-  validateStructureJSON,               // JSON String → ValidationResult
-  parseStructureProposal,              // Validated JSON → StructureProposal
-  structureToActions                   // StructureProposal → AIAction[]
-} from './structureGeneration';
-```
-
-### Phase 3: Action Processing
-
-```typescript
-export {
-  createBoardPreview,   // StructureProposal → BoardPreview
-  executeActions        // AIAction[] → Board Updates (via BoardStore)
-} from './actionProcessing';
-```
+**Vorteile:**
+- ✅ Keine manuelle JSON-Validierung nötig
+- ✅ LLM wählt automatisch das richtige Tool
+- ✅ Robuster als Text-Parsing
+- ✅ Erweiterbar (neue Tools = neue Funktionen)
 
 ---
 
-## 3-Phasen System
+## Verfügbare Tools
 
-### Phase 1: Content-Vorschlag
+### Board Tools
 
-**Ziel:** LLM liefert Markdown-Content, User reviewed
+| Tool | Beschreibung |
+|------|--------------|
+| `populate_board` | Befüllt Board komplett mit Spalten & Karten |
+| `update_board` | Aktualisiert Board-Metadaten (Beschreibung, Tags) |
 
-**Flow:**
-1. User sendet Prompt
-2. LLM antwortet mit Markdown
-3. `parseContentProposal()` analysiert Response
-4. UI zeigt Content + "Board generieren?" Button
+### Column Tools
 
-**Code:**
-```typescript
-const proposal = await parseContentProposal(llmResponse);
+| Tool | Beschreibung |
+|------|--------------|
+| `add_column` | Fügt neue Spalte hinzu |
+| `update_column` | Benennt Spalte um |
+| `delete_column` | Löscht Spalte inkl. Karten |
 
-if (proposal.canGenerate) {
-  // Zeige "Board generieren" Button
-} else {
-  // Nur Content anzeigen (kein Board möglich)
-}
-```
+### Card Tools
 
----
+| Tool | Beschreibung |
+|------|--------------|
+| `add_card` | Erstellt einzelne Karte in Spalte |
+| `update_card` | Aktualisiert Karten-Inhalt, Labels, Links, Bild |
+| `move_card` | Verschiebt Karte zwischen Spalten |
+| `delete_card` | Löscht Karte |
 
-### Phase 2: Struktur-Generation
+### Comment Tools
 
-**Ziel:** LLM generiert valides JSON für Board-Struktur
+| Tool | Beschreibung |
+|------|--------------|
+| `add_comment` | Fügt Kommentar zu Karte hinzu |
 
-**Flow:**
-1. User klickt "Board generieren"
-2. `generateStructurePrompt()` erstellt User-Prompt
-3. LLM antwortet mit JSON
-4. `validateStructureJSON()` prüft Format
-5. `parseStructureProposal()` extrahiert Struktur
-6. UI zeigt Preview
+### Meta Tools
 
-**Code:**
-```typescript
-// 1. Generate Prompt
-const userPrompt = generateStructurePrompt(content, {
-  existingColumns: ['Einführung', 'Übung']
-});
-
-// 2. Send to LLM (with STRUCTURE_GENERATION_SYSTEM_PROMPT)
-const jsonResponse = await sendToLLM(userPrompt, STRUCTURE_GENERATION_SYSTEM_PROMPT);
-
-// 3. Validate
-const validation = validateStructureJSON(jsonResponse);
-if (!validation.valid) {
-  throw new Error(validation.error);
-}
-
-// 4. Parse
-const structure = parseStructureProposal(validation.data);
-
-// 5. Preview
-const preview = createBoardPreview(structure);
-console.log(`Board: ${preview.totalCards} Karten in ${preview.columns.length} Spalten`);
-```
+| Tool | Beschreibung |
+|------|--------------|
+| `respond` | Antwortet ohne Board-Aktion (Fragen, Erklärungen) |
+| `ask_clarification` | Fragt nach mehr Details |
 
 ---
 
-### Phase 3: Action Execution
+## Public API
 
-**Ziel:** Struktur wird zu Board-Aktionen konvertiert & ausgeführt
-
-**Flow:**
-1. User bestätigt Preview
-2. `structureToActions()` konvertiert zu AIActions
-3. `executeActions()` führt aus (via BoardStore)
-4. Board wird aktualisiert
-
-**Code:**
-```typescript
-// 1. Convert to Actions
-const actions = structureToActions(structure);
-
-// 2. Execute (via BoardStore)
-await executeActions(actions, boardStore);
-
-// 3. Done! Board ist aktualisiert
-```
-
----
-
-## Validierung
-
-### JSON Auto-Extraktion
-
-`validateStructureJSON()` unterstützt verschiedene Formate:
+### Import
 
 ```typescript
-// ✅ Pure JSON
-validateStructureJSON('{ "title": "...", "columns": [...] }');
+// Zentrale Imports
+import { llmRequest } from '$lib/agent';
+import type { ToolDefinition, ToolCall, ToolResult } from '$lib/agent';
 
-// ✅ Markdown Code-Block
-validateStructureJSON('```json\n{ "title": "...", "columns": [...] }\n```');
-
-// ✅ JSON in Text
-validateStructureJSON('Text\n{ "title": "...", "columns": [...] }\nText');
-```
-
-### Detaillierte Fehler
-
-```typescript
-const result = validateStructureJSON(jsonString);
-
-if (!result.valid) {
-  console.error(result.error);
-  // Beispiele:
-  // "Column 2 missing or invalid "name""
-  // "Column "Übung" Card 3 heading too short (min 3 chars)"
-  // "Response does not contain JSON object. Starts with: "Hier ist...""
-}
-```
-
----
-
-## Migration von `aiActionGenerator.ts`
-
-**Status:** ✅ COMPLETED (06.11.2025)
-
-**Änderungen:**
-
-| Alt (utils/) | Neu (agent/) | Bemerkung |
-|-------------|--------------|-----------|
-| `aiActionGenerator.ts` | ❌ Gelöscht | Alle Funktionen migriert |
-| `generateStructureFromContent()` | `generateStructurePrompt()` | Umbenannt |
-| `validateStructureJSON()` | `validateStructureJSON()` | Erweitert (Auto-Extraktion) |
-| `parseStructureProposal()` | `parseStructureProposal()` | Unverändert |
-| `structureToActions()` | `structureToActions()` | Unverändert |
-
-**Details:** [MIGRATION-AIACTIONGENERATOR.md](./MIGRATION-AIACTIONGENERATOR.md)
-
----
-
-## Verwendung in Komponenten
-
-### AIPanel.svelte (Beispiel)
-
-```typescript
+// Tool-spezifische Imports
 import {
-  parseContentProposal,
-  STRUCTURE_GENERATION_SYSTEM_PROMPT,
-  generateStructurePrompt,
-  validateStructureJSON,
-  parseStructureProposal,
-  structureToActions
-} from '$lib/agent';
+  toolDefinitions,
+  getToolDefinitions,
+  buildToolSystemPrompt,
+  executeToolCall,
+  executeToolCalls
+} from '$lib/agent/tools';
+```
 
-// Phase 1: Parse Content
-const proposal = await parseContentProposal(llmResponse);
+### Types (`types.ts`)
 
-if (proposal.canGenerate) {
-  // Phase 2: Generate Structure
-  const userPrompt = generateStructurePrompt(proposal.content, {
-    existingColumns: boardStore.uiData.map(c => c.name)
+```typescript
+// OpenAI Function Calling Format
+interface ToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: { type: 'object'; properties: Record<string, any>; required: string[] };
+  };
+}
+
+// Tool-Call aus LLM Response
+interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };  // JSON string
+}
+
+// Ergebnis einer Tool-Ausführung
+interface ToolResult {
+  tool_call_id: string;
+  tool_name: string;
+  success: boolean;
+  result?: any;
+  error?: string;
+}
+```
+
+---
+
+## Verwendung
+
+### 1. System Prompt mit Board-Kontext erstellen
+
+```typescript
+import { buildToolSystemPrompt } from '$lib/agent/tools';
+
+const systemPrompt = buildToolSystemPrompt(
+  {
+    name: boardStore.board.name,
+    description: boardStore.board.description,
+    columns: boardStore.uiData
+  },
+  selectedCard  // Optional: aktuell selektierte Karte
+);
+```
+
+### 2. LLM Request mit Tools
+
+```typescript
+import { getToolDefinitions } from '$lib/agent/tools';
+
+const response = await fetch(endpoint, {
+  method: 'POST',
+  body: JSON.stringify({
+    model: 'gpt-4',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ],
+    tools: getToolDefinitions(),  // ← Alle Tool-Schemas
+    tool_choice: 'auto'
+  })
+});
+```
+
+### 3. Tool-Calls ausführen
+
+```typescript
+import { executeToolCalls } from '$lib/agent/tools';
+
+const toolCalls = response.choices[0].message.tool_calls;
+
+if (toolCalls) {
+  const results = await executeToolCalls(toolCalls, {
+    boardOperations,  // BoardOperations instance
+    nostrIntegration, // NostrIntegration instance
+    board: boardStore.board
   });
   
-  const jsonResponse = await chatStore.sendToLLMWithSystem(
-    userPrompt,
-    STRUCTURE_GENERATION_SYSTEM_PROMPT
-  );
-  
-  const validation = validateStructureJSON(jsonResponse);
-  
-  if (validation.valid) {
-    const structure = parseStructureProposal(validation.data);
-    
-    // Phase 3: Execute
-    const actions = structureToActions(structure);
-    await executeActions(actions, boardStore);
+  // Ergebnisse verarbeiten
+  for (const result of results) {
+    if (result.success) {
+      console.log(`✅ ${result.tool_name}: ${result.result}`);
+    } else {
+      console.error(`❌ ${result.tool_name}: ${result.error}`);
+    }
   }
 }
 ```
 
 ---
 
-## Tests
+## LLM Request Utility
 
-**Test-Dateien:**
-```
-src/lib/agent/
-├── intentDetection.test.ts     ← Intent Detection Unit Tests
-└── (TODO: weitere Tests)
+`llmRequest.ts` bietet einen generischen LLM-Wrapper:
+
+```typescript
+import { llmRequest } from '$lib/agent';
+
+// Text-Response
+const text = await llmRequest({
+  systemPrompt: 'Du bist ein hilfreicher Assistent.',
+  userMessage: 'Was ist 2+2?',
+  returnType: 'text'
+});
+
+// JSON-Response (mit Auto-Extraktion)
+const json = await llmRequest<{ answer: number }>({
+  systemPrompt: 'Antworte nur mit JSON.',
+  userMessage: 'Was ist 2+2?',
+  returnType: 'json'
+});
+
+// → Unterstützt: OpenAI, OpenRouter, Ollama (auto-detect)
 ```
 
-**Test-Coverage:**
-- [x] Intent Detection
-- [ ] Content Proposal Parsing
-- [ ] JSON Validation (verschiedene Formate)
-- [ ] Structure Parsing
-- [ ] Action Conversion
-- [ ] E2E: Full 3-Phase Flow
+**Features:**
+- ✅ Auto-Detection: OpenAI vs Ollama Endpoint
+- ✅ JSON Auto-Extraktion (aus Markdown, Text)
+- ✅ Reasoning-Model Support (DeepSeek, o1)
+- ✅ Konfiguration via `settingsStore`
 
 ---
 
-## Dokumentation
+## Tool Executor Details
 
-- **[MIGRATION-AIACTIONGENERATOR.md](./MIGRATION-AIACTIONGENERATOR.md)** - Migration Guide
-- **[TWO-PHASE-AI-RESPONSE.md](../../FEATURE/TWO-PHASE-AI-RESPONSE.md)** - Feature Spec
-- **[AI-INTEGRATION.md](../../FEATURE/AI-INTEGRATION.md)** - Gesamtübersicht
+Der `toolExecutor.ts` enthält:
+
+### JSON Repair
+
+LLMs (besonders Ollama) erzeugen manchmal fehlerhaftes JSON. Der Executor repariert:
+- Echte Newlines in Strings → `\n`
+- Doppelt escapte Characters → `\\n` → `\n`
+- Fehlende schließende Klammern
+- Extra Text nach JSON
+
+### Execution Context
+
+```typescript
+interface ExecutionContext {
+  boardOperations: BoardOperations;
+  nostrIntegration: NostrIntegration;
+  board: Board;
+}
+```
+
+### Tool Dispatch
+
+Jedes Tool wird an die entsprechende `BoardOperations` Methode dispatcht:
+
+```typescript
+// add_card → BoardOperations.createCard()
+// update_card → BoardOperations.editCard()
+// move_card → BoardOperations.moveCard()
+// etc.
+```
+
+---
+
+## Konfiguration
+
+Die LLM-Einstellungen kommen aus `settingsStore`:
+
+| Setting | Beschreibung |
+|---------|--------------|
+| `llmBaseUrl` | API-Endpoint (OpenAI, OpenRouter, Ollama) |
+| `llmApiKey` | API-Key (nicht nötig für Ollama) |
+| `llmModel` | Model-Name (z.B. `gpt-4`, `llama3`) |
+
+---
+
+## Archivierte Dokumentation
+
+Das alte 3-Phasen System wurde archiviert:
+- `archive/MIGRATION-AIACTIONGENERATOR.md` - Historische Migration
+- `archive/TWO-PHASE-AI-RESPONSE.md` - Altes 2-Phasen System
+
+Diese Dateien sind **nicht mehr relevant** für die aktuelle Implementierung.
+
+---
+
+## Erweiterung: Neue Tools hinzufügen
+
+### 1. Tool-Definition in `toolDefinitions.ts`
+
+```typescript
+{
+  type: 'function',
+  function: {
+    name: 'my_new_tool',
+    description: 'Beschreibung für das LLM',
+    parameters: {
+      type: 'object',
+      properties: {
+        param1: { type: 'string', description: '...' }
+      },
+      required: ['param1']
+    }
+  }
+}
+```
+
+### 2. Handler in `toolExecutor.ts`
+
+```typescript
+case 'my_new_tool': {
+  const { param1 } = args;
+  // Implementierung...
+  return { success: true, result: 'Ergebnis' };
+}
+```
 
 ---
 
 ## Roadmap
 
-**Phase 1 (Current):** ✅ Konsolidierung
-- [x] Migration von `aiActionGenerator.ts`
-- [x] Erweiterte JSON-Validierung
-- [x] Bessere Prompts
+**Aktuell (v3.0):** ✅ Tool-Based AI System
+- [x] OpenAI Function Calling
+- [x] Board/Column/Card Tools
+- [x] JSON Repair für LLM-Fehler
+- [x] Multi-Provider Support (OpenAI, Ollama)
 
-**Phase 2 (Next):**
-- [ ] Error Recovery (Retry-Logik bei Parse-Fehlern)
-- [ ] Streaming Support (JSON Partial Parsing)
-- [ ] Multi-Board Support (Context aus mehreren Boards)
-
-**Phase 3 (Future):**
-- [ ] Custom AI Providers (nicht nur ChatGPT)
-- [ ] Fine-tuning für Lern-Domänen
-- [ ] Action Templates (vorgefertigte Strukturen)
+**Geplant (feature/ai-mcp Branch):**
+- [ ] OER-Suche Tools (`search_oer`, `add_cards_from_oer`)
+- [ ] URL-Import Tool (`import_from_url`)
+- [ ] MCP Server Integration
 
 ---
 
-**Zuletzt aktualisiert:** 06. November 2025  
-**Maintainer:** AI Team  
+**Zuletzt aktualisiert:** 31. Januar 2026  
 **Status:** ✅ Production Ready

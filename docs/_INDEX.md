@@ -407,14 +407,8 @@ docs/
 | Datei | Zweck | Status |
 |-------|-------|--------|
 | [`COMMENTS.md`](./FEATURE/COMMENTS.md) | Kommentar-System Feature Dokumentation | ✅ |
-| [`TOOL-BASED-AI.md`](./FEATURE/TOOL-BASED-AI.md) | 🆕 **NEU (21.01.26)**: MCP-Style Tool-Based KI (ersetzt Phase 1/2 Ansatz) | ✅ Neu |
-| [`AI-INTEGRATION.md`](./FEATURE/AI-INTEGRATION.md) | ⚠️ **DEPRECATED**: KI-Chatbot (Phase 3 Foundation) - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
-| [`TWO-PHASE-AI-RESPONSE.md`](./FEATURE/TWO-PHASE-AI-RESPONSE.md) | ⚠️ **DEPRECATED**: 2-Phase Response - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
-| [`TWO-PHASE-AI-RESPONSE-INTEGRATION.md`](./FEATURE/TWO-PHASE-AI-RESPONSE-INTEGRATION.md) | ⚠️ **DEPRECATED**: 2-Phase Integration - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
-| [`LLM-INTENT-DETECTION.md`](./FEATURE/LLM-INTENT-DETECTION.md) | ⚠️ **DEPRECATED**: Intent-Erkennung - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
-| [`INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) | ⚠️ **DEPRECATED**: Struktur-Analyse - siehe TOOL-BASED-AI.md | ⚠️ Deprecated |
-| [`PASTE-SYSTEM.md`](./FEATURE/PASTE-SYSTEM.md) | Phase 1.5 - Paste Handler für URLs, Bilder, Text, Nostr | ✅ Neu (25.10.) |
-| [`MERGE-SYSTEM.md`](./FEATURE/MERGE-SYSTEM.md) | Phase 1.5 - Git-like 3-way Merge + Visual Test Route | ✅ Neu (26.10.) |
+| [`TOOL-BASED-AI.md`](./AGENT/TOOL-BASED-AI.md) | 🆕 **NEU (21.01.26)**: MCP-Style Tool-Based KI 
+| [`OER-FINDER-CHAT-BOT-INTEGRATION.md`](./AGENT/OER-FINDER-CHAT-BOT-INTEGRATION.md) | OER-Finder Integration für Chatbot fügt OER-Content hinzu  ✅ Neu |
 | [`SHARELINK.md`](./FEATURE/SHARELINK.md) | Phase 1.5 - URL-basiertes Board-Sharing mit Token-Encoding | ✅ Neu (31.10.) |
 | [`IMPORT-EXPORT.md`](./FEATURE/IMPORT-EXPORT.md) | Phase 1.5 - JSON-Export/Import mit 3 Modi (merge/new/overwrite) | ✅ Neu (31.10.) |
 | [`BOARD-SNAPSHOTS.md`](./FEATURE/BOARD-SNAPSHOTS.md) | 🆕 **NEU (28.12.)**: Phase 1.5 - Board Versioning mit Kind 30303 Snapshots | ✅ Neu (28.12.) |
