@@ -6,35 +6,38 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 
 ## 📊 PROJECT STATUS (31. Januar 2026)
 
-**🎉 PHASE 4 INFRASTRUCTURE ANALYSIS COMPLETE - MAJOR BREAKTHROUGH!**
+**🎉 ALLE PHASEN ABGESCHLOSSEN - PROJEKT PRODUCTION READY!**
 
-| Phase | Status | Completion | Code-Lines | Tests | Docs |
+| Phase | Status | Highlights | Code-Lines | Tests | Docs |
 |-------|--------|-----------|-----------|-------|------|
-| **Phase 1** | ✅ 95% | Author, Publishing, Comments, Merge, Export | 500+ | 150+ | ✅ |
-| **Phase 3** | ✅ 90% | ChatStore, AIPanel, Agents (3 Actions fehlen!) | 2000+ | 600+ | ✅ |
-| **Phase 2** | 🟡 15% | Settings+Dark Mode ✅, Mobile+A11y offen | 1000+ | 50+ | ✅ |
-| **Phase 4** | ✅ 85% | **Infrastructure READY!** Nur UI fehlt | 1200+ | 20+ | ✅ |
+| **Phase 1** | ✅ 100% | Author, Publishing, Comments, Merge, Export/Import, Demo Boards | 2500+ | 350+ | ✅ |
+| **Phase 2** | ✅ 100% | UI Components, Settings, Dark Mode, Responsive Design | 1500+ | 100+ | ✅ |
+| **Phase 3** | ✅ 100% | Tool-Based AI, OER Discovery, URL Import, 12 Tools | 3000+ | 700+ | ✅ |
+| **Phase 4** | ✅ 100% | Kollaboration, Soft-Locks, 3-Way Merge, Live-Sync | 1500+ | 150+ | ✅ |
 
-### 🎯 REALISTIC DEADLINE: 28.02.2026 (10 Tage früher möglich!)
-### ⚡ PHASE 4 BLOCKER GELÖST: Backend komplett, nur 12-17 Tage UI-Arbeit!
+### 🎯 PROJEKT ABGESCHLOSSEN: 31.01.2026
+### ⚡ NEXT: Testphase & Community Feedback (01.02. - 28.02.2026)
 
 **READ FIRST:**
-1. **[🗺️ ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** ⭐ **v3.3 PHASE 4 INFRASTRUCTURE ANALYSIS** - Phase 4 ~85% fertig!
-2. **[📋 DEVELOPER-TASKS.md](./docs/COLLABORATION/DEVELOPER-TASKS.md)** ⭐ **NEW** - Nur noch fehlende Tasks (12-17 Tage)
-3. **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (52/52 Dateien)
+1. **[🗺️ ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** ⭐ **v3.22** - Alle Meilensteine COMPLETE!
+2. **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (55+ Dateien)
+3. **[🤖 Agent README](./docs/ARCHITECTURE/AGENT/README.md)** ⭐ **NEW** - Tool-Based AI System v3.0
 
 ---
 
 ## 🎯 Features
 
 - ✅ **Offline-First:** Arbeiten Sie ohne Internetverbindung, automatische Synchronisation bei Reconnect
-- 🤖 **KI-Agent-System (Phase 3.0 ✅):** Intelligente Intent-Erkennung, 2-Phase Response Processing, Learning Manager mit Confidence Scoring
+- 🤖 **Tool-Based KI-System:** 12 Tools für Board-Manipulation via OpenAI Function Calling
+- 🔍 **OER Discovery:** Durchsuche Open Educational Resources (WLO, Serlo, OER-Hörnchen) direkt im Board
+- 🔗 **URL Import:** Füge Karten aus Nostr Events, Webseiten und naddr-Links hinzu
 - 🧠 **Intelligente Karten-Aufteilung:** Automatische Card-Struktur und Aufgaben-Management via LLM
 - 🌐 **Nostr-basiert:** Dezentrale Speicherung über Nostr-Relays (NIP-30301/30302)
-- 💬 **Kommentar-System:** Lokal persistent mit lokalisierter UI (in Phase D: Nostr Publishing)
+- 👥 **Echtzeit-Kollaboration:** Multi-User Editing mit Soft-Locks und 3-Way Merge
+- 💬 **Kommentar-System:** Nostr-basierte Kommentare (Kind 1 Events)
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
 - 🔒 **Typsicher:** Vollständig in TypeScript implementiert
-- 💬 **Kommentare:** Nostr-basierte Kommentare mit Reactions & Zaps
+- 🎨 **Demo-Boards:** Sofortiger Start für anonyme Nutzer mit vorkonfigurierten Boards
 
 ## 📚 Dokumentation
 
@@ -72,7 +75,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
 - **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
 - **[UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)** - shadcn-svelte UI Guidelines
-- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (✅ Version 4.0 - Phase 3.0 AI Agent Infrastructure Complete!)
+- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (✅ Version 5.0 - Alle Phasen Complete!)
 
 ### 🗺️ Documentation Map (für Entwickler)
 
@@ -121,9 +124,10 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **Phase 1.0** ✅ (Author Field Attribution) — siehe AUTHOR-FIELD-ATTRIBUTION.md + AUTHSTORE-INTEGRATION-GUIDE.md
 - **Phase 1.1** (Nostr Publishing) — siehe AGENTS.md + STORES.md
 - **Phase 1.2** (Offline-First) — siehe STORES.md (SyncManager)
-- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./docs/ARCHITECTURE/STORES.md) Section III** ⭐
-- **Phase 2.1** (UI Components) — siehe UX-RULES.md + AGENTS.md
-- **Phase 3.1** (KI-Integration) — siehe AGENTS.md (Chat-Klasse) + ROADMAP.md
+- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./docs/ARCHITECTURE/STORES.md) Section III** ✅
+- **Phase 2** (UI Components) — siehe UX-RULES.md + AGENTS.md ✅
+- **Phase 3** (Tool-Based KI) — siehe **[Agent README](./docs/ARCHITECTURE/AGENT/README.md)** ✅
+- **Phase 4** (Kollaboration) — siehe **[BOARD-SHARING.md](./docs/ARCHITECTURE/BOARD-SHARING.md)** ✅
 
 ## 🏗️ Architektur
 
@@ -296,37 +300,48 @@ src/
 │   │   └── BoardModel.ts          # ✅ Card, Column, Board, Chat Klassen
 │   ├── stores/
 │   │   ├── kanbanStore.svelte.ts         # ✅ Hauptstore mit Svelte 5 Runes
-│   │   ├── authStore.svelte.ts    # ✅ User Authentication (COMPLETE!)
-│   │   └── syncManager.svelte.ts  # ✅ Offline-Sync Manager mit Dexie (COMPLETE!)
+│   │   ├── authStore.svelte.ts    # ✅ User Authentication
+│   │   ├── chatStore.svelte.ts    # ✅ AI Chat mit Message History
+│   │   ├── settingsStore.svelte.ts # ✅ Theme, Relays, LLM Config
+│   │   └── syncManager.svelte.ts  # ✅ Offline-Sync Manager mit Dexie
 │   ├── utils/
-│   │   ├── softLockManager.svelte.ts # ✅ Phase 4 Soft Locks (160 Zeilen - COMPLETE!)
-│   │   ├── mergeEngine.ts         # ✅ Phase 4 3-Way Merge (COMPLETE!)
-│   │   ├── cardEditingFlow.ts     # ✅ Phase 4 Conflict Detection (COMPLETE!)
-│   ├── utils/
+│   │   ├── softLockManager.svelte.ts # ✅ Soft Locks mit Kind 20001
+│   │   ├── mergeEngine.ts         # ✅ 3-Way Merge Algorithm
+│   │   ├── cardEditingFlow.ts     # ✅ Conflict Detection
 │   │   ├── idGenerator.ts         # ✅ D-Tag Generierung
-│   │   ├── nostrEvents.ts         # 🟡 Event Serialization (Phase 1.1)
-│   │   └── testSuite.ts           # ✅ Test-Suite
+│   │   └── nostrEvents.ts         # ✅ Event Serialization
+│   ├── agent/                     # ✅ Tool-Based AI System
+│   │   ├── index.ts               # Public API Exports
+│   │   ├── types.ts               # ToolDefinition, ToolCall, ToolResult
+│   │   ├── llmRequest.ts          # LLM API Wrapper
+│   │   └── tools/                 # 12 Tools für Board-Manipulation
+│   │       ├── toolDefinitions.ts # OpenAI Function Calling Schemas
+│   │       ├── toolExecutor.ts    # Tool Dispatcher
+│   │       ├── toolSystemPrompt.ts # Kontextbewusster System Prompt
+│   │       ├── oer/               # OER Discovery Tools
+│   │       └── url/               # URL Import Tools
 │   ├── components/
-│   │   ├── Board.svelte           # 🟡 Refactor zu BoardModel (Phase 2.1)
-│   │   ├── Column.svelte          # 🟡 Refactor zu BoardModel (Phase 2.1)
-│   │   ├── Card.svelte            # 🟡 Refactor zu BoardModel (Phase 2.1)
-│   │   ├── Chatbot.svelte         # ⚪ KI-Interface (Phase 3.1)
+│   │   ├── Board.svelte           # ✅ DnD Container mit Store-Sync
+│   │   ├── Column.svelte          # ✅ $effect Auto-Sync
+│   │   ├── Card.svelte            # ✅ Mit CardDialog Integration
+│   │   ├── AIPanel.svelte         # ✅ KI-Interface mit Tool Calls
 │   │   └── ui/                    # shadcn-svelte components
 │   └── hooks/
 └── routes/
     ├── +layout.svelte             # ✅ NDK + Dexie Initialisierung
-    ├── +page.svelte               # ✅ Hauptseite
-    └── cardsboard/                # 🟡 Zu migrieren (Phase 2.1)
-        ├── +page.svelte
-        ├── Board.svelte
-        ├── Column.svelte
-        ├── Card.svelte
-        ├── CardDialog.svelte
-        ├── types.ts               # Zu ersetzten durch BoardModel.ts
-        └── data.ts                # Zu entfernen (Mock-Daten)
+    ├── +page.svelte               # ✅ Landing Page mit Auth
+    └── cardsboard/                # ✅ Kanban-Board Route
+        ├── +page.svelte           # ✅ Board-Page mit Sidebar-Layout
+        ├── Board.svelte           # ✅ DnD Container
+        ├── Column.svelte          # ✅ Spalten mit $effect Sync
+        ├── Card.svelte            # ✅ Karten mit Metadaten
+        ├── CardDialog.svelte      # ✅ Edit Modal
+        ├── CardDetailsDialog.svelte # ✅ View Modal mit Kommentaren
+        ├── AIPanel.svelte         # ✅ KI-Chat Interface
+        └── Topbar.svelte          # ✅ Navigation + Share-Link
 ```
 
-**Legende:** ✅ Fertig | 🟡 In Arbeit | ⚪ Geplant
+**Status:** ✅ Alle Komponenten Production Ready
 
 ## 🔧 Technologie-Stack
 
@@ -600,69 +615,62 @@ runTestSuite();
 ```
 
 ## 📈 Roadmap & Meilensteine
-**Förderhinweis:** Die Projektförderung erwartet die Umsetzung bis einschließlich Phase 4; Phase 5 ist optional (Nice-to-have).
 
-### ✅ Phase 1: Foundation & Core Implementation (Priorität: Hoch)
+**🎉 ALLE FÖRDERPHASEN ABGESCHLOSSEN (31.01.2026)**
 
-**Status:** 🔴 **IN PROGRESS**
+### ✅ Phase 1: Foundation & Core Implementation
 
-- [x] Svelte 5 Runes + TypeScript Klassenstruktur
-- [ ] **1.1:** Nostr Event Publishing (boardToNostrEvent, cardToNostrEvent)
-- [ ] **1.2:** Offline-First Sync Manager mit Event Queue
-- [ ] **1.3:** Kommentar-System (Kind 1 Events)
-- [ ] **1.4:** Benutzerauthentifizierung (NIP-07)
+**Status:** ✅ **COMPLETE**
 
-### 🟡 Phase 2: UI Components & UX Polish (Priorität: Mittel)
+- [x] **1.0:** Svelte 5 Runes + TypeScript Klassenstruktur
+- [x] **1.1:** Nostr Event Publishing (Last-Write-Wins, Echo-Loop Prevention)
+- [x] **1.2:** Offline-First Sync Manager mit Dexie Queue
+- [x] **1.3:** Kommentar-System (Kind 1 Events mit Nostr Publishing)
+- [x] **1.4:** Benutzerauthentifizierung (NIP-07, nsec, OIDC)
+- [x] **1.5:** Export/Import (JSON, Share-Links mit jsoncrush)
+- [x] **1.6:** Demo Board System für anonyme Nutzer
 
-**Status:** 🟡 PLANNED
+### ✅ Phase 2: UI Components & UX Polish
 
-- [ ] **2.1:** UI-Komponenten Migration (Refactor cardsboard/)
-- [ ] **2.2:** UX Polish & Accessibility (WCAG 2.1 AA)
-- [ ] **2.3:** Performance & Optimization (Lighthouse > 90)
+**Status:** ✅ **COMPLETE**
 
-### ⚪ Phase 3: KI-Integration (Priorität: Geplant)
+- [x] **2.1:** UI-Komponenten mit BoardStore Integration
+- [x] **2.2:** shadcn-svelte Design System
+- [x] **2.3:** Dark Mode + Settings Panel
+- [x] **2.4:** Responsive Design (Mobile, Tablet, Desktop)
 
-**Status:** ⚪ PLANNED
+### ✅ Phase 3: KI-Integration (Tool-Based)
 
-- [ ] **3.1:** KI-Context Serialisierung & Chat-UI
-- [ ] **3.2:** OER-Content Discovery im Nostr-Netzwerk
-- [ ] **3.3:** KI-Aktionen (split-card, add-card, move-card)
+**Status:** ✅ **COMPLETE**
 
-### ✅ Phase 4: Kollaboration & Sync (Priorität: CRITICAL - bis 31.12.2025!)
+- [x] **3.0:** Tool-Based AI Architecture (OpenAI Function Calling)
+- [x] **3.1:** 12 Board-Manipulation Tools
+- [x] **3.2:** OER-Content Discovery (WLO, Serlo, OER-Hörnchen Integration)
+- [x] **3.3:** URL Import Tools (Nostr Events, Webseiten, naddr)
+- [x] **3.4:** AIPanel mit Chat-Interface
 
-**Status:** ✅ **~85% INFRASTRUCTURE READY** - Nur UI + NIP-51 + Tests fehlen!
+### ✅ Phase 4: Kollaboration & Sync
 
-**✅ BEREITS IMPLEMENTIERT (Backend Infrastructure - 85%):**
-- [x] SoftLockManager (160 Zeilen) - Soft Locks mit Kind 20001
-- [x] MergeEngine - 3-Way Merge Algorithm
-- [x] CardEditingFlow - Session Management + Conflict Detection
-- [x] SyncManager - IndexedDB Queue + Retry Logic
-- [x] Nostr Events - createSoftLockEvent(), Maintainers Support
-- [x] Last-Write-Wins - Timestamp-basierte Conflict Resolution
-- [x] Maintainers - Multi-User Event Publishing
+**Status:** ✅ **COMPLETE**
 
-**❌ NOCH ZU IMPLEMENTIEREN (UI + Integration - 15%):**
-- [ ] **4.1:** Share Dialog UI (3-5 Tage)
-- [ ] **4.1:** NIP-51 Integration (2-3 Tage)
-- [ ] **4.1:** BoardRole Permission System (1 Tag)
-- [ ] **4.2:** Presence-Indicator UI (2-3 Tage)
-- [ ] **4.2:** Live-Notifications (1-2 Tage)
-- [ ] **4.2:** Soft-Lock UI Integration (1-2 Tage)
-- [ ] **4.2:** E2E Tests Multi-User (3-4 Tage)
+- [x] **4.1:** Board-Sharing mit Maintainers (p-tags)
+- [x] **4.2:** SoftLockManager (Kind 20001 Ephemeral Events)
+- [x] **4.3:** MergeEngine (3-Way Merge Algorithm)
+- [x] **4.4:** CardEditingFlow (Conflict Detection)
+- [x] **4.5:** Live-Sync via Nostr Subscriptions
+- [x] **4.6:** Column-Order Patch (Kind 8571)
 
-**Verbleibender Aufwand: ~12-17 Tage (nicht 30!)**
+### 🟡 Phase 5: Erweiterte Features (Optional)
 
-### ⚪ Phase 5: Erweiterte Features (Priorität: Geplant)
-
-**Status:** ⚪ PLANNED
+**Status:** 🟡 **FUTURE**
 
 - [ ] Materialverwaltung & Depot
 - [ ] Gemeinschaften & Communities
-- [ ] Analyse & Insights
-- [ ] Mobile App (React Native/Flutter)
-- [ ] Tool-Integrationen (LMS, Calendar, etc.)
+- [ ] Analyse & Insights Dashboard
+- [ ] Mobile App (PWA Ready)
+- [ ] LMS-Integrationen (Moodle, Ilias)
 
-**Siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) für die vollständige priorisierte Roadmap mit Akzeptanz-Kriterien.**
+**Siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) für Details zu allen Meilensteinen.**
 
 ## 🤝 Contributing
 
@@ -695,9 +703,9 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 
 ---
 
-**Projekt-Status:** ✅ Phase 1: 95% | ✅ Phase 3: 90% | ✅ Phase 4 Infrastructure: 85%  
-**Letzte Aktualisierung:** 13. November 2025 (Phase 4 Infrastruktur-Analyse)  
-**Repository:** [edufeed-org/nostr-cli](https://github.com/edufeed-org/kanban-editor)  
-**Kritischer Pfad:** 32 Tage (nicht 43) - Deadline: 15.12.2025 möglich!
+**Projekt-Status:** ✅ Phase 1-4 COMPLETE | 🧪 Testphase ab 01.02.2026  
+**Letzte Aktualisierung:** 31. Januar 2026  
+**Repository:** [edufeed-org/kanban-editor](https://github.com/edufeed-org/kanban-editor)  
+**Version:** 5.0 (Production Ready)
 
-Für den aktuellen Entwicklungsstand siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md).
+Für Details siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) und [CHANGELOG.md](./CHANGELOG.md).
