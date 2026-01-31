@@ -112,6 +112,81 @@ Die Beschreibung unterstützt **Markdown**:
 
 ---
 
+## ✂️ Teaser-Funktion (Vorschautext)
+
+Die Teaser-Funktion ermöglicht es, einen **kurzen Vorschautext** auf der Karte anzuzeigen, während die vollständige Beschreibung erst in der Detailansicht sichtbar ist.
+
+### So funktioniert's
+
+Fügen Sie `+++` in Ihrer Beschreibung ein, um den Teaser (Vorschautext) vom Rest zu trennen:
+
+```markdown
+**Fall:**
+
+Maria ist 16 Jahre alt und besucht die 10. Klasse. 
+Ihre Eltern sind beide katholisch, sie wurde getauft 
+und gefirmt. Maria ist empört und überlegt, aus der 
+Kirche auszutreten.
+
++++
+
+**Aufgaben:**
+
+1. Analyse:
+   - Welche Gründe spricht Maria für einen Austritt?
+   - Welche Gründe sprechen dagegen?
+
+2. Perspektivwechsel:
+   - Wie würde Marias Mutter die Situation sehen?
+```
+
+### Darstellung
+
+| Ansicht | Was wird gezeigt |
+|---------|------------------|
+| **Karte im Board** | Nur der Text **vor** `+++` (der Teaser) |
+| **Detailansicht** | Der **komplette** Text mit Trennlinie |
+
+```
+┌─────────────────────────────────────────┐
+│  Fallbeispiel: Marias Entscheidung      │  ← Karte im Board
+├─────────────────────────────────────────┤
+│  Fall:                                  │
+│  Maria ist 16 Jahre alt und besucht     │  ← Nur Teaser
+│  die 10. Klasse. Ihre Eltern sind...    │     (vor +++)
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│  Detailansicht                          │
+├─────────────────────────────────────────┤
+│  Fall:                                  │
+│  Maria ist 16 Jahre alt und besucht     │  ← Teaser
+│  die 10. Klasse...                      │
+│  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │  ← Trennlinie
+│  Aufgaben:                              │     (statt +++)
+│  1. Analyse:                            │  ← Rest
+│     - Welche Gründe...                  │
+└─────────────────────────────────────────┘
+```
+
+### Tipps für gute Teaser
+
+| ✅ Gut | ❌ Vermeiden |
+|--------|--------------|
+| Kurze Einleitung (2-4 Sätze) | Gesamten Text als Teaser |
+| Neugier wecken | Wichtige Infos verstecken |
+| Kontext geben | Nur „Mehr lesen..." |
+
+### Wann Teaser nutzen?
+
+- **Fallbeispiele:** Fall beschreiben, Aufgaben verstecken
+- **Lange Anleitungen:** Überblick zeigen, Details in Detailansicht
+- **Materialsammlungen:** Thema nennen, Ressourcen-Liste verstecken
+
+**💡 Tipp:** Ohne `+++` wird der gesamte Text auf der Karte angezeigt (mit automatischer Kürzung nach 3 Zeilen).
+
+---
+
 ## 🏷️ Labels (Tags)
 
 Labels helfen beim Filtern und Kategorisieren:
