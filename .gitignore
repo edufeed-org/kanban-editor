@@ -48,3 +48,8 @@ PR.md
 scripts/load-env.ps1
 scripts/run-with-env.ps1
 static/config.github.json
+
+# tailwind logs
+tailwind.config.js.timestamp-*
+tailwind.log
+tailwindcss-*.log

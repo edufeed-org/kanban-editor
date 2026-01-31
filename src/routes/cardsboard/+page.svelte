@@ -57,7 +57,9 @@ import { authStore } from '$lib';
 	});
 	
 	onDestroy(() => {
-		window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+		}
 	});
 
 	// Hook 1: Suppress passive event listener warnings for dnd-action
