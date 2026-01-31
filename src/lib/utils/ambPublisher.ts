@@ -175,36 +175,68 @@ export const LEARNING_RESOURCE_TYPES: AmbConcept[] = [
 /**
  * Schulfächer vocabulary (KIM Schulfächer)
  * @see http://w3id.org/kim/schulfaecher/
+ * @see https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json
  */
 export const SCHULFAECHER: AmbConcept[] = [
+    // Sprachen
     { id: 'http://w3id.org/kim/schulfaecher/s1005', prefLabel: { de: 'Deutsch' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1017', prefLabel: { de: 'Mathematik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1006', prefLabel: { de: 'Deutsch als Zweitsprache' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1007', prefLabel: { de: 'Englisch' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1009', prefLabel: { de: 'Französisch' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1016', prefLabel: { de: 'Latein' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1030', prefLabel: { de: 'Spanisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1014', prefLabel: { de: 'Italienisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1016', prefLabel: { de: 'Latein' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1000', prefLabel: { de: 'Alt-Griechisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1027', prefLabel: { de: 'Russisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1032', prefLabel: { de: 'Türkisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1003', prefLabel: { de: 'Chinesisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1035', prefLabel: { de: 'Japanisch' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1050', prefLabel: { de: 'Fremdsprachen' }, type: 'Concept' },
+    // MINT
+    { id: 'http://w3id.org/kim/schulfaecher/s1017', prefLabel: { de: 'Mathematik' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1001', prefLabel: { de: 'Biologie' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1002', prefLabel: { de: 'Chemie' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1022', prefLabel: { de: 'Physik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1013', prefLabel: { de: 'Informatik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1019', prefLabel: { de: 'MINT' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1052', prefLabel: { de: 'Naturwissenschaften' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1040', prefLabel: { de: 'Astronomie' }, type: 'Concept' },
+    // Gesellschaftswissenschaften
     { id: 'http://w3id.org/kim/schulfaecher/s1011', prefLabel: { de: 'Geschichte' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1010', prefLabel: { de: 'Geografie' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1023', prefLabel: { de: 'Politik' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1029', prefLabel: { de: 'Sozialkunde' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1035', prefLabel: { de: 'Wirtschaft' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1024', prefLabel: { de: 'Religion (evangelische)' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1026', prefLabel: { de: 'Religion (katholische)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1058', prefLabel: { de: 'Sozialkunde' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1033', prefLabel: { de: 'Wirtschaftskunde' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1054', prefLabel: { de: 'Recht' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1042', prefLabel: { de: 'Gesellschaftswissenschaften' }, type: 'Concept' },
+    // Religion & Ethik (alle 6 Religionen aus KIM-Standard)
     { id: 'http://w3id.org/kim/schulfaecher/s1008', prefLabel: { de: 'Ethik' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1021', prefLabel: { de: 'Philosophie' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1013', prefLabel: { de: 'Informatik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1055', prefLabel: { de: 'Religion (konfessionslos)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1056', prefLabel: { de: 'Religionslehre (alevitisch)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1024', prefLabel: { de: 'Religionslehre (evangelisch)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1025', prefLabel: { de: 'Religionslehre (islamisch)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1057', prefLabel: { de: 'Religionslehre (jüdisch)' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1026', prefLabel: { de: 'Religionslehre (katholisch)' }, type: 'Concept' },
+    // Kunst & Musik
     { id: 'http://w3id.org/kim/schulfaecher/s1015', prefLabel: { de: 'Kunst' }, type: 'Concept' },
     { id: 'http://w3id.org/kim/schulfaecher/s1020', prefLabel: { de: 'Musik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1004', prefLabel: { de: 'Darstellendes Spiel' }, type: 'Concept' },
+    // Praktische Fächer
     { id: 'http://w3id.org/kim/schulfaecher/s1031', prefLabel: { de: 'Sport' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1033', prefLabel: { de: 'Technik' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1012', prefLabel: { de: 'Hauswirtschaft' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1019', prefLabel: { de: 'Medienbildung' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1059', prefLabel: { de: 'Technik' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1047', prefLabel: { de: 'Hauswirtschaft' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1048', prefLabel: { de: 'Arbeitslehre' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1060', prefLabel: { de: 'Textiles Gestalten' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1061', prefLabel: { de: 'Werken und Gestalten' }, type: 'Concept' },
+    // Sonstige
     { id: 'http://w3id.org/kim/schulfaecher/s1028', prefLabel: { de: 'Sachunterricht' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1018', prefLabel: { de: 'Naturwissenschaften' }, type: 'Concept' },
-    { id: 'http://w3id.org/kim/schulfaecher/s1003', prefLabel: { de: 'Darstellendes Spiel' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1046', prefLabel: { de: 'Medienbildung' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1049', prefLabel: { de: 'Berufs- und Studienorientierung' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1012', prefLabel: { de: 'Gesundheit' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1044', prefLabel: { de: 'Ernährung' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1043', prefLabel: { de: 'Psychologie' }, type: 'Concept' },
+    { id: 'http://w3id.org/kim/schulfaecher/s1045', prefLabel: { de: 'Erziehungswissenschaften' }, type: 'Concept' },
 ];
 
 /**

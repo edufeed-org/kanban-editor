@@ -26,6 +26,7 @@ import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
 import { authStore } from '$lib/stores/authStore.svelte.js';
 import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
 import { publishBoardToEdufeed, suggestAmbMetadata, type AmbPublishResult, type AmbMetadataSuggestion, AUDIENCE_ROLES, EDUCATIONAL_LEVELS, LEARNING_RESOURCE_TYPES, SCHULFAECHER } from '$lib/utils/ambPublisher.js';
+import { loadVocabulary, type SkosConcept } from '$lib/utils/vocabularyLoader.js';
 import { toast } from 'svelte-sonner';
 
 // Icons
@@ -78,6 +79,13 @@ let isAnalyzing = $state(false);
 let publishResult = $state<AmbPublishResult | null>(null);
 let llmSuggestion = $state<AmbMetadataSuggestion | null>(null);
 let newTag = $state('');
+
+// Dynamisch geladene Vokabulare (mit Fallback auf statische Listen)
+let audienceRoles = $state<SkosConcept[]>(AUDIENCE_ROLES);
+let educationalLevels = $state<SkosConcept[]>(EDUCATIONAL_LEVELS);
+let learningResourceTypes = $state<SkosConcept[]>(LEARNING_RESOURCE_TYPES);
+let schulfaecher = $state<SkosConcept[]>(SCHULFAECHER);
+let isLoadingVocabulary = $state(false);
 let newTeaches = $state('');
 let showAdvanced = $state(false);
 let showAmbFields = $state(true);
@@ -117,8 +125,37 @@ $effect(() => {
         publishResult = null;
         newTag = '';
         newTeaches = '';
+        
+        // Dynamisch alle Vokabulare laden (cached, 24h TTL)
+        loadAllVocabularies();
     }
 });
+
+// Lädt alle Vokabulare parallel von skohub.io (mit Caching + Fallback)
+async function loadAllVocabularies() {
+    isLoadingVocabulary = true;
+    try {
+        // Alle 4 Vokabulare parallel laden
+        const [audience, levels, resourceTypes, subjects] = await Promise.all([
+            loadVocabulary('audience'),
+            loadVocabulary('educationalLevel'),
+            loadVocabulary('learningResourceType'),
+            loadVocabulary('about')
+        ]);
+        
+        // Nur übernehmen wenn erfolgreich geladen
+        if (audience.length > 0) audienceRoles = audience;
+        if (levels.length > 0) educationalLevels = levels;
+        if (resourceTypes.length > 0) learningResourceTypes = resourceTypes;
+        if (subjects.length > 0) schulfaecher = subjects;
+        
+        console.log(`[PublishDialog] Loaded vocabularies: ${audience.length} audience, ${levels.length} levels, ${resourceTypes.length} types, ${subjects.length} subjects`);
+    } catch (error) {
+        console.warn('[PublishDialog] Failed to load vocabularies, using fallbacks:', error);
+    } finally {
+        isLoadingVocabulary = false;
+    }
+}
 
 // Tag hinzufügen
 function addTag() {
@@ -600,10 +637,13 @@ function handleClose() {
                                 <FieldLabel class="flex items-center gap-2">
                                     <UsersIcon class="h-4 w-4" />
                                     Zielgruppe
+                                    {#if isLoadingVocabulary}
+                                        <LoaderIcon class="h-3 w-3 animate-spin text-muted-foreground" />
+                                    {/if}
                                 </FieldLabel>
                                 <FieldContent>
                                     <div class="grid grid-cols-2 gap-2">
-                                        {#each AUDIENCE_ROLES as role}
+                                        {#each audienceRoles as role}
                                             <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                                                 <Checkbox 
                                                     checked={formData.audience.includes(role.id)}
@@ -622,10 +662,13 @@ function handleClose() {
                                 <FieldLabel class="flex items-center gap-2">
                                     <GraduationCapIcon class="h-4 w-4" />
                                     Bildungsstufe
+                                    {#if isLoadingVocabulary}
+                                        <LoaderIcon class="h-3 w-3 animate-spin text-muted-foreground" />
+                                    {/if}
                                 </FieldLabel>
                                 <FieldContent>
                                     <div class="grid grid-cols-2 gap-2">
-                                        {#each EDUCATIONAL_LEVELS as level}
+                                        {#each educationalLevels as level}
                                             <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                                                 <Checkbox 
                                                     checked={formData.educationalLevel.includes(level.id)}
@@ -644,10 +687,13 @@ function handleClose() {
                                 <FieldLabel class="flex items-center gap-2">
                                     <BookOpenIcon class="h-4 w-4" />
                                     Ressourcentyp
+                                    {#if isLoadingVocabulary}
+                                        <LoaderIcon class="h-3 w-3 animate-spin text-muted-foreground" />
+                                    {/if}
                                 </FieldLabel>
                                 <FieldContent>
                                     <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
-                                        {#each LEARNING_RESOURCE_TYPES as resourceType}
+                                        {#each learningResourceTypes as resourceType}
                                             <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                                                 <Checkbox 
                                                     checked={formData.learningResourceType.includes(resourceType.id)}
@@ -666,10 +712,13 @@ function handleClose() {
                                 <FieldLabel class="flex items-center gap-2">
                                     <BookOpenIcon class="h-4 w-4" />
                                     Fach / Themengebiet
+                                    {#if isLoadingVocabulary}
+                                        <LoaderIcon class="h-3 w-3 animate-spin text-muted-foreground" />
+                                    {/if}
                                 </FieldLabel>
                                 <FieldContent>
                                     <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
-                                        {#each SCHULFAECHER as fach}
+                                        {#each schulfaecher as fach}
                                             <label class="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded">
                                                 <Checkbox 
                                                     checked={formData.about.includes(fach.id)}

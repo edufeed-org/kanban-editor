@@ -61,7 +61,7 @@
 
   "wissenswertes": {
     "sourceCodeUrl": "https://github.com/edufeed-org/kanban-editor",
-    "documentationUrl": "https://github.com/edufeed-org/kanban-editor/tree/main/docs",
+    "documentationUrl": "https://github.com/edufeed-org/kanban-editor/tree/cardsboard/docs/MANUAL#readme",
     "aboutUrl": "https://github.com/edufeed-org/kanban-editor#readme",
     "$comment": "Konfigurierbare Links für das Wissenswertes-Menü"
   },

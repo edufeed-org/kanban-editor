@@ -13,10 +13,11 @@ import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
 /**
  * Standard SKOS Concept Interface
+ * Note: prefLabel is optional to maintain compatibility with AmbConcept from ambPublisher.ts
  */
 export interface SkosConcept {
     id: string;
-    prefLabel: { de?: string; en?: string } | string;
+    prefLabel?: { de?: string; en?: string } | string;
     type?: 'Concept';
     notation?: string;
     broader?: string[];
@@ -414,6 +415,9 @@ export function clearVocabularyCache(): void {
  * Gibt den Label eines Concepts zurück (bevorzugt Deutsch)
  */
 export function getConceptLabel(concept: SkosConcept, lang: 'de' | 'en' = 'de'): string {
+    if (!concept.prefLabel) {
+        return concept.id;
+    }
     if (typeof concept.prefLabel === 'string') {
         return concept.prefLabel;
     }
