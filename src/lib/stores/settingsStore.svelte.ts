@@ -14,7 +14,7 @@
  * LLMApiKey wird NUR bei lokaler Ollama-Nutzung lokal gespeichert
  */
 
-export type Theme = 'dark' | 'light';
+export type Theme = 'dark' | 'light' | 'system';
 export type PublishState = 'published' | 'private';
 export type PrivatePublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
@@ -82,7 +82,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   maxCardsBeforeScroll: 20,
   alignColumnsToMaxHeight: true,
   columnWidth: 350,
-  theme: 'light',
+  theme: 'system', // 'system' = folgt Browser-Präferenz (prefers-color-scheme)
 
   // Nostr Relays
   relaysPublic: [
@@ -525,7 +525,7 @@ export class SettingsStore {
     this.saveToStorage();
     
     // Update Theme im DOM
-    this.updateTheme(this.settings.theme);
+    this.applyTheme();
 
     console.log('✅ Config merged successfully');
     console.log('   Current settings:', this.settings);
@@ -565,21 +565,73 @@ export class SettingsStore {
 
   public setTheme(theme: Theme) {
     this.settings = { ...this.settings, theme };
-    this.updateTheme(theme);
+    this.applyTheme();
     this.saveToStorage();
   }
 
   /**
-   * Aktualisiere DOM-Theme (document.documentElement.classList)
+   * Ermittelt das effektive Theme basierend auf Setting und Browser-Präferenz
    */
-  private updateTheme(theme: Theme): void {
+  public getEffectiveTheme(): 'dark' | 'light' {
+    if (this.settings.theme === 'system') {
+      // Browser-Präferenz abfragen
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      return 'light'; // Fallback für SSR
+    }
+    return this.settings.theme;
+  }
+
+  /**
+   * Wendet das Theme auf das DOM an und registriert Listener für System-Änderungen
+   */
+  public applyTheme(): void {
     if (typeof document === 'undefined') return;
 
+    const effectiveTheme = this.getEffectiveTheme();
     const root = document.documentElement;
 
     root.classList.remove('dark', 'light');
+    root.classList.add(effectiveTheme);
 
-    root.classList.add(theme);
+    // Bei 'system' auf Änderungen der Browser-Präferenz reagieren
+    if (this.settings.theme === 'system' && typeof window !== 'undefined') {
+      this.setupSystemThemeListener();
+    }
+  }
+
+  /**
+   * Listener für System-Theme-Änderungen (nur bei theme='system')
+   */
+  private systemThemeMediaQuery: MediaQueryList | null = null;
+  private systemThemeListener: ((e: MediaQueryListEvent) => void) | null = null;
+
+  private setupSystemThemeListener(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+
+    // Alten Listener entfernen falls vorhanden
+    this.removeSystemThemeListener();
+
+    this.systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    this.systemThemeListener = (e: MediaQueryListEvent) => {
+      if (this.settings.theme === 'system') {
+        const newTheme = e.matches ? 'dark' : 'light';
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(newTheme);
+        console.log(`🌓 System theme changed to: ${newTheme}`);
+      }
+    };
+
+    this.systemThemeMediaQuery.addEventListener('change', this.systemThemeListener);
+  }
+
+  private removeSystemThemeListener(): void {
+    if (this.systemThemeMediaQuery && this.systemThemeListener) {
+      this.systemThemeMediaQuery.removeEventListener('change', this.systemThemeListener);
+      this.systemThemeMediaQuery = null;
+      this.systemThemeListener = null;
+    }
   }
 
   /**
@@ -869,7 +921,7 @@ export class SettingsStore {
   public reset(): void {
     this.settings = { ...DEFAULT_SETTINGS };
     this.saveToStorage();
-    this.updateTheme(DEFAULT_SETTINGS.theme);
+    this.applyTheme();
     console.log('✅ Settings reset to defaults');
   }
 

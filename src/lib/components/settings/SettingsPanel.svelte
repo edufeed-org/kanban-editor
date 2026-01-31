@@ -22,6 +22,9 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
+  import MonitorIcon from '@lucide/svelte/icons/monitor';
+  import SunIcon from '@lucide/svelte/icons/sun';
+  import MoonIcon from '@lucide/svelte/icons/moon';
   
   // Props
   let { 
@@ -152,19 +155,32 @@
           <!-- Theme -->
           <div class="space-y-2">
             <Label>Theme</Label>
-            <div class="flex items-center gap-2">
+            <p class="text-sm text-muted-foreground mb-2">
+              "System" folgt automatisch den Browser-Einstellungen
+            </p>
+            <div class="flex items-center gap-1 p-1 bg-muted rounded-lg">
               <Button 
-                variant="default"
-                onclick={() => settingsStore.setTheme('light')}
-                class="flex-1"
+                variant={settings.theme === 'system' ? 'default' : 'ghost'}
+                onclick={() => settingsStore.setTheme('system')}
+                class="flex-1 gap-2 {settings.theme === 'system' ? 'ring-2 ring-primary ring-offset-background' : 'opacity-50'}"
               >
+                <MonitorIcon class="h-4 w-4" />
+                System
+              </Button>
+              <Button 
+                variant={settings.theme === 'light' ? 'default' : 'ghost'}
+                onclick={() => settingsStore.setTheme('light')}
+                class="flex-1 gap-2 {settings.theme === 'light' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-50'}"
+              >
+                <SunIcon class="h-4 w-4" />
                 Hell
               </Button>
               <Button 
-                variant="default"
+                variant={settings.theme === 'dark' ? 'default' : 'ghost'}
                 onclick={() => settingsStore.setTheme('dark')}
-                class="flex-1"
+                class="flex-1 gap-2 {settings.theme === 'dark' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-50'}"
               >
+                <MoonIcon class="h-4 w-4" />
                 Dunkel
               </Button>
             </div>
