@@ -405,7 +405,7 @@
 		border-radius: var(--radius-md);
 		border: 1px solid var(--accent);
 		background: var(--muted);
-		color: var(--primary-foreground);
+		color: var(--foreground);
 		cursor: pointer;
 		display: flex;
 		align-items: center;

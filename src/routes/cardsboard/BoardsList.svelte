@@ -305,6 +305,7 @@
         >
             <MenuIcon class="h-5 w-5" />
         </Button>
+        <div class="flex-1">Board Einstellungen</div>
     </div>
     
     <!-- Expandable Menu -->
