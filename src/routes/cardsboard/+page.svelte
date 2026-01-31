@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { replaceState } from '$app/navigation';
 import Board from "./Board.svelte";
 import BoardsList from "./BoardsList.svelte";
@@ -13,6 +13,7 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
 import { toast } from "svelte-sonner";
 import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
 import MenuIcon from '@lucide/svelte/icons/menu';
@@ -32,9 +33,32 @@ import { authStore } from '$lib';
 	// Mobile detection (screens < 768px are considered mobile)
 	let isMobile = $state(false);
 
+	// ==========================================================================
+	// GLOBAL AI CONTEXT EVENT HANDLER
+	// Muss global sein, damit es auch funktioniert wenn AIPanel geschlossen ist
+	// ==========================================================================
+	function handleGlobalAddCardToContext(e: CustomEvent<ContextCard>) {
+		const newCard = e.detail;
+		const added = aiContextStore.addCard(newCard);
+		if (added) {
+			toast.success(`"${newCard.cardName}" zum KI-Kontext hinzugefügt`);
+		} else {
+			toast.info(`Karte ist bereits im KI-Kontext`);
+		}
+	}
+
 	// ============================================================================
 	// LIFECYCLE: ONMOUNT HOOKS (Browser API calls - only once per component mount)
 	// ============================================================================
+
+	// Hook 0: Globaler Event-Listener für AI-Kontext (funktioniert auch bei geschlossener Sidebar)
+	onMount(() => {
+		window.addEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+	});
+	
+	onDestroy(() => {
+		window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+	});
 
 	// Hook 1: Suppress passive event listener warnings for dnd-action
 	// ✅ CORRECT: onMount for one-time side effects

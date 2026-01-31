@@ -15,6 +15,7 @@
   import { chatStore } from '$lib/stores/chatStore.svelte.js';
   import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
   import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+  import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
   import BrainIcon from '@lucide/svelte/icons/brain';
   import SendIcon from '@lucide/svelte/icons/send';
   import SparklesIcon from '@lucide/svelte/icons/sparkles';
@@ -59,39 +60,18 @@
   let aiSummaryError = $state<string | null>(null);
   let showSummarySection = $state(false);
   
-  // 🎯 Kontext-Karten (per CTRL+Klick oder Long-Press hinzugefügt)
-  interface ContextCard {
-    cardId: string;
-    cardName: string;
-    columnId: string;
-    columnName: string;
-  }
-  let contextCards = $state<ContextCard[]>([]);
-  
-  function handleAddCardToContext(e: CustomEvent<ContextCard>) {
-    const newCard = e.detail;
-    // Verhindere Duplikate
-    if (!contextCards.some(c => c.cardId === newCard.cardId)) {
-      contextCards = [...contextCards, newCard];
-    }
-  }
+  // 🎯 Kontext-Karten (per CTRL+Klick, Long-Press oder Button hinzugefügt)
+  // Nutzt globalen Store damit Karten erhalten bleiben wenn Sidebar geschlossen wird
+  // Event-Listener ist GLOBAL in +page.svelte registriert (funktioniert auch bei geschlossener Sidebar)
+  let contextCards = $derived(aiContextStore.cards);
   
   function removeContextCard(cardId: string) {
-    contextCards = contextCards.filter(c => c.cardId !== cardId);
+    aiContextStore.removeCard(cardId);
   }
   
   function clearAllContextCards() {
-    contextCards = [];
+    aiContextStore.clear();
   }
-  
-  // Event-Listener für CTRL+Klick/Long-Press
-  onMount(() => {
-    window.addEventListener('addCardToAIContext', handleAddCardToContext as EventListener);
-  });
-  
-  onDestroy(() => {
-    window.removeEventListener('addCardToAIContext', handleAddCardToContext as EventListener);
-  });
   
   // Chat Messages (derived from chatStore)
   let messages = $derived(chatStore.messages);
