@@ -13,6 +13,7 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { toast } from "svelte-sonner";
+import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
 import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
@@ -289,6 +290,8 @@ import { authStore } from '$lib';
 		<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
 			<!-- Linke Sidebar - nur rendern wenn offen -->
 			{#if leftSidebarOpen}
+				
+    
 				<Resizable.Pane 
 					defaultSize={20} 
 					minSize={15} 
@@ -296,7 +299,12 @@ import { authStore } from '$lib';
 					class="border-r bg-muted/10 overflow-y-auto"
 					onResize={(size: number) => { leftSidebarSize = size; }}
 				>
-					<div class="p-4 h-full flex flex-col overflow-hidden">
+					<div class="p-4 border-b-4 max-h-15 flex">
+						<div class="flex items-center gap-2">
+							<SquareKanbanIcon /><h2 class="text-lg font-semibold">Kanban-Editor</h2>
+						</div>
+					</div>
+					<div class="p-4 h-[calc(100%-3.75rem)] flex flex-col overflow-hidden">
 						<div class="flex-1 overflow-y-auto min-h-0">
 							<BoardsList {currentBoardId} />
 						</div>
