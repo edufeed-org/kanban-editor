@@ -70,7 +70,6 @@
 			composed: true
 		});
 		window.dispatchEvent(event);
-		console.log('🧠 Karte zum AI-Kontext hinzugefügt:', localName);
 	}
 	
 	function handleTouchStart(e: TouchEvent) {
@@ -176,7 +175,6 @@
 		const handleOpenDialog = (event: Event) => {
 			const customEvent = event as CustomEvent<{ cardId: string }>;
 			if (customEvent.detail.cardId === String(card.id)) {
-				console.log('📖 Opening dialog for card:', card.id);
 				isDialogOpen = true;
 			}
 		};
@@ -245,7 +243,6 @@
 				const localAttendeesJSON = JSON.stringify(localAttendees);
 				
 				if (attendeesJSON !== localAttendeesJSON) {
-					console.log('🔄 Card attendees updated:', (updatedCard.attendees || []).length, 'attendees');
 					localAttendees = updatedCard.attendees || [];
 				}				
 				// Update labels
@@ -260,7 +257,6 @@
 				const cardLinksJSON = JSON.stringify(card.links || []);
 				
 				if (linksJSON !== cardLinksJSON) {
-					console.log('🔄 Card links updated:', (updatedCard.links || []).length, 'links');
 					// Triggere Prop-Update durch Reassignment
 					card = { ...card, links: updatedCard.links };
 				}
@@ -335,7 +331,6 @@
 	function handleRenameChange() {
 		// 🎯 DIREKT SPEICHERN beim Input ändern (real-time mit oninput)
 		if (editName !== card.name) {
-			console.log('📝 Card name changed:', { old: card.name, new: editName });
 			boardStore.editCard(String(card.id), { heading: editName });
 		}
 	}
