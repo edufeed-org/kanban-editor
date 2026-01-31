@@ -203,7 +203,7 @@
         <!-- Right Section: Actions + Right Sidebar Trigger -->
         <div class="flex items-center gap-0.5 sm:gap-2">
             <!-- Mobile: Icon-only Button -->
-            <Button
+            <!-- <Button
                 variant="outline"
                 size="icon"
                 onclick={() => showEdufeedDialog = true}
@@ -211,7 +211,7 @@
                 title="Board als OER zu Edufeed teilen"
             >
                 <ShareIcon class="h-4 w-4" />
-            </Button>
+            </Button> -->
             
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             
