@@ -23,11 +23,15 @@
     import { NDKEvent, NDKRelay, nip19 } from '@nostr-dev-kit/ndk';
     import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
     import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
+    import FollowBoardDialog from '$lib/components/board/FollowBoardDialog.svelte';
 
     // State
     let status = $state<'loading' | 'error' | 'success'>('loading');
     let errorMessage = $state('');
     let loadingStep = $state('naddr dekodieren...');
+    let showFollowDialog = $state(false);
+    let followBoardId = $state('');
+    let followBoardAuthor = $state('');
 
     interface NaddrData {
         kind: number;
@@ -265,6 +269,16 @@
             loadingStep = 'Verbinde zu Relays...';
             await connectToRelayHints(ndk, naddrData.relays);
 
+            // ✅ Eingeloggt: Share-Link bleibt, Dialog steuert Follow/Fork
+            const currentUserPubkey = authStore.getPubkey();
+            if (currentUserPubkey) {
+                followBoardId = naddrData.identifier;
+                followBoardAuthor = naddrData.pubkey;
+                showFollowDialog = true;
+                status = 'success';
+                return;
+            }
+
             // 3b. Versuche zuerst AMB (30142) zu finden, die ['a', <naddr>] oder ['a', address] enthält
             loadingStep = 'Suche AMB Snapshot...';
             const aTagCandidates: string[] = [];
@@ -347,6 +361,22 @@
             // 7. Speichere Board lokal
             loadingStep = 'Board speichern...';
             BoardStorage.saveBoard(board);
+
+            // ✅ Wenn User eingeloggt ist und nicht Owner: Board als geteiltes Viewer-Board cachen
+            const viewerPubkey = authStore.getPubkey();
+            if (viewerPubkey && board.author && board.author !== viewerPubkey) {
+                const updatedAtMs = board.updatedAt ? new Date(board.updatedAt).getTime() : undefined;
+                boardStore.handleSharedBoardEvent({
+                    id: board.id,
+                    name: board.name,
+                    description: board.description,
+                    createdAt: new Date(board.createdAt).getTime(),
+                    updatedAt: updatedAtMs,
+                    isShared: true,
+                    userRole: 'viewer',
+                    author: board.author
+                });
+            }
             
             // Board-IDs neu laden damit es in der Liste erscheint
             boardStore.refreshBoardIds();
@@ -393,6 +423,26 @@
                     Zurück zur Übersicht
                 </a>
             </div>
+        {:else if status === 'success'}
+            <div class="flex flex-col items-center gap-4">
+                <h1 class="text-xl font-semibold">Board-Link geöffnet</h1>
+                <p class="text-muted-foreground">Bitte wähle „Beobachten“ oder „Fork“ im Dialog.</p>
+                <button
+                    type="button"
+                    class="mt-2 text-primary hover:underline"
+                    onclick={() => (showFollowDialog = true)}
+                >
+                    Dialog erneut öffnen
+                </button>
+                <a
+                    href="{base}/cardsboard/"
+                    class="text-muted-foreground hover:underline"
+                >
+                    Zurück zur Übersicht
+                </a>
+            </div>
         {/if}
     </div>
 </div>
+
+<FollowBoardDialog bind:open={showFollowDialog} boardId={followBoardId} boardAuthor={followBoardAuthor} />

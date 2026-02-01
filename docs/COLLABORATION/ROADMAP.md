@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
 **Version:** 3.23 (ShareDialog Performance Fix - 01. Februar 2026)  
-**Aktualisiert:** 01. Februar 2026 (ShareDialog lädt config.json nur einmal, vermeidet doppelte Share-Link Generierung, parallele Profil-Loads für Teilnehmer, BASE_URL robust aufgelöst inkl. ".").  
+**Aktualisiert:** 01. Februar 2026 (ShareDialog lädt config.json nur einmal, vermeidet doppelte Share-Link Generierung, parallele Profil-Loads für Teilnehmer, BASE_URL robust aufgelöst inkl. "."; naddr-Boards werden bei eingeloggten Nutzern per Follow/Fork Dialog übernommen und die URL bleibt bis zur Aktion bestehen; Shared-Cache aktualisiert Metadaten sofort nach „Beobachten“).  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 

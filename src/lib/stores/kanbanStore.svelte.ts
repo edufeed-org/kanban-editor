@@ -2662,6 +2662,20 @@ export class BoardStore {
                 return false;
             }
             console.log(`✅ Board geladen und aktiv: ${boardId}`);
+
+            // ✅ Cache sofort mit echten Metadaten aktualisieren (ersetzt "Wird geladen...")
+            const loadedBoard = this.board;
+            const cacheIndex = this.cachedSharedBoards.findIndex(b => b.id === boardId);
+            if (cacheIndex !== -1) {
+                this.cachedSharedBoards[cacheIndex] = {
+                    ...this.cachedSharedBoards[cacheIndex],
+                    name: loadedBoard.name,
+                    description: loadedBoard.description,
+                    createdAt: loadedBoard.createdAt ? new Date(loadedBoard.createdAt).getTime() : Date.now(),
+                    updatedAt: loadedBoard.updatedAt ? new Date(loadedBoard.updatedAt).getTime() : undefined
+                };
+                this.updateTrigger++;
+            }
             
             return true;
             

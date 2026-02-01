@@ -1,5 +1,53 @@
 # Changelog
 
+## Version 4.7.29 - Shared Board Name Sync ⚡
+
+**Datum:** 01. Februar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Liste nach „Beobachten“:** Platzhalter „Wird geladen…“ wird sofort durch echte Metadaten ersetzt
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/kanbanStore.svelte.ts` | Shared-Cache nach follow sofort aktualisiert |
+
+---
+
+## Version 4.7.28 - Naddr Follow Dialog Flow 🧭
+
+**Datum:** 01. Februar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Naddr-Link (eingeloggt):** URL bleibt stehen, Follow/Fork Dialog steuert den Import
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/[naddr]/+page.svelte` | Follow-Dialog statt Auto-Redirect für eingeloggte Nutzer |
+
+---
+
+## Version 4.7.27 - Naddr Shared Board Visibility ✅
+
+**Datum:** 01. Februar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Naddr-Links (eingeloggt):** geladene Boards werden als Viewer gecacht und erscheinen in der Liste
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/[naddr]/+page.svelte` | Shared-Cache Eintrag für eingeloggte Viewer |
+
+---
+
 ## Version 4.7.26 - ShareDialog Performance Fix ⚡
 
 **Datum:** 01. Februar 2026  
