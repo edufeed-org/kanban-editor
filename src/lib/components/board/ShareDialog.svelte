@@ -51,6 +51,9 @@
     let isGeneratingLink = $state(false);
     let tokenSize = $state(0);
     let maxTokenSize = $state(200000); // Standard-Maximum
+    let lastShareBoardId = $state<string | null>(null);
+    let shareConfigLoaded = $state(false);
+    let shareConfigLoading = $state(false);
     
     // Berechnete Werte für Token-Größe-Anzeige
     let tokenSizePercent = $derived((tokenSize / maxTokenSize) * 100);
@@ -66,28 +69,44 @@
     // Vollständiger Share-Link (kombiniert baseUrl + Token)
     let fullShareLink = $derived(shareToken ? `${baseUrl}${import.meta.env.BASE_URL}cardsboard?import=${shareToken}` : '');
     
+    async function loadShareConfig(): Promise<void> {
+        if (shareConfigLoaded || shareConfigLoading) return;
+
+        shareConfigLoading = true;
+        try {
+            const config = await fetch(`${import.meta.env.BASE_URL}config.json`)
+                .then(r => r.json())
+                .catch(() => ({}));
+            if (config?.shareTokenMaxSize) {
+                maxTokenSize = config.shareTokenMaxSize;
+            }
+            shareConfigLoaded = true;
+        } catch {
+            shareConfigLoaded = true;
+        } finally {
+            shareConfigLoading = false;
+        }
+    }
+
     async function generateShareLinkAsync(): Promise<void> {
         const boardId = boardStore.data?.id;
-        if (!boardId) return;
+        if (!boardId || isGeneratingLink) return;
+
+        if (lastShareBoardId === boardId && shareToken && tokenSize > 0) return;
         
         isGeneratingLink = true;
         try {
+            await loadShareConfig();
+
             const result = await boardStore.generateShareLink(boardId, true);
             tokenSize = result.tokenSize;
+            lastShareBoardId = boardId;
             
             // Token aus der URL extrahieren (alles nach "?import=")
             const importMatch = result.url.match(/[?&]import=(.+)$/);
             if (importMatch) {
                 shareToken = importMatch[1];
             }
-            
-            // Config laden für dynamisches Maximum
-            try {
-                const config = await fetch(`${import.meta.env.BASE_URL}config.json`).then(r => r.json()).catch(() => ({}));
-                if (config?.shareTokenMaxSize) {
-                    maxTokenSize = config.shareTokenMaxSize;
-                }
-            } catch { /* ignore */ }
         } catch (error) {
             console.error('Fehler beim Generieren des Share-Links:', error);
             toast.error('Link konnte nicht generiert werden');
@@ -138,21 +157,34 @@
     
     // Display names für alle Teilnehmer laden
     async function loadDisplayNames() {
-        for (const participant of participants) {
-            if (!displayNameCache[participant.pubkey]) {
+        const missing = participants.filter(p => !displayNameCache[p.pubkey]);
+        if (missing.length === 0) return;
+
+        const results: Array<[string, string] | null> = await Promise.all(
+            missing.map(async participant => {
                 try {
                     const profile = await authStore.fetchProfileFromPubkey(participant.pubkey);
-                    if (profile?.name || profile?.displayName || profile?.display_name) {
-                        // Reassign entire object to trigger reactivity
-                        displayNameCache = {
-                            ...displayNameCache,
-                            [participant.pubkey]: profile.displayName || profile.name || ''
-                        };
-                    }
+                    const rawName = profile?.displayName || profile?.name || profile?.display_name || '';
+                    const name = rawName ? String(rawName) : '';
+                    return name ? [participant.pubkey, name] as const : null;
                 } catch (error) {
                     console.warn('Could not fetch profile for', participant.pubkey, error);
+                    return null;
                 }
+            })
+        );
+
+        let changed = false;
+        const nextCache = { ...displayNameCache };
+        for (const entry of results) {
+            if (entry && !nextCache[entry[0]]) {
+                nextCache[entry[0]] = entry[1];
+                changed = true;
             }
+        }
+
+        if (changed) {
+            displayNameCache = nextCache;
         }
     }
 

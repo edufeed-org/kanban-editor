@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 4.7.26 - ShareDialog Performance Fix ⚡
+
+**Datum:** 01. Februar 2026  
+**Branch:** `main`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **ShareDialog Performance:** config.json wird nur noch einmal geladen
+- **Doppelte Requests verhindert:** Share-Link wird pro Board nur einmal generiert
+- **Schnelleres Laden:** Display-Namen werden parallel geladen
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `ShareDialog.svelte` | Config-Caching + Parallel-Loads + Guard gegen Doppel-Generierung |
+
+---
+
 ## Version 4.7.25 - Inline-Editing & Mobile UX 📝
 
 **Datum:** 31. Januar 2026  
