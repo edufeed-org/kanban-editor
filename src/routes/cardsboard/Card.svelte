@@ -529,13 +529,6 @@
 			width: 100%;
 		}
 
-		.header-actions {
-			display: flex;
-			align-items: center;
-			gap: 0.5em;
-			flex-shrink: 0;
-		}
-		
 		.card-image-container {
 			width: 100%;
 		overflow: hidden;

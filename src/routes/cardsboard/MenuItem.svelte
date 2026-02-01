@@ -13,7 +13,7 @@
     }
 
     let {
-        icon,
+        icon: Icon,
         label,
         onclick,
         disabled = false,
@@ -37,7 +37,7 @@
     {disabled}
 >
     <div class="flex items-center gap-3 flex-shrink-0">
-        <svelte:component this={icon} class="h-4 w-4 text-muted-foreground" />
+        <Icon class="h-4 w-4 text-muted-foreground" />
         <span>{label}</span>
     </div>
     {#if showChevron}

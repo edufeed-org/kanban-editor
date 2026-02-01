@@ -7,7 +7,7 @@
         onclick: () => void;
     }
 
-    let { icon, label, onclick }: Props = $props();
+    let { icon: Icon, label, onclick }: Props = $props();
 </script>
 
 <button
@@ -16,6 +16,6 @@
     title={label}
     {onclick}
 >
-    <svelte:component this={icon} class="h-4 w-4 text-muted-foreground" />
+    <Icon class="h-4 w-4 text-muted-foreground" />
     <span>{label}</span>
 </button>
