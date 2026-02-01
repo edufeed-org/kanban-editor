@@ -36,7 +36,11 @@
     // Base-URL für vollständige Links (default: Origin + BASE_URL)
     let baseUrl = $state(
         typeof window !== 'undefined'
-            ? `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}`
+            ? (() => {
+                const resolved = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+                const normalizedPath = resolved.pathname.replace(/\/$/, '');
+                return `${resolved.origin}${normalizedPath}`;
+            })()
             : 'http://localhost:5173'
     );
     

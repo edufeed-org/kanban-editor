@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
 **Version:** 3.23 (ShareDialog Performance Fix - 01. Februar 2026)  
-**Aktualisiert:** 01. Februar 2026 (ShareDialog lädt config.json nur einmal, vermeidet doppelte Share-Link Generierung, parallele Profil-Loads für Teilnehmer.)  
+**Aktualisiert:** 01. Februar 2026 (ShareDialog lädt config.json nur einmal, vermeidet doppelte Share-Link Generierung, parallele Profil-Loads für Teilnehmer, BASE_URL robust aufgelöst inkl. ".").  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1654,7 +1654,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
-| 3.23 | 01.02.2026 | ⚡ **ShareDialog & UI Fixes:** config.json Cache, keine doppelte Share-Link Generierung, parallele Display-Name Loads, BASE_URL Default für GitHub Pages, Flip-Animation Guard gegen NaN-Transforms (In der FLIP-Animation (First, Last, Invert, Play) treten NaN-Werte (Not-a-Number) ). |
+| 3.23 | 01.02.2026 | ⚡ **ShareDialog & UI Fixes:** config.json Cache, keine doppelte Share-Link Generierung, parallele Display-Name Loads, BASE_URL robust aufgelöst (inkl. "."), Flip-Animation Guard gegen NaN-Transforms (In der FLIP-Animation (First, Last, Invert, Play) treten NaN-Werte (Not-a-Number) ). |
 | 3.22 | 30.01.2026 | 🔍 **OER-Content Discovery Approved:** Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1. Timeline: 6-8 Tage. |
 | 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
 | 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
