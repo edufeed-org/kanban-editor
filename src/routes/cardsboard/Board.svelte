@@ -10,6 +10,34 @@
  	import type { Column as ColumnType, BoardUpdateHandler, CardItem } from "./types.js";
 
  	const flipDurationMs = 300;
+	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
+	type FlipParams = {
+		delay?: number;
+		duration?: number | ((len: number) => number);
+		easing?: (t: number) => number;
+	};
+
+	function safeFlip(
+		node: Element,
+		{ from, to }: { from: DOMRect; to: DOMRect },
+		params?: FlipParams
+	) {
+		const valid =
+			Number.isFinite(from.width) &&
+			Number.isFinite(from.height) &&
+			Number.isFinite(to.width) &&
+			Number.isFinite(to.height) &&
+			from.width > 0 &&
+			from.height > 0 &&
+			to.width > 0 &&
+			to.height > 0;
+
+		if (!valid) {
+			return { duration: 0 };
+		}
+
+		return flip(node, { from, to }, params);
+	}
 
 	// Track column heights for alignment
 	let columnHeights = $state<{ [key: string]: number }>({});
@@ -438,9 +466,9 @@
 	onfinalize={handleDndFinalizeColumns}
 >
     {#each columns as {id, name, color, items}, idx (id)}
-   		<div 
+		<div 
 			class="column" 
-			animate:flip="{{duration: flipDurationMs}}"
+			animate:safeFlip={{ duration: flipDurationMs }}
 			use:observeColumnHeight={id}
 			style={settings?.alignColumnsToMaxHeight && maxColumnHeight > 0 ? `min-height: ${maxColumnHeight}px;` : ''}
 		>

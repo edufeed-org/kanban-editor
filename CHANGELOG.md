@@ -12,6 +12,7 @@
 - **Schnelleres Laden:** Display-Namen werden parallel geladen
 - **UI-Warnung behoben:** doppelte Textgröße im Base-URL Input entfernt
 - **GitHub Pages Base-URL:** Default enthält jetzt `BASE_URL` (z.B. /kanban-editor)
+- **Animation Guard:** Flip-Animationen vermeiden NaN/Infinity-Transforms bei 0‑Größen
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |

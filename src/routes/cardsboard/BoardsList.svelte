@@ -42,6 +42,34 @@
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+    // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
+    type FlipParams = {
+        delay?: number;
+        duration?: number | ((len: number) => number);
+        easing?: (t: number) => number;
+    };
+
+    function safeFlip(
+        node: Element,
+        { from, to }: { from: DOMRect; to: DOMRect },
+        params?: FlipParams
+    ) {
+        const valid =
+            Number.isFinite(from.width) &&
+            Number.isFinite(from.height) &&
+            Number.isFinite(to.width) &&
+            Number.isFinite(to.height) &&
+            from.width > 0 &&
+            from.height > 0 &&
+            to.width > 0 &&
+            to.height > 0;
+
+        if (!valid) {
+            return { duration: 0 };
+        }
+
+        return flip(node, { from, to }, params);
+    }
 
     // Props
     let { 
@@ -633,7 +661,7 @@
             {#each filteredBoards as board (board.id)}
                 {@const isActive = currentBoardId === board.id}
                 <div
-                    animate:flip={{ duration: 300 }}
+                    animate:safeFlip={{ duration: 300 }}
                     class="w-full rounded-md px-3 py-2.5 text-sm transition-all group relative
                         {isActive
                             ? 'active-board'

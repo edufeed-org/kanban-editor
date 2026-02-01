@@ -15,6 +15,34 @@
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';	
 
  	const flipDurationMs = 150;
+	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
+	type FlipParams = {
+		delay?: number;
+		duration?: number | ((len: number) => number);
+		easing?: (t: number) => number;
+	};
+
+	function safeFlip(
+		node: Element,
+		{ from, to }: { from: DOMRect; to: DOMRect },
+		params?: FlipParams
+	) {
+		const valid =
+			Number.isFinite(from.width) &&
+			Number.isFinite(from.height) &&
+			Number.isFinite(to.width) &&
+			Number.isFinite(to.height) &&
+			from.width > 0 &&
+			from.height > 0 &&
+			to.width > 0 &&
+			to.height > 0;
+
+		if (!valid) {
+			return { duration: 0 };
+		}
+
+		return flip(node, { from, to }, params);
+	}
 
  	// Suppress passive event listener warnings for dnd-action
  	// This is a known issue with svelte-dnd-action library
@@ -526,7 +554,7 @@
 		onfinalize={handleDndFinalizeCards}
 	>
 		{#each items as item (item.id)}
-			<div animate:flip="{{duration: flipDurationMs}}" class="card-wrapper">
+			<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper">
 				<Card
 					card={item}
 					{onCardAction}
