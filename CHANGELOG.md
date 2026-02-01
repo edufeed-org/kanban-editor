@@ -1,5 +1,52 @@
 # Changelog
 
+## Version 4.7.25 - Inline-Editing & Mobile UX 📝
+
+**Datum:** 31. Januar 2026  
+**Branch:** `inline-editing` → `cardsboard`  
+**Status:** ✅ Implementiert
+
+### ✨ Neue Features
+
+#### 1. Inline-Editing für Titel
+- **Board-Titel**: Klick in Topbar startet Inline-Editing (mit Stift-Icon bei Hover)
+- **Spaltentitel**: Klick auf Spaltenname startet Inline-Editing
+- Enter speichert, Escape bricht ab
+- Toast-Benachrichtigung bei Speicherung
+- Separater Drag-Handle verhindert Konflikte mit DnD
+
+#### 2. Globaler AI-Kontext-Store
+- **Neuer Store**: `aiContextStore.svelte.ts` für persistenten AI-Kontext
+- Kontext-Karten bleiben erhalten, auch wenn Sidebar geschlossen wird
+- Methoden: `addCard()`, `removeCard()`, `clear()`, `hasCard()`
+
+#### 3. Mobile UX Verbesserungen
+- **AI-Kontext-Button** (🧠) in CardDetailsDialog für Mobile
+- Alternative zu CTRL+Klick/Long-Press (Long-Press kollidiert mit Drag)
+- Globaler Event-Handler in +page.svelte für Sidebar-unabhängige Funktion
+
+#### 4. UI-Optimierungen
+- **Hamburger-Menü** in BoardsList für Board-Einstellungen
+- **Profilbearbeitung** in User-Dropdown (LeftSidebarFooter)
+- Konsistentes Menü-Styling mit `bg-muted/80`
+- Reduzierte Border-Dicke für dezenteres Design
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `Column.svelte` | +51 Zeilen - Inline-Editing |
+| `Topbar.svelte` | +85 Zeilen - Board-Titel Inline-Editing |
+| `+page.svelte` | +48/-91 Zeilen - Globaler AI-Handler |
+| `aiContextStore.svelte.ts` | +69 Zeilen - **Neu** |
+| `CardDetailsDialog.svelte` | +41 Zeilen - AI-Button |
+| `BoardsList.svelte` | +30 Zeilen - Hamburger-Menü |
+| `LeftSidebarFooter.svelte` | +9 Zeilen - Profilbearbeitung |
+
+### 📚 Dokumentation
+- Neuer Guide: `docs/GUIDES/INLINE-EDITING.md`
+
+---
+
 ## Version 4.7.24 - OER Search: Multi-Source + Bildungsstufe 🎯
 
 **Datum:** 30. Januar 2026  

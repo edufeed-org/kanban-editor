@@ -41,15 +41,21 @@
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
+    import PackageOpenIcon from '@lucide/svelte/icons/package-open';
 
     // Props
-    let { currentBoardId = '' }: { currentBoardId?: string } = $props();
+    let { 
+        currentBoardId = '', 
+        hamburgerMenuOpen = $bindable(false)
+    }: { 
+        currentBoardId?: string;
+        hamburgerMenuOpen?: boolean;
+    } = $props();
 
     // State
     let searchQuery = $state('');
     let isCreating = $state(false);
     let isLoading = $state(false);
-    let hamburgerMenuOpen = $state(false);
     
     // Board Settings Dialog State
     let settingsDialogOpen = $state(false);
@@ -294,25 +300,13 @@
 </script>
 
 <div class="flex flex-col gap-3 h-full overflow-hidden p-2">
-    <!-- Hamburger Menu Header -->
-    <div class="flex items-center gap-2 mb-2">
-        <Button
-            variant="ghost"
-            size="icon"
-            class="h-9 w-9"
-            title="Menü"
-            onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
-        >
-            <MenuIcon class="h-5 w-5" />
-        </Button>
-    </div>
     
-    <!-- Expandable Menu -->
+    <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-card border rounded-md mb-2 shadow-md max-h-[60vh] overflow-y-auto">
+        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b -mx-2 -mt-2 mb-1 max-h-[60vh] overflow-y-auto editor-menu bg-[var(--card)]">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
-                icon={SettingsIcon} 
+                icon={PackageOpenIcon} 
                 label="Eigenschaften" 
                 onclick={() => { 
                     settingsDialogOpen = true;
@@ -605,7 +599,7 @@
         </div>
     {/if}
     
-    <h2 class="text-m font-semibold text-center upper">Meine Boards</h2>
+    <h2 class="text-lg font-semibold upper">Meine Boards</h2>
 
     <div class="m-2 flex-shrink-0">
         <div class="relative">

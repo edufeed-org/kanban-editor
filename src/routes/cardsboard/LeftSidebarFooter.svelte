@@ -11,6 +11,7 @@
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlayIcon from "@lucide/svelte/icons/play";
+	import UserIcon from "@lucide/svelte/icons/user";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -83,6 +84,14 @@
 					</DropdownMenu.Trigger>
 
 					<DropdownMenu.Content align="start" class="w-56">
+						
+						<!-- Profil bearbeiten -->
+						<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2">
+							<UserIcon class="h-4 w-4" />
+							<span>Profil bearbeiten</span>
+						</DropdownMenu.Item>
+						
+						<DropdownMenu.Separator />
 						
 						<!-- Logout -->
 						<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+import { onMount, onDestroy } from 'svelte';
 import { replaceState } from '$app/navigation';
 import Board from "./Board.svelte";
 import BoardsList from "./BoardsList.svelte";
@@ -11,12 +11,19 @@ import AIPanel from "./AIPanel.svelte";
 import type { Column } from "./types.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
+import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
 import { toast } from "svelte-sonner";
+import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
+import MenuIcon from '@lucide/svelte/icons/menu';
 import { authStore } from '$lib';
 
 	// Reference to ImportPopover component for share-link preview
 	let importPopoverComponent: any;
+	
+	// Hamburger Menu State für Board-Einstellungen
+	let hamburgerMenuOpen = $state(false);
 	
 	// Share-Link Dialog State
 	let showFollowDialog = $state(false);
@@ -26,9 +33,34 @@ import { authStore } from '$lib';
 	// Mobile detection (screens < 768px are considered mobile)
 	let isMobile = $state(false);
 
+	// ==========================================================================
+	// GLOBAL AI CONTEXT EVENT HANDLER
+	// Muss global sein, damit es auch funktioniert wenn AIPanel geschlossen ist
+	// ==========================================================================
+	function handleGlobalAddCardToContext(e: CustomEvent<ContextCard>) {
+		const newCard = e.detail;
+		const added = aiContextStore.addCard(newCard);
+		if (added) {
+			toast.success(`"${newCard.cardName}" zum KI-Kontext hinzugefügt`);
+		} else {
+			toast.info(`Karte ist bereits im KI-Kontext`);
+		}
+	}
+
 	// ============================================================================
 	// LIFECYCLE: ONMOUNT HOOKS (Browser API calls - only once per component mount)
 	// ============================================================================
+
+	// Hook 0: Globaler Event-Listener für AI-Kontext (funktioniert auch bei geschlossener Sidebar)
+	onMount(() => {
+		window.addEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+	});
+	
+	onDestroy(() => {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
+		}
+	});
 
 	// Hook 1: Suppress passive event listener warnings for dnd-action
 	// ✅ CORRECT: onMount for one-time side effects
@@ -201,35 +233,23 @@ import { authStore } from '$lib';
 		cardsCount: columns.reduce((sum, col) => sum + col.items.length, 0)
 	});
 
-	// Sidebar states - jetzt mit Größen
+	// Sidebar states
 	let leftSidebarOpen = $state(true);
 	let rightSidebarOpen = $state(false);
-	let leftSidebarSize = $state(20);
-	let rightSidebarSize = $state(15);
 	
-	// Auto-close sidebars on mobile
+	// Auto-close left sidebar on mobile
 	$effect(() => {
 		if (isMobile) {
 			leftSidebarOpen = false;
 		}
 	});
 	
-	// Funktionen zum Toggle mit Größenänderung
+	// Toggle-Funktionen
 	function toggleLeftSidebar() {
-		if (leftSidebarOpen) {
-			leftSidebarSize = 0;
-		} else {
-			leftSidebarSize = 20;
-		}
 		leftSidebarOpen = !leftSidebarOpen;
 	}
 	
 	function toggleRightSidebar() {
-		if (rightSidebarOpen) {
-			rightSidebarSize = 0;
-		} else {
-			rightSidebarSize = 15;
-		}
 		rightSidebarOpen = !rightSidebarOpen;
 	}
 
@@ -264,10 +284,28 @@ import { authStore } from '$lib';
 		
 		<!-- Left Sidebar Sheet (Mobile) -->
 		<Sheet.Root bind:open={leftSidebarOpen}>
-			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0">
-				<div class="p-4 h-full flex flex-col overflow-hidden">
-					<div class="flex-1 overflow-y-auto min-h-0">
-						<BoardsList {currentBoardId} />
+			<Sheet.Content side="left" class="w-[280px] sm:w-[320px] p-0 [&>button]:hidden flex flex-col">
+				<!-- Header mit Titel und Menü-Button -->
+				<div class="px-4 py-3 border-b-4 flex items-center justify-between shrink-0">
+					<Button
+						variant="ghost"
+						size="icon"
+						class="h-8 w-8 hamburger-menu-button"
+						title="Board Einstellungen"
+						onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
+					>
+						<MenuIcon class="h-4 w-4" />
+					</Button>
+					<div class="flex items-center gap-2">
+						<!-- <SquareKanbanIcon class="h-5 w-5" /> -->
+						<h2 class="font-semibold">Kanban-Editor</h2>
+					</div>
+					
+				</div>
+				<!-- Content Bereich - flex-1 für den restlichen Platz -->
+				<div class="flex-1 flex flex-col overflow-hidden">
+					<div class="flex-1 overflow-y-auto min-h-0 p-2">
+						<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 					</div>
 					<LeftSidebarFooter />
 				</div>
@@ -285,64 +323,75 @@ import { authStore } from '$lib';
 		</Sheet.Root>
 		
 	{:else}
-		<!-- Desktop Layout: Resizable sidebars -->
-		<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
-			<!-- Linke Sidebar - nur rendern wenn offen -->
+		<!-- Desktop Layout: Left sidebar fixed, Main+Right resizable -->
+		<div class="flex flex-1 overflow-hidden">
+			
+			<!-- Linke Sidebar (Board-Liste) - feste Breite, außerhalb der PaneGroup -->
 			{#if leftSidebarOpen}
-				<Resizable.Pane 
-					defaultSize={20} 
-					minSize={15} 
-					maxSize={40} 
-					class="border-r bg-muted/10 overflow-y-auto"
-					onResize={(size: number) => { leftSidebarSize = size; }}
-				>
-					<div class="p-4 h-full flex flex-col overflow-hidden">
-						<div class="flex-1 overflow-y-auto min-h-0">
-							<BoardsList {currentBoardId} />
+				<aside class="w-[320px] border-r-2 bg-background flex flex-col shrink-0">
+					<!-- Header mit Titel und Menü-Button -->
+					<div class="px-4 py-3 border-b-2 flex items-center justify-between shrink-0">
+						<Button
+							variant="ghost"
+							size="icon"
+							class="h-8 w-8 hamburger-menu-button"
+							title="Board Einstellungen"
+							onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
+						>
+							<MenuIcon class="h-4 w-4" />
+						</Button>
+						<div class="flex items-center gap-2">
+							<!-- <SquareKanbanIcon class="h-5 w-5" /> -->
+							<h2 class="font-semibold">Kanban-Editor</h2>
+						</div>
+						
+					</div>
+					<!-- Content Bereich -->
+					<div class="flex-1 flex flex-col overflow-hidden">
+						<div class="flex-1 overflow-y-auto min-h-0 p-2">
+							<BoardsList {currentBoardId} bind:hamburgerMenuOpen />
 						</div>
 						<LeftSidebarFooter />
 					</div>
+				</aside>
+			{/if}
+			
+			<!-- Main + Rechte Sidebar als separate PaneGroup -->
+			<Resizable.PaneGroup direction="horizontal" class="flex-1 overflow-hidden">
+				<!-- Hauptbereich -->
+				<Resizable.Pane defaultSize={rightSidebarOpen ? 75 : 100} minSize={50} class="flex flex-col overflow-hidden">
+					<main class="flex flex-1 flex-col overflow-hidden min-w-0">
+						<Topbar
+							onToggleLeftSidebar={toggleLeftSidebar}
+							onToggleRightSidebar={toggleRightSidebar}
+							{isMobile}
+						/>
+						
+						<div class="flex-1 overflow-hidden p-0 min-h-0">
+							<Board 
+								columns={columns} 
+								onFinalUpdate={handleBoardUpdated}
+							/>
+						</div>
+					</main>
 				</Resizable.Pane>
 				
-				<Resizable.Handle withHandle />
-			{/if}
-			
-			<!-- Hauptbereich -->
-			<Resizable.Pane defaultSize={70} minSize={40} class="flex flex-col overflow-hidden">
-				<main class="flex flex-1 flex-col overflow-hidden min-w-0">
-					<Topbar
-						onToggleLeftSidebar={toggleLeftSidebar}
-						onToggleRightSidebar={toggleRightSidebar}
-						{isMobile}
-					/>
+				{#if rightSidebarOpen}
+					<!-- Handle zwischen Main und rechter Sidebar -->
+					<Resizable.Handle withHandle />
 					
-					<div class="flex-1 overflow-hidden p-0 min-h-0">
-						<Board 
-							columns={columns} 
-							onFinalUpdate={handleBoardUpdated}
-						/>
-					</div>
-				</main>
-			</Resizable.Pane>
-			
-			<!-- Handle zwischen Main und rechter Sidebar -->
-			{#if rightSidebarOpen}
-				<Resizable.Handle withHandle />
-			{/if}
-			
-			<!-- Rechte Sidebar (KI-Agent) - nur rendern wenn offen -->
-			{#if rightSidebarOpen}
-				<Resizable.Pane 
-					defaultSize={20} 
-					minSize={15} 
-					maxSize={50} 
-					class="border-l bg-background"
-					onResize={(size: number) => { rightSidebarSize = size; }}
-				>
-					<AIPanel boardId={currentBoardId} />
-				</Resizable.Pane>
-			{/if}
-		</Resizable.PaneGroup>
+					<!-- Rechte Sidebar (KI-Agent) - resizable -->
+					<Resizable.Pane 
+						defaultSize={25} 
+						minSize={15} 
+						maxSize={50}
+						class="bg-background border-l-2"
+					>
+						<AIPanel boardId={currentBoardId} />
+					</Resizable.Pane>
+				{/if}
+			</Resizable.PaneGroup>
+		</div>
 	{/if}
 </div>
 

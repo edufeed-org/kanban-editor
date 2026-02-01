@@ -24,6 +24,7 @@
 	import XIcon from '@lucide/svelte/icons/x';
 	import LinkIcon from '@lucide/svelte/icons/link';
 	import ImageIcon from '@lucide/svelte/icons/image';
+	import BrainIcon from '@lucide/svelte/icons/brain';
 	import OerImagePicker from '$lib/components/OerImagePicker.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { fade, slide } from 'svelte/transition';
@@ -122,6 +123,35 @@
 		}
 		return null;
 	});
+
+	// Finde die Spalte für diese Karte (für AI-Kontext)
+	let currentColumn = $derived.by(() => {
+		for (const col of boardStore.uiData) {
+			const found = col.items.find(c => String(c.id) === String(cardId));
+			if (found) return col;
+		}
+		return null;
+	});
+
+	/**
+	 * Fügt die Karte zum AI-Kontext hinzu (für Mobile Alternative)
+	 */
+	function handleAddToAIContext() {
+		if (!currentCard || !currentColumn) return;
+		
+		const event = new CustomEvent('addCardToAIContext', {
+			detail: {
+				cardId: String(currentCard.id),
+				cardName: currentCard.name,
+				columnId: currentColumn.id,
+				columnName: currentColumn.name
+			}
+		});
+		window.dispatchEvent(event);
+		
+		// Optional: Dialog schließen nach Hinzufügen
+		// open = false;
+	}
 
 	// Abgeleitete Werte
 	let displayComments = $derived(currentCard?.comments || []);
@@ -455,6 +485,17 @@
 				/>
 				<div class="flex items-center gap-1 flex-shrink-0">
 					{#if !readOnly}
+					<!-- AI-Kontext Button (besonders nützlich für Mobile) -->
+					<Button 
+						variant="ghost" 
+						size="sm"
+						onclick={handleAddToAIContext}
+						class="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+						aria-label="Zum AI-Kontext hinzufügen"
+						title="Zum AI-Kontext hinzufügen"
+					>
+						<BrainIcon class="h-4 w-4" />
+					</Button>
 					<Button 
 						variant="ghost" 
 						size="sm"
