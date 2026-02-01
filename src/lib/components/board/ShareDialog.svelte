@@ -77,6 +77,8 @@
     // Vollständiger Share-Link (kombiniert baseUrl + Token)
     let fullShareLink = $derived(shareToken ? `${baseUrl}${import.meta.env.BASE_URL}cardsboard?import=${shareToken}` : '');
     
+    console.log('[ShareDialog] SHARE_BASE_URL:',import.meta.env.BASE_URL);
+
     async function loadShareConfig(): Promise<void> {
         if (shareConfigLoaded || shareConfigLoading) return;
 
