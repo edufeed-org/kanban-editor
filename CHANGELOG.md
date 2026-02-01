@@ -11,7 +11,7 @@
 - **Doppelte Requests verhindert:** Share-Link wird pro Board nur einmal generiert
 - **Schnelleres Laden:** Display-Namen werden parallel geladen
 - **UI-Warnung behoben:** doppelte Textgröße im Base-URL Input entfernt
-- **GitHub Pages Base-URL:** Default wird robust aus `BASE_URL` aufgelöst (inkl. `.`/`/`)
+- **GitHub Pages Base-URL:** Default wird robust aus `BASE_URL` aufgelöst (inkl. `.`/`./`)
 - **Animation Guard:** Flip-Animationen vermeiden NaN/Infinity-Transforms bei 0‑Größen
 
 ### 📁 Geänderte Dateien

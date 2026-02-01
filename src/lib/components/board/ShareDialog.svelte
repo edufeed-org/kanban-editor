@@ -37,7 +37,20 @@
     let baseUrl = $state(
         typeof window !== 'undefined'
             ? (() => {
-                const resolved = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+                const envBase = import.meta.env.BASE_URL || '/';
+                let basePath = envBase;
+
+                // Vite kann BASE_URL als "./" setzen (z.B. GitHub Pages). Dann aktuelles Path-Segment verwenden.
+                if (basePath === '.' || basePath === './') {
+                    basePath = window.location.pathname.replace(/[^/]*$/, '');
+                }
+
+                // Normalisieren: führenden Slash sicherstellen
+                if (!basePath.startsWith('/')) {
+                    basePath = `/${basePath}`;
+                }
+
+                const resolved = new URL(basePath, window.location.origin);
                 const normalizedPath = resolved.pathname.replace(/\/$/, '');
                 return `${resolved.origin}${normalizedPath}`;
             })()
@@ -77,7 +90,6 @@
     // Vollständiger Share-Link (kombiniert baseUrl + Token)
     let fullShareLink = $derived(shareToken ? `${baseUrl}${import.meta.env.BASE_URL}cardsboard?import=${shareToken}` : '');
     
-    console.log('[ShareDialog] SHARE_BASE_URL:',import.meta.env.BASE_URL);
 
     async function loadShareConfig(): Promise<void> {
         if (shareConfigLoaded || shareConfigLoading) return;
