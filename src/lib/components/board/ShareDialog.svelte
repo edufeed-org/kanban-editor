@@ -33,8 +33,12 @@
     let naddrCopied = $state(false);
     let qrCodeDataUrl = $state('');
     
-    // Base-URL für vollständige Links (default: aktuelle Origin)
-    let baseUrl = $state(typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+    // Base-URL für vollständige Links (default: Origin + BASE_URL)
+    let baseUrl = $state(
+        typeof window !== 'undefined'
+            ? `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}`
+            : 'http://localhost:5173'
+    );
     
     // Vollständiger naddr-Link (kombiniert baseUrl + naddrPath)
     let naddrLink = $derived(naddrPath ? `${baseUrl}${naddrPath}` : '');
