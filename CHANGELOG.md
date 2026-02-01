@@ -10,6 +10,7 @@
 - **ShareDialog Performance:** config.json wird nur noch einmal geladen
 - **Doppelte Requests verhindert:** Share-Link wird pro Board nur einmal generiert
 - **Schnelleres Laden:** Display-Namen werden parallel geladen
+- **UI-Warnung behoben:** doppelte Textgröße im Base-URL Input entfernt
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |
