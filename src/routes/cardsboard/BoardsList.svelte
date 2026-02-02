@@ -29,6 +29,7 @@
     import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import { ShareButton } from '$lib/components/board';
+    import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
@@ -100,6 +101,7 @@
     let nostrSettingsOpen = $state(false);
     let defaultsSettingsOpen = $state(false);
     let sharePopoverOpen = $state(false);
+    let shareToCommunitiesOpen = $state(false);
     
     // Import & Export States
     let importExportPopoverOpen = $state(false);
@@ -443,7 +445,7 @@
                             icon={UsersIcon} 
                             label="An Communities" 
                             onclick={() => { 
-                                toast.info('Community-Teilen kommt bald');
+                                shareToCommunitiesOpen = true;
                                 sharePopoverOpen = false;
                                 hamburgerMenuOpen = false;
                             }}
@@ -994,6 +996,9 @@
 
 <!-- Publish to Edufeed Dialog -->
 <PublishToEdufeedDialog bind:open={publishToEdufeedDialogOpen} />
+
+<!-- Share to Communities Dialog -->
+<ShareToCommunitiesDialog bind:open={shareToCommunitiesOpen} />
 
 <style>
     div {

@@ -39,13 +39,6 @@ export type EditorRequestInfo = {
     role?: string;
 };
 
-export type EditorRequestInfo = {
-    eventId: string;
-    createdAt?: number;
-    reason?: string;
-    role?: string;
-};
-
 export class BoardSharingOperations {
 
     private static loadHiddenBoardsRegistry(): HiddenBoardsRegistryV1 {
@@ -83,7 +76,7 @@ export class BoardSharingOperations {
         localStorage.setItem(HIDDEN_BOARDS_KEY, JSON.stringify(registry));
     }
 
-    private static makeBoardAddress(boardId: string, boardAuthor: string): string {
+    public static makeBoardAddress(boardId: string, boardAuthor: string): string {
         return `30301:${boardAuthor}:${boardId}`;
     }
 

@@ -12,6 +12,7 @@
 
   "nostr": {
     "relaysPublic": [
+      "wss://relay-rpi.edufeed.org",
       "wss://relay.edufeed.org",
       "ws://localhost:7000"
     ],

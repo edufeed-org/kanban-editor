@@ -108,11 +108,23 @@ Dieses Format folgt den gleichen Prinzipien wie nprofile, ist aber speziell für
 
 Für die UI gilt: **Ein Nutzer darf ausschließlich in Communities teilen, in denen er selbst Mitglied ist.** Zusätzliche Communities zu „entdecken“ ist nicht erforderlich und würde falsche Treffer erzeugen.
 
-Die zuverlässige Quelle für Mitgliedschaft ist das **Profil‑Badges‑Event [[kind-30008]]**. Es listet alle Badges, die der Nutzer besitzt. Aus den Badge‑Adressen lässt sich die Community‑Pubkey ableiten.
+Die zuverlässige Quelle für **Mitgliedschaft** sind **Relationship‑Events (Kind 30382)**. In diesem Modell suchst du nach Events des Nutzers (author = userPubkey) mit:
+- **`d`‑Tag** = Community‑Identifier (z.B. Community‑Pubkey oder definierter d‑Tag)
+- **Relationship** = `follow` (Tag `n` oder `relationship`)
 
-### Community‑Badges (Single Source of Truth)
+**Name/Anzeige:** Der Community‑Name kommt aus dem **Kind‑0 Metadaten‑Event** des Community‑Pubkeys (Felder `display_name` oder `name`). Falls Kind‑10222 `content` leer ist, muss der Client Kind‑0 als Fallback laden.
 
-Clients lesen das Profil‑Badges‑Event [[kind-30008]] und extrahieren daraus die Community‑Pubkeys:
+Beispiel‑Abfrage (nak):
+
+```
+nak req -k 30382 -a <user-pubkey-hex> relay.edufeed.org
+```
+
+Badges (Kind 30008) werden **nicht** für Mitgliedschaft verwendet, sondern für **Schreibrechte und Moderation**. Sie sind das Gegenstück, das die Community an Nutzer verleiht.
+
+### Community‑Badges (Rechte & Moderation)
+
+Clients lesen das Profil‑Badges‑Event [[kind-30008]] für **Rechte** (z.B. Publish/Moderation), **nicht** für Mitgliedschaft.
 
 1. **Badge‑Adressen (`a`‑Tags)** haben das Format `30009:<community-pubkey>:<badge-name>`.
 2. Der **Author‑Teil** ist die Community‑Pubkey.
@@ -121,8 +133,34 @@ Clients lesen das Profil‑Badges‑Event [[kind-30008]] und extrahieren daraus 
 ### Code‑Beispiele (Realisierung)
 
 ```ts
-// 1) Eigene Communities aus Kind-30008 extrahieren
-async function getMyCommunityPubkeys(ndk: NDK, userPubkey: string): Promise<string[]> {
+// 1) Mitgliedschaften via Relationship-Events (Kind 30382)
+async function getMyCommunityPubkeysFromRelationships(
+  ndk: NDK,
+  userPubkey: string
+): Promise<string[]> {
+  const relEvents = await ndk.fetchEvents({
+    kinds: [30382],
+    authors: [userPubkey]
+  });
+
+  if (!relEvents) return [];
+
+  const communityPubkeys = new Set<string>();
+  for (const event of Array.from(relEvents)) {
+    const isFollow = event.tags?.some((t) =>
+      (t[0] === 'n' || t[0] === 'relationship') && t[1] === 'follow'
+    );
+    if (!isFollow) continue;
+
+    const dTag = event.tags?.find((t) => t[0] === 'd')?.[1];
+    if (dTag) communityPubkeys.add(dTag);
+  }
+
+  return Array.from(communityPubkeys);
+}
+
+// 1b) Badges (Kind 30008) für Rechte/Moderation
+async function getMyCommunityBadgePubkeys(ndk: NDK, userPubkey: string): Promise<string[]> {
   const badgesEvent = await ndk.fetchEvent({
     kinds: [30008],
     authors: [userPubkey]
@@ -144,7 +182,7 @@ async function getMyCommunityPubkeys(ndk: NDK, userPubkey: string): Promise<stri
 
 // 2) Community‑Metadaten (Kind-10222) laden
 async function loadMyCommunities(ndk: NDK, userPubkey: string) {
-  const pubkeys = await getMyCommunityPubkeys(ndk, userPubkey);
+  const pubkeys = await getMyCommunityPubkeysFromRelationships(ndk, userPubkey);
 
   const communities = [] as Array<{
     pubkey: string;
@@ -343,6 +381,16 @@ Das `kind-30222`-Event wird auf den Community-Relays veröffentlicht und kann vo
   - **merge**: Erzeugt neue IDs (konfliktfrei)
   - **new**: Erstellt Variante mit "(Imported)"-Suffix
   - **overwrite**: Überschreibt bestehendes Board (mit Warnung)
+
+### UI-Workflow (Boards-Menü)
+
+1. Öffne das Boards-Menü in der linken Sidebar.
+2. Wähle **Teilen → An Communities**.
+3. Die App lädt deine Communities über **Kind 30382** (Relationship‑Membership) und **Kind 10222** (Community‑Metadaten). Badges (Kind 30008) werden für Rechte/Moderation geprüft.
+4. Wähle bis zu 12 Communities aus und bestätige **Teilen**.
+5. Es wird ein **Kind 30222** Event mit `a`, `p`, `r`, `naddr`, `url` Tags publiziert.
+
+**Hinweis:** Es werden ausschließlich Communities angezeigt, in denen der Nutzer Mitglied ist (Relationship‑basiert).
 
 ### Sicherheitsüberlegungen
 

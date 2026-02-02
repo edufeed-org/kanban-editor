@@ -1,5 +1,204 @@
 # Changelog
 
+## Version 4.7.57 - Communikey Name via Kind 0 🏷️
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Community‑Name wird aus Kind‑0 Metadaten geladen (Fallback wenn Kind‑10222 `content` leer ist)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Kind‑0 Fallback für Community‑Name |
+| `docs/GUIDES/COMMUNIKEY.md` | Name‑Quelle (Kind‑0) dokumentiert |
+
+---
+
+## Version 4.7.56 - Communikey Relationship Tag Fix 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Relationship‑Follow erkennt `n=follow` (neben `relationship=follow`)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Tag `n` unterstützt |
+| `docs/GUIDES/COMMUNIKEY.md` | Spec: `n`/`relationship` Tag dokumentiert |
+
+---
+
+## Version 4.7.55 - Communikey Relationships + Relay-Only 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Relationship‑Fallback (Kind 30382, `relationship=follow` + `d`‑Tag)
+- **Communities:** Relay‑Scan auf `wss://relay.edufeed.org` begrenzt (kein localhost‑Fallback)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Fallback + Relay‑Scope | 
+
+---
+
+## Version 4.7.54 - Communikey Debug Filter Logs 🧪
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🧪 Debug
+- **Communities:** Nostr-Filter (Badges, Community-List, Community-Details) werden im Log ausgegeben
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Debug-Logging der Nostr-Filter | 
+
+---
+
+## Version 4.7.53 - Communikey Pubkey Normalization 🔐
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** npub/nprofile werden zu Hex-Pubkeys normalisiert, damit Badges/Listen korrekt geladen werden
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Pubkey-Normalisierung (npub/nprofile → hex) |
+
+---
+
+## Version 4.7.52 - Communikey Fallback & Relay Fix 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** relay.edufeed.org immer im Relay-Set
+- **Communities:** Fallback auf Kind 10004 (Community List), falls Badges leer sind
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Set erweitert + Community-List Fallback |
+
+---
+
+## Version 4.7.51 - Communikey Badge Relay Scan 🔍
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Badges werden auf allen konfigurierten Relays geladen (nicht nur edufeed/localhost)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Scan für Kind 30008 erweitert |
+
+---
+
+## Version 4.7.50 - Communikey Membership Fix 🧩
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Membership wird aus Kind 30008 (Badges) geladen, nicht aus 10222
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Badge-Query auf Kind 30008 korrigiert |
+
+---
+
+## Version 4.7.49 - Debug-Communities NDK Context Fix 🧪
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Debug-Page:** NDK aus Svelte Context statt `window` (Fehler „NDK nicht initialisiert“ behoben)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/test/debug-communities/+page.svelte` | NDK via `getContext()` laden |
+
+---
+
+## Version 4.7.48 - Board-Sharing Typen & BoardRef Fix 🧹
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Sharing:** Doppelte Typdefinition entfernt und `makeBoardAddress()` öffentlich gemacht (svelte-check Fehler behoben)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Duplicate Type entfernt, `makeBoardAddress()` public |
+
+---
+
+## Version 4.7.47 - Communikey Community-Load Fix 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Community-Dialog:** Timeout + Relay-Fallback verhindert endloses „Communities werden geladen…“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Timeout + Relay-Connect beim Laden |
+
+---
+
+## Version 4.7.46 - Communikey-Teilen an Communities 🌐
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Communikey Workflow:** Communities aus Kind 30008/10222 laden und Board via Kind 30222 teilen
+- **UI:** Dialog für Community-Auswahl und Publishing angebunden an „Teilen → An Communities“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Neuer Dialog + Publishing-Logik |
+| `src/routes/cardsboard/BoardsList.svelte` | Button mit Dialog verbunden |
+| `docs/GUIDES/COMMUNIKEY.md` | UI-Workflow dokumentiert |
+
+---
+
 ## Version 4.7.45 - Teilen-Untermenü im Boards-Menü 🔗
 
 **Datum:** 02. Februar 2026  

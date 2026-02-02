@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.43 (Teilen-Untermenü im Boards-Menü - 02. Februar 2026)  
-**Aktualisiert:** 02. Februar 2026 (Teilen-Untermenü in BoardsList ergänzt).  
+**Version:** 3.49 (Communikey Name via Kind 0 - 02. Februar 2026)  
+**Aktualisiert:** 02. Februar 2026 (Community‑Name aus Kind‑0 Metadaten).  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1654,6 +1654,12 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.49 | 02.02.2026 | 🏷️ **Communikey Name via Kind 0:** Community‑Name wird aus Kind‑0 Metadaten geladen (Fallback). |
+| 3.48 | 02.02.2026 | 🧭 **Communikey Relationship Tag Fix:** `n=follow` wird als Relationship erkannt. |
+| 3.47 | 02.02.2026 | 🧭 **Communikey Relationship Fallback:** Kind 30382 `follow` + `d` als Membership-Quelle. |
+| 3.46 | 02.02.2026 | 🧪 **Communikey Debug Filter Logs:** Badge/List/Community-Filter werden geloggt. |
+| 3.45 | 02.02.2026 | 🔐 **Communikey Pubkey Normalization:** npub/nprofile → hex für Badge/Listen-Queries. |
+| 3.44 | 02.02.2026 | 🌐 **Communikey-Teilen:** Community-Auswahl (Kind 30008/10222) + Publish als Kind 30222. |
 | 3.43 | 02.02.2026 | 🔗 **Teilen-Untermenü:** „Als Link“, „An Communities“, „An Edufeed“ in BoardsList ergänzt. |
 | 3.36 | 02.02.2026 | 👀 **Editor-Request Bell Visibility:** Glocke nur bei offenen Requests sichtbar. |
 | 3.35 | 02.02.2026 | 🔔 **Editor-Request Background Refresh:** Badge wird im Hintergrund geladen. |
