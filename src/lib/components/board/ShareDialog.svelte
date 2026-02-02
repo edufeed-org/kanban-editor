@@ -18,7 +18,12 @@
     import QRCode from 'qrcode';
     
     // Props
-    let { open = $bindable(false), initialTab = 'nostr-link', initialEditorRequests = {} } = $props();
+    let {
+        open = $bindable(false),
+        initialTab = 'nostr-link',
+        initialEditorRequests = {},
+        mode = 'all'
+    } = $props();
     
     // State
     let newEditorPubkey = $state('');
@@ -62,6 +67,11 @@
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
+    let showLinkTabs = $derived(mode !== 'editors');
+    let showEditorsTab = $derived(mode !== 'links');
+    let showTabList = $derived(
+        (mode === 'all') || (mode === 'links')
+    );
 
     let leaveRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number }>>({});
     let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
@@ -361,9 +371,16 @@
     });
 
     let wasOpen = $state(false);
+    function getDefaultTab() {
+        if (mode === 'editors') return 'editors';
+        if (mode === 'links') return 'nostr-link';
+        return initialTab;
+    }
+
     $effect(() => {
         if (open && !wasOpen) {
-            activeTab = initialTab;
+            const nextTab = getDefaultTab();
+            activeTab = nextTab;
         }
         wasOpen = open;
     });
@@ -373,18 +390,18 @@
         if (!open) return;
         const tab = activeTab;
 
-        if (tab === 'share-link') {
+        if (tab === 'share-link' && mode !== 'editors') {
             void generateShareLinkAsync();
         }
 
-        if (tab === 'nostr-link') {
+        if (tab === 'nostr-link' && mode !== 'editors') {
             void generateNaddrLink();
         }
     });
 
     // QR-Code nur für Nostr-Link neu generieren
     $effect(() => {
-        if (!open || activeTab !== 'nostr-link') return;
+        if (!open || activeTab !== 'nostr-link' || mode === 'editors') return;
         const currentBaseUrl = baseUrl;
         const currentPath = naddrPath;
         if (currentBaseUrl && currentPath) {
@@ -500,20 +517,28 @@
             />
         </div>
         
+        {#if showLinkTabs || showEditorsTab}
         <Tabs.Root bind:value={activeTab} class="mt-4">
-            <Tabs.List class="grid w-full grid-cols-3">
-                <Tabs.Trigger value="nostr-link">
-                    Nostr-Link
-                </Tabs.Trigger>
-                <Tabs.Trigger value="share-link">
-                    Share & Fork
-                </Tabs.Trigger>
-                <Tabs.Trigger value="editors">
-                    Editoren ({editorsAndOwners.length})
-                </Tabs.Trigger>
-            </Tabs.List>
+            {#if showTabList}
+                <Tabs.List class="grid w-full {showEditorsTab ? 'grid-cols-3' : 'grid-cols-2'}">
+                    {#if showLinkTabs}
+                        <Tabs.Trigger value="nostr-link">
+                            Nostr-Link
+                        </Tabs.Trigger>
+                        <Tabs.Trigger value="share-link">
+                            Share & Fork
+                        </Tabs.Trigger>
+                    {/if}
+                    {#if showEditorsTab}
+                        <Tabs.Trigger value="editors">
+                            Editoren ({editorsAndOwners.length})
+                        </Tabs.Trigger>
+                    {/if}
+                </Tabs.List>
+            {/if}
             
             <!-- Nostr-Link Tab (naddr) - jetzt erster Tab -->
+            {#if showLinkTabs}
             <Tabs.Content value="nostr-link" class="mt-4 space-y-4">
                 <div class="space-y-2">
                     <p class="text-sm text-muted-foreground">
@@ -675,8 +700,10 @@
                     </div>
                 </div>
             </Tabs.Content>
+            {/if}
             
             <!-- Editoren Tab -->
+            {#if showEditorsTab}
             <Tabs.Content value="editors" class="mt-4">
                 {#if canInviteEditors}
                     <div class="space-y-4 mb-4">
@@ -784,7 +811,9 @@
                     {/if}
                 </div>
             </Tabs.Content>
+            {/if}
         </Tabs.Root>
+        {/if}
         </div>
         
         <Dialog.Footer class="flex-shrink-0">

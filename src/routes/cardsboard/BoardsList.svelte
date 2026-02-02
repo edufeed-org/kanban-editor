@@ -24,11 +24,12 @@
     import CircleIcon from '@lucide/svelte/icons/circle';
     import SearchIcon from '@lucide/svelte/icons/search';
     import MenuIcon from '@lucide/svelte/icons/menu';
+    import Share2Icon from '@lucide/svelte/icons/share-2';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
     import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
-    import { ShareButton } from '$lib/components/board';
+    import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
     import PaletteIcon from '@lucide/svelte/icons/palette';
@@ -45,6 +46,8 @@
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
+    import LinkIcon from '@lucide/svelte/icons/link';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -102,6 +105,8 @@
     let defaultsSettingsOpen = $state(false);
     let sharePopoverOpen = $state(false);
     let shareToCommunitiesOpen = $state(false);
+    let shareEditorsOpen = $state(false);
+    let shareLinksOpen = $state(false);
     
     // Import & Export States
     let importExportPopoverOpen = $state(false);
@@ -401,16 +406,6 @@
                         />
                         
                         <SubmenuItem 
-                            icon={SendIcon} 
-                            label="An edufeed.org senden" 
-                            onclick={async () => { 
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                                publishToEdufeedDialogOpen = true;
-                            }}
-                        />
-                        
-                        <SubmenuItem 
                             icon={FileTextIcon} 
                             label="Als Liascript exportieren" 
                             onclick={() => { 
@@ -427,7 +422,7 @@
             <Popover.Root bind:open={sharePopoverOpen}>
                 <Popover.Trigger class="w-full">
                     <MenuItem 
-                        icon={MenuIcon} 
+                        icon={Share2Icon} 
                         label="Teilen" 
                         onclick={() => {}}
                         showBorder={false}
@@ -436,14 +431,31 @@
                 </Popover.Trigger>
                 <Popover.Content side="right" align="start" class="w-56 p-1">
                     <div class="space-y-0">
-                        <ShareButton 
-                            variant="default"
-                            class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
-                            showLabel={true}
+                        <MenuItem
+                            icon={UserPlusIcon}
+                            label="Schreibrechte zuweisen"
+                            onclick={() => {
+                                shareEditorsOpen = true;
+                                sharePopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                            disabled={!canEditBoardMeta}
+                            showBorder={false}
+                        />
+                        <MenuItem
+                            icon={LinkIcon}
+                            label="Link für Beobachter"
+                            onclick={() => {
+                                shareLinksOpen = true;
+                                sharePopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                            disabled={!currentBoardId}
+                            showBorder={false}
                         />
                         <SubmenuItem 
                             icon={UsersIcon} 
-                            label="An Communities" 
+                            label="In Communities teilen" 
                             onclick={() => { 
                                 shareToCommunitiesOpen = true;
                                 sharePopoverOpen = false;
@@ -452,7 +464,7 @@
                         />
                         <SubmenuItem 
                             icon={SendIcon} 
-                            label="An Edufeed" 
+                            label="An Edufeed senden" 
                             onclick={() => { 
                                 publishToEdufeedDialogOpen = true;
                                 sharePopoverOpen = false;
@@ -999,6 +1011,10 @@
 
 <!-- Share to Communities Dialog -->
 <ShareToCommunitiesDialog bind:open={shareToCommunitiesOpen} />
+
+            <!-- Share Dialogs (Links / Editoren) -->
+            <ShareDialog bind:open={shareLinksOpen} mode="links" initialTab="nostr-link" />
+            <ShareDialog bind:open={shareEditorsOpen} mode="editors" initialTab="editors" />
 
 <style>
     div {

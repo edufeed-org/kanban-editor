@@ -1,5 +1,22 @@
 # Changelog
 
+## Version 4.7.58 - Share-Menü aufgeteilt 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `main`  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Share-Menü:** Optionen aufgeteilt in **Schreibrechte**, **Link für Beobachter**, **Communities** und **Edufeed**
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareDialog.svelte` | Modus für Links/Editoren + Tabs konditional |
+| `src/routes/cardsboard/BoardsList.svelte` | Share-Untermenü in 4 Einträge aufgeteilt |
+
+---
+
 ## Version 4.7.57 - Communikey Name via Kind 0 🏷️
 
 **Datum:** 02. Februar 2026  \

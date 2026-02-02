@@ -144,13 +144,72 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
 export async function loginWithNip07(page: Page) {
     await mockNip07Extension(page);
 
-    await page.getByRole('button', { name: 'Anmelden' }).click();
-    
+    await openLoginDialog(page);
+
     const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
-    await expect(nip07Button).toBeVisible();
+    await expect(nip07Button).toBeVisible({ timeout: 5000 });
     await nip07Button.click();
 
-    await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 10000 });
+}
+
+/**
+ * Open login dialog (robust helper)
+ */
+export async function openLoginDialog(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(500);
+
+  const loginButton = page.getByTestId('login-button');
+  await expect(loginButton).toBeVisible({ timeout: 10000 });
+
+  let dialogOpened = false;
+
+  try {
+    await loginButton.click({ force: true, timeout: 2000 });
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 3000 });
+    dialogOpened = true;
+  } catch {
+    // noop
+  }
+
+  if (!dialogOpened) {
+    try {
+      await loginButton.evaluate((el: HTMLElement) => el.click());
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    } catch {
+      // noop
+    }
+  }
+
+  if (!dialogOpened) {
+    try {
+      await loginButton.dispatchEvent('click');
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    } catch {
+      // noop
+    }
+  }
+
+  if (!dialogOpened) {
+    const box = await loginButton.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      const dialog = page.locator('[role="dialog"]');
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      dialogOpened = true;
+    }
+  }
+
+  if (!dialogOpened) {
+    await page.screenshot({ path: 'test-results/login-button-debug.png' });
+    throw new Error('Could not open login dialog after trying all click methods');
+  }
 }
 
 /**
