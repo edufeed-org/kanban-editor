@@ -40,6 +40,7 @@
     // Derived values for displaying board info
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
+    let isBoardPublished = $derived(boardStore.data?.publishState === 'published');
     let userRole = $derived(boardStore.getCurrentUserRole());
     let isOwner = $derived(userRole === BoardRole.OWNER);
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
@@ -209,7 +210,7 @@
                 variant="default"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="h-8 w-8 bg-secondary"
+                class="h-8 w-8 bg-primary text-primary-foreground"
             >
                 {#if isMobile}
                     <!-- <MenuIcon class="h-4 w-4" /> -->
@@ -252,16 +253,17 @@
                 {/if}
                 
                 <!-- CC License Badge (superscript style) -->
-                {#if currentBoardLicense}
+                
+                {#if isBoardPublished && currentBoardLicense}
                     {@const licenseInfo = getLicenseInfo(currentBoardLicense)}
                     <a 
                         href={licenseInfo.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative -top-1 {licenseInfo.color}"
+                        class="inline-flex items-center align-middle gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative top-0 {licenseInfo.color}"
                         title="{licenseInfo.name} - Klicken für Details"
                     >
-                        <svg class="h-2 w-2" viewBox="0 0 24 24" fill="currentColor">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
                         </svg>
                         <span class="leading-none">{licenseInfo.symbol}</span>
@@ -291,7 +293,7 @@
                     variant="ghost"
                     size="icon"
                     onclick={openEditorRequests}
-                    class="relative h-8 w-8 bg-secondary"
+                    class="relative h-8 w-8 bg-secondary text-secondary-foreground"
                     title="Editor-Anfragen"
                 >
                     <BellIcon class="h-4 w-4" />
@@ -308,7 +310,7 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="  h-8 w-8 bg-secondary"
+                class="  h-8 w-8 bg-primary text-primary-foreground"
             >
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>

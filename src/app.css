@@ -156,6 +156,12 @@
     background-color: var(--color-green);
     border: 1px solid black;
   }
+  .text-primary-foreground {
+    color: var(--primary-foreground);
+  }
+  .text-secondary-foreground {
+    color: var(--secondary-foreground);
+  }
 
 }
 
@@ -164,14 +170,10 @@ button:hover {
   transition: background-color 0.2s ease, color 0.2s ease; 
 }
 
-button.btn, .menu-item{
-  background: var(--background);  
-  color: var(--foreground);
-  border-radius: var(--radius-md);
-}
+
 .menu-item:hover{
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
   border-color: var(--accent) !important;
 }
 .menu-item-danger:hover{
@@ -188,6 +190,15 @@ button.btn, .menu-item{
 button.btn:hover{
   border: 2px solid var(--border);
   border-color: var(--accent);
+}
+.editor-menu-item{
+  background-color: transparent;
+}
+
+/* hover:bg-primary hover:text-primary-foreground */
+.editor-menu-item:hover, .editor-menu-item:active{
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
 .hamburger-menu-button:hover, .hamburger-menu-button:active{
   background-color: var(--primary) !important;
