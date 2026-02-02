@@ -28,6 +28,7 @@
     import UserIcon from '@lucide/svelte/icons/user';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import { ShareButton } from '$lib/components/board';
+    import VersionHistory from '$lib/components/board/VersionHistory.svelte';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
     import WifiIcon from '@lucide/svelte/icons/wifi';
@@ -450,6 +451,9 @@
                 }}
                 showBorder={false}
             />
+
+            <!-- 4b. Versionen -->
+            <VersionHistory />
             
             <!-- 5. Board löschen -->
             <MenuItem 

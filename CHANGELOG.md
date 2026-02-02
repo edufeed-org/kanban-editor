@@ -1,19 +1,18 @@
 # Changelog
 
-## Version 4.7.43 - Viewer Request Button Stabilized 🧭
+## Version 4.7.44 - Versions-Menüpunkt in Boards-Liste 🗂️
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
 **Status:** ✅ Implementiert
 
-### 🐛 Fixes
-- **Viewer-Requests:** ShareButton nutzt Shared-Cache Fallback, damit „Schreibrechte beantragen“ nicht zurück auf „Beobachten“ springt
+### ✨ Verbesserungen
+- **Boards-Menü:** „Versionen“ ist wieder direkt unter „Board duplizieren“ verfügbar
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |
 |-------|----------|
-| `src/lib/stores/kanbanStore.svelte.ts` | Helper für Follow-Status (Shared-Cache Fallback) |
-| `src/lib/components/board/ShareButton.svelte` | Stabiler Request-Button für Viewer |
+| `src/routes/cardsboard/BoardsList.svelte` | Versions-Menüpunkt ergänzt |
 
 ---
 
