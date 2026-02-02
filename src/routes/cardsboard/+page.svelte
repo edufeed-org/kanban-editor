@@ -7,6 +7,7 @@ import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
 import Topbar from "./Topbar.svelte";
 import ImportPopover from "$lib/components/ImportPopover.svelte";
 import FollowBoardDialog from "$lib/components/board/FollowBoardDialog.svelte";
+import RequestEditorRoleDialog from "$lib/components/board/RequestEditorRoleDialog.svelte";
 import AIPanel from "./AIPanel.svelte";
 import type { Column } from "./types.js";
 import * as Resizable from "$lib/components/ui/resizable/index.js";
@@ -14,6 +15,8 @@ import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
+import { BoardRole } from '$lib/types/sharing';
+import { showEditorPermissionToast } from '$lib/utils/permissionToast';
 import { toast } from "svelte-sonner";
 import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
 import MenuIcon from '@lucide/svelte/icons/menu';
@@ -215,9 +218,9 @@ import { authStore } from '$lib';
 			const now = Date.now();
 			// Zeige Toast nur, wenn letzter Toast > 1 Sekunde her ist
 			if (now - lastToastTime > TOAST_DEBOUNCE_MS) {
-				toast.error('Keine Berechtigung', {
-					description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Änderungen durchzuführen.'
-				});
+				showEditorPermissionToast(
+					'Du brauchst Editorrechte, um Änderungen durchzuführen.'
+				);
 				lastToastTime = now;
 			} else {
 				console.log('⏭️ Toast übersprungen (Debounce)');
@@ -290,7 +293,7 @@ import { authStore } from '$lib';
 					<Button
 						variant="ghost"
 						size="icon"
-						class="h-8 w-8 hamburger-menu-button"
+						class="h-8 w-8 hamburger-menu-button bg-primary text-primary-foreground"
 						title="Board Einstellungen"
 						onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 					>
@@ -334,7 +337,7 @@ import { authStore } from '$lib';
 						<Button
 							variant="ghost"
 							size="icon"
-							class="h-8 w-8 hamburger-menu-button"
+							class="h-8 w-8 bg-primary text-primary-foreground hamburger-menu-button"
 							title="Board Einstellungen"
 							onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 						>
@@ -404,3 +407,6 @@ import { authStore } from '$lib';
 	boardId={shareLinkBoardId}
 	boardAuthor={shareLinkBoardAuthor}
 />
+
+<!-- RequestEditorRoleDialog Component -->
+<RequestEditorRoleDialog />

@@ -4,6 +4,7 @@
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import MenuIcon from "@lucide/svelte/icons/menu";
     import ShareIcon from "@lucide/svelte/icons/share-2";
+    import BellIcon from "@lucide/svelte/icons/bell";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
@@ -11,9 +12,14 @@
     import { settingsStore } from '$lib/stores/settingsStore.svelte';
     import { toast } from 'svelte-sonner';
     import PencilIcon from '@lucide/svelte/icons/pencil';
+    import ShareDialog from '$lib/components/board/ShareDialog.svelte';
+    import { BoardRole } from '$lib/types/sharing';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
+    let showEditorRequestsDialog = $state(false);
+    let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
+    let editorRequestsLoadToken = $state(0);
     
     // State für Inline-Editing des Board-Titels
     let isEditingTitle = $state(false);
@@ -34,6 +40,10 @@
     // Derived values for displaying board info
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
+    let isBoardPublished = $derived(boardStore.data?.publishState === 'published');
+    let userRole = $derived(boardStore.getCurrentUserRole());
+    let isOwner = $derived(userRole === BoardRole.OWNER);
+    let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
     const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
@@ -91,6 +101,68 @@
     onMount(() => {
         settingsStore.setTheme(settingsStore.settings.theme);
     })
+
+    async function loadEditorRequests(): Promise<void> {
+        const boardId = boardStore.data?.id;
+        const token = ++editorRequestsLoadToken;
+
+        if (!isOwner || !boardId) {
+            editorRequestsByPubkey = {};
+            return;
+        }
+        try {
+            editorRequestsByPubkey = await boardStore.getEditorRequestsForCurrentBoard();
+        } catch (error) {
+            console.warn('⚠️ Editor-Requests konnten nicht geladen werden (best-effort):', error);
+            editorRequestsByPubkey = {};
+        } finally {
+            if (token !== editorRequestsLoadToken || boardStore.data?.id !== boardId) {
+                return;
+            }
+        }
+    }
+
+    let lastBoardId = $state<string | undefined>(undefined);
+    $effect(() => {
+        const boardId = boardStore.data?.id;
+        const role = userRole;
+
+        if (boardId !== lastBoardId) {
+            lastBoardId = boardId;
+            editorRequestsByPubkey = {};
+            editorRequestsLoadToken++;
+        }
+
+        if (role !== BoardRole.OWNER) {
+            editorRequestsByPubkey = {};
+        }
+    });
+
+    // Hintergrund-Refresh für Editor-Requests (Badge ohne Klick)
+    $effect(() => {
+        const boardId = boardStore.data?.id;
+        const role = userRole;
+        if (!boardId || role !== BoardRole.OWNER) return;
+
+        // Leicht verzögert laden, damit Board-Load nicht blockiert
+        const initialTimer = setTimeout(() => {
+            void loadEditorRequests();
+        }, 300);
+
+        const intervalId = setInterval(() => {
+            void loadEditorRequests();
+        }, 30000);
+
+        return () => {
+            clearTimeout(initialTimer);
+            clearInterval(intervalId);
+        };
+    });
+
+    function openEditorRequests(): void {
+        showEditorRequestsDialog = true;
+        void loadEditorRequests();
+    }
     
     // Funktionen für Inline-Editing des Board-Titels
     function startEditingTitle() {
@@ -138,7 +210,7 @@
                 variant="default"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="h-8 w-8 bg-secondary"
+                class="h-8 w-8 bg-primary text-primary-foreground"
             >
                 {#if isMobile}
                     <!-- <MenuIcon class="h-4 w-4" /> -->
@@ -181,16 +253,17 @@
                 {/if}
                 
                 <!-- CC License Badge (superscript style) -->
-                {#if currentBoardLicense}
+                
+                {#if isBoardPublished && currentBoardLicense}
                     {@const licenseInfo = getLicenseInfo(currentBoardLicense)}
                     <a 
                         href={licenseInfo.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative -top-1 {licenseInfo.color}"
+                        class="inline-flex items-center align-middle gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative top-0 {licenseInfo.color}"
                         title="{licenseInfo.name} - Klicken für Details"
                     >
-                        <svg class="h-2 w-2" viewBox="0 0 24 24" fill="currentColor">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
                         </svg>
                         <span class="leading-none">{licenseInfo.symbol}</span>
@@ -214,13 +287,30 @@
             </Button> -->
             
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+
+            {#if isOwner && editorRequestCount > 0}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onclick={openEditorRequests}
+                    class="relative h-8 w-8 bg-secondary text-secondary-foreground"
+                    title="Editor-Anfragen"
+                >
+                    <BellIcon class="h-4 w-4" />
+                    <span class="absolute -top-1 -right-1 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 text-center px-1">
+                        {editorRequestCount > 9 ? '9+' : editorRequestCount}
+                    </span>
+                    <span class="sr-only">Editor-Anfragen</span>
+                </Button>
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+            {/if}
             
             <!-- Right Sidebar Trigger -->
             <Button
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="  h-8 w-8 bg-secondary"
+                class="  h-8 w-8 bg-primary text-primary-foreground"
             >
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
@@ -231,4 +321,13 @@
 
 <!-- Edufeed Publish Dialog -->
 <PublishToEdufeedDialog bind:open={showEdufeedDialog} />
+
+<!-- Owner: Editor-Requests Dialog (öffnet ShareDialog im Editor-Tab) -->
+{#if isOwner}
+    <ShareDialog
+        bind:open={showEditorRequestsDialog}
+        initialTab="editors"
+        initialEditorRequests={editorRequestsByPubkey}
+    />
+{/if}
 

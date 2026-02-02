@@ -5,6 +5,7 @@ import {
   mockNip07Extension,
   loginWithNsec,
   loginWithNip07,
+  openLoginDialog,
   clearAuthState,
   getAuthState,
   isAuthenticated,
@@ -45,7 +46,7 @@ test.describe('NIP-07 Authentication Flow', () => {
   });
 
   test('should handle NIP-07 extension not found', async ({ page }) => {
-    page.getByRole('button', { name: 'Anmelden' }).click();
+    await openLoginDialog(page);
     
     const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
     await nip07Button.click();
@@ -62,7 +63,7 @@ test.describe('NIP-07 Authentication Flow', () => {
       errorMessage
     });
     
-    page.getByRole('button', { name: 'Anmelden' }).click();
+    await openLoginDialog(page);
     const nip07Button = page.getByText('Mit Nostr-Extension anmelden');
     await nip07Button.click();
 
@@ -97,9 +98,10 @@ test.describe('nsec Private Key Authentication Flow', () => {
   });
 
   test('should reject invalid nsec formats', async ({ page }) => {
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await openLoginDialog(page);
     
     const nsecTab = page.getByRole('tab', { name: 'nsec' });
+    await expect(nsecTab).toBeVisible({ timeout: 5000 });
     await nsecTab.click();
     
     const nsecInput = page.getByPlaceholder('nsec1...');

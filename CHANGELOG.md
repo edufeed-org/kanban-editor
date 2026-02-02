@@ -1,5 +1,452 @@
 # Changelog
 
+## Version 4.7.58 - Share-Menü aufgeteilt 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `main`  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Share-Menü:** Optionen aufgeteilt in **Schreibrechte**, **Link für Beobachter**, **Communities** und **Edufeed**
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareDialog.svelte` | Modus für Links/Editoren + Tabs konditional |
+| `src/routes/cardsboard/BoardsList.svelte` | Share-Untermenü in 4 Einträge aufgeteilt |
+
+---
+
+## Version 4.7.57 - Communikey Name via Kind 0 🏷️
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Community‑Name wird aus Kind‑0 Metadaten geladen (Fallback wenn Kind‑10222 `content` leer ist)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Kind‑0 Fallback für Community‑Name |
+| `docs/GUIDES/COMMUNIKEY.md` | Name‑Quelle (Kind‑0) dokumentiert |
+
+---
+
+## Version 4.7.56 - Communikey Relationship Tag Fix 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Relationship‑Follow erkennt `n=follow` (neben `relationship=follow`)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Tag `n` unterstützt |
+| `docs/GUIDES/COMMUNIKEY.md` | Spec: `n`/`relationship` Tag dokumentiert |
+
+---
+
+## Version 4.7.55 - Communikey Relationships + Relay-Only 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Relationship‑Fallback (Kind 30382, `relationship=follow` + `d`‑Tag)
+- **Communities:** Relay‑Scan auf `wss://relay.edufeed.org` begrenzt (kein localhost‑Fallback)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Fallback + Relay‑Scope | 
+
+---
+
+## Version 4.7.54 - Communikey Debug Filter Logs 🧪
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🧪 Debug
+- **Communities:** Nostr-Filter (Badges, Community-List, Community-Details) werden im Log ausgegeben
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Debug-Logging der Nostr-Filter | 
+
+---
+
+## Version 4.7.53 - Communikey Pubkey Normalization 🔐
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** npub/nprofile werden zu Hex-Pubkeys normalisiert, damit Badges/Listen korrekt geladen werden
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Pubkey-Normalisierung (npub/nprofile → hex) |
+
+---
+
+## Version 4.7.52 - Communikey Fallback & Relay Fix 🧭
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** relay.edufeed.org immer im Relay-Set
+- **Communities:** Fallback auf Kind 10004 (Community List), falls Badges leer sind
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Set erweitert + Community-List Fallback |
+
+---
+
+## Version 4.7.51 - Communikey Badge Relay Scan 🔍
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Badges werden auf allen konfigurierten Relays geladen (nicht nur edufeed/localhost)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Scan für Kind 30008 erweitert |
+
+---
+
+## Version 4.7.50 - Communikey Membership Fix 🧩
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Communities:** Membership wird aus Kind 30008 (Badges) geladen, nicht aus 10222
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Badge-Query auf Kind 30008 korrigiert |
+
+---
+
+## Version 4.7.49 - Debug-Communities NDK Context Fix 🧪
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Debug-Page:** NDK aus Svelte Context statt `window` (Fehler „NDK nicht initialisiert“ behoben)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/test/debug-communities/+page.svelte` | NDK via `getContext()` laden |
+
+---
+
+## Version 4.7.48 - Board-Sharing Typen & BoardRef Fix 🧹
+
+**Datum:** 02. Februar 2026  \
+**Branch:** `feature/communikeys`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Sharing:** Doppelte Typdefinition entfernt und `makeBoardAddress()` öffentlich gemacht (svelte-check Fehler behoben)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Duplicate Type entfernt, `makeBoardAddress()` public |
+
+---
+
+## Version 4.7.47 - Communikey Community-Load Fix 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Community-Dialog:** Timeout + Relay-Fallback verhindert endloses „Communities werden geladen…“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Timeout + Relay-Connect beim Laden |
+
+---
+
+## Version 4.7.46 - Communikey-Teilen an Communities 🌐
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Communikey Workflow:** Communities aus Kind 30008/10222 laden und Board via Kind 30222 teilen
+- **UI:** Dialog für Community-Auswahl und Publishing angebunden an „Teilen → An Communities“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Neuer Dialog + Publishing-Logik |
+| `src/routes/cardsboard/BoardsList.svelte` | Button mit Dialog verbunden |
+| `docs/GUIDES/COMMUNIKEY.md` | UI-Workflow dokumentiert |
+
+---
+
+## Version 4.7.45 - Teilen-Untermenü im Boards-Menü 🔗
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Teilen-Menü:** Untermenü mit „Als Link“, „An Communities“ und „An Edufeed“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/BoardsList.svelte` | Teilen-Untermenü ergänzt |
+
+---
+
+## Version 4.7.44 - Versions-Menüpunkt in Boards-Liste 🗂️
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Boards-Menü:** „Versionen“ ist wieder direkt unter „Board duplizieren“ verfügbar
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/BoardsList.svelte` | Versions-Menüpunkt ergänzt |
+
+---
+
+## Version 4.7.32 - Toast-Design Polish 🎨
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Toast-Layout:** Lesbarere Breite, saubere Zeilenumbrüche, kompaktere Buttons
+- **Farben & Schatten:** Sanftere Error/Warning-Hintergründe, klarere Konturen
+- **Kompatibilität:** Entfernt color-mix für ältere Browser
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/app.css` | Sonner-Toast Styling (Breite, Typografie, Buttons) |
+
+---
+
+## Version 4.7.33 - Owner Editor-Requests 👀
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Owner-Hinweis:** Glocke in der Topbar mit Badge + Dialog (ShareDialog, Tab „Editoren“)
+- **Editor-Anfragen Liste:** Requester werden auch ohne Teilnehmerliste angezeigt; Quick‑Action korrekt verdrahtet
+- **Sofortanzeige:** Dialog nutzt vorab geladene Requests + Loading-Hinweis
+- **Layout:** Editor‑Anfragen stapeln Name/Badge/Reason für bessere Lesbarkeit
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Loader für Editor-Requests |
+| `src/lib/stores/kanbanStore.svelte.ts` | Editor-Requests API |
+| `src/lib/components/board/ShareDialog.svelte` | Owner‑Anzeige + Quick‑Action |
+| `src/routes/cardsboard/Topbar.svelte` | Glocke + Badge für Editor‑Requests |
+| `docs/FEATURE/REQUEST-EDITORROLE.md` | Owner‑Hinweis dokumentiert |
+
+---
+
+## Version 4.7.34 - Editor-Request Timeout ⏱️
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **ShareDialog Hang:** Editor-Request Fetch hat jetzt Timeout (best‑effort)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Timeout beim Laden von Editor‑Requests |
+
+---
+
+## Version 4.7.35 - Editor-Request Board-Switch Fix 🔁
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Wechsel:** Editor-Requests laden nicht mehr blockierend beim Öffnen; stale Responses werden ignoriert
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Non-blocking Open + Token-Guard |
+
+---
+
+## Version 4.7.36 - Editor-Request Load Guard 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Load OOM:** Editor-Requests werden nur beim Klick geladen (kein Auto-Fetch beim Boardwechsel)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Auto‑Load entfernt, Reset bei Boardwechsel |
+
+---
+
+## Version 4.7.37 - Editor-Request Timeout Noise 🔇
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Timeout-Log:** Timeout bei Editor‑Request Load wird still behandelt (kein Console‑Spam)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Timeout‑Warnung unterdrückt |
+
+---
+
+## Version 4.7.38 - ShareDialog Open/Close Perf ⚡
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Dialog-Lag:** ShareDialog lädt Inhalte nur im aktiven Tab (schnelleres Öffnen/Schließen)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareDialog.svelte` | Lazy-Load pro Tab |
+
+---
+
+## Version 4.7.39 - Editor-Request Background Refresh 🔔
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Badge-UX:** Editor‑Requests werden im Hintergrund geladen (Glocke zeigt Badge ohne Klick)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Background-Refresh + initial delay |
+
+---
+
+## Version 4.7.40 - Editor-Request Bell Visibility 👀
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Glocke nur bei Bedarf:** Icon erscheint nur, wenn offene Editor‑Requests vorhanden sind
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Bell nur bei Count > 0 |
+
+---
+
+## Version 4.7.31 - Permission-Toast Fix 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Viewer-Toast im Store:** Alle Permission-Checks leiten Viewer auf den „Rechte beantragen“-Toast
+- **Toast-Stabilität:** Stabiler Permission-Toast mit fester ID (verhindert Mehrfach-Spam)
+- **Unauth/Viewer konsistent:** DnD-Permission-Toast zeigt immer Request‑Hinweis (kein „Maintainer“-Hinweis mehr)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/utils/permissionToast.ts` | Browser-Guard + stabile Toast-ID |
+| `src/lib/stores/kanbanStore.svelte.ts` | Viewer-Toast in allen Permission-Checks |
+| `src/routes/cardsboard/Board.svelte` | Viewer-Toast bei Spalten-Erstellung |
+| `src/routes/cardsboard/Column.svelte` | Viewer-Toast bei Rename/Delete |
+| `src/routes/cardsboard/+page.svelte` | Viewer-Toast bei DnD-Sync |
+
+---
+
+## Version 4.7.30 - Editor-Request Toast + Dialog 🛎️
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Viewer‑Toast:** Berechtigungsfehler bietet „Rechte beantragen“ + „Nicht mehr anzeigen“
+- **Request‑Dialog:** Viewer können Editorrechte direkt anfragen
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/utils/permissionToast.ts` | Neuer Permission‑Toast mit Request‑Aktion + Opt‑out |
+| `src/lib/stores/requestEditorDialog.svelte.ts` | Dialog‑State Store (open/close) |
+| `src/lib/components/board/RequestEditorRoleDialog.svelte` | Neuer Request‑Dialog |
+| `src/lib/stores/boardstore/sharing.ts` | Editor‑Request Event (Kind 30000) |
+| `src/lib/stores/kanbanStore.svelte.ts` | `requestEditorRole()` API |
+| `src/routes/cardsboard/Board.svelte` | Viewer‑Toast statt Fehler‑Spam |
+| `src/routes/cardsboard/Column.svelte` | Viewer‑Toast statt Fehler‑Spam |
+| `src/routes/cardsboard/+page.svelte` | Dialog eingebunden + Viewer‑Toast |
+
+---
+
 ## Version 4.7.29 - Shared Board Name Sync ⚡
 
 **Datum:** 01. Februar 2026  

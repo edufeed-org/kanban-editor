@@ -23,10 +23,14 @@
     import CircleIcon from '@lucide/svelte/icons/circle';
     import SearchIcon from '@lucide/svelte/icons/search';
     import MenuIcon from '@lucide/svelte/icons/menu';
+    import Share2Icon from '@lucide/svelte/icons/share-2';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
+    import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
-    import { ShareButton } from '$lib/components/board';
+    import ShareDialog from '$lib/components/board/ShareDialog.svelte';
+    import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
+    import VersionHistory from '$lib/components/board/VersionHistory.svelte';
     import PaletteIcon from '@lucide/svelte/icons/palette';
     import BotIcon from '@lucide/svelte/icons/bot';
     import WifiIcon from '@lucide/svelte/icons/wifi';
@@ -41,6 +45,8 @@
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
+    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
+    import LinkIcon from '@lucide/svelte/icons/link';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -96,6 +102,10 @@
     let llmSettingsOpen = $state(false);
     let nostrSettingsOpen = $state(false);
     let defaultsSettingsOpen = $state(false);
+    let sharePopoverOpen = $state(false);
+    let shareToCommunitiesOpen = $state(false);
+    let shareEditorsOpen = $state(false);
+    let shareLinksOpen = $state(false);
     
     // Import & Export States
     let importExportPopoverOpen = $state(false);
@@ -354,75 +364,125 @@
                         showChevron={true}
                     />
                 </Popover.Trigger>
-                <Popover.Content side="right" align="start" class="w-56 p-1">
+                <Popover.Content side="right" align="start" class="w-56 p-0">
                     <div class="space-y-0">
-                        <SubmenuItem 
-                            icon={UploadIcon} 
-                            label="Von JSON importieren" 
-                            onclick={() => { 
-                                importDialogOpen = true;
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
-                        
-                        <SubmenuItem 
-                            icon={DownloadIcon} 
-                            label="Als JSON downloaden" 
-                            onclick={() => { 
-                                try {
-                                    const jsonString = boardStore.exportBoardAsJson(true);
-                                    const blob = new Blob([jsonString], { type: 'application/json' });
-                                    const url = URL.createObjectURL(blob);
-                                    const boardName = boardStore.data?.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'board';
-                                    const dateStr = new Date().toISOString().split('T')[0];
-                                    const filename = `${boardName}_${dateStr}.json`;
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = filename;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
-                                    URL.revokeObjectURL(url);
-                                    toast.success('Board als JSON exportiert');
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={UploadIcon} 
+                                label="Von JSON importieren" 
+                                onclick={() => { 
+                                    importDialogOpen = true;
                                     importExportPopoverOpen = false;
                                     hamburgerMenuOpen = false;
-                                } catch (error) {
-                                    console.error('❌ Export fehlgeschlagen:', error);
-                                    toast.error('Export fehlgeschlagen');
-                                }
-                            }}
-                        />
+                                }}
+                            />
+                        </div>
                         
-                        <SubmenuItem 
-                            icon={SendIcon} 
-                            label="An edufeed.org senden" 
-                            onclick={async () => { 
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                                publishToEdufeedDialogOpen = true;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={DownloadIcon} 
+                                label="Als JSON downloaden" 
+                                onclick={() => { 
+                                    try {
+                                        const jsonString = boardStore.exportBoardAsJson(true);
+                                        const blob = new Blob([jsonString], { type: 'application/json' });
+                                        const url = URL.createObjectURL(blob);
+                                        const boardName = boardStore.data?.name?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'board';
+                                        const dateStr = new Date().toISOString().split('T')[0];
+                                        const filename = `${boardName}_${dateStr}.json`;
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = filename;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        URL.revokeObjectURL(url);
+                                        toast.success('Board als JSON exportiert');
+                                        importExportPopoverOpen = false;
+                                        hamburgerMenuOpen = false;
+                                    } catch (error) {
+                                        console.error('❌ Export fehlgeschlagen:', error);
+                                        toast.error('Export fehlgeschlagen');
+                                    }
+                                }}
+                            />
+                        </div>
                         
-                        <SubmenuItem 
-                            icon={FileTextIcon} 
-                            label="Als Liascript exportieren" 
-                            onclick={() => { 
-                                liaScriptExportDialogOpen = true;
-                                importExportPopoverOpen = false;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={FileTextIcon} 
+                                label="Als Liascript exportieren" 
+                                onclick={() => { 
+                                    liaScriptExportDialogOpen = true;
+                                    importExportPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                     </div>
                 </Popover.Content>
             </Popover.Root>
             
             <!-- 3. Teilen (Share) -->
-            <ShareButton 
-                variant="default"
-                class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
-                showLabel={true}
-            />
+            <Popover.Root bind:open={sharePopoverOpen}>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={Share2Icon} 
+                        label="Teilen" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-56 p-0">
+                    <div class="space-y-0">
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={UserPlusIcon}
+                                label="Schreibrechte zuweisen"
+                                onclick={() => {
+                                    shareEditorsOpen = true;
+                                    sharePopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={LinkIcon}
+                                label="Link für Beobachter"
+                                onclick={() => {
+                                    shareLinksOpen = true;
+                                    sharePopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={UsersIcon} 
+                                label="In Communities teilen" 
+                                onclick={() => { 
+                                    shareToCommunitiesOpen = true;
+                                    sharePopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={SendIcon} 
+                                label="An Edufeed senden" 
+                                onclick={() => { 
+                                    publishToEdufeedDialogOpen = true;
+                                    sharePopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
             
             <!-- 4. Board duplizieren -->
             <MenuItem 
@@ -449,6 +509,9 @@
                 }}
                 showBorder={false}
             />
+
+            <!-- 4b. Versionen -->
+            <VersionHistory />
             
             <!-- 5. Board löschen -->
             <MenuItem 
@@ -524,43 +587,51 @@
                         showChevron={true}
                     />
                 </Popover.Trigger>
-                <Popover.Content side="right" align="start" class="w-64 p-1">
+                <Popover.Content side="right" align="start" class="w-64 p-0">
                     <div class="space-y-0">
-                        <SubmenuItem 
-                            icon={PaletteIcon} 
-                            label="UI & Layout" 
-                            onclick={() => { 
-                                uiSettingsOpen = true;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={PaletteIcon} 
+                                label="UI & Layout" 
+                                onclick={() => { 
+                                    uiSettingsOpen = true;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                         
-                        <SubmenuItem 
-                            icon={BotIcon} 
-                            label="KI-Anbindung" 
-                            onclick={() => { 
-                                llmSettingsOpen = true;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={BotIcon} 
+                                label="KI-Anbindung" 
+                                onclick={() => { 
+                                    llmSettingsOpen = true;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                         
-                        <SubmenuItem 
-                            icon={WifiIcon} 
-                            label="Nostr Relays" 
-                            onclick={() => { 
-                                nostrSettingsOpen = true;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={WifiIcon} 
+                                label="Nostr Relays" 
+                                onclick={() => { 
+                                    nostrSettingsOpen = true;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                         
-                        <SubmenuItem 
-                            icon={FileTextIcon} 
-                            label="Standard-Werte" 
-                            onclick={() => { 
-                                defaultsSettingsOpen = true;
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={FileTextIcon} 
+                                label="Standard-Werte" 
+                                onclick={() => { 
+                                    defaultsSettingsOpen = true;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                     </div>
                 </Popover.Content>
             </Popover.Root>
@@ -594,32 +665,38 @@
                         showChevron={true}
                     />
                 </Popover.Trigger>
-                <Popover.Content side="right" align="start" class="w-48 p-1">
+                <Popover.Content side="right" align="start" class="w-48 p-0">
                     <div class="space-y-0">
-                        <SubmenuItem 
-                            icon={FileTextIcon} 
-                            label="Source Code" 
-                            onclick={() => { 
-                                window.open(settingsStore.settings.sourceCodeUrl, '_blank');
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
-                        <SubmenuItem 
-                            icon={BookIcon} 
-                            label="Dokumentation" 
-                            onclick={() => { 
-                                window.open(settingsStore.settings.documentationUrl, '_blank');
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
-                        <SubmenuItem 
-                            icon={InfoIcon} 
-                            label="Über" 
-                            onclick={() => { 
-                                window.open(settingsStore.settings.aboutUrl, '_blank');
-                                hamburgerMenuOpen = false;
-                            }}
-                        />
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={FileTextIcon} 
+                                label="Source Code" 
+                                onclick={() => { 
+                                    window.open(settingsStore.settings.sourceCodeUrl, '_blank');
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={BookIcon} 
+                                label="Dokumentation" 
+                                onclick={() => { 
+                                    window.open(settingsStore.settings.documentationUrl, '_blank');
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem 
+                                icon={InfoIcon} 
+                                label="Über" 
+                                onclick={() => { 
+                                    window.open(settingsStore.settings.aboutUrl, '_blank');
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
                     </div>
                 </Popover.Content>
             </Popover.Root>
@@ -715,10 +792,8 @@
                         >
                             <button
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
-                                class="p-1 rounded transition-colors
-                                    {isActive 
-                                        ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
-                                        : 'hover:bg-destructive hover:text-destructive-foreground'}"
+                                class="p-1 rounded transition-colors trash"
+                                    
                                 title={board.isShared ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
@@ -813,7 +888,7 @@
                     class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canEditBoardMeta}
                 >
-                    {#each ccLicenses as license}
+                    {#each ccLicenses as license (license.value)}
                         <option value={license.value}>{license.label}</option>
                     {/each}
                 </select>
@@ -954,6 +1029,13 @@
 
 <!-- Publish to Edufeed Dialog -->
 <PublishToEdufeedDialog bind:open={publishToEdufeedDialogOpen} />
+
+<!-- Share to Communities Dialog -->
+<ShareToCommunitiesDialog bind:open={shareToCommunitiesOpen} />
+
+            <!-- Share Dialogs (Links / Editoren) -->
+            <ShareDialog bind:open={shareLinksOpen} mode="links" initialTab="nostr-link" />
+            <ShareDialog bind:open={shareEditorsOpen} mode="editors" initialTab="editors" />
 
 <style>
     div {

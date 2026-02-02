@@ -72,8 +72,21 @@ export async function handleBoardEvent(
 			const eventTime = unixSecondsToMs(boardEvent.created_at); // Nostr timestamps sind in Sekunden
 
 			if (eventTime <= localTime) {
-				// Silent skip - lokale Daten sind neuer oder gleich
-				return;
+				// ⚡ PERMISSION OVERRIDE: Owner-signed event darf Editor-Entzug durchsetzen
+				// auch wenn lokale Daten durch (nicht-publishbare) Viewer-Edits neuer sind.
+				const { authStore } = await import('../../../authStore.svelte.js');
+				const currentUser = authStore.getPubkey();
+				const incomingMaintainers = boardProps.maintainers || [];
+				const isOwnerSigned = boardEvent.pubkey && boardProps.author && boardEvent.pubkey === boardProps.author;
+				const localHadEditor = !!(currentUser && localBoard.maintainers?.includes(currentUser));
+				const incomingRemovedEditor = !!(currentUser && !incomingMaintainers.includes(currentUser));
+
+				if (!(isOwnerSigned && localHadEditor && incomingRemovedEditor)) {
+					// Silent skip - lokale Daten sind neuer oder gleich
+					return;
+				}
+
+				console.log('🧹 Permission override: Owner removed editor, applying board event');
 			}
 
 			console.log(`✅ LWW: Apply newer event (${Math.round((eventTime - localTime) / 1000)}s newer)`);

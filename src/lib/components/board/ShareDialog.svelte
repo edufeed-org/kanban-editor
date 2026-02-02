@@ -18,7 +18,12 @@
     import QRCode from 'qrcode';
     
     // Props
-    let { open = $bindable(false) } = $props();
+    let {
+        open = $bindable(false),
+        initialTab = 'nostr-link',
+        initialEditorRequests = {},
+        mode = 'all'
+    } = $props();
     
     // State
     let newEditorPubkey = $state('');
@@ -62,8 +67,15 @@
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
+    let showLinkTabs = $derived(mode !== 'editors');
+    let showEditorsTab = $derived(mode !== 'links');
+    let showTabList = $derived(
+        (mode === 'all') || (mode === 'links')
+    );
 
     let leaveRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number }>>({});
+    let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
+    let isLoadingEditorRequests = $state(false);
     
     // Cache for display names
     let displayNameCache = $state<Record<string, string>>({});
@@ -223,18 +235,37 @@
             leaveRequestsByPubkey = {};
         }
     }
+
+    async function loadEditorRequestsIfOwner() {
+        if (!canInviteEditors) {
+            editorRequestsByPubkey = {};
+            return;
+        }
+
+        try {
+            isLoadingEditorRequests = true;
+            editorRequestsByPubkey = await boardStore.getEditorRequestsForCurrentBoard();
+        } catch (error) {
+            console.warn('⚠️ Editor-Requests konnten nicht geladen werden (best-effort):', error);
+            editorRequestsByPubkey = {};
+        } finally {
+            isLoadingEditorRequests = false;
+        }
+    }
     
     // Editor einladen
-    async function handleInviteEditor() {
-        if (!newEditorPubkey.trim()) return;
+    async function handleInviteEditor(pubkey?: string) {
+        const targetPubkey = (pubkey ?? newEditorPubkey).trim();
+        if (!targetPubkey) return;
         
         isLoading = true;
         errorMessage = '';
         
         try {
-            await boardStore.addEditor(newEditorPubkey);
+            await boardStore.addEditor(targetPubkey);
             newEditorPubkey = '';
             await loadParticipants();
+            await loadEditorRequestsIfOwner();
             toast.success('Editor hinzugefügt', {
                 description: 'Der Nutzer kann jetzt das Board bearbeiten'
             });
@@ -301,22 +332,76 @@
     
     // Filtered participants
     let editorsAndOwners = $derived(participantsWithNames.filter(p => p.role === 'editor' || p.role === 'owner'));
+
+    function getDisplayNameForPubkey(pubkey: string): string {
+        const fromCache = displayNameCache[pubkey];
+        if (fromCache) return fromCache;
+
+        if (authStore.getDisplayNameForPubkey) {
+            const name = authStore.getDisplayNameForPubkey(pubkey);
+            if (name && name !== pubkey) return name;
+        }
+
+        if (pubkey === authStore.getPubkey()) {
+            const userName = authStore.getUserName();
+            if (userName) return userName;
+        }
+
+        return `${pubkey.slice(0, 8)}...${pubkey.slice(-4)}`;
+    }
+
+    let editorRequestsList = $derived(
+        Object.entries(editorRequestsByPubkey).map(([pubkey, info]) => ({
+            pubkey,
+            displayName: getDisplayNameForPubkey(pubkey),
+            reason: info.reason,
+            role: info.role
+        }))
+    );
     
     // Bei Dialog-Öffnung laden
     $effect(() => {
         if (open) {
             loadParticipants();
             loadUserRole();
-            // Share-Link async generieren (Token-basiert mit allen Daten)
+            if (Object.keys(initialEditorRequests).length > 0) {
+                editorRequestsByPubkey = initialEditorRequests;
+            }
+        }
+    });
+
+    let wasOpen = $state(false);
+    function getDefaultTab() {
+        if (mode === 'editors') return 'editors';
+        if (mode === 'links') return 'nostr-link';
+        return initialTab;
+    }
+
+    $effect(() => {
+        if (open && !wasOpen) {
+            const nextTab = getDefaultTab();
+            activeTab = nextTab;
+        }
+        wasOpen = open;
+    });
+    
+    // Nur den aktiven Tab laden (verhindert langsames Open/Close)
+    $effect(() => {
+        if (!open) return;
+        const tab = activeTab;
+
+        if (tab === 'share-link' && mode !== 'editors') {
             void generateShareLinkAsync();
-            
-            // Nostr naddr-Link generieren (async wegen QR-Code)
+        }
+
+        if (tab === 'nostr-link' && mode !== 'editors') {
             void generateNaddrLink();
         }
     });
-    
-    // QR-Code neu generieren wenn baseUrl sich ändert
+
+    // QR-Code nur für Nostr-Link neu generieren
     $effect(() => {
+        if (!open || activeTab !== 'nostr-link' || mode === 'editors') return;
         const currentBaseUrl = baseUrl;
         const currentPath = naddrPath;
         if (currentBaseUrl && currentPath) {
@@ -333,8 +418,10 @@
         const role = userRole;
         if (role === BoardRole.OWNER) {
             void loadLeaveRequestsIfOwner();
+            void loadEditorRequestsIfOwner();
         } else {
             leaveRequestsByPubkey = {};
+            editorRequestsByPubkey = {};
         }
     });
     
@@ -350,7 +437,7 @@
         try {
             // Relay-Hints aus den öffentlichen Relays holen
             const relayHints: string[] = settingsStore.settings.relaysPublic || [];
-            console.log('📡 naddr mit Relay-Hints:', relayHints);
+            // Hinweis: console.log von $state-Proxies vermeiden
             
             naddrPath = createBoardNaddrUrl(board.id, board.author, relayHints);
             
@@ -430,20 +517,28 @@
             />
         </div>
         
+        {#if showLinkTabs || showEditorsTab}
         <Tabs.Root bind:value={activeTab} class="mt-4">
-            <Tabs.List class="grid w-full grid-cols-3">
-                <Tabs.Trigger value="nostr-link">
-                    Nostr-Link
-                </Tabs.Trigger>
-                <Tabs.Trigger value="share-link">
-                    Share & Fork
-                </Tabs.Trigger>
-                <Tabs.Trigger value="editors">
-                    Editoren ({editorsAndOwners.length})
-                </Tabs.Trigger>
-            </Tabs.List>
+            {#if showTabList}
+                <Tabs.List class="grid w-full {showEditorsTab ? 'grid-cols-3' : 'grid-cols-2'}">
+                    {#if showLinkTabs}
+                        <Tabs.Trigger value="nostr-link">
+                            Nostr-Link
+                        </Tabs.Trigger>
+                        <Tabs.Trigger value="share-link">
+                            Share & Fork
+                        </Tabs.Trigger>
+                    {/if}
+                    {#if showEditorsTab}
+                        <Tabs.Trigger value="editors">
+                            Editoren ({editorsAndOwners.length})
+                        </Tabs.Trigger>
+                    {/if}
+                </Tabs.List>
+            {/if}
             
             <!-- Nostr-Link Tab (naddr) - jetzt erster Tab -->
+            {#if showLinkTabs}
             <Tabs.Content value="nostr-link" class="mt-4 space-y-4">
                 <div class="space-y-2">
                     <p class="text-sm text-muted-foreground">
@@ -605,8 +700,10 @@
                     </div>
                 </div>
             </Tabs.Content>
+            {/if}
             
             <!-- Editoren Tab -->
+            {#if showEditorsTab}
             <Tabs.Content value="editors" class="mt-4">
                 {#if canInviteEditors}
                     <div class="space-y-4 mb-4">
@@ -618,7 +715,7 @@
                                 class="flex-1"
                             />
                             <Button 
-                                onclick={handleInviteEditor}
+                                onclick={() => handleInviteEditor()}
                                 disabled={isLoading || !newEditorPubkey.trim()}
                                 data-testid="add-editor-button"
                             >
@@ -629,6 +726,50 @@
                         {#if errorMessage}
                             <p class="text-sm text-destructive text-red-600">{errorMessage}</p>
                         {/if}
+                    </div>
+                {/if}
+
+                {#if canInviteEditors && editorRequestsList.length > 0}
+                    <div class="space-y-2 mb-6">
+                        <h4 class="text-sm font-medium">Editor-Anfragen</h4>
+                        {#each editorRequestsList as request}
+                            <div class="flex flex-col gap-2 p-2 rounded-md border">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-sm font-medium">
+                                        {request.displayName}
+                                    </span>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <Badge variant="outline" title="Editor-Anfrage" class="bg-amber-100 text-amber-800">
+                                            Editor angefragt
+                                        </Badge>
+                                        {#if request.role}
+                                            <span class="text-xs text-muted-foreground">
+                                                Rolle: {request.role}
+                                            </span>
+                                        {/if}
+                                    </div>
+                                    {#if request.reason}
+                                        <span class="text-xs text-muted-foreground">
+                                            „{request.reason}“
+                                        </span>
+                                    {/if}
+                                </div>
+                                <div class="flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onclick={() => handleInviteEditor(request.pubkey)}
+                                        disabled={isLoading}
+                                    >
+                                        Als Editor hinzufügen
+                                    </Button>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                {:else if canInviteEditors && isLoadingEditorRequests}
+                    <div class="mb-6 text-sm text-muted-foreground">
+                        Editor-Anfragen werden geladen…
                     </div>
                 {/if}
                 
@@ -670,7 +811,9 @@
                     {/if}
                 </div>
             </Tabs.Content>
+            {/if}
         </Tabs.Root>
+        {/if}
         </div>
         
         <Dialog.Footer class="flex-shrink-0">

@@ -1,6 +1,6 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 16.12.2025 (DnD-Sync Hard-Fail/Defensive-Merge ✅, LWW-Guard für Reload-Upserts ✅, Kind-5 Deletion Authorization Tests ✅, Shared-Board Leave/Hide Tests ✅, Tombstone-Guard für `upsertBoardFromNostr()` ✅, Leave-Request Loader Tests ✅, Toast-Guard Tests ✅, Board-Metadaten/Maintainers Regression-Test ✅, Permission-Guards (Owner-only Board-Meta/Publish) ✅, Column-Order Patch `d`-Tag + `updated_at_ms` Parsing Tests ✅, Shared-Board Reload Rekonstruktions-Test ✅)
+**Letzte Aktualisierung:** 02.02.2026 (E2E-Selector-Update: Login-Dialog + Share-Menü-Aufteilung ✅)
 **Status:** 🟢 Vollständig funktional (letzter Stand: 508 Tests: 505 passed | 3 skipped) ✅
 
 ## 🎯 Test-Übersicht

@@ -25,10 +25,18 @@ const HIDDEN_BOARDS_KEY = 'nostr-kanban-hidden-boards-v1';
 const FOLLOW_SET_D_TAG = 'kanban-boards';
 const LEFT_BOARDS_D_TAG = 'kanban-left-boards';
 const LEAVE_REQUEST_D_TAG_PREFIX = 'kanban-leave-request:';
+const EDITOR_REQUEST_D_TAG_PREFIX = 'kanban-editor-request:';
 
 export type LeaveRequestInfo = {
     eventId: string;
     createdAt?: number;
+};
+
+export type EditorRequestInfo = {
+    eventId: string;
+    createdAt?: number;
+    reason?: string;
+    role?: string;
 };
 
 export class BoardSharingOperations {
@@ -68,7 +76,7 @@ export class BoardSharingOperations {
         localStorage.setItem(HIDDEN_BOARDS_KEY, JSON.stringify(registry));
     }
 
-    private static makeBoardAddress(boardId: string, boardAuthor: string): string {
+    public static makeBoardAddress(boardId: string, boardAuthor: string): string {
         return `30301:${boardAuthor}:${boardId}`;
     }
 
@@ -279,6 +287,61 @@ export class BoardSharingOperations {
         });
     }
 
+    private static async publishEditorRoleRequest(
+        boardRef: string,
+        ownerPubkey: string,
+        ndk: NDK,
+        reason?: string,
+        role: string = 'editor'
+    ): Promise<void> {
+        if (!ndk?.signer) {
+            console.log('ℹ️ Editor-Request: Kein Signer – publish übersprungen', {
+                boardRef,
+                owner: `${ownerPubkey.slice(0, 12)}…`,
+            });
+            return;
+        }
+
+        const ev = new NDKEvent(ndk);
+        ev.kind = 30000;
+        ev.tags = [
+            ['d', `${EDITOR_REQUEST_D_TAG_PREFIX}${boardRef}`],
+            ['a', boardRef],
+            ['p', ownerPubkey],
+            ['role', role]
+        ];
+
+        if (reason) {
+            ev.tags.push(['reason', reason]);
+        }
+
+        ev.content = 'editor-request';
+
+        const relays = await ev.publish();
+        console.log('✅ Editor-Request publiziert', {
+            boardRef,
+            owner: `${ownerPubkey.slice(0, 12)}…`,
+            eventId: ev.id,
+            relays: relays?.size ?? 0,
+        });
+    }
+
+    /**
+     * Viewer: Request Editor-Role für ein Board.
+     */
+    public static async requestEditorRole(
+        board: Board,
+        ndk: NDK,
+        reason?: string
+    ): Promise<void> {
+        if (!board?.id || !board?.author) {
+            throw new Error('Board-Daten unvollständig');
+        }
+
+        const boardRef = this.makeBoardAddress(board.id, board.author);
+        await this.publishEditorRoleRequest(boardRef, board.author, ndk, reason);
+    }
+
     /**
      * Owner-Sichtbarkeit: lädt Leave-Requests (Kind 30000) für ein Board.
      *
@@ -330,6 +393,78 @@ export class BoardSharingOperations {
             return result;
         } catch (error) {
             console.warn('⚠️ loadLeaveRequestsForBoard fehlgeschlagen (best-effort):', error);
+            return {};
+        }
+    }
+
+    /**
+     * Owner-Sichtbarkeit: lädt Editor-Requests (Kind 30000) für ein Board.
+     *
+     * Events werden von den jeweiligen Requestern publiziert und enthalten:
+     * - d = kanban-editor-request:<boardRef>
+     * - a = <boardRef>
+     * - p = <ownerPubkey>
+     * - role = editor
+     * - reason = optional
+     */
+    public static async loadEditorRequestsForBoard(
+        boardRef: string,
+        ndk: NDK
+    ): Promise<Record<string, EditorRequestInfo>> {
+        if (!ndk || !boardRef) return {};
+
+        const dTag = `${EDITOR_REQUEST_D_TAG_PREFIX}${boardRef}`;
+        const filter: any = {
+            kinds: [30000],
+            '#d': [dTag],
+        };
+
+        const timeoutMs = 1500;
+        const withTimeout = async <T>(promise: Promise<T>): Promise<T> => {
+            return await Promise.race([
+                promise,
+                new Promise<T>((_, reject) =>
+                    setTimeout(() => reject(new Error('timeout')), timeoutMs)
+                )
+            ]);
+        };
+
+        try {
+            let events: Set<any> = new Set();
+
+            if (typeof (ndk as any).fetchEvents === 'function') {
+                events = await withTimeout((ndk as any).fetchEvents(filter));
+            } else if (typeof (ndk as any).fetchEvent === 'function') {
+                const single = await withTimeout((ndk as any).fetchEvent(filter));
+                if (single) events = new Set([single]);
+            }
+
+            const result: Record<string, EditorRequestInfo> = {};
+            for (const ev of Array.from(events || [])) {
+                const requester = ev?.pubkey;
+                const eventId = ev?.id;
+                if (!requester || !eventId) continue;
+
+                const hasD = (ev.tags || []).some((t: any) => t?.[0] === 'd' && t?.[1] === dTag);
+                if (!hasD) continue;
+
+                const createdAt = typeof ev.created_at === 'number' ? ev.created_at : undefined;
+                const reason = (ev.tags || []).find((t: any) => t?.[0] === 'reason')?.[1];
+                const role = (ev.tags || []).find((t: any) => t?.[0] === 'role')?.[1];
+
+                result[requester] = {
+                    eventId,
+                    createdAt,
+                    reason: typeof reason === 'string' ? reason : undefined,
+                    role: typeof role === 'string' ? role : undefined,
+                };
+            }
+
+            return result;
+        } catch (error: any) {
+            if (error?.message !== 'timeout') {
+                console.warn('⚠️ loadEditorRequestsForBoard fehlgeschlagen (best-effort):', error);
+            }
             return {};
         }
     }

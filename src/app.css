@@ -25,7 +25,7 @@
   --accent: oklch(56.572% 0.01222 316.248);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
+  --border: oklch(77.4% 0.0043 286);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.606 0.25 292.717);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -156,6 +156,12 @@
     background-color: var(--color-green);
     border: 1px solid black;
   }
+  .text-primary-foreground {
+    color: var(--primary-foreground);
+  }
+  .text-secondary-foreground {
+    color: var(--secondary-foreground);
+  }
 
 }
 
@@ -164,14 +170,10 @@ button:hover {
   transition: background-color 0.2s ease, color 0.2s ease; 
 }
 
-button.btn, .menu-item{
-  background: var(--background);  
-  color: var(--foreground);
-  border-radius: var(--radius-md);
-}
+
 .menu-item:hover{
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
   border-color: var(--accent) !important;
 }
 .menu-item-danger:hover{
@@ -189,9 +191,24 @@ button.btn:hover{
   border: 2px solid var(--border);
   border-color: var(--accent);
 }
+.editor-menu-item{
+  background-color: transparent;
+}
+
+/* hover:bg-primary hover:text-primary-foreground */
+.editor-menu-item:hover, .editor-menu-item:active{
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
 .hamburger-menu-button:hover, .hamburger-menu-button:active{
   background-color: var(--primary) !important;
   color: var(--foreground) !important;
+}
+
+button.trash{
+  /* background-color: var(--destructive)!important; */
+  color: var(--destructive)!important;
+  
 }
 
 button.btn:focus-visible,
@@ -231,8 +248,8 @@ button.bg-destructive:hover {
   color: var(--destructive-foreground) !important;
 }
 
-.text-destructive-foreground {
-  color: var(--destructive-foreground);
+.text-destructive {
+  color: var(--destructive)!important;
 }
 
 .card-content button {
@@ -303,6 +320,74 @@ button.bg-destructive:hover {
 [data-sonner-toast] [data-close-button] {
   left: unset !important;
   right: 0.5rem !important;
+}
+
+/* Sonner Toast Design Polish */
+[data-sonner-toast] {
+  width: 360px;
+  max-width: min(420px, calc(100vw - 2rem));
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  gap: 0.625rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px -12px rgba(0, 0, 0, 0.25);
+  overflow-wrap: normal;
+  word-break: normal;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+[data-sonner-toast][data-type='error'] {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+[data-sonner-toast][data-type='warning'] {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-sonner-toast] [data-content] {
+  min-width: 0;
+  flex: 1 1 100%;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--muted-foreground);
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+[data-sonner-toast] [data-button] {
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+[data-sonner-toast] [data-cancel] {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  margin-right: 0.5rem;
+}
+
+[data-sonner-toast] [data-button]:not([data-cancel]) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
 }
 
 * {

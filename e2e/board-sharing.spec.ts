@@ -272,13 +272,15 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
     await expect(page.getByTitle('Board Einstellungen')).toBeVisible({ timeout: 5000 });
     await page.getByTitle('Board Einstellungen').click();
     
-    // Wait for share option to be visible
-    await expect(page.getByText('Board teilen')).toBeVisible({ timeout: 5000 });
-    await page.getByText('Board teilen').click();
+    // Öffne Share-Submenu
+    await expect(page.getByText('Teilen')).toBeVisible({ timeout: 5000 });
+    await page.getByText('Teilen').click();
+    
+    // Schreibrechte-Dialog öffnen
+    await expect(page.getByText('Schreibrechte zuweisen')).toBeVisible({ timeout: 5000 });
+    await page.getByText('Schreibrechte zuweisen').click();
     
     await expect(page.getByTestId('share-dialog')).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Editoren' }).click();
 
     await page.getByPlaceholder('Nostr Public Key (npub oder hex)').fill(targetUserPubkey);
     
@@ -288,7 +290,15 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
 }
 
 async function getViewerLink(page: Page): Promise<string> {
-    await page.getByTestId('share-button').click();
+    await expect(page.getByTitle('Board Einstellungen')).toBeVisible({ timeout: 5000 });
+    await page.getByTitle('Board Einstellungen').click();
+
+    await expect(page.getByText('Teilen')).toBeVisible({ timeout: 5000 });
+    await page.getByText('Teilen').click();
+
+    await expect(page.getByText('Link für Beobachter')).toBeVisible({ timeout: 5000 });
+    await page.getByText('Link für Beobachter').click();
+
     await expect(page.getByTestId('share-dialog')).toBeVisible();
     return await page.getByTestId('share-link-input').inputValue();
 }
