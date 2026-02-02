@@ -377,7 +377,7 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 cursor-pointer border border-border hover:shadow-md {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
+	class="card p-1 transition-all duration-200 cursor-pointer border border-border shadow-md hover:shadow-lg {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
