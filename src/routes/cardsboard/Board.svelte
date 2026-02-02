@@ -408,6 +408,7 @@
 
 	.add-column-button button:hover {
 		background: var(--accent);
+		color: var(--primary-foreground);
 		transform: scale(1.05);
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 	}
@@ -448,6 +449,7 @@
 		background: var(--accent);
 		transform: scale(1.1);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+		color: var(--primary-foreground);
 	}
 
 	/* Hide sticky button on mobile screens */

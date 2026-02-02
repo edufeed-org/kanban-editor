@@ -569,7 +569,7 @@
 		<!-- Add Card Button: Direkt unter der letzten Karte (oder oben wenn keine Karten) -->
 		{#if !readOnly}
 		<button 
-			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md"
+			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
 			onclick={(e) => {
 				e.stopPropagation();
 				if (columnId) {

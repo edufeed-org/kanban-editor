@@ -205,6 +205,12 @@ button.btn:hover{
   color: var(--foreground) !important;
 }
 
+button.trash{
+  /* background-color: var(--destructive)!important; */
+  color: var(--destructive)!important;
+  
+}
+
 button.btn:focus-visible,
 .menu-item:focus-visible {
   outline: 2px solid var(--accent);
@@ -242,8 +248,8 @@ button.bg-destructive:hover {
   color: var(--destructive-foreground) !important;
 }
 
-.text-destructive-foreground {
-  color: var(--destructive-foreground);
+.text-destructive {
+  color: var(--destructive)!important;
 }
 
 .card-content button {

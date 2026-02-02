@@ -793,10 +793,8 @@
                         >
                             <button
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
-                                class="p-1 rounded transition-colors
-                                    {isActive 
-                                        ? 'hover:bg-primary-foreground/20 text-primary-foreground' 
-                                        : 'hover:bg-destructive hover:text-destructive-foreground'}"
+                                class="p-1 rounded transition-colors trash"
+                                    
                                 title={board.isShared ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
