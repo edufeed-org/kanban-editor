@@ -1,18 +1,19 @@
 # Changelog
 
-## Version 4.7.41 - Editor-Request Cleanup 🧹
+## Version 4.7.43 - Viewer Request Button Stabilized 🧭
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
 **Status:** ✅ Implementiert
 
 ### 🐛 Fixes
-- **Editor-Anfragen:** Requests von bereits hinzugefügten Editoren werden nicht mehr angezeigt
+- **Viewer-Requests:** ShareButton nutzt Shared-Cache Fallback, damit „Schreibrechte beantragen“ nicht zurück auf „Beobachten“ springt
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |
 |-------|----------|
-| `src/lib/stores/kanbanStore.svelte.ts` | Filtert Requests für Owner/Editoren |
+| `src/lib/stores/kanbanStore.svelte.ts` | Helper für Follow-Status (Shared-Cache Fallback) |
+| `src/lib/components/board/ShareButton.svelte` | Stabiler Request-Button für Viewer |
 
 ---
 

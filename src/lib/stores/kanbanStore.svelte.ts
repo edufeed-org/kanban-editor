@@ -78,7 +78,7 @@ export class BoardStore {
 
     private showPermissionDeniedToast(description: string, userRole: BoardRole | null): void {
         if (!userRole || userRole === BoardRole.VIEWER) {
-            showEditorPermissionToast(description);
+            showEditorPermissionToast(description, this.board?.id);
             return;
         }
 
@@ -2756,6 +2756,20 @@ export class BoardStore {
     public getCurrentUserRole(): BoardRole | null {
         const currentUser = authStore.getPubkey();
         return this.board.getUserRole(currentUser || undefined);
+    }
+
+    /**
+     * Prüft ob aktueller Nutzer das Board bereits als Viewer folgt
+     * (nutzt followers + shared cache als Fallback)
+     */
+    public isCurrentBoardFollowedByUser(): boolean {
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) return false;
+
+        if (this.board.followers?.includes(currentUser)) return true;
+
+        const sharedMeta = this.cachedSharedBoards.find(b => b.id === this.board?.id);
+        return !!(sharedMeta && sharedMeta.userRole === 'viewer');
     }
 
     /**

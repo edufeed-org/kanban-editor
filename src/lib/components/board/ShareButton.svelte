@@ -3,12 +3,16 @@
     import ShareDialog from "./ShareDialog.svelte";
     import MenuItem from "../../../routes/cardsboard/MenuItem.svelte";
     import { boardStore } from "$lib/stores/kanbanStore.svelte";
+    import { authStore } from "$lib/stores/authStore.svelte";
     import { BoardRole } from "$lib/types/sharing";
     import { toast } from "svelte-sonner";
+    import { requestEditorDialogStore } from "$lib/stores/requestEditorDialog.svelte";
+    import RequestEditorRoleDialog from "$lib/components/board/RequestEditorRoleDialog.svelte";
     import ShareIcon2 from "@lucide/svelte/icons/share-2";
     import HeartIcon from "@lucide/svelte/icons/heart";
     import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import HeartOffIcon from "@lucide/svelte/icons/heart-off";
+    import UserPlusIcon from "@lucide/svelte/icons/user-plus";
     
     // Props for customization
     let {
@@ -31,6 +35,8 @@
         userRole === BoardRole.OWNER || userRole === BoardRole.EDITOR
     );
     let isViewer = $derived(userRole === BoardRole.VIEWER);
+    let isFollowed = $derived(boardStore.isCurrentBoardFollowedByUser());
+    let shouldShowRequest = $derived(isViewer || isFollowed);
     
     // Follow/Unfollow Handler
     async function handleToggleFollow() {
@@ -66,13 +72,12 @@
         onclick={() => showShareDialog = true}
         showBorder={false}
     />
-{:else if isViewer}
-    <!-- Viewer sehen Unfollow-Button -->
+{:else if shouldShowRequest}
+    <!-- Viewer: Request-Dialog statt Beobachten -->
     <MenuItem
-        icon={EyeOffIcon}
-        label={isLoading ? 'Lädt...' : 'Ausblenden'}
-        onclick={handleToggleFollow}
-        disabled={isLoading}
+        icon={UserPlusIcon}
+        label="Schreibrechte beantragen"
+        onclick={() => requestEditorDialogStore.openDialog()}
         showBorder={false}
     />
 {:else}
@@ -90,3 +95,5 @@
 {#if isOwnerOrEditor}
     <ShareDialog bind:open={showShareDialog} />
 {/if}
+
+<RequestEditorRoleDialog />
