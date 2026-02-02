@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 4.7.41 - Editor-Request Cleanup 🧹
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Editor-Anfragen:** Requests von bereits hinzugefügten Editoren werden nicht mehr angezeigt
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/kanbanStore.svelte.ts` | Filtert Requests für Owner/Editoren |
+
+---
+
 ## Version 4.7.32 - Toast-Design Polish 🎨
 
 **Datum:** 02. Februar 2026  

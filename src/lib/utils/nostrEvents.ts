@@ -233,6 +233,7 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
     .filter((p): p is string => typeof p === 'string' && p.length > 0);
 
   const author = pTags.length > 0 ? pTags[0] : event.pubkey; // First p-tag is canonical owner
+  const hasPTags = pTags.length > 0;
 
   // Maintainers = all p-tags except the first one (which is the owner)
   // Normalize: de-dup und Owner entfernen (Owner darf nicht in maintainers stehen)
@@ -273,7 +274,9 @@ export function nostrEventToBoard(event: NDKEvent): BoardProps {
     columns,
     publishState,
     author,
-    maintainers: maintainers.length > 0 ? maintainers : undefined,
+    // ⚡ CRITICAL: If p-tags are present, empty maintainers MUST clear local editors
+    // (e.g., owner-only p-tags after editor removal)
+    maintainers: hasPTags ? maintainers : undefined,
     followers: followers.length > 0 ? followers : undefined, // Populated from Kind 30000 Follow Set
     tags: boardTags,
     ccLicense,

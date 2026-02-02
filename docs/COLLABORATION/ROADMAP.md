@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.36 (Editor-Request Bell Visibility - 02. Februar 2026)  
-**Aktualisiert:** 02. Februar 2026 (Glocke erscheint nur, wenn Requests vorhanden sind).  
+**Version:** 3.39 (Editor-Request Cleanup - 02. Februar 2026)  
+**Aktualisiert:** 02. Februar 2026 (Anfragen von bereits hinzugefügten Editoren werden ausgeblendet).  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 

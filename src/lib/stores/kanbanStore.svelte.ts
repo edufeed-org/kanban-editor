@@ -2551,7 +2551,24 @@ export class BoardStore {
         if (!board?.id || !board?.author) return {};
 
         const boardRef = BoardSharingOperations.makeBoardAddress(board.id, board.author);
-        return await BoardSharingOperations.loadEditorRequestsForBoard(boardRef, ndk);
+        const requests = await BoardSharingOperations.loadEditorRequestsForBoard(boardRef, ndk);
+
+        // Hide requests from users who are already Owner/Editor
+        const blocked = new Set<string>([
+            board.author,
+            ...(board.maintainers || [])
+        ].filter(Boolean) as string[]);
+
+        if (blocked.size === 0) return requests;
+
+        const filtered: Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }> = {};
+        for (const [pubkey, info] of Object.entries(requests)) {
+            if (!blocked.has(pubkey)) {
+                filtered[pubkey] = info;
+            }
+        }
+
+        return filtered;
     }
 
     /**
