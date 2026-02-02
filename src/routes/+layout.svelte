@@ -117,6 +117,12 @@
         if (err?.message !== 'No state in response') {
           console.error('OIDC callback failed:', err);
         }
+      }).finally(() => {
+        // Clean up OIDC-related query parameters from URL
+        const cleanUrl = new URL(window.location.href);
+        const paramsToRemove = ['code', 'state', 'session_state', 'iss'];
+        paramsToRemove.forEach(param => cleanUrl.searchParams.delete(param));
+        window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
       });
     }
 	});

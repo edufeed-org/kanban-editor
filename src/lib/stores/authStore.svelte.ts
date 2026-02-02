@@ -214,6 +214,10 @@ export class AuthStore {
 
       this.currentUser = user;
 
+      // 🔑 OIDC FIX: Store nsec in sessionStorage for page refresh restoration
+      // This allows the signer to be reconstructed after page reload
+      sessionStorage.setItem("nostr-nsec-temp", nsec);
+
       await this.saveSession(user, "nsec");
       
       // 🔄 Update SyncManager with new signer
