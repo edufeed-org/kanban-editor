@@ -20,6 +20,7 @@ import {
 import { pasteHandler } from '$lib/paste/PasteHandler.js';
 import { MetadataMigration } from './boardstore/migration.js';
 import { PermissionChecks } from '$lib/utils/permissionCheck.js';
+import { showEditorPermissionToast } from '$lib/utils/permissionToast.js';
 import { toast } from 'svelte-sonner';
 import { clearAllBoardTombstones, clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
 
@@ -73,6 +74,17 @@ export class BoardStore {
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
         }
+    }
+
+    private showPermissionDeniedToast(description: string, userRole: BoardRole | null): void {
+        if (!userRole || userRole === BoardRole.VIEWER) {
+            showEditorPermissionToast(description);
+            return;
+        }
+
+        toast.error('Fehlende Berechtigung', {
+            description
+        });
     }
     
     /**
@@ -755,9 +767,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const currentBoardId = boardId || this.board.id;
         if (!PermissionChecks.canDeleteBoard(userRole, currentBoardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, dieses Board zu löschen.'
-            })
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, dieses Board zu löschen.', userRole);
             return false; // Silently fail - Permission denied message already shown
         }
         
@@ -1372,9 +1382,10 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Nur der Board-Besitzer kann Name, Beschreibung, Tags, Lizenz und Publish-Status ändern.'
-            });
+            this.showPermissionDeniedToast(
+                'Nur der Board-Besitzer kann Name, Beschreibung, Tags, Lizenz und Publish-Status ändern.',
+                userRole
+            );
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1398,9 +1409,10 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditBoardMeta(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Nur der Board-Besitzer kann den Publish-Status ändern.'
-            });
+            this.showPermissionDeniedToast(
+                'Nur der Board-Besitzer kann den Publish-Status ändern.',
+                userRole
+            );
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1449,9 +1461,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditBoard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, die Board-Einstellungen zu ändern.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, die Board-Einstellungen zu ändern.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
 
@@ -1504,9 +1514,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canCreateCard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Karten zu erstellen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu erstellen.', userRole);
             return ''; // Silently fail - Permission denied message already shown
         }
         
@@ -1536,9 +1544,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditCard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Karten zu bearbeiten.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu bearbeiten.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1598,9 +1604,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canDeleteCard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Karten zu löschen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu löschen.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1625,9 +1629,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canCreateColumn(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Spalten zu erstellen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Spalten zu erstellen.', userRole);
             return ''; // Silently fail - Permission denied message already shown
         }
         
@@ -1647,9 +1649,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditColumn(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Spalten zu bearbeiten.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Spalten zu bearbeiten.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1679,9 +1679,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canDeleteColumn(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Spalten zu löschen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Spalten zu löschen.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1697,9 +1695,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canMoveCard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Karten zu verschieben.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu verschieben.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -1714,9 +1710,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canEditColumn(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Spalten zu bearbeiten.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Spalten zu bearbeiten.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
 
@@ -1871,9 +1865,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canMoveCard(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Karten zu verschieben.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu verschieben.', userRole);
             return false;
         }
         
@@ -1996,9 +1988,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canAddComment(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Kommentare hinzuzufügen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Kommentare hinzuzufügen.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -2029,9 +2019,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canDeleteComment(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Kommentare zu löschen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Kommentare zu löschen.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
         
@@ -2410,9 +2398,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Benutzer einzuladen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Benutzer einzuladen.', userRole);
             throw new Error('Berechtigung verweigert: Benutzer einladen');
         }
         
@@ -2438,9 +2424,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.', userRole);
             throw new Error('Berechtigung verweigert: Benutzer-Zugriff entfernen');
         }
         
@@ -2466,9 +2450,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Benutzer einzuladen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Benutzer einzuladen.', userRole);
             throw new Error('Berechtigung verweigert: Benutzer einladen');
         }
         
@@ -2494,9 +2476,7 @@ export class BoardStore {
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
         if (!PermissionChecks.canInviteUsers(userRole, boardId)) {
-            toast.error('Fehlende Berechtigung', {
-                description: 'Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.'
-            });
+            this.showPermissionDeniedToast('Du hast keine Berechtigung, Benutzer-Zugriff zu entfernen.', userRole);
             throw new Error('Berechtigung verweigert: Benutzer-Zugriff entfernen');
         }
         
@@ -2511,6 +2491,28 @@ export class BoardStore {
             ndk
         );
         this.triggerUpdate({publish: true});
+    }
+
+    /**
+     * Viewer: Editorrechte für das aktuelle Board anfragen.
+     */
+    public async requestEditorRole(reason?: string): Promise<void> {
+        const currentUser = authStore.getPubkey();
+        if (!currentUser) {
+            throw new Error('Du musst angemeldet sein, um Editorrechte anzufragen.');
+        }
+
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            throw new Error('NDK nicht verfügbar');
+        }
+
+        const board = this.board;
+        if (!board?.id || !board?.author) {
+            throw new Error('Board-Daten unvollständig');
+        }
+
+        await BoardSharingOperations.requestEditorRole(board, ndk, reason);
     }
 
     /**
@@ -2536,6 +2538,20 @@ export class BoardStore {
 
         const boardRef = `30301:${boardAuthor}:${boardId}`;
         return await BoardSharingOperations.loadLeaveRequestsForBoard(boardRef, ndk);
+    }
+
+    /**
+     * Owner UX: Editor-Requests (Kind 30000) für das aktuelle Board laden.
+     */
+    public async getEditorRequestsForCurrentBoard(): Promise<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) return {};
+
+        const board = this.board;
+        if (!board?.id || !board?.author) return {};
+
+        const boardRef = BoardSharingOperations.makeBoardAddress(board.id, board.author);
+        return await BoardSharingOperations.loadEditorRequestsForBoard(boardRef, ndk);
     }
 
     /**

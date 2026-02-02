@@ -1,5 +1,92 @@
 # Changelog
 
+## Version 4.7.32 - Toast-Design Polish 🎨
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Toast-Layout:** Lesbarere Breite, saubere Zeilenumbrüche, kompaktere Buttons
+- **Farben & Schatten:** Sanftere Error/Warning-Hintergründe, klarere Konturen
+- **Kompatibilität:** Entfernt color-mix für ältere Browser
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/app.css` | Sonner-Toast Styling (Breite, Typografie, Buttons) |
+
+---
+
+## Version 4.7.33 - Owner Editor-Requests 👀
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Owner-Hinweis:** Glocke in der Topbar mit Badge + Dialog (ShareDialog, Tab „Editoren“)
+- **Editor-Anfragen Liste:** Requester werden auch ohne Teilnehmerliste angezeigt; Quick‑Action korrekt verdrahtet
+- **Sofortanzeige:** Dialog nutzt vorab geladene Requests + Loading-Hinweis
+- **Layout:** Editor‑Anfragen stapeln Name/Badge/Reason für bessere Lesbarkeit
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Loader für Editor-Requests |
+| `src/lib/stores/kanbanStore.svelte.ts` | Editor-Requests API |
+| `src/lib/components/board/ShareDialog.svelte` | Owner‑Anzeige + Quick‑Action |
+| `src/routes/cardsboard/Topbar.svelte` | Glocke + Badge für Editor‑Requests |
+| `docs/FEATURE/REQUEST-EDITORROLE.md` | Owner‑Hinweis dokumentiert |
+
+---
+
+## Version 4.7.31 - Permission-Toast Fix 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Viewer-Toast im Store:** Alle Permission-Checks leiten Viewer auf den „Rechte beantragen“-Toast
+- **Toast-Stabilität:** Stabiler Permission-Toast mit fester ID (verhindert Mehrfach-Spam)
+- **Unauth/Viewer konsistent:** DnD-Permission-Toast zeigt immer Request‑Hinweis (kein „Maintainer“-Hinweis mehr)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/utils/permissionToast.ts` | Browser-Guard + stabile Toast-ID |
+| `src/lib/stores/kanbanStore.svelte.ts` | Viewer-Toast in allen Permission-Checks |
+| `src/routes/cardsboard/Board.svelte` | Viewer-Toast bei Spalten-Erstellung |
+| `src/routes/cardsboard/Column.svelte` | Viewer-Toast bei Rename/Delete |
+| `src/routes/cardsboard/+page.svelte` | Viewer-Toast bei DnD-Sync |
+
+---
+
+## Version 4.7.30 - Editor-Request Toast + Dialog 🛎️
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Viewer‑Toast:** Berechtigungsfehler bietet „Rechte beantragen“ + „Nicht mehr anzeigen“
+- **Request‑Dialog:** Viewer können Editorrechte direkt anfragen
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/utils/permissionToast.ts` | Neuer Permission‑Toast mit Request‑Aktion + Opt‑out |
+| `src/lib/stores/requestEditorDialog.svelte.ts` | Dialog‑State Store (open/close) |
+| `src/lib/components/board/RequestEditorRoleDialog.svelte` | Neuer Request‑Dialog |
+| `src/lib/stores/boardstore/sharing.ts` | Editor‑Request Event (Kind 30000) |
+| `src/lib/stores/kanbanStore.svelte.ts` | `requestEditorRole()` API |
+| `src/routes/cardsboard/Board.svelte` | Viewer‑Toast statt Fehler‑Spam |
+| `src/routes/cardsboard/Column.svelte` | Viewer‑Toast statt Fehler‑Spam |
+| `src/routes/cardsboard/+page.svelte` | Dialog eingebunden + Viewer‑Toast |
+
+---
+
 ## Version 4.7.29 - Shared Board Name Sync ⚡
 
 **Datum:** 01. Februar 2026  

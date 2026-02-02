@@ -8,6 +8,8 @@
 	import { Separator } from "$lib/components/ui/separator/index.js";
  	import type { CardItem, ColumnDropHandler } from "./types.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+	import { BoardRole } from "$lib/types/sharing";
+	import { showEditorPermissionToast } from "$lib/utils/permissionToast";
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { toast } from "svelte-sonner";
 	import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
@@ -237,9 +239,9 @@
 				boardStore.updateColumn(columnId, { name: editName });
 			} catch (error) {
 				console.error('❌ Fehler beim Umbenennen:', error);
-				toast.error('Keine Berechtigung', {
-					description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten umzubenennen.'
-				});
+				showEditorPermissionToast(
+					'Du brauchst Editorrechte, um Spalten umzubenennen.'
+				);
 				// Setze den Namen zurück
 				editName = name;
 			}
@@ -275,9 +277,9 @@
 					boardStore.deleteColumnWithCards(columnId);
 				} catch (error) {
 					console.error('❌ Fehler beim Löschen:', error);
-					toast.error('Keine Berechtigung', {
-						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu löschen.'
-					});
+					showEditorPermissionToast(
+						'Du brauchst Editorrechte, um Spalten zu löschen.'
+					);
 				}
 			}
 		}

@@ -402,7 +402,7 @@ docs/
 | [`GUIDE.md`](./TESTS/GUIDE.md) | Ausführliches Test-Guide | ✅ |
 | [`STATUS.md`](./TESTS/STATUS.md) | Test Suite Status & Überblick | ✅ |
 
-### FEATURE/ (11 Dateien)
+### FEATURE/ (12 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -413,6 +413,7 @@ docs/
 | [`IMPORT-EXPORT.md`](./FEATURE/IMPORT-EXPORT.md) | Phase 1.5 - JSON-Export/Import mit 3 Modi (merge/new/overwrite) | ✅ Neu (31.10.) |
 | [`BOARD-SNAPSHOTS.md`](./FEATURE/BOARD-SNAPSHOTS.md) | 🆕 **NEU (28.12.)**: Phase 1.5 - Board Versioning mit Kind 30303 Snapshots | ✅ Neu (28.12.) |
 | [`CARD-DESIGN.md`](./FEATURE/CARD-DESIGN.md) | 🆕 **NEU (06.11.)**: UI/UX Design für Card-Komponente mit Badges & Popover | ✅ Neu (06.11.) |
+| [`REQUEST-EDITORROLE.md`](./FEATURE/REQUEST-EDITORROLE.md) | 🆕 **NEU (02.02.26)**: Editor-/Maintainer-Request Flow (Vorschlag) | ✅ Neu (02.02.26) |
 | [`RELAY-SELECTION-IMPLEMENTATION.md`](./FEATURE/RELAY-SELECTION-IMPLEMENTATION.md) | ✅ Relay Selection Implementation Summary (referenziert von Test Guide) | ✅ |
 
 ### REFERENCE/ (1 Datei)
@@ -429,10 +430,10 @@ docs/
 ✅ **GUIDES/** — 6/6 Dateien verlinkt  
 ✅ **COLLABORATION/** — 6/6 Dateien verlinkt  
 ✅ **TESTS/** — 2/2 Dateien verlinkt  
-✅ **FEATURE/** — 11/11 Dateien verlinkt (neue Phase 3.0 Docs!)  
+✅ **FEATURE/** — 12/12 Dateien verlinkt (neue Phase 3.0 Docs!)  
 ✅ **REFERENCE/** — 1/1 Dateien verlinkt  
 
-**Total: 53/53 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
+**Total: 54/54 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
 
 ---
 

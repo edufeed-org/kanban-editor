@@ -4,6 +4,7 @@
     import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import MenuIcon from "@lucide/svelte/icons/menu";
     import ShareIcon from "@lucide/svelte/icons/share-2";
+    import BellIcon from "@lucide/svelte/icons/bell";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
@@ -11,9 +12,13 @@
     import { settingsStore } from '$lib/stores/settingsStore.svelte';
     import { toast } from 'svelte-sonner';
     import PencilIcon from '@lucide/svelte/icons/pencil';
+    import ShareDialog from '$lib/components/board/ShareDialog.svelte';
+    import { BoardRole } from '$lib/types/sharing';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
+    let showEditorRequestsDialog = $state(false);
+    let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
     
     // State für Inline-Editing des Board-Titels
     let isEditingTitle = $state(false);
@@ -34,6 +39,9 @@
     // Derived values for displaying board info
     let currentBoardTitle = $derived(boardStore.boardMeta.name || 'Mein Projekt Board');
     let currentBoardLicense = $derived(boardStore.data?.ccLicense || 'cc-by-4.0');
+    let userRole = $derived(boardStore.getCurrentUserRole());
+    let isOwner = $derived(userRole === BoardRole.OWNER);
+    let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
     const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
@@ -91,6 +99,34 @@
     onMount(() => {
         settingsStore.setTheme(settingsStore.settings.theme);
     })
+
+    async function loadEditorRequests(): Promise<void> {
+        if (!isOwner) {
+            editorRequestsByPubkey = {};
+            return;
+        }
+        try {
+            editorRequestsByPubkey = await boardStore.getEditorRequestsForCurrentBoard();
+        } catch (error) {
+            console.warn('⚠️ Editor-Requests konnten nicht geladen werden (best-effort):', error);
+            editorRequestsByPubkey = {};
+        }
+    }
+
+    $effect(() => {
+        const boardId = boardStore.data?.id;
+        const role = userRole;
+        if (role === BoardRole.OWNER && boardId) {
+            void loadEditorRequests();
+        } else {
+            editorRequestsByPubkey = {};
+        }
+    });
+
+    async function openEditorRequests(): Promise<void> {
+        await loadEditorRequests();
+        showEditorRequestsDialog = true;
+    }
     
     // Funktionen für Inline-Editing des Board-Titels
     function startEditingTitle() {
@@ -214,6 +250,25 @@
             </Button> -->
             
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+
+            {#if isOwner}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onclick={openEditorRequests}
+                    class="relative h-8 w-8 bg-secondary"
+                    title="Editor-Anfragen"
+                >
+                    <BellIcon class="h-4 w-4" />
+                    {#if editorRequestCount > 0}
+                        <span class="absolute -top-1 -right-1 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 text-center px-1">
+                            {editorRequestCount > 9 ? '9+' : editorRequestCount}
+                        </span>
+                    {/if}
+                    <span class="sr-only">Editor-Anfragen</span>
+                </Button>
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+            {/if}
             
             <!-- Right Sidebar Trigger -->
             <Button
@@ -231,4 +286,13 @@
 
 <!-- Edufeed Publish Dialog -->
 <PublishToEdufeedDialog bind:open={showEdufeedDialog} />
+
+<!-- Owner: Editor-Requests Dialog (öffnet ShareDialog im Editor-Tab) -->
+{#if isOwner}
+    <ShareDialog
+        bind:open={showEditorRequestsDialog}
+        initialTab="editors"
+        initialEditorRequests={editorRequestsByPubkey}
+    />
+{/if}
 

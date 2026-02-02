@@ -5,6 +5,8 @@
  	import Column from "./Column.svelte";
  	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
  	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+	import { BoardRole } from '$lib/types/sharing';
+	import { showEditorPermissionToast } from '$lib/utils/permissionToast';
  	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
  	import { toast } from "svelte-sonner";
  	import type { Column as ColumnType, BoardUpdateHandler, CardItem } from "./types.js";
@@ -497,9 +499,9 @@
 					boardStore.createColumn('Neue Spalte');
 				} catch (error) {
 					console.error('❌ Fehler beim Erstellen der Spalte:', error);
-					toast.error('Keine Berechtigung', {
-						description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
-					});
+					showEditorPermissionToast(
+						'Du brauchst Editorrechte, um Spalten zu erstellen.'
+					);
 				}
 			}}
 		>
@@ -528,9 +530,9 @@
 						}
 					} catch (error) {
 						console.error('❌ Fehler beim Erstellen der Spalte:', error);
-						toast.error('Keine Berechtigung', {
-							description: 'Du musst angemeldet sein und Maintainer dieses Boards sein, um Spalten zu erstellen.'
-						});
+						showEditorPermissionToast(
+							'Du brauchst Editorrechte, um Spalten zu erstellen.'
+						);
 					}
 				}}
 			>
