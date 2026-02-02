@@ -426,13 +426,23 @@ export class BoardSharingOperations {
             '#d': [dTag],
         };
 
+        const timeoutMs = 1500;
+        const withTimeout = async <T>(promise: Promise<T>): Promise<T> => {
+            return await Promise.race([
+                promise,
+                new Promise<T>((_, reject) =>
+                    setTimeout(() => reject(new Error('timeout')), timeoutMs)
+                )
+            ]);
+        };
+
         try {
             let events: Set<any> = new Set();
 
             if (typeof (ndk as any).fetchEvents === 'function') {
-                events = await (ndk as any).fetchEvents(filter);
+                events = await withTimeout((ndk as any).fetchEvents(filter));
             } else if (typeof (ndk as any).fetchEvent === 'function') {
-                const single = await (ndk as any).fetchEvent(filter);
+                const single = await withTimeout((ndk as any).fetchEvent(filter));
                 if (single) events = new Set([single]);
             }
 
@@ -458,8 +468,10 @@ export class BoardSharingOperations {
             }
 
             return result;
-        } catch (error) {
-            console.warn('⚠️ loadEditorRequestsForBoard fehlgeschlagen (best-effort):', error);
+        } catch (error: any) {
+            if (error?.message !== 'timeout') {
+                console.warn('⚠️ loadEditorRequestsForBoard fehlgeschlagen (best-effort):', error);
+            }
             return {};
         }
     }

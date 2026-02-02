@@ -41,6 +41,118 @@
 
 ---
 
+## Version 4.7.34 - Editor-Request Timeout ⏱️
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **ShareDialog Hang:** Editor-Request Fetch hat jetzt Timeout (best‑effort)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Timeout beim Laden von Editor‑Requests |
+
+---
+
+## Version 4.7.35 - Editor-Request Board-Switch Fix 🔁
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Wechsel:** Editor-Requests laden nicht mehr blockierend beim Öffnen; stale Responses werden ignoriert
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Non-blocking Open + Token-Guard |
+
+---
+
+## Version 4.7.36 - Editor-Request Load Guard 🧯
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Load OOM:** Editor-Requests werden nur beim Klick geladen (kein Auto-Fetch beim Boardwechsel)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Auto‑Load entfernt, Reset bei Boardwechsel |
+
+---
+
+## Version 4.7.37 - Editor-Request Timeout Noise 🔇
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Timeout-Log:** Timeout bei Editor‑Request Load wird still behandelt (kein Console‑Spam)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/stores/boardstore/sharing.ts` | Timeout‑Warnung unterdrückt |
+
+---
+
+## Version 4.7.38 - ShareDialog Open/Close Perf ⚡
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Dialog-Lag:** ShareDialog lädt Inhalte nur im aktiven Tab (schnelleres Öffnen/Schließen)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/lib/components/board/ShareDialog.svelte` | Lazy-Load pro Tab |
+
+---
+
+## Version 4.7.39 - Editor-Request Background Refresh 🔔
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Badge-UX:** Editor‑Requests werden im Hintergrund geladen (Glocke zeigt Badge ohne Klick)
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Background-Refresh + initial delay |
+
+---
+
+## Version 4.7.40 - Editor-Request Bell Visibility 👀
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Glocke nur bei Bedarf:** Icon erscheint nur, wenn offene Editor‑Requests vorhanden sind
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/Topbar.svelte` | Bell nur bei Count > 0 |
+
+---
+
 ## Version 4.7.31 - Permission-Toast Fix 🧯
 
 **Datum:** 02. Februar 2026  

@@ -354,12 +354,6 @@
         if (open) {
             loadParticipants();
             loadUserRole();
-            // Share-Link async generieren (Token-basiert mit allen Daten)
-            void generateShareLinkAsync();
-            
-            // Nostr naddr-Link generieren (async wegen QR-Code)
-            void generateNaddrLink();
-
             if (Object.keys(initialEditorRequests).length > 0) {
                 editorRequestsByPubkey = initialEditorRequests;
             }
@@ -374,8 +368,23 @@
         wasOpen = open;
     });
     
-    // QR-Code neu generieren wenn baseUrl sich ändert
+    // Nur den aktiven Tab laden (verhindert langsames Open/Close)
     $effect(() => {
+        if (!open) return;
+        const tab = activeTab;
+
+        if (tab === 'share-link') {
+            void generateShareLinkAsync();
+        }
+
+        if (tab === 'nostr-link') {
+            void generateNaddrLink();
+        }
+    });
+
+    // QR-Code nur für Nostr-Link neu generieren
+    $effect(() => {
+        if (!open || activeTab !== 'nostr-link') return;
         const currentBaseUrl = baseUrl;
         const currentPath = naddrPath;
         if (currentBaseUrl && currentPath) {

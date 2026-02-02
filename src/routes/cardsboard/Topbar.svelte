@@ -19,6 +19,7 @@
     let showEdufeedDialog = $state(false);
     let showEditorRequestsDialog = $state(false);
     let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
+    let editorRequestsLoadToken = $state(0);
     
     // State für Inline-Editing des Board-Titels
     let isEditingTitle = $state(false);
@@ -101,7 +102,10 @@
     })
 
     async function loadEditorRequests(): Promise<void> {
-        if (!isOwner) {
+        const boardId = boardStore.data?.id;
+        const token = ++editorRequestsLoadToken;
+
+        if (!isOwner || !boardId) {
             editorRequestsByPubkey = {};
             return;
         }
@@ -110,22 +114,53 @@
         } catch (error) {
             console.warn('⚠️ Editor-Requests konnten nicht geladen werden (best-effort):', error);
             editorRequestsByPubkey = {};
+        } finally {
+            if (token !== editorRequestsLoadToken || boardStore.data?.id !== boardId) {
+                return;
+            }
         }
     }
 
+    let lastBoardId = $state<string | undefined>(undefined);
     $effect(() => {
         const boardId = boardStore.data?.id;
         const role = userRole;
-        if (role === BoardRole.OWNER && boardId) {
-            void loadEditorRequests();
-        } else {
+
+        if (boardId !== lastBoardId) {
+            lastBoardId = boardId;
+            editorRequestsByPubkey = {};
+            editorRequestsLoadToken++;
+        }
+
+        if (role !== BoardRole.OWNER) {
             editorRequestsByPubkey = {};
         }
     });
 
-    async function openEditorRequests(): Promise<void> {
-        await loadEditorRequests();
+    // Hintergrund-Refresh für Editor-Requests (Badge ohne Klick)
+    $effect(() => {
+        const boardId = boardStore.data?.id;
+        const role = userRole;
+        if (!boardId || role !== BoardRole.OWNER) return;
+
+        // Leicht verzögert laden, damit Board-Load nicht blockiert
+        const initialTimer = setTimeout(() => {
+            void loadEditorRequests();
+        }, 300);
+
+        const intervalId = setInterval(() => {
+            void loadEditorRequests();
+        }, 30000);
+
+        return () => {
+            clearTimeout(initialTimer);
+            clearInterval(intervalId);
+        };
+    });
+
+    function openEditorRequests(): void {
         showEditorRequestsDialog = true;
+        void loadEditorRequests();
     }
     
     // Funktionen für Inline-Editing des Board-Titels
@@ -251,7 +286,7 @@
             
             <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
 
-            {#if isOwner}
+            {#if isOwner && editorRequestCount > 0}
                 <Button
                     variant="ghost"
                     size="icon"
@@ -260,11 +295,9 @@
                     title="Editor-Anfragen"
                 >
                     <BellIcon class="h-4 w-4" />
-                    {#if editorRequestCount > 0}
-                        <span class="absolute -top-1 -right-1 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 text-center px-1">
-                            {editorRequestCount > 9 ? '9+' : editorRequestCount}
-                        </span>
-                    {/if}
+                    <span class="absolute -top-1 -right-1 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4 text-center px-1">
+                        {editorRequestCount > 9 ? '9+' : editorRequestCount}
+                    </span>
                     <span class="sr-only">Editor-Anfragen</span>
                 </Button>
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />

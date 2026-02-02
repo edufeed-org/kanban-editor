@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.29 (Editor-Request Preload - 02. Februar 2026)  
-**Aktualisiert:** 02. Februar 2026 (Editor‑Requests werden vorab geladen und im Dialog sofort angezeigt).  
+**Version:** 3.36 (Editor-Request Bell Visibility - 02. Februar 2026)  
+**Aktualisiert:** 02. Februar 2026 (Glocke erscheint nur, wenn Requests vorhanden sind).  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1654,6 +1654,13 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.36 | 02.02.2026 | 👀 **Editor-Request Bell Visibility:** Glocke nur bei offenen Requests sichtbar. |
+| 3.35 | 02.02.2026 | 🔔 **Editor-Request Background Refresh:** Badge wird im Hintergrund geladen. |
+| 3.34 | 02.02.2026 | ⚡ **ShareDialog Perf:** Inhalte werden nur im aktiven Tab geladen (Open/Close schneller). |
+| 3.33 | 02.02.2026 | 🔇 **Editor-Request Timeout Noise:** Timeout‑Warnung wird unterdrückt. |
+| 3.32 | 02.02.2026 | 🧯 **Editor-Request Load Guard:** Auto‑Fetch beim Boardwechsel entfernt, verhindert OOM/Hänger. |
+| 3.31 | 02.02.2026 | 🔁 **Editor-Request Board-Switch Fix:** Non‑blocking Load + Stale‑Response Guard beim Boardwechsel. |
+| 3.30 | 02.02.2026 | ⏱️ **Editor-Request Timeout:** ShareDialog hängt nicht mehr, wenn keine Requests vorhanden sind. |
 | 3.29 | 02.02.2026 | ⚡ **Editor-Request Preload:** Requests werden vorab geladen; Dialog zeigt sofortige Anzeige + Loading-Hinweis. |
 | 3.28 | 02.02.2026 | 🛎️ **Editor-Request Bell:** Topbar‑Glocke mit Badge öffnet Editor‑Requests im ShareDialog. |
 | 3.27 | 02.02.2026 | 👀 **Owner Editor-Requests:** ShareDialog zeigt Editor‑Requests für Owner inkl. Quick‑Action. |
