@@ -1,7 +1,7 @@
 # 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.42 (Versions-Menüpunkt in Boards-Liste - 02. Februar 2026)  
-**Aktualisiert:** 02. Februar 2026 (Menüpunkt „Versionen“ in BoardsList ergänzt).  
+**Version:** 3.43 (Teilen-Untermenü im Boards-Menü - 02. Februar 2026)  
+**Aktualisiert:** 02. Februar 2026 (Teilen-Untermenü in BoardsList ergänzt).  
 **Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1654,6 +1654,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 | Version | Datum | Beschreibung |
 |---------|-------|-------------|
+| 3.43 | 02.02.2026 | 🔗 **Teilen-Untermenü:** „Als Link“, „An Communities“, „An Edufeed“ in BoardsList ergänzt. |
 | 3.36 | 02.02.2026 | 👀 **Editor-Request Bell Visibility:** Glocke nur bei offenen Requests sichtbar. |
 | 3.35 | 02.02.2026 | 🔔 **Editor-Request Background Refresh:** Badge wird im Hintergrund geladen. |
 | 3.34 | 02.02.2026 | ⚡ **ShareDialog Perf:** Inhalte werden nur im aktiven Tab geladen (Open/Close schneller). |

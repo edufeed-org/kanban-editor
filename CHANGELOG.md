@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 4.7.45 - Teilen-Untermenü im Boards-Menü 🔗
+
+**Datum:** 02. Februar 2026  
+**Branch:** `feature/communikeys`  
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **Teilen-Menü:** Untermenü mit „Als Link“, „An Communities“ und „An Edufeed“
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/routes/cardsboard/BoardsList.svelte` | Teilen-Untermenü ergänzt |
+
+---
+
 ## Version 4.7.44 - Versions-Menüpunkt in Boards-Liste 🗂️
 
 **Datum:** 02. Februar 2026  

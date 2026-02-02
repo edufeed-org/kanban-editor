@@ -26,6 +26,7 @@
     import MenuIcon from '@lucide/svelte/icons/menu';
     import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
+    import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import { ShareButton } from '$lib/components/board';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
@@ -98,6 +99,7 @@
     let llmSettingsOpen = $state(false);
     let nostrSettingsOpen = $state(false);
     let defaultsSettingsOpen = $state(false);
+    let sharePopoverOpen = $state(false);
     
     // Import & Export States
     let importExportPopoverOpen = $state(false);
@@ -420,11 +422,44 @@
             </Popover.Root>
             
             <!-- 3. Teilen (Share) -->
-            <ShareButton 
-                variant="default"
-                class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
-                showLabel={true}
-            />
+            <Popover.Root bind:open={sharePopoverOpen}>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={MenuIcon} 
+                        label="Teilen" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-56 p-1">
+                    <div class="space-y-0">
+                        <ShareButton 
+                            variant="default"
+                            class="w-full flex justify-start gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors" 
+                            showLabel={true}
+                        />
+                        <SubmenuItem 
+                            icon={UsersIcon} 
+                            label="An Communities" 
+                            onclick={() => { 
+                                toast.info('Community-Teilen kommt bald');
+                                sharePopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                        <SubmenuItem 
+                            icon={SendIcon} 
+                            label="An Edufeed" 
+                            onclick={() => { 
+                                publishToEdufeedDialogOpen = true;
+                                sharePopoverOpen = false;
+                                hamburgerMenuOpen = false;
+                            }}
+                        />
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
             
             <!-- 4. Board duplizieren -->
             <MenuItem 
@@ -818,7 +853,7 @@
                     class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canEditBoardMeta}
                 >
-                    {#each ccLicenses as license}
+                    {#each ccLicenses as license (license.value)}
                         <option value={license.value}>{license.label}</option>
                     {/each}
                 </select>
