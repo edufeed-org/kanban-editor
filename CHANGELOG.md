@@ -1,5 +1,57 @@
 # Changelog
 
+## Version 4.7.61 - TSConfig Strict Defaults 🧰
+
+**Datum:** 03. Februar 2026  \
+**Branch:** `main`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Tooling:** Generierte `.svelte-kit/tsconfig.json` setzt `strict` und `forceConsistentCasingInFileNames` über `kit.typescript.config`.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `svelte.config.js` | `kit.typescript.config` ergänzt (strict + forceConsistentCasingInFileNames) |
+
+---
+
+## Version 4.7.60 - Svelte-Check Fixes ✅
+
+**Datum:** 03. Februar 2026  \
+**Branch:** `main`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Tooling:** tsconfig erweitert wieder die SvelteKit-Config, damit svelte-check sauber läuft.
+- **Routing:** Navigation nutzt `goto('/cardsboard')` statt `resolve()` mit falscher Signatur.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `tsconfig.json` | Wieder auf SvelteKit-Extend umgestellt |
+| `src/lib/components/auth/LoginSheet.svelte` | `goto('/cardsboard')` statt `resolve()` |
+| `src/lib/components/board/FollowBoardDialog.svelte` | `goto('/cardsboard')` statt `resolve()` |
+| `src/routes/+page.svelte` | `goto('/cardsboard')` statt `resolve()` |
+
+---
+
+## Version 4.7.59 - TSConfig Parent Fix 🛠️
+
+**Datum:** 03. Februar 2026  \
+**Branch:** `main`  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Tooling:** tsconfig ist jetzt unabhängig von der generierten `.svelte-kit/tsconfig.json` und löst das „Parent configuration missing“-Problem.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `tsconfig.json` | SvelteKit-Basisoptionen inline definiert, um fehlende Parent-Config zu vermeiden |
+
+---
+
 ## Version 4.7.58 - Share-Menü aufgeteilt 🧭
 
 **Datum:** 02. Februar 2026  \

@@ -28,6 +28,14 @@ const config = {
 		paths: {
 			base: getBasePath()
 		},
+		typescript: {
+			config: (config) => {
+				config.compilerOptions = config.compilerOptions || {};
+				config.compilerOptions.strict = true;
+				config.compilerOptions.forceConsistentCasingInFileNames = true;
+				return config;
+			}
+		}
 	},
 	extensions: ['.svelte', '.svx'],
 	vitePlugin: {

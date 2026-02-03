@@ -10,7 +10,6 @@
   import KeyRoundIcon from "@lucide/svelte/icons/key-round";
   import Nos2x from './assets/nos2x.png';
   import Alby from './assets/alby.svg';
-  import { resolve } from '$app/paths';
   
   interface Props {
     open: boolean;
@@ -34,7 +33,7 @@
 
       onClose();
       
-      if (user) goto(resolve('/cardsboard', {}));
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
       
@@ -54,7 +53,7 @@
       
       const user = await authStore.loginWithNsec(nsecInput);
       onClose();
-      if (user) goto(resolve('/cardsboard', {}));
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
     } finally {
@@ -69,7 +68,7 @@
       
       const user = await authStore.loginWithNip46(nip46Input);
       onClose();
-      if (user) goto(resolve('/cardsboard', {}));
+      if (user) goto('/cardsboard');
     } catch (err: any) {
       error = err.message;
     } finally {

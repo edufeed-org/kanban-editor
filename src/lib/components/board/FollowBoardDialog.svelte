@@ -19,7 +19,6 @@
     import UserIcon from "@lucide/svelte/icons/user";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CopyPlusIcon from "@lucide/svelte/icons/copy-plus";
-    import { resolve } from "$app/paths";
     
     // Get NDK from context (set in +layout.svelte)
     const ndk = getContext<NDK>('ndk');
@@ -143,7 +142,7 @@
             
             // Zum Board navigieren
             open = false;
-            goto(resolve('/cardsboard', {}));
+            goto('/cardsboard');
             
         } catch (error: any) {
             errorMessage = error.message || 'Fehler';

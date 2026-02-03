@@ -1,6 +1,5 @@
 <script lang="ts">
     import KeyRoundIcon from "@lucide/svelte/icons/key-round";
-    import { resolve } from '$app/paths';
     import { goto } from '$app/navigation';
     import * as Avatar from "$lib/components/ui/avatar/index.js";
     import { getInitials, getAvatarColor } from "$lib/components/ui/avatar/index.js";
@@ -65,11 +64,11 @@
                 role="link"
                 tabindex="0"
                 class="cursor-pointer"
-                onclick={() => goto(resolve('/cardsboard', {}))}
+                onclick={() => goto('/cardsboard')}
                 onkeydown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        goto(resolve('/cardsboard', {}));
+                        goto('/cardsboard');
                     }
                 }}
             >
