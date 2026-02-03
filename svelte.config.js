@@ -2,20 +2,6 @@ import { mdsvex } from 'mdsvex';
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-
-const isDev = process.argv.includes('dev');
-const isPreview = process.argv.includes('preview');
-
-// Determine base path:
-// - Dev/Preview: empty (local development)
-// - CI with BASE_PATH: use BASE_PATH (GitHub Pages deployment)
-// - CI without BASE_PATH: empty
-// - Production build with BASE_PATH: use BASE_PATH
-const getBasePath = () => {
-	if (isDev || isPreview) return '';
-	return process.env.BASE_PATH || '';
-};
-
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: [vitePreprocess(), mdsvex()],
@@ -23,7 +9,7 @@ const config = {
 	// the site on GitHub Pages. Change them if it is going to be hosted somewhere else.
 	kit: {
 		adapter: adapter({
-			fallback: '404.html'
+			fallback: 'index.html'
 		}),
 		paths: {
 			base: getBasePath()
