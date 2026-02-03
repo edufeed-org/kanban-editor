@@ -171,6 +171,11 @@
 button:hover {
   transition: background-color 0.2s ease, color 0.2s ease; 
 }
+.add-board-button {
+      background-color: var(--muted);
+      border: 2px dotted var(--border);
+      color: var(--muted-foreground);
+  }
 
 
 .menu-item:hover{

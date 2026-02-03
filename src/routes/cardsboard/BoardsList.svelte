@@ -809,7 +809,7 @@
     <Button
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}
-        class="w-full gap-2 h-auto py-2 whitespace-normal"
+        class="w-full gap-2 h-auto py-2 whitespace-normal add-board-button"
         variant="default"
         data-testid="create-board-button"
     >
@@ -1041,4 +1041,5 @@
     div {
         --apply-flex: true;
     }
+    
 </style>
