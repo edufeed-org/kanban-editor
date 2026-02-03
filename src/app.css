@@ -12,7 +12,8 @@
   --radius: 0.65rem;
   --background: oklch(0.94 0.004 286.3);
   --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
+  --card: oklch(100% 0.00011 271.152);
+  --card-hover: oklch(97.068% 0.01653 301.033);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
@@ -259,14 +260,12 @@ button.bg-destructive:hover {
   color: var(--accent);
 }
 .active-board  {
-  padding: 2px;
   border: 2px solid var(--ring);
-  border-radius: var(--radius);
 }
 .user-msg div {
   background-color: var(--primary);
   color: var(--primary-foreground);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
 
 }
 

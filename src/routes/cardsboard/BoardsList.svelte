@@ -340,7 +340,7 @@
     
     <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b -mx-2 -mt-2 mb-1 max-h-[60vh] overflow-y-auto editor-menu bg-[var(--card)]">
+        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto editor-menu bg-[var(--card)]">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 
@@ -705,7 +705,7 @@
     
     <h2 class="text-lg font-semibold upper">Meine Boards</h2>
 
-    <div class="m-2 flex-shrink-0">
+    <div class="m-0 flex-shrink-0">
         <div class="relative">
             <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -738,7 +738,7 @@
                 {@const isActive = currentBoardId === board.id}
                 <div
                     animate:safeFlip={{ duration: 300 }}
-                    class="w-full rounded-md px-3 py-2.5 text-sm transition-all group relative
+                    class="w-full rounded-md border border-border px-1 py-1 text-sm transition-all group relative bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
                         {isActive
                             ? 'active-board'
                             : ''}"

@@ -260,7 +260,7 @@
                         href={licenseInfo.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center align-middle gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative top-0 {licenseInfo.color}"
+                        class="inline-flex items-center align-middle gap-0.5 px-1 py-0.5 rounded border text-[9px] font-bold transition-colors hover:opacity-80 relative top-0] {licenseInfo.color}"
                         title="{licenseInfo.name} - Klicken für Details"
                     >
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
