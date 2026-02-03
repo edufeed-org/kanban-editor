@@ -1,33 +1,87 @@
-# Changelog
-
-## Version 4.7.61 - TSConfig Strict Defaults 🧰
+﻿# Changelog
+## Version 4.7.64 - Landingpage CTA Glow ✨
 
 **Datum:** 03. Februar 2026  \
-**Branch:** `main`  \
+**Branch:** eature/landingpage  \
 **Status:** ✅ Implementiert
 
-### 🐛 Fixes
-- **Tooling:** Generierte `.svelte-kit/tsconfig.json` setzt `strict` und `forceConsistentCasingInFileNames` über `kit.typescript.config`.
+### ✨ UI
+- **Landingpage:** Hero-Layout optimiert (weniger Leerraum), primärer CTA ist deutlich sichtbar und hat Glow-Effekt.
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |
 |-------|----------|
-| `svelte.config.js` | `kit.typescript.config` ergänzt (strict + forceConsistentCasingInFileNames) |
+| src/routes/+page.svelte | CTA Glow + Hero Layout Refactor |
+| docs/FEATURE/LANDINGPAGE.md | CTA/Glow Dokumentation ergänzt |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.52 ergänzt |
 
 ---
-
-## Version 4.7.60 - Svelte-Check Fixes ✅
+## Version 4.7.63 - Landingpage Polish + Theme Sync ✨
 
 **Datum:** 03. Februar 2026  \
-**Branch:** `main`  \
+**Branch:** main  \
 **Status:** ✅ Implementiert
 
-### 🐛 Fixes
-- **Tooling:** tsconfig erweitert wieder die SvelteKit-Config, damit svelte-check sauber läuft.
-- **Routing:** Navigation nutzt `goto('/cardsboard')` statt `resolve()` mit falscher Signatur.
+### ✨ UI
+- **Landingpage:** Mehr visuelle Struktur, Lucide-Icons, kompaktere Texte, bessere Hero-Section.
+- **Theme:** Dark/Light wird zuverlässig synchronisiert (System-Theme + Settings).
 
 ### 📁 Geänderte Dateien
 | Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Landingpage überarbeitet (Icons, Layout, visuelle Struktur) |
+| src/routes/+layout.svelte | Theme-Sync via settingsStore.applyTheme() |
+| docs/FEATURE/LANDINGPAGE.md | Landingpage-Doku aktualisiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.51 ergänzt |
+
+---
+## Version 4.7.62 - Landingpage Refresh ✨
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage:** Neue Landingpage mit CTA, Open-Source/Doku-Links, Edufeed-Branding und Lehrkräfte-Fokus; Theme-aware (Dark/Light).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Landingpage neu aufgebaut (Hero, Features, CTA, Links) |
+| docs/FEATURE/LANDINGPAGE.md | Feature-Entwurf für Landingpage ergänzt |
+| docs/_INDEX.md | Dokumentations-Index aktualisiert (neue Feature-Doc, Counts) |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Update für Landingpage |
+
+---
+
+## Version 4.7.61 - TSConfig Strict Defaults ðŸ§°
+
+**Datum:** 03. Februar 2026  \
+**Branch:** `main`  \
+**Status:** âœ… Implementiert
+
+### ðŸ› Fixes
+- **Tooling:** Generierte `.svelte-kit/tsconfig.json` setzt `strict` und `forceConsistentCasingInFileNames` Ã¼ber `kit.typescript.config`.
+
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
+|-------|----------|
+| `svelte.config.js` | `kit.typescript.config` ergÃ¤nzt (strict + forceConsistentCasingInFileNames) |
+
+---
+
+## Version 4.7.60 - Svelte-Check Fixes âœ…
+
+**Datum:** 03. Februar 2026  \
+**Branch:** `main`  \
+**Status:** âœ… Implementiert
+
+### ðŸ› Fixes
+- **Tooling:** tsconfig erweitert wieder die SvelteKit-Config, damit svelte-check sauber lÃ¤uft.
+- **Routing:** Navigation nutzt `goto('/cardsboard')` statt `resolve()` mit falscher Signatur.
+
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `tsconfig.json` | Wieder auf SvelteKit-Extend umgestellt |
 | `src/lib/components/auth/LoginSheet.svelte` | `goto('/cardsboard')` statt `resolve()` |
@@ -36,231 +90,231 @@
 
 ---
 
-## Version 4.7.59 - TSConfig Parent Fix 🛠️
+## Version 4.7.59 - TSConfig Parent Fix ðŸ› ï¸
 
 **Datum:** 03. Februar 2026  \
 **Branch:** `main`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Tooling:** tsconfig ist jetzt unabhängig von der generierten `.svelte-kit/tsconfig.json` und löst das „Parent configuration missing“-Problem.
+### ðŸ› Fixes
+- **Tooling:** tsconfig ist jetzt unabhÃ¤ngig von der generierten `.svelte-kit/tsconfig.json` und lÃ¶st das â€žParent configuration missingâ€œ-Problem.
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `tsconfig.json` | SvelteKit-Basisoptionen inline definiert, um fehlende Parent-Config zu vermeiden |
 
 ---
 
-## Version 4.7.58 - Share-Menü aufgeteilt 🧭
+## Version 4.7.58 - Share-MenÃ¼ aufgeteilt ðŸ§­
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `main`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ UI
-- **Share-Menü:** Optionen aufgeteilt in **Schreibrechte**, **Link für Beobachter**, **Communities** und **Edufeed**
+### âœ¨ UI
+- **Share-MenÃ¼:** Optionen aufgeteilt in **Schreibrechte**, **Link fÃ¼r Beobachter**, **Communities** und **Edufeed**
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareDialog.svelte` | Modus für Links/Editoren + Tabs konditional |
-| `src/routes/cardsboard/BoardsList.svelte` | Share-Untermenü in 4 Einträge aufgeteilt |
+| `src/lib/components/board/ShareDialog.svelte` | Modus fÃ¼r Links/Editoren + Tabs konditional |
+| `src/routes/cardsboard/BoardsList.svelte` | Share-UntermenÃ¼ in 4 EintrÃ¤ge aufgeteilt |
 
 ---
 
-## Version 4.7.57 - Communikey Name via Kind 0 🏷️
+## Version 4.7.57 - Communikey Name via Kind 0 ðŸ·ï¸
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Communities:** Community‑Name wird aus Kind‑0 Metadaten geladen (Fallback wenn Kind‑10222 `content` leer ist)
+### ðŸ› Fixes
+- **Communities:** Communityâ€‘Name wird aus Kindâ€‘0 Metadaten geladen (Fallback wenn Kindâ€‘10222 `content` leer ist)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Kind‑0 Fallback für Community‑Name |
-| `docs/GUIDES/COMMUNIKEY.md` | Name‑Quelle (Kind‑0) dokumentiert |
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Kindâ€‘0 Fallback fÃ¼r Communityâ€‘Name |
+| `docs/GUIDES/COMMUNIKEY.md` | Nameâ€‘Quelle (Kindâ€‘0) dokumentiert |
 
 ---
 
-## Version 4.7.56 - Communikey Relationship Tag Fix 🧭
+## Version 4.7.56 - Communikey Relationship Tag Fix ðŸ§­
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Communities:** Relationship‑Follow erkennt `n=follow` (neben `relationship=follow`)
+### ðŸ› Fixes
+- **Communities:** Relationshipâ€‘Follow erkennt `n=follow` (neben `relationship=follow`)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Tag `n` unterstützt |
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationshipâ€‘Tag `n` unterstÃ¼tzt |
 | `docs/GUIDES/COMMUNIKEY.md` | Spec: `n`/`relationship` Tag dokumentiert |
 
 ---
 
-## Version 4.7.55 - Communikey Relationships + Relay-Only 🧭
+## Version 4.7.55 - Communikey Relationships + Relay-Only ðŸ§­
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Communities:** Relationship‑Fallback (Kind 30382, `relationship=follow` + `d`‑Tag)
-- **Communities:** Relay‑Scan auf `wss://relay.edufeed.org` begrenzt (kein localhost‑Fallback)
+### ðŸ› Fixes
+- **Communities:** Relationshipâ€‘Fallback (Kind 30382, `relationship=follow` + `d`â€‘Tag)
+- **Communities:** Relayâ€‘Scan auf `wss://relay.edufeed.org` begrenzt (kein localhostâ€‘Fallback)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationship‑Fallback + Relay‑Scope | 
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relationshipâ€‘Fallback + Relayâ€‘Scope | 
 
 ---
 
-## Version 4.7.54 - Communikey Debug Filter Logs 🧪
+## Version 4.7.54 - Communikey Debug Filter Logs ðŸ§ª
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🧪 Debug
+### ðŸ§ª Debug
 - **Communities:** Nostr-Filter (Badges, Community-List, Community-Details) werden im Log ausgegeben
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Debug-Logging der Nostr-Filter | 
 
 ---
 
-## Version 4.7.53 - Communikey Pubkey Normalization 🔐
+## Version 4.7.53 - Communikey Pubkey Normalization ðŸ”
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Communities:** npub/nprofile werden zu Hex-Pubkeys normalisiert, damit Badges/Listen korrekt geladen werden
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Pubkey-Normalisierung (npub/nprofile → hex) |
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Pubkey-Normalisierung (npub/nprofile â†’ hex) |
 
 ---
 
-## Version 4.7.52 - Communikey Fallback & Relay Fix 🧭
+## Version 4.7.52 - Communikey Fallback & Relay Fix ðŸ§­
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Communities:** relay.edufeed.org immer im Relay-Set
 - **Communities:** Fallback auf Kind 10004 (Community List), falls Badges leer sind
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Set erweitert + Community-List Fallback |
 
 ---
 
-## Version 4.7.51 - Communikey Badge Relay Scan 🔍
+## Version 4.7.51 - Communikey Badge Relay Scan ðŸ”
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Communities:** Badges werden auf allen konfigurierten Relays geladen (nicht nur edufeed/localhost)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Scan für Kind 30008 erweitert |
+| `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Relay-Scan fÃ¼r Kind 30008 erweitert |
 
 ---
 
-## Version 4.7.50 - Communikey Membership Fix 🧩
+## Version 4.7.50 - Communikey Membership Fix ðŸ§©
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Communities:** Membership wird aus Kind 30008 (Badges) geladen, nicht aus 10222
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Badge-Query auf Kind 30008 korrigiert |
 
 ---
 
-## Version 4.7.49 - Debug-Communities NDK Context Fix 🧪
+## Version 4.7.49 - Debug-Communities NDK Context Fix ðŸ§ª
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Debug-Page:** NDK aus Svelte Context statt `window` (Fehler „NDK nicht initialisiert“ behoben)
+### ðŸ› Fixes
+- **Debug-Page:** NDK aus Svelte Context statt `window` (Fehler â€žNDK nicht initialisiertâ€œ behoben)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/routes/test/debug-communities/+page.svelte` | NDK via `getContext()` laden |
 
 ---
 
-## Version 4.7.48 - Board-Sharing Typen & BoardRef Fix 🧹
+## Version 4.7.48 - Board-Sharing Typen & BoardRef Fix ðŸ§¹
 
 **Datum:** 02. Februar 2026  \
 **Branch:** `feature/communikeys`  \
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Board-Sharing:** Doppelte Typdefinition entfernt und `makeBoardAddress()` öffentlich gemacht (svelte-check Fehler behoben)
+### ðŸ› Fixes
+- **Board-Sharing:** Doppelte Typdefinition entfernt und `makeBoardAddress()` Ã¶ffentlich gemacht (svelte-check Fehler behoben)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/stores/boardstore/sharing.ts` | Duplicate Type entfernt, `makeBoardAddress()` public |
 
 ---
 
-## Version 4.7.47 - Communikey Community-Load Fix 🧯
+## Version 4.7.47 - Communikey Community-Load Fix ðŸ§¯
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Community-Dialog:** Timeout + Relay-Fallback verhindert endloses „Communities werden geladen…“
+### ðŸ› Fixes
+- **Community-Dialog:** Timeout + Relay-Fallback verhindert endloses â€žCommunities werden geladenâ€¦â€œ
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Timeout + Relay-Connect beim Laden |
 
 ---
 
-## Version 4.7.46 - Communikey-Teilen an Communities 🌐
+## Version 4.7.46 - Communikey-Teilen an Communities ðŸŒ
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
+### âœ¨ Verbesserungen
 - **Communikey Workflow:** Communities aus Kind 30008/10222 laden und Board via Kind 30222 teilen
-- **UI:** Dialog für Community-Auswahl und Publishing angebunden an „Teilen → An Communities“
+- **UI:** Dialog fÃ¼r Community-Auswahl und Publishing angebunden an â€žTeilen â†’ An Communitiesâ€œ
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareToCommunitiesDialog.svelte` | Neuer Dialog + Publishing-Logik |
 | `src/routes/cardsboard/BoardsList.svelte` | Button mit Dialog verbunden |
@@ -268,204 +322,204 @@
 
 ---
 
-## Version 4.7.45 - Teilen-Untermenü im Boards-Menü 🔗
+## Version 4.7.45 - Teilen-UntermenÃ¼ im Boards-MenÃ¼ ðŸ”—
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Teilen-Menü:** Untermenü mit „Als Link“, „An Communities“ und „An Edufeed“
+### âœ¨ Verbesserungen
+- **Teilen-MenÃ¼:** UntermenÃ¼ mit â€žAls Linkâ€œ, â€žAn Communitiesâ€œ und â€žAn Edufeedâ€œ
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/routes/cardsboard/BoardsList.svelte` | Teilen-Untermenü ergänzt |
+| `src/routes/cardsboard/BoardsList.svelte` | Teilen-UntermenÃ¼ ergÃ¤nzt |
 
 ---
 
-## Version 4.7.44 - Versions-Menüpunkt in Boards-Liste 🗂️
+## Version 4.7.44 - Versions-MenÃ¼punkt in Boards-Liste ðŸ—‚ï¸
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Boards-Menü:** „Versionen“ ist wieder direkt unter „Board duplizieren“ verfügbar
+### âœ¨ Verbesserungen
+- **Boards-MenÃ¼:** â€žVersionenâ€œ ist wieder direkt unter â€žBoard duplizierenâ€œ verfÃ¼gbar
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/routes/cardsboard/BoardsList.svelte` | Versions-Menüpunkt ergänzt |
+| `src/routes/cardsboard/BoardsList.svelte` | Versions-MenÃ¼punkt ergÃ¤nzt |
 
 ---
 
-## Version 4.7.32 - Toast-Design Polish 🎨
+## Version 4.7.32 - Toast-Design Polish ðŸŽ¨
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Toast-Layout:** Lesbarere Breite, saubere Zeilenumbrüche, kompaktere Buttons
-- **Farben & Schatten:** Sanftere Error/Warning-Hintergründe, klarere Konturen
-- **Kompatibilität:** Entfernt color-mix für ältere Browser
+### âœ¨ Verbesserungen
+- **Toast-Layout:** Lesbarere Breite, saubere ZeilenumbrÃ¼che, kompaktere Buttons
+- **Farben & Schatten:** Sanftere Error/Warning-HintergrÃ¼nde, klarere Konturen
+- **KompatibilitÃ¤t:** Entfernt color-mix fÃ¼r Ã¤ltere Browser
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/app.css` | Sonner-Toast Styling (Breite, Typografie, Buttons) |
 
 ---
 
-## Version 4.7.33 - Owner Editor-Requests 👀
+## Version 4.7.33 - Owner Editor-Requests ðŸ‘€
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Owner-Hinweis:** Glocke in der Topbar mit Badge + Dialog (ShareDialog, Tab „Editoren“)
-- **Editor-Anfragen Liste:** Requester werden auch ohne Teilnehmerliste angezeigt; Quick‑Action korrekt verdrahtet
+### âœ¨ Verbesserungen
+- **Owner-Hinweis:** Glocke in der Topbar mit Badge + Dialog (ShareDialog, Tab â€žEditorenâ€œ)
+- **Editor-Anfragen Liste:** Requester werden auch ohne Teilnehmerliste angezeigt; Quickâ€‘Action korrekt verdrahtet
 - **Sofortanzeige:** Dialog nutzt vorab geladene Requests + Loading-Hinweis
-- **Layout:** Editor‑Anfragen stapeln Name/Badge/Reason für bessere Lesbarkeit
+- **Layout:** Editorâ€‘Anfragen stapeln Name/Badge/Reason fÃ¼r bessere Lesbarkeit
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/stores/boardstore/sharing.ts` | Loader für Editor-Requests |
+| `src/lib/stores/boardstore/sharing.ts` | Loader fÃ¼r Editor-Requests |
 | `src/lib/stores/kanbanStore.svelte.ts` | Editor-Requests API |
-| `src/lib/components/board/ShareDialog.svelte` | Owner‑Anzeige + Quick‑Action |
-| `src/routes/cardsboard/Topbar.svelte` | Glocke + Badge für Editor‑Requests |
-| `docs/FEATURE/REQUEST-EDITORROLE.md` | Owner‑Hinweis dokumentiert |
+| `src/lib/components/board/ShareDialog.svelte` | Ownerâ€‘Anzeige + Quickâ€‘Action |
+| `src/routes/cardsboard/Topbar.svelte` | Glocke + Badge fÃ¼r Editorâ€‘Requests |
+| `docs/FEATURE/REQUEST-EDITORROLE.md` | Ownerâ€‘Hinweis dokumentiert |
 
 ---
 
-## Version 4.7.34 - Editor-Request Timeout ⏱️
+## Version 4.7.34 - Editor-Request Timeout â±ï¸
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **ShareDialog Hang:** Editor-Request Fetch hat jetzt Timeout (best‑effort)
+### ðŸ› Fixes
+- **ShareDialog Hang:** Editor-Request Fetch hat jetzt Timeout (bestâ€‘effort)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/stores/boardstore/sharing.ts` | Timeout beim Laden von Editor‑Requests |
+| `src/lib/stores/boardstore/sharing.ts` | Timeout beim Laden von Editorâ€‘Requests |
 
 ---
 
-## Version 4.7.35 - Editor-Request Board-Switch Fix 🔁
+## Version 4.7.35 - Editor-Request Board-Switch Fix ðŸ”
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Board-Wechsel:** Editor-Requests laden nicht mehr blockierend beim Öffnen; stale Responses werden ignoriert
+### ðŸ› Fixes
+- **Board-Wechsel:** Editor-Requests laden nicht mehr blockierend beim Ã–ffnen; stale Responses werden ignoriert
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/routes/cardsboard/Topbar.svelte` | Non-blocking Open + Token-Guard |
 
 ---
 
-## Version 4.7.36 - Editor-Request Load Guard 🧯
+## Version 4.7.36 - Editor-Request Load Guard ðŸ§¯
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Board-Load OOM:** Editor-Requests werden nur beim Klick geladen (kein Auto-Fetch beim Boardwechsel)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/routes/cardsboard/Topbar.svelte` | Auto‑Load entfernt, Reset bei Boardwechsel |
+| `src/routes/cardsboard/Topbar.svelte` | Autoâ€‘Load entfernt, Reset bei Boardwechsel |
 
 ---
 
-## Version 4.7.37 - Editor-Request Timeout Noise 🔇
+## Version 4.7.37 - Editor-Request Timeout Noise ðŸ”‡
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Timeout-Log:** Timeout bei Editor‑Request Load wird still behandelt (kein Console‑Spam)
+### ðŸ› Fixes
+- **Timeout-Log:** Timeout bei Editorâ€‘Request Load wird still behandelt (kein Consoleâ€‘Spam)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/stores/boardstore/sharing.ts` | Timeout‑Warnung unterdrückt |
+| `src/lib/stores/boardstore/sharing.ts` | Timeoutâ€‘Warnung unterdrÃ¼ckt |
 
 ---
 
-## Version 4.7.38 - ShareDialog Open/Close Perf ⚡
+## Version 4.7.38 - ShareDialog Open/Close Perf âš¡
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Dialog-Lag:** ShareDialog lädt Inhalte nur im aktiven Tab (schnelleres Öffnen/Schließen)
+### ðŸ› Fixes
+- **Dialog-Lag:** ShareDialog lÃ¤dt Inhalte nur im aktiven Tab (schnelleres Ã–ffnen/SchlieÃŸen)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/components/board/ShareDialog.svelte` | Lazy-Load pro Tab |
 
 ---
 
-## Version 4.7.39 - Editor-Request Background Refresh 🔔
+## Version 4.7.39 - Editor-Request Background Refresh ðŸ””
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Badge-UX:** Editor‑Requests werden im Hintergrund geladen (Glocke zeigt Badge ohne Klick)
+### âœ¨ Verbesserungen
+- **Badge-UX:** Editorâ€‘Requests werden im Hintergrund geladen (Glocke zeigt Badge ohne Klick)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/routes/cardsboard/Topbar.svelte` | Background-Refresh + initial delay |
 
 ---
 
-## Version 4.7.40 - Editor-Request Bell Visibility 👀
+## Version 4.7.40 - Editor-Request Bell Visibility ðŸ‘€
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Glocke nur bei Bedarf:** Icon erscheint nur, wenn offene Editor‑Requests vorhanden sind
+### âœ¨ Verbesserungen
+- **Glocke nur bei Bedarf:** Icon erscheint nur, wenn offene Editorâ€‘Requests vorhanden sind
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/routes/cardsboard/Topbar.svelte` | Bell nur bei Count > 0 |
 
 ---
 
-## Version 4.7.31 - Permission-Toast Fix 🧯
+## Version 4.7.31 - Permission-Toast Fix ðŸ§¯
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Viewer-Toast im Store:** Alle Permission-Checks leiten Viewer auf den „Rechte beantragen“-Toast
-- **Toast-Stabilität:** Stabiler Permission-Toast mit fester ID (verhindert Mehrfach-Spam)
-- **Unauth/Viewer konsistent:** DnD-Permission-Toast zeigt immer Request‑Hinweis (kein „Maintainer“-Hinweis mehr)
+### ðŸ› Fixes
+- **Viewer-Toast im Store:** Alle Permission-Checks leiten Viewer auf den â€žRechte beantragenâ€œ-Toast
+- **Toast-StabilitÃ¤t:** Stabiler Permission-Toast mit fester ID (verhindert Mehrfach-Spam)
+- **Unauth/Viewer konsistent:** DnD-Permission-Toast zeigt immer Requestâ€‘Hinweis (kein â€žMaintainerâ€œ-Hinweis mehr)
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/utils/permissionToast.ts` | Browser-Guard + stabile Toast-ID |
 | `src/lib/stores/kanbanStore.svelte.ts` | Viewer-Toast in allen Permission-Checks |
@@ -475,108 +529,108 @@
 
 ---
 
-## Version 4.7.30 - Editor-Request Toast + Dialog 🛎️
+## Version 4.7.30 - Editor-Request Toast + Dialog ðŸ›Žï¸
 
 **Datum:** 02. Februar 2026  
 **Branch:** `feature/communikeys`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Viewer‑Toast:** Berechtigungsfehler bietet „Rechte beantragen“ + „Nicht mehr anzeigen“
-- **Request‑Dialog:** Viewer können Editorrechte direkt anfragen
+### âœ¨ Verbesserungen
+- **Viewerâ€‘Toast:** Berechtigungsfehler bietet â€žRechte beantragenâ€œ + â€žNicht mehr anzeigenâ€œ
+- **Requestâ€‘Dialog:** Viewer kÃ¶nnen Editorrechte direkt anfragen
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/lib/utils/permissionToast.ts` | Neuer Permission‑Toast mit Request‑Aktion + Opt‑out |
-| `src/lib/stores/requestEditorDialog.svelte.ts` | Dialog‑State Store (open/close) |
-| `src/lib/components/board/RequestEditorRoleDialog.svelte` | Neuer Request‑Dialog |
-| `src/lib/stores/boardstore/sharing.ts` | Editor‑Request Event (Kind 30000) |
+| `src/lib/utils/permissionToast.ts` | Neuer Permissionâ€‘Toast mit Requestâ€‘Aktion + Optâ€‘out |
+| `src/lib/stores/requestEditorDialog.svelte.ts` | Dialogâ€‘State Store (open/close) |
+| `src/lib/components/board/RequestEditorRoleDialog.svelte` | Neuer Requestâ€‘Dialog |
+| `src/lib/stores/boardstore/sharing.ts` | Editorâ€‘Request Event (Kind 30000) |
 | `src/lib/stores/kanbanStore.svelte.ts` | `requestEditorRole()` API |
-| `src/routes/cardsboard/Board.svelte` | Viewer‑Toast statt Fehler‑Spam |
-| `src/routes/cardsboard/Column.svelte` | Viewer‑Toast statt Fehler‑Spam |
-| `src/routes/cardsboard/+page.svelte` | Dialog eingebunden + Viewer‑Toast |
+| `src/routes/cardsboard/Board.svelte` | Viewerâ€‘Toast statt Fehlerâ€‘Spam |
+| `src/routes/cardsboard/Column.svelte` | Viewerâ€‘Toast statt Fehlerâ€‘Spam |
+| `src/routes/cardsboard/+page.svelte` | Dialog eingebunden + Viewerâ€‘Toast |
 
 ---
 
-## Version 4.7.29 - Shared Board Name Sync ⚡
+## Version 4.7.29 - Shared Board Name Sync âš¡
 
 **Datum:** 01. Februar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
-- **Board-Liste nach „Beobachten“:** Platzhalter „Wird geladen…“ wird sofort durch echte Metadaten ersetzt
+### ðŸ› Fixes
+- **Board-Liste nach â€žBeobachtenâ€œ:** Platzhalter â€žWird geladenâ€¦â€œ wird sofort durch echte Metadaten ersetzt
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `src/lib/stores/kanbanStore.svelte.ts` | Shared-Cache nach follow sofort aktualisiert |
 
 ---
 
-## Version 4.7.28 - Naddr Follow Dialog Flow 🧭
+## Version 4.7.28 - Naddr Follow Dialog Flow ðŸ§­
 
 **Datum:** 01. Februar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Naddr-Link (eingeloggt):** URL bleibt stehen, Follow/Fork Dialog steuert den Import
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/routes/cardsboard/[naddr]/+page.svelte` | Follow-Dialog statt Auto-Redirect für eingeloggte Nutzer |
+| `src/routes/cardsboard/[naddr]/+page.svelte` | Follow-Dialog statt Auto-Redirect fÃ¼r eingeloggte Nutzer |
 
 ---
 
-## Version 4.7.27 - Naddr Shared Board Visibility ✅
+## Version 4.7.27 - Naddr Shared Board Visibility âœ…
 
 **Datum:** 01. Februar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **Naddr-Links (eingeloggt):** geladene Boards werden als Viewer gecacht und erscheinen in der Liste
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
-| `src/routes/cardsboard/[naddr]/+page.svelte` | Shared-Cache Eintrag für eingeloggte Viewer |
+| `src/routes/cardsboard/[naddr]/+page.svelte` | Shared-Cache Eintrag fÃ¼r eingeloggte Viewer |
 
 ---
 
-## Version 4.7.26 - ShareDialog Performance Fix ⚡
+## Version 4.7.26 - ShareDialog Performance Fix âš¡
 
 **Datum:** 01. Februar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fixes
+### ðŸ› Fixes
 - **ShareDialog Performance:** config.json wird nur noch einmal geladen
 - **Doppelte Requests verhindert:** Share-Link wird pro Board nur einmal generiert
 - **Schnelleres Laden:** Display-Namen werden parallel geladen
-- **UI-Warnung behoben:** doppelte Textgröße im Base-URL Input entfernt
-- **GitHub Pages Base-URL:** Default wird robust aus `BASE_URL` aufgelöst (inkl. `.`/`./`)
-- **Animation Guard:** Flip-Animationen vermeiden NaN/Infinity-Transforms bei 0‑Größen
+- **UI-Warnung behoben:** doppelte TextgrÃ¶ÃŸe im Base-URL Input entfernt
+- **GitHub Pages Base-URL:** Default wird robust aus `BASE_URL` aufgelÃ¶st (inkl. `.`/`./`)
+- **Animation Guard:** Flip-Animationen vermeiden NaN/Infinity-Transforms bei 0â€‘GrÃ¶ÃŸen
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `ShareDialog.svelte` | Config-Caching + Parallel-Loads + Guard gegen Doppel-Generierung |
 
 ---
 
-## Version 4.7.25 - Inline-Editing & Mobile UX 📝
+## Version 4.7.25 - Inline-Editing & Mobile UX ðŸ“
 
 **Datum:** 31. Januar 2026  
-**Branch:** `inline-editing` → `cardsboard`  
-**Status:** ✅ Implementiert
+**Branch:** `inline-editing` â†’ `cardsboard`  
+**Status:** âœ… Implementiert
 
-### ✨ Neue Features
+### âœ¨ Neue Features
 
-#### 1. Inline-Editing für Titel
+#### 1. Inline-Editing fÃ¼r Titel
 - **Board-Titel**: Klick in Topbar startet Inline-Editing (mit Stift-Icon bei Hover)
 - **Spaltentitel**: Klick auf Spaltenname startet Inline-Editing
 - Enter speichert, Escape bricht ab
@@ -584,63 +638,63 @@
 - Separater Drag-Handle verhindert Konflikte mit DnD
 
 #### 2. Globaler AI-Kontext-Store
-- **Neuer Store**: `aiContextStore.svelte.ts` für persistenten AI-Kontext
+- **Neuer Store**: `aiContextStore.svelte.ts` fÃ¼r persistenten AI-Kontext
 - Kontext-Karten bleiben erhalten, auch wenn Sidebar geschlossen wird
 - Methoden: `addCard()`, `removeCard()`, `clear()`, `hasCard()`
 
 #### 3. Mobile UX Verbesserungen
-- **AI-Kontext-Button** (🧠) in CardDetailsDialog für Mobile
+- **AI-Kontext-Button** (ðŸ§ ) in CardDetailsDialog fÃ¼r Mobile
 - Alternative zu CTRL+Klick/Long-Press (Long-Press kollidiert mit Drag)
-- Globaler Event-Handler in +page.svelte für Sidebar-unabhängige Funktion
+- Globaler Event-Handler in +page.svelte fÃ¼r Sidebar-unabhÃ¤ngige Funktion
 
 #### 4. UI-Optimierungen
-- **Hamburger-Menü** in BoardsList für Board-Einstellungen
+- **Hamburger-MenÃ¼** in BoardsList fÃ¼r Board-Einstellungen
 - **Profilbearbeitung** in User-Dropdown (LeftSidebarFooter)
-- Konsistentes Menü-Styling mit `bg-muted/80`
-- Reduzierte Border-Dicke für dezenteres Design
+- Konsistentes MenÃ¼-Styling mit `bg-muted/80`
+- Reduzierte Border-Dicke fÃ¼r dezenteres Design
 
-### 📁 Geänderte Dateien
-| Datei | Änderung |
+### ðŸ“ GeÃ¤nderte Dateien
+| Datei | Ã„nderung |
 |-------|----------|
 | `Column.svelte` | +51 Zeilen - Inline-Editing |
 | `Topbar.svelte` | +85 Zeilen - Board-Titel Inline-Editing |
 | `+page.svelte` | +48/-91 Zeilen - Globaler AI-Handler |
 | `aiContextStore.svelte.ts` | +69 Zeilen - **Neu** |
 | `CardDetailsDialog.svelte` | +41 Zeilen - AI-Button |
-| `BoardsList.svelte` | +30 Zeilen - Hamburger-Menü |
+| `BoardsList.svelte` | +30 Zeilen - Hamburger-MenÃ¼ |
 | `LeftSidebarFooter.svelte` | +9 Zeilen - Profilbearbeitung |
 
-### 📚 Dokumentation
+### ðŸ“š Dokumentation
 - Neuer Guide: `docs/GUIDES/INLINE-EDITING.md`
 
 ---
 
-## Version 4.7.24 - OER Search: Multi-Source + Bildungsstufe 🎯
+## Version 4.7.24 - OER Search: Multi-Source + Bildungsstufe ðŸŽ¯
 
 **Datum:** 30. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Verbesserungen
-- **Multi-Source Suche:** `search_oer` durchsucht jetzt standardmäßig **rpi-virtuell** und **nostr-amb-relay**
-- **Bildungsstufe filterbar:** `educational_level` wird an die API übergeben
-- **Auto-Detection:** „Oberstufe/Sekundarstufe/Grundschule“ im Query setzt `educational_level` automatisch
-- **Klassenstufen:** „Klasse 11/12/13“ → `educational_level = Oberstufe` (1–4 Grundschule, 5–10 Sekundarstufe)
+### âœ¨ Verbesserungen
+- **Multi-Source Suche:** `search_oer` durchsucht jetzt standardmÃ¤ÃŸig **rpi-virtuell** und **nostr-amb-relay**
+- **Bildungsstufe filterbar:** `educational_level` wird an die API Ã¼bergeben
+- **Auto-Detection:** â€žOberstufe/Sekundarstufe/Grundschuleâ€œ im Query setzt `educational_level` automatisch
+- **Klassenstufen:** â€žKlasse 11/12/13â€œ â†’ `educational_level = Oberstufe` (1â€“4 Grundschule, 5â€“10 Sekundarstufe)
 - **Fallback:** Wenn keine Treffer mit Bildungsstufe gefunden werden, wird ohne Filter erneut gesucht
 - **Tool-Schema erweitert:** `sources[]` und `educational_level` als optionale Parameter
-- **Konsistent für Karten-Kontext:** `search_oer_for_card` nutzt ebenfalls beide Quellen
+- **Konsistent fÃ¼r Karten-Kontext:** `search_oer_for_card` nutzt ebenfalls beide Quellen
 
-## Version 4.7.23 - Edufeed Publishing: Cards auf öffentlichen Relays 📤
+## Version 4.7.23 - Edufeed Publishing: Cards auf Ã¶ffentlichen Relays ðŸ“¤
 
 **Datum:** 29. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Board auf Edufeed erscheint leer
-- **Problem:** Boards wurden auf Edufeed veröffentlicht, aber die Cards (Kind 30302) blieben auf privaten Relays.
-- **Ursache:** Cards nutzten ihren eigenen `publishState` für die Relay-Auswahl, nicht den des Boards.
+### ðŸ› Fix: Board auf Edufeed erscheint leer
+- **Problem:** Boards wurden auf Edufeed verÃ¶ffentlicht, aber die Cards (Kind 30302) blieben auf privaten Relays.
+- **Ursache:** Cards nutzten ihren eigenen `publishState` fÃ¼r die Relay-Auswahl, nicht den des Boards.
 
-### ✨ Verbesserungen
+### âœ¨ Verbesserungen
 
 #### 1. Cards erben publishState vom Board
 ```typescript
@@ -652,573 +706,573 @@ const effectivePublishState = board.publishState === 'published'
     ? 'published' 
     : (card.publishState || 'draft');
 ```
-- Neue Cards in öffentlichen Boards landen automatisch auf öffentlichen Relays
+- Neue Cards in Ã¶ffentlichen Boards landen automatisch auf Ã¶ffentlichen Relays
 - Card-eigener `publishState` wird nur als Fallback verwendet
 
-#### 2. Republizierung aller Cards bei Board-Veröffentlichung
+#### 2. Republizierung aller Cards bei Board-VerÃ¶ffentlichung
 - `setPublishState('published')` triggert `publishAllCardsToPublicRelays()`
 - Toast-Notification zeigt Anzahl der publizierten Cards
-- Alle existierenden Cards werden auf öffentliche Relays republiziert
+- Alle existierenden Cards werden auf Ã¶ffentliche Relays republiziert
 
 #### 3. Edufeed-spezifische Card-Publikation
 - `publishBoardToEdufeed()` publiziert jetzt auch alle Cards auf Edufeed-Relays
 - Stellt sicher, dass Board + Cards auf denselben Relays landen
 
-### 📁 Geänderte Dateien
+### ðŸ“ GeÃ¤nderte Dateien
 - `src/lib/stores/boardstore/nostr.ts` - `publishCard()` + `publishAllCardsToPublicRelays()`
 - `src/lib/stores/kanbanStore.svelte.ts` - `setPublishState()` + `publishAllCardsToPublicRelaysAsync()`
 - `src/lib/utils/ambPublisher.ts` - `publishBoardToEdufeed()` publiziert auch Cards
 
-### 📊 Relay-Auswahl Logik
+### ðŸ“Š Relay-Auswahl Logik
 
 | Board Status | Card Status | Ziel-Relays |
 |--------------|-------------|-------------|
-| `published` | (beliebig) | **Öffentliche Relays** ✅ |
-| `draft` | `published` | Öffentliche Relays |
+| `published` | (beliebig) | **Ã–ffentliche Relays** âœ… |
+| `draft` | `published` | Ã–ffentliche Relays |
 | `draft` | `draft` | Private Relays |
 
-## Version 4.7.22 - Nostr Paste: njump Config + Ursprungs-Link 🔗
+## Version 4.7.22 - Nostr Paste: njump Config + Ursprungs-Link ðŸ”—
 
 **Datum:** 26. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Erweiterung: Nostr naddr Paste System
-- **njump URL konfigurierbar**: `config.json → nostr.njumpUrl` (Standard: `https://njump.edufeed.org`)
-- **Ursprünglicher Link**: Die gepastete URL wird als dritter Link hinzugefügt ("Ursprünglicher Link")
+### âœ¨ Erweiterung: Nostr naddr Paste System
+- **njump URL konfigurierbar**: `config.json â†’ nostr.njumpUrl` (Standard: `https://njump.edufeed.org`)
+- **UrsprÃ¼nglicher Link**: Die gepastete URL wird als dritter Link hinzugefÃ¼gt ("UrsprÃ¼nglicher Link")
 - **Bereinigtes Output**: "Nostr:" Zeile aus Card-Description entfernt
 
-### 📚 Dokumentation
-- **PASTE-SYSTEM.md** vollständig überarbeitet:
-  - Workflow-Diagramm für naddr-Verarbeitung
+### ðŸ“š Dokumentation
+- **PASTE-SYSTEM.md** vollstÃ¤ndig Ã¼berarbeitet:
+  - Workflow-Diagramm fÃ¼r naddr-Verarbeitung
   - Tag-Extraktion Tabelle
-  - njump Konfiguration erklärt
+  - njump Konfiguration erklÃ¤rt
   - Link-Struktur dokumentiert
 
-### 🔧 Technische Änderungen
+### ðŸ”§ Technische Ã„nderungen
 - `NostrEventHandler.ts`: `originalUrl` Parameter durch gesamte Aufrufkette
-- `collectLinks()`: Dritten Link nur wenn URL ≠ njump-URL
-- `formatAmbContent()`: Kein `nostrUrl` Parameter mehr nötig
+- `collectLinks()`: Dritten Link nur wenn URL â‰  njump-URL
+- `formatAmbContent()`: Kein `nostrUrl` Parameter mehr nÃ¶tig
 
-## Version 4.7.21 - Paste: Strg+V im Board erstellt Card 🧷
+## Version 4.7.21 - Paste: Strg+V im Board erstellt Card ðŸ§·
 
 **Datum:** 26. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ UX: Globaler Paste im Board
-- `paste` wird am Window abgefangen (außer in Inputs/Textareas)
+### âœ¨ UX: Globaler Paste im Board
+- `paste` wird am Window abgefangen (auÃŸer in Inputs/Textareas)
 - Erstellt neue Card in erster Spalte via `handleColumnPaste()`
 
-### 🐛 Fix: HTML-only Clipboard wird erkannt
+### ðŸ› Fix: HTML-only Clipboard wird erkannt
 - Text-Handler akzeptiert jetzt auch `text/html`, damit kein "Kein passender Handler" erscheint
 
-### 🔎 Debug: Bessere Fehlerdetails bei nicht erkannten Clipboard-Daten
-- Paste-Fehler zeigt jetzt Clipboard-Typen und Längen (text/html/items)
+### ðŸ”Ž Debug: Bessere Fehlerdetails bei nicht erkannten Clipboard-Daten
+- Paste-Fehler zeigt jetzt Clipboard-Typen und LÃ¤ngen (text/html/items)
 
-## Version 4.7.20 - SSR Fix: Card-Link ohne verschachtelte <a> 🔗
+## Version 4.7.20 - SSR Fix: Card-Link ohne verschachtelte <a> ðŸ”—
 
 **Datum:** 26. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: `node_invalid_placement_ssr` (A-Tag in A-Tag)
+### ðŸ› Fix: `node_invalid_placement_ssr` (A-Tag in A-Tag)
 - Klickbarer Card-Bereich nutzt jetzt `div` + `goto()` statt `<a>`-Wrapper
-- verhindert `hydration_mismatch` durch ungültiges HTML
+- verhindert `hydration_mismatch` durch ungÃ¼ltiges HTML
 
-## Version 4.7.19 - Paste: Nostr naddr → AMB Learning Resource Card 📋
+## Version 4.7.19 - Paste: Nostr naddr â†’ AMB Learning Resource Card ðŸ“‹
 
 **Datum:** 26. Januar 2026  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Feature: Nostr-Adressable Events als Card importieren
+### âœ¨ Feature: Nostr-Adressable Events als Card importieren
 - `naddr1...` (auch in URLs) wird per `nip19.decode()` erkannt
 - Event-Fetch via NDK und Konvertierung mit `nostrToAmb()`
 - Ergebnis ist eine Card mit Beschreibung, Metadaten, Links und optionalem Bild
 
-## Version 4.7.18 - Fix: Reload für Shared Boards funktioniert auch als Editor 🔄
+## Version 4.7.18 - Fix: Reload fÃ¼r Shared Boards funktioniert auch als Editor ðŸ”„
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: „Board konnte nicht aus Nostr geladen werden“ beim Reload (nur Editoren)
-- Ursache: Bei Shared Boards kann `loadBoard()` nach Cache-Clear initial `false` zurückgeben, weil die Rekonstruktion (`reconstructSharedBoard()`) asynchron startet.
+### ðŸ› Fix: â€žBoard konnte nicht aus Nostr geladen werdenâ€œ beim Reload (nur Editoren)
+- Ursache: Bei Shared Boards kann `loadBoard()` nach Cache-Clear initial `false` zurÃ¼ckgeben, weil die Rekonstruktion (`reconstructSharedBoard()`) asynchron startet.
 - Fix: `forceReloadCurrentBoardFromNostr()` wartet bei Shared Boards auf die Rekonstruktion und versucht `loadBoard()` danach erneut, statt sofort zu werfen.
 
-### ✅ Tests
-- Regression-Test ergänzt: Shared-Board Reload wartet auf Rekonstruktion und retry’t erfolgreich.
+### âœ… Tests
+- Regression-Test ergÃ¤nzt: Shared-Board Reload wartet auf Rekonstruktion und retryâ€™t erfolgreich.
 
-## Version 4.7.17 - UX: Board-Metadaten für Nicht-Owner read-only 🔐
-
-**Datum:** 16. Dezember 2025  
-**Branch:** `main`  
-**Status:** ✅ Implementiert
-
-### 🔐 UX/Permissions: Board-Einstellungen nur für Owner editierbar
-- In `Board-Einstellungen` sind Metadaten-Felder (Titel, Beschreibung, Status, Tags, CC-Lizenz) für Nicht-Owner jetzt read-only/disabled.
-- Der `Speichern`-Button ist für Nicht-Owner deaktiviert (Store-level Guard bleibt weiterhin die Source of Truth).
-
-## Version 4.7.16 - Fix: ColumnOrderPatch Subscribe ist idempotent + Catch-up wendet nur latest Patch an 🧩
+## Version 4.7.17 - UX: Board-Metadaten fÃ¼r Nicht-Owner read-only ðŸ”
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: "ColumnOrderPatch subscribe" wird beim Laden mehrfach ausgeführt
-- Ursache: `subscribeToNostrUpdates()` wird aus mehreren Pfaden aufgerufen (u.a. `initializeNostr()`, `loadBoard()` und ggf. UI-Aliases). Ohne Idempotenz führt das zu wiederholtem `dispose()+subscribe()`.
-- Fix: Nostr-Integration überspringt Resubscribe, wenn `(pubkey, boardId, boardAuthor)` unverändert sind.
+### ðŸ” UX/Permissions: Board-Einstellungen nur fÃ¼r Owner editierbar
+- In `Board-Einstellungen` sind Metadaten-Felder (Titel, Beschreibung, Status, Tags, CC-Lizenz) fÃ¼r Nicht-Owner jetzt read-only/disabled.
+- Der `Speichern`-Button ist fÃ¼r Nicht-Owner deaktiviert (Store-level Guard bleibt weiterhin die Source of Truth).
 
-### 👀 UX Fix: Relays replayen viele alte Patch-Events → UI "springt" durch alte Orders
+## Version 4.7.16 - Fix: ColumnOrderPatch Subscribe ist idempotent + Catch-up wendet nur latest Patch an ðŸ§©
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** âœ… Implementiert
+
+### ðŸ› Fix: "ColumnOrderPatch subscribe" wird beim Laden mehrfach ausgefÃ¼hrt
+- Ursache: `subscribeToNostrUpdates()` wird aus mehreren Pfaden aufgerufen (u.a. `initializeNostr()`, `loadBoard()` und ggf. UI-Aliases). Ohne Idempotenz fÃ¼hrt das zu wiederholtem `dispose()+subscribe()`.
+- Fix: Nostr-Integration Ã¼berspringt Resubscribe, wenn `(pubkey, boardId, boardAuthor)` unverÃ¤ndert sind.
+
+### ðŸ‘€ UX Fix: Relays replayen viele alte Patch-Events â†’ UI "springt" durch alte Orders
 - Ursache: Der Patch-Subscribe nutzt `since: sevenDaysAgo`, wodurch beim initialen Subscribe mehrere historische Kind-`8571` Events geliefert werden. Wenn jedes Event sofort angewendet wird, sieht man mehrere Reorders.
-- Fix: Während des initialen Catch-up werden Patch-Events gepuffert und nach `eose` wird nur das neueste Event einmalig angewendet; danach werden neue Patch-Events live verarbeitet.
+- Fix: WÃ¤hrend des initialen Catch-up werden Patch-Events gepuffert und nach `eose` wird nur das neueste Event einmalig angewendet; danach werden neue Patch-Events live verarbeitet.
 
-### 🧹 Logging: Weniger Spam pro Board
-- ColumnOrderPatch: keine per-Event "received" Logs mehr während Catch-up; stattdessen eine kompakte Summary nach `eose`.
-- Live-Events: Log nur bei tatsächlichem Apply; No-op/LWW/Duplicate/Board-mismatch wird auf `console.debug` reduziert.
+### ðŸ§¹ Logging: Weniger Spam pro Board
+- ColumnOrderPatch: keine per-Event "received" Logs mehr wÃ¤hrend Catch-up; stattdessen eine kompakte Summary nach `eose`.
+- Live-Events: Log nur bei tatsÃ¤chlichem Apply; No-op/LWW/Duplicate/Board-mismatch wird auf `console.debug` reduziert.
 - Column reorder: "Spalten neu angeordnet" auf `console.debug`.
 
-## Version 4.7.15 - UX Fix: kein sichtbares "Re-Sort" beim Board-Load (No-op Column-Order Updates) 👀
+## Version 4.7.15 - UX Fix: kein sichtbares "Re-Sort" beim Board-Load (No-op Column-Order Updates) ðŸ‘€
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🧼 Fix: Board lädt korrekt, sortiert aber danach "nochmal" (gleiche Reihenfolge)
-- Ursache: Nach Page-Reload kann der Board-State zuerst aus localStorage gerendert werden und danach durch Nostr-Bootstrap/Subscriptions erneut „bestätigt“ werden. Auch wenn die Reihenfolge identisch ist, triggert eine erneute Zuweisung (`_columnOrder = [...]`) einen sichtbaren Re-render („Spalten springen“).
+### ðŸ§¼ Fix: Board lÃ¤dt korrekt, sortiert aber danach "nochmal" (gleiche Reihenfolge)
+- Ursache: Nach Page-Reload kann der Board-State zuerst aus localStorage gerendert werden und danach durch Nostr-Bootstrap/Subscriptions erneut â€žbestÃ¤tigtâ€œ werden. Auch wenn die Reihenfolge identisch ist, triggert eine erneute Zuweisung (`_columnOrder = [...]`) einen sichtbaren Re-render (â€žSpalten springenâ€œ).
 - Fix: No-op Guards an allen relevanten Stellen:
   - `reorderColumns()` (User/DnD)
   - `applyColumnOrderPatchFromNostr()` (Kind `8571` Patch)
-  - `loadBoard()` / Nostr-Load-Switch-Pfad: `_columnOrder` wird nur gesetzt, wenn sich die Order wirklich ändert.
+  - `loadBoard()` / Nostr-Load-Switch-Pfad: `_columnOrder` wird nur gesetzt, wenn sich die Order wirklich Ã¤ndert.
 
-## Version 4.7.14 - Fix: Column-Order Patch (8571) wird angewandt (updated_at_ms Parsing + Fallback) ✅
+## Version 4.7.14 - Fix: Column-Order Patch (8571) wird angewandt (updated_at_ms Parsing + Fallback) âœ…
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Owner empfängt Patch, aber UI/Storage änderte sich nicht
-- Ursache: `updated_at_ms` wurde teils als **numerischer String** (z.B. `"1765908093000"`) publiziert. `unknownTimestampToMs()` behandelte Strings nur als ISO-Date → Ergebnis `0`.
-- Effekt: LWW/Guards verwarfen den Patch still (`eventTimeMs <= 0`), obwohl Logs „received/applying“ zeigten.
+### ðŸ› Fix: Owner empfÃ¤ngt Patch, aber UI/Storage Ã¤nderte sich nicht
+- Ursache: `updated_at_ms` wurde teils als **numerischer String** (z.B. `"1765908093000"`) publiziert. `unknownTimestampToMs()` behandelte Strings nur als ISO-Date â†’ Ergebnis `0`.
+- Effekt: LWW/Guards verwarfen den Patch still (`eventTimeMs <= 0`), obwohl Logs â€žreceived/applyingâ€œ zeigten.
 - Fix:
-  - `unknownTimestampToMs()` unterstützt jetzt numerische Strings (10-stellig = Sekunden → ms, sonst ms).
-  - `handleColumnOrderPatchEvent()` fällt auf `created_at`/`Date.now()` zurück, wenn `updated_at_ms` nicht sinnvoll parsebar ist.
+  - `unknownTimestampToMs()` unterstÃ¼tzt jetzt numerische Strings (10-stellig = Sekunden â†’ ms, sonst ms).
+  - `handleColumnOrderPatchEvent()` fÃ¤llt auf `created_at`/`Date.now()` zurÃ¼ck, wenn `updated_at_ms` nicht sinnvoll parsebar ist.
 
-### 🧯 Fix: Svelte Runtime Crash `each_key_duplicate` bei schnellem Column-DnD
-- DnD-„consider“ kann transient duplizierte Column-IDs liefern; diese werden jetzt vor dem Rendern dedupliziert, damit keyed `{#each}` nicht crasht.
+### ðŸ§¯ Fix: Svelte Runtime Crash `each_key_duplicate` bei schnellem Column-DnD
+- DnD-â€žconsiderâ€œ kann transient duplizierte Column-IDs liefern; diese werden jetzt vor dem Rendern dedupliziert, damit keyed `{#each}` nicht crasht.
 
-### ✅ Tests
-- Gezielter Vitest-Lauf: `pnpm vitest run src/lib/stores/boardstore/nostr/time.spec.ts --project server` → ✅ 4/4
+### âœ… Tests
+- Gezielter Vitest-Lauf: `pnpm vitest run src/lib/stores/boardstore/nostr/time.spec.ts --project server` â†’ âœ… 4/4
 
-## Version 4.7.13 - Fix: Column-Order Patch (8571) wird zuverlässig empfangen (d-Tag + #d Fallback) 📡
-
-**Datum:** 16. Dezember 2025  
-**Branch:** `main`  
-**Status:** ✅ Implementiert
-
-### 🐛 Fix: Owner sieht Editor-Spalten-Reorder wieder zuverlässig
-- Column-Order Patch Events (Kind `8571`) enthalten jetzt zusätzlich `d=<boardId>`.
-- Subscriptions filtern jetzt nicht nur über `#a` (kanonische Board-Address), sondern zusätzlich über `#d` als robusten Fallback.
-
-### ✅ Tests
-- Gezielter Vitest-Lauf: `pnpm run test:unit -- --run src/lib/utils/nostrEvents.spec.ts` → ✅ 12/12
-
-## Version 4.7.12 - Fix: Spalten-DnD sendet vollständiges Board-Payload (kein hard-fail Abort) 🧩
+## Version 4.7.13 - Fix: Column-Order Patch (8571) wird zuverlÃ¤ssig empfangen (d-Tag + #d Fallback) ðŸ“¡
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: syncBoardState hard-fail nur bei Spalten-Reorder
-- Ursache: `svelte-dnd-action` kann beim Spalten-Verschieben kurzfristig ein **partielles** Payload liefern (Columns ohne vollständige `items`-Liste). Der Store nutzt absichtlich `strategy: 'hard-fail'`, um in solchen Momenten **keinen** korrupten Zustand zu persistieren/publizieren.
-- Fix: Beim Column-Reorder wird das Payload für `onFinalUpdate()` jetzt aus dem lokalen/Parent-Snapshot rekonstruiert (Reihenfolge-IDs aus DnD, aber `items` aus der kanonischen Column-Quelle).
+### ðŸ› Fix: Owner sieht Editor-Spalten-Reorder wieder zuverlÃ¤ssig
+- Column-Order Patch Events (Kind `8571`) enthalten jetzt zusÃ¤tzlich `d=<boardId>`.
+- Subscriptions filtern jetzt nicht nur Ã¼ber `#a` (kanonische Board-Address), sondern zusÃ¤tzlich Ã¼ber `#d` als robusten Fallback.
 
+### âœ… Tests
+- Gezielter Vitest-Lauf: `pnpm run test:unit -- --run src/lib/utils/nostrEvents.spec.ts` â†’ âœ… 12/12
 
-## Version 4.7.11 - Collaboration Fix: Editoren können Spalten wieder verschieben (ohne Board-Forks) ↕️
+## Version 4.7.12 - Fix: Spalten-DnD sendet vollstÃ¤ndiges Board-Payload (kein hard-fail Abort) ðŸ§©
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Feature/Fix: Column-Order Sync ohne 30301-Publish
+### ðŸ› Fix: syncBoardState hard-fail nur bei Spalten-Reorder
+- Ursache: `svelte-dnd-action` kann beim Spalten-Verschieben kurzfristig ein **partielles** Payload liefern (Columns ohne vollstÃ¤ndige `items`-Liste). Der Store nutzt absichtlich `strategy: 'hard-fail'`, um in solchen Momenten **keinen** korrupten Zustand zu persistieren/publizieren.
+- Fix: Beim Column-Reorder wird das Payload fÃ¼r `onFinalUpdate()` jetzt aus dem lokalen/Parent-Snapshot rekonstruiert (Reihenfolge-IDs aus DnD, aber `items` aus der kanonischen Column-Quelle).
+
+
+## Version 4.7.11 - Collaboration Fix: Editoren kÃ¶nnen Spalten wieder verschieben (ohne Board-Forks) â†•ï¸
+
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** âœ… Implementiert
+
+### âœ¨ Feature/Fix: Column-Order Sync ohne 30301-Publish
 - Hintergrund: Kind `30301` ist **parameterized replaceable** (Adresse `30301:<publisherPubkey>:<d>`). Wenn Editoren `30301` publizieren, entstehen Fork-Boards.
-- Lösung: Spalten-Reihenfolge wird jetzt über ein separates Patch-Event synchronisiert: Kind `8571` (**Column Order Patch**).
-- Patch-Events referenzieren das kanonische Board via `a`-Tag (`30301:<boardAuthor>:<boardId>`) und enthalten die neue Reihenfolge als `order`-Tag sowie `updated_at_ms` für LWW.
-- Effekt: Editoren können DnD/Spalten-Reorder wieder synchronisieren, ohne jemals `30301` zu publizieren.
+- LÃ¶sung: Spalten-Reihenfolge wird jetzt Ã¼ber ein separates Patch-Event synchronisiert: Kind `8571` (**Column Order Patch**).
+- Patch-Events referenzieren das kanonische Board via `a`-Tag (`30301:<boardAuthor>:<boardId>`) und enthalten die neue Reihenfolge als `order`-Tag sowie `updated_at_ms` fÃ¼r LWW.
+- Effekt: Editoren kÃ¶nnen DnD/Spalten-Reorder wieder synchronisieren, ohne jemals `30301` zu publizieren.
 
-### ✅ Tests
-- Bestehende Unit-Testsuite ausgeführt (Vitest): ✅ grün (493 Tests, 38 Files; 3 skipped).
+### âœ… Tests
+- Bestehende Unit-Testsuite ausgefÃ¼hrt (Vitest): âœ… grÃ¼n (493 Tests, 38 Files; 3 skipped).
 
-## Version 4.7.10 - Hotfix: Editoren können kein Board „forken“ via Meta-Update 🛡️
+## Version 4.7.10 - Hotfix: Editoren kÃ¶nnen kein Board â€žforkenâ€œ via Meta-Update ðŸ›¡ï¸
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Metadaten-Edits durch Editoren verlieren keine Maintainers mehr
-- Board-Metadaten (Name/Beschreibung/Tags/Lizenz/PublishState) sind Kind `30301` (parametrized replaceable) und dürfen daher nur vom **Owner** publiziert werden.
+### ðŸ› Fix: Metadaten-Edits durch Editoren verlieren keine Maintainers mehr
+- Board-Metadaten (Name/Beschreibung/Tags/Lizenz/PublishState) sind Kind `30301` (parametrized replaceable) und dÃ¼rfen daher nur vom **Owner** publiziert werden.
 - `updateCurrentBoardMeta()` und `setPublishState()` sind jetzt **Owner-only** (Demo-Board bleibt ausgenommen).
-- Zusätzlich: Board-Publishing (`publishBoardAsync`) ist **Owner-only**, um Fork-Boards (`30301:<editorPubkey>:<d>`) grundsätzlich zu verhindern.
+- ZusÃ¤tzlich: Board-Publishing (`publishBoardAsync`) ist **Owner-only**, um Fork-Boards (`30301:<editorPubkey>:<d>`) grundsÃ¤tzlich zu verhindern.
 
-### ✅ Tests
-- Neue Unit-Tests für Permission-Guards (`permissionCheck.spec.ts`).
+### âœ… Tests
+- Neue Unit-Tests fÃ¼r Permission-Guards (`permissionCheck.spec.ts`).
 
-## Version 4.7.9 - Hotfix: Owner wird nicht als Editor doppelt geführt 🔐
-
-**Datum:** 16. Dezember 2025  
-**Branch:** `main`  
-**Status:** ✅ Implementiert
-
-### 🐛 Fix: Share-Dialog zeigt Owner nicht mehr als Editor
-- Invariant: `maintainers` enthält **nie** den `author` (Owner) – weder nach localStorage-Rekonstruktion noch nach Nostr (de)serialisierung oder Board-Metadaten-Updates.
-- `addEditor()` verhindert explizit, den Owner als Editor hinzuzufügen; Publisher-Updates deduplizieren `p`-Tags und schließen den Owner als Maintainer defensiv aus.
-- Effekt: Beim Bearbeiten der Board-Description „verschieben“ sich Pubkeys nicht mehr in eine korrupten Owner+Editor Doppelrolle; echte Editoren bleiben entfernbar.
-
-## Version 4.7.8 - Hotfix: Cards laden nach localStorage-Reset + weniger Deletion-Cache-Wachstum 🧯
+## Version 4.7.9 - Hotfix: Owner wird nicht als Editor doppelt gefÃ¼hrt ðŸ”
 
 **Datum:** 16. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Board öffnet nicht mehr „leer“ nach Reset/Login
-- Card-Load und Card-Subscriptions akzeptieren jetzt mehrere mögliche `boardRef`-Varianten (z.B. `30301:<board.author>:<d>` und `30301:<currentPubkey>:<d>`), statt hart von einem einzigen `board.author`-Wert auszugehen.
-- Effekt: Wenn `localStorage` geleert wurde und `board.author` initial noch fehlt/abweicht, werden Cards trotzdem korrekt über `#a` geladen.
+### ðŸ› Fix: Share-Dialog zeigt Owner nicht mehr als Editor
+- Invariant: `maintainers` enthÃ¤lt **nie** den `author` (Owner) â€“ weder nach localStorage-Rekonstruktion noch nach Nostr (de)serialisierung oder Board-Metadaten-Updates.
+- `addEditor()` verhindert explizit, den Owner als Editor hinzuzufÃ¼gen; Publisher-Updates deduplizieren `p`-Tags und schlieÃŸen den Owner als Maintainer defensiv aus.
+- Effekt: Beim Bearbeiten der Board-Description â€žverschiebenâ€œ sich Pubkeys nicht mehr in eine korrupten Owner+Editor Doppelrolle; echte Editoren bleiben entfernbar.
 
-### 🧹 Fix: `nostr-processed-deletions` wächst nicht mehr unnötig
-- Kind-5 Deletion-IDs werden nur noch persistiert, wenn das Event tatsächlich relevant angewendet wurde (z.B. Tombstone/Deletion ausgeführt), statt bei jedem empfangenen Deletion-Event.
-- Deletion-Subscription wird auf relevante Autoren eingeschränkt (aktueller Pubkey + Board-Teilnehmer), um unnötigen Netzwerk-/Cache-Noise zu reduzieren.
+## Version 4.7.8 - Hotfix: Cards laden nach localStorage-Reset + weniger Deletion-Cache-Wachstum ðŸ§¯
 
-## Version 4.7.7 - Hotfix: Shared-Discovery Author/Adresse konsistent (kein Ghost-Toast) 🧭
+**Datum:** 16. Dezember 2025  
+**Branch:** `main`  
+**Status:** âœ… Implementiert
+
+### ðŸ› Fix: Board Ã¶ffnet nicht mehr â€žleerâ€œ nach Reset/Login
+- Card-Load und Card-Subscriptions akzeptieren jetzt mehrere mÃ¶gliche `boardRef`-Varianten (z.B. `30301:<board.author>:<d>` und `30301:<currentPubkey>:<d>`), statt hart von einem einzigen `board.author`-Wert auszugehen.
+- Effekt: Wenn `localStorage` geleert wurde und `board.author` initial noch fehlt/abweicht, werden Cards trotzdem korrekt Ã¼ber `#a` geladen.
+
+### ðŸ§¹ Fix: `nostr-processed-deletions` wÃ¤chst nicht mehr unnÃ¶tig
+- Kind-5 Deletion-IDs werden nur noch persistiert, wenn das Event tatsÃ¤chlich relevant angewendet wurde (z.B. Tombstone/Deletion ausgefÃ¼hrt), statt bei jedem empfangenen Deletion-Event.
+- Deletion-Subscription wird auf relevante Autoren eingeschrÃ¤nkt (aktueller Pubkey + Board-Teilnehmer), um unnÃ¶tigen Netzwerk-/Cache-Noise zu reduzieren.
+
+## Version 4.7.7 - Hotfix: Shared-Discovery Author/Adresse konsistent (kein Ghost-Toast) ðŸ§­
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: canonicalOwner = event.pubkey
-- Shared-Board Discovery (Kind 30301 `#p`) nutzt für `author`/Adresse jetzt konsequent `event.pubkey` (Nostr-Address: `30301:<pubkey>:<d>`), statt die Reihenfolge der `p`-Tags zu interpretieren.
-- Effekt: Leave/Hide Registry (byAddress) matcht zuverlässig → der Toast „Neues Board geteilt“ wird nach „Board verlassen“ auch in Edge-Cases (Owner republish/delete) nicht mehr fälschlich auf jedem Reload angezeigt.
-- Zusätzlich: Toast-Guard berücksichtigt Tombstones (`kanban-deleted-boards-v1`) und unterdrückt den Toast für lokal gelöschte Boards auch dann, wenn das 30301-Event beim Reload vor dem Kind-5 Delete-Replay eintrifft.
+### ðŸ› Fix: canonicalOwner = event.pubkey
+- Shared-Board Discovery (Kind 30301 `#p`) nutzt fÃ¼r `author`/Adresse jetzt konsequent `event.pubkey` (Nostr-Address: `30301:<pubkey>:<d>`), statt die Reihenfolge der `p`-Tags zu interpretieren.
+- Effekt: Leave/Hide Registry (byAddress) matcht zuverlÃ¤ssig â†’ der Toast â€žNeues Board geteiltâ€œ wird nach â€žBoard verlassenâ€œ auch in Edge-Cases (Owner republish/delete) nicht mehr fÃ¤lschlich auf jedem Reload angezeigt.
+- ZusÃ¤tzlich: Toast-Guard berÃ¼cksichtigt Tombstones (`kanban-deleted-boards-v1`) und unterdrÃ¼ckt den Toast fÃ¼r lokal gelÃ¶schte Boards auch dann, wenn das 30301-Event beim Reload vor dem Kind-5 Delete-Replay eintrifft.
 
-## Version 4.7.6 - UX: Owner sieht Leave-Requests im Share-Dialog 👀
-
-**Datum:** 15. Dezember 2025  
-**Branch:** `main`  
-**Status:** ✅ Implementiert
-
-### ✨ UX: Leave-Request Marker
-- Wenn ein Editor ein Leave-Request Event publiziert (Kind `30000`, `d=kanban-leave-request:<boardRef>`), zeigt der Owner im ShareDialog (Tab „Editoren“) ein Badge beim betreffenden Editor.
-- Best-effort: Anzeige hängt von Relay-Verfügbarkeit ab und ist ein Signal, kein kanonischer Zustand.
-
-### 🧼 UX: Kein „Neues Board geteilt“-Toast nach Leave
-- Der Toast „Neues Board geteilt“ wird unterdrückt, wenn der Nutzer das Board bereits verlassen/versteckt hat (lokale Hide/Leave Registry). Damit werden „Ghost“-Toasts vermieden.
-
-## Version 4.7.5 - Hotfix: NIP-09 Delete Guard (keine „Auth Mismatch“ Deletes mehr) 🧹
+## Version 4.7.6 - UX: Owner sieht Leave-Requests im Share-Dialog ðŸ‘€
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Remote-Löschungen nur mit gültiger Autorisierung
-- `deleteBoard()` publiziert das NIP-09 Kind-5 Lösch-Event nur, wenn der aktuelle Signer auch dem `board.author` entspricht.
-- Kaskadierende Card-Löschungen publizieren nur noch für Cards, deren `card.author` dem aktuellen Pubkey entspricht (alle anderen werden remote übersprungen).
+### âœ¨ UX: Leave-Request Marker
+- Wenn ein Editor ein Leave-Request Event publiziert (Kind `30000`, `d=kanban-leave-request:<boardRef>`), zeigt der Owner im ShareDialog (Tab â€žEditorenâ€œ) ein Badge beim betreffenden Editor.
+- Best-effort: Anzeige hÃ¤ngt von Relay-VerfÃ¼gbarkeit ab und ist ein Signal, kein kanonischer Zustand.
 
-### 🎯 Effekt
-- Keine „DELETION AUTH MISMATCH“ Warn-Spam durch doomed Deletes.
-- Weniger Relay-Rejections bei Board-Delete, ohne das lokale Löschen zu beeinflussen.
+### ðŸ§¼ UX: Kein â€žNeues Board geteiltâ€œ-Toast nach Leave
+- Der Toast â€žNeues Board geteiltâ€œ wird unterdrÃ¼ckt, wenn der Nutzer das Board bereits verlassen/versteckt hat (lokale Hide/Leave Registry). Damit werden â€žGhostâ€œ-Toasts vermieden.
 
-## Version 4.7.4 - Hotfix: „Leave“ bleibt auch cross-device weg (NIP-51 + Leave Request) 🚪
+## Version 4.7.5 - Hotfix: NIP-09 Delete Guard (keine â€žAuth Mismatchâ€œ Deletes mehr) ðŸ§¹
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ Feature: Cross-Device Leave Persistenz
-- „Board verlassen“ wird zusätzlich über eine NIP-51 Liste persistiert: Kind `30000` mit `d=kanban-left-boards` und `a`-Tags im Format `30301:<author>:<d>`.
+### ðŸ› Fix: Remote-LÃ¶schungen nur mit gÃ¼ltiger Autorisierung
+- `deleteBoard()` publiziert das NIP-09 Kind-5 LÃ¶sch-Event nur, wenn der aktuelle Signer auch dem `board.author` entspricht.
+- Kaskadierende Card-LÃ¶schungen publizieren nur noch fÃ¼r Cards, deren `card.author` dem aktuellen Pubkey entspricht (alle anderen werden remote Ã¼bersprungen).
+
+### ðŸŽ¯ Effekt
+- Keine â€žDELETION AUTH MISMATCHâ€œ Warn-Spam durch doomed Deletes.
+- Weniger Relay-Rejections bei Board-Delete, ohne das lokale LÃ¶schen zu beeinflussen.
+
+## Version 4.7.4 - Hotfix: â€žLeaveâ€œ bleibt auch cross-device weg (NIP-51 + Leave Request) ðŸšª
+
+**Datum:** 15. Dezember 2025  
+**Branch:** `main`  
+**Status:** âœ… Implementiert
+
+### âœ¨ Feature: Cross-Device Leave Persistenz
+- â€žBoard verlassenâ€œ wird zusÃ¤tzlich Ã¼ber eine NIP-51 Liste persistiert: Kind `30000` mit `d=kanban-left-boards` und `a`-Tags im Format `30301:<author>:<d>`.
 - Beim Laden geteilter Boards wird diese Liste vor der Discovery gesynct, damit verlassene Boards auf neuen Devices direkt gefiltert werden.
 
-### 📬 Feature: Leave-Request Event (Owner-Koordination)
-- Editors können (best-effort, signer required) ein Leave-Request Event publizieren: Kind `30000` mit `d=kanban-leave-request:<boardRef>`, `a=<boardRef>` und `p=<ownerPubkey>`.
+### ðŸ“¬ Feature: Leave-Request Event (Owner-Koordination)
+- Editors kÃ¶nnen (best-effort, signer required) ein Leave-Request Event publizieren: Kind `30000` mit `d=kanban-leave-request:<boardRef>`, `a=<boardRef>` und `p=<ownerPubkey>`.
 - Ziel: Owner kann die Editor-Permission (30301 p-tags) serverseitig entfernen und das Board republishen.
 
-### ✅ Tests
+### âœ… Tests
 - Leave/Hide Tests aktualisiert (author-scoped Registry via `byAddress`).
 
-## Version 4.7.3 - Hotfix: Kein sofortiges „Resurrect“ nach Delete 🛑
+## Version 4.7.3 - Hotfix: Kein sofortiges â€žResurrectâ€œ nach Delete ðŸ›‘
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Nostr Board-Events können gelöschte Boards nicht reaktivieren
-- `upsertBoardFromNostr()` ignoriert **tombstoned** Boards (`kanban-deleted-boards-v1`) vollständig.
-- Zusätzlich: Shared/Followed Boards, die lokal **hidden** sind (`nostr-kanban-hidden-boards-v1`), werden nicht erneut gespeichert.
+### ðŸ› Fix: Nostr Board-Events kÃ¶nnen gelÃ¶schte Boards nicht reaktivieren
+- `upsertBoardFromNostr()` ignoriert **tombstoned** Boards (`kanban-deleted-boards-v1`) vollstÃ¤ndig.
+- ZusÃ¤tzlich: Shared/Followed Boards, die lokal **hidden** sind (`nostr-kanban-hidden-boards-v1`), werden nicht erneut gespeichert.
 
-### 🧹 Fix: Keine Self-Duplikate in Shared-Board Liste
+### ðŸ§¹ Fix: Keine Self-Duplikate in Shared-Board Liste
 - Shared-Cache/Filter ignoriert Boards, deren `author` der aktuelle Nutzer ist.
 - Shared-Cache/Filter ignoriert tombstoned/hidden Boards defensiv (auch bei Real-Time Events).
 
-### ✅ Tests
+### âœ… Tests
 - Neuer Unit-Test: `src/lib/stores/kanbanStore.upsertBoardFromNostr.tombstone.spec.ts`.
 
-## Version 4.7.2 - Hotfix: Shared Board „Verlassen“ (Delete = Leave) 🚪
+## Version 4.7.2 - Hotfix: Shared Board â€žVerlassenâ€œ (Delete = Leave) ðŸšª
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### ✨ UX: Delete ist rollenbasiert
-- **Owner:** „Löschen“ bleibt eine destructive Delete-Operation.
-- **Editor/Viewer:** „Löschen“ verhält sich wie **„Board verlassen“** (Board verschwindet für diesen Nutzer).
+### âœ¨ UX: Delete ist rollenbasiert
+- **Owner:** â€žLÃ¶schenâ€œ bleibt eine destructive Delete-Operation.
+- **Editor/Viewer:** â€žLÃ¶schenâ€œ verhÃ¤lt sich wie **â€žBoard verlassenâ€œ** (Board verschwindet fÃ¼r diesen Nutzer).
 
-### 🧠 Persistenz: Board bleibt wirklich weg
+### ðŸ§  Persistenz: Board bleibt wirklich weg
 - Verlassene Shared Boards werden lokal in einer Hide-Registry gespeichert (`nostr-kanban-hidden-boards-v1`).
 - Shared-/Followed-Board Loader filtern hidden Boards konsequent heraus.
-- Für Viewer-Boards wird zusätzlich **best-effort** „unfollow“ versucht; unabhängig davon bleibt das Board lokal versteckt.
+- FÃ¼r Viewer-Boards wird zusÃ¤tzlich **best-effort** â€žunfollowâ€œ versucht; unabhÃ¤ngig davon bleibt das Board lokal versteckt.
 
-### ✅ Tests
-- Neue Unit-Tests für Leave/Hide/Unfollow-Logik: `src/lib/stores/boardstore/sharing.leaveBoard.spec.ts`.
+### âœ… Tests
+- Neue Unit-Tests fÃ¼r Leave/Hide/Unfollow-Logik: `src/lib/stores/boardstore/sharing.leaveBoard.spec.ts`.
 
-## Version 4.7.1 - Hotfix: Board-Delete Tombstones 🧯
+## Version 4.7.1 - Hotfix: Board-Delete Tombstones ðŸ§¯
 
 **Datum:** 15. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Implementiert
+**Status:** âœ… Implementiert
 
-### 🐛 Fix: Gelöschte Boards tauchen nicht mehr wieder auf
-- Löschungen werden dauerhaft über eine Tombstone-Registry gespeichert (`kanban-deleted-boards-v1`).
-- Board-Discovery/Load/Rekonstruktion filtern tombstoned IDs konsequent, damit kein späterer Write-Pfad ein gelöschtes Board „resurrected“.
+### ðŸ› Fix: GelÃ¶schte Boards tauchen nicht mehr wieder auf
+- LÃ¶schungen werden dauerhaft Ã¼ber eine Tombstone-Registry gespeichert (`kanban-deleted-boards-v1`).
+- Board-Discovery/Load/Rekonstruktion filtern tombstoned IDs konsequent, damit kein spÃ¤terer Write-Pfad ein gelÃ¶schtes Board â€žresurrectedâ€œ.
 
-### 🛡️ Fix: Keine False-Positives durch Nostr Kind-5 Deletions
+### ðŸ›¡ï¸ Fix: Keine False-Positives durch Nostr Kind-5 Deletions
 - Kind-5 Deletion-Events werden nur angewendet, wenn `deletionEvent.pubkey` dem Pubkey im `a`-Tag entspricht (NIP-09 Adressierung).
-- Board-Deletion wird nur ausgeführt, wenn ein lokales Board existiert und dessen `author` zum `a`-Tag passt.
+- Board-Deletion wird nur ausgefÃ¼hrt, wenn ein lokales Board existiert und dessen `author` zum `a`-Tag passt.
 
-### 🔄 Fix: Shared Boards können sich aus stale Tombstones erholen
-- Shared-Boards, die fälschlich tombstoned wurden, werden beim Load revalidiert (Board-Event vs. Deletion-Event Timestamp) und ggf. automatisch „un-tombstoned“.
+### ðŸ”„ Fix: Shared Boards kÃ¶nnen sich aus stale Tombstones erholen
+- Shared-Boards, die fÃ¤lschlich tombstoned wurden, werden beim Load revalidiert (Board-Event vs. Deletion-Event Timestamp) und ggf. automatisch â€žun-tombstonedâ€œ.
 
 ---
 
-## Version 4.7.0 - Board Snapshots / Versionshistorie 📸
+## Version 4.7.0 - Board Snapshots / Versionshistorie ðŸ“¸
 
 **Datum:** 3. Dezember 2025  
 **Branch:** `main`  
-**Status:** ✅ Vollständig implementiert
+**Status:** âœ… VollstÃ¤ndig implementiert
 
-### ✨ Neues Feature: Board Versioning
+### âœ¨ Neues Feature: Board Versioning
 
-Benutzer können jetzt **manuelle Snapshots** ihrer Kanban-Boards erstellen und bei Bedarf zu früheren Versionen zurückkehren.
+Benutzer kÃ¶nnen jetzt **manuelle Snapshots** ihrer Kanban-Boards erstellen und bei Bedarf zu frÃ¼heren Versionen zurÃ¼ckkehren.
 
 #### Features
 - **Manuelles Speichern von Versionen** - Button "Versionen" in der Topbar
 - **Versionshistorie anzeigen** - Liste aller Snapshots mit Metadaten
-- **Wiederherstellen** - Zurückkehren zu einem früheren Board-Zustand
+- **Wiederherstellen** - ZurÃ¼ckkehren zu einem frÃ¼heren Board-Zustand
 - **Automatisches Backup** vor jeder Wiederherstellung
 
 #### Technische Details
 - Snapshots werden als **Kind 30303 Nostr Events** gespeichert (non-replaceable)
-- Speicherung auf privaten Relays (für Draft-Boards) oder öffentlichen Relays
+- Speicherung auf privaten Relays (fÃ¼r Draft-Boards) oder Ã¶ffentlichen Relays
 - Event-Tags: `a` (Board-Referenz), `v` (Label), `r` (Grund), `t` (Timestamp)
-- Vollständiges Board-JSON im Event-Content
+- VollstÃ¤ndiges Board-JSON im Event-Content
 
 #### Komponenten
-- `VersionHistory.svelte` - Dialog-Komponente für Versionshistorie
+- `VersionHistory.svelte` - Dialog-Komponente fÃ¼r Versionshistorie
 - `NostrIntegration.publishSnapshot()` - Event-Publishing
 - `NostrIntegration.loadSnapshots()` - Laden von Snapshots von Relays
 - `BoardStore.createManualSnapshot()` / `rollbackToSnapshot()` - Store-API
 
 #### Relay-Konfiguration
-- Kind 30303 zur Relay-Allowlist hinzugefügt (`docker-relay-config.toml`)
-- Explizites Laden von privaten Relays für Snapshots
+- Kind 30303 zur Relay-Allowlist hinzugefÃ¼gt (`docker-relay-config.toml`)
+- Explizites Laden von privaten Relays fÃ¼r Snapshots
 
-### 📚 Dokumentation
-- `docs/FEATURE/BOARD-SNAPSHOTS.md` - Vollständige Feature-Dokumentation
+### ðŸ“š Dokumentation
+- `docs/FEATURE/BOARD-SNAPSHOTS.md` - VollstÃ¤ndige Feature-Dokumentation
 - ROADMAP.md aktualisiert (Meilenstein 1.5C: DONE)
 
-### 🔧 Technische Fixes
+### ðŸ”§ Technische Fixes
 - TypeScript-Fehler in `nostr.ts` und `syncManager.svelte.ts` behoben
 - Relay-Pool-Handling verbessert (keine `addRelay(url)` mehr, da Relays bereits im Pool)
 
 ---
 
-## Unreleased - Board-Sharing Realtime Anzeige 🚀
+## Unreleased - Board-Sharing Realtime Anzeige ðŸš€
 
 **Datum:** 24. November 2025  
 **Branch:** `feature/board-sharing`  
-**Status:** ✅ Implementiert (Auto-Erscheinung geteilter Boards beim Editor)
+**Status:** âœ… Implementiert (Auto-Erscheinung geteilter Boards beim Editor)
 
-### ✨ Feature
-Nachdem der Owner einen Editor (Maintainer) zum Board hinzufügt, erscheint das Board nun automatisch und ohne Reload in der Boardliste des Editors.
+### âœ¨ Feature
+Nachdem der Owner einen Editor (Maintainer) zum Board hinzufÃ¼gt, erscheint das Board nun automatisch und ohne Reload in der Boardliste des Editors.
 
-### 🔧 Technische Umsetzung
-- Zweite Nostr Subscription (`sharedSub`) für Kind 30301 Events mit `#p` Filter auf Nutzer-Pubkey (nicht nur `authors`)
-- Direktes Event-Parsing (d, title, description, p-tags) → Ableitung `userRole: editor|viewer`
+### ðŸ”§ Technische Umsetzung
+- Zweite Nostr Subscription (`sharedSub`) fÃ¼r Kind 30301 Events mit `#p` Filter auf Nutzer-Pubkey (nicht nur `authors`)
+- Direktes Event-Parsing (d, title, description, p-tags) â†’ Ableitung `userRole: editor|viewer`
 - Neuer Store-Handler `handleSharedBoardEvent()` im `BoardStore` upsertet das Board in `cachedSharedBoards` und triggert `updateTrigger`
-- Kein Polling mehr nötig; keine künstliche Verzögerung
+- Kein Polling mehr nÃ¶tig; keine kÃ¼nstliche VerzÃ¶gerung
 
-### 🐛 Fix (Deterministische Card LWW bei Same-Second Updates)
-- Behebt seltene Race-Conditions bei schnellen Card-Moves/Ranks über mehrere Clients (zwei Events im selben `created_at`-Sekundenfenster)
-- Card-Events (Kind 30302) enthalten jetzt zusätzlich `ts` (Millisekunden) und LWW nutzt `ts` + deterministischen Tie-Break über `event.id`
+### ðŸ› Fix (Deterministische Card LWW bei Same-Second Updates)
+- Behebt seltene Race-Conditions bei schnellen Card-Moves/Ranks Ã¼ber mehrere Clients (zwei Events im selben `created_at`-Sekundenfenster)
+- Card-Events (Kind 30302) enthalten jetzt zusÃ¤tzlich `ts` (Millisekunden) und LWW nutzt `ts` + deterministischen Tie-Break Ã¼ber `event.id`
 - Dateien: `src/lib/utils/nostrEvents.ts`, `src/lib/stores/boardstore/nostr/handlers/card.ts`
 
-### 📚 Dokumentation
+### ðŸ“š Dokumentation
 - `docs/ARCHITECTURE/BOARD-SHARING.md` aktualisiert (Abschnitt "Realtime Appearance")
 
-### ✅ Acceptance Criteria
+### âœ… Acceptance Criteria
 - Editor sieht neues geteiltes Board < 1s nach Publish
-- Kein manuelles Refresh nötig
-- BoardsList reagiert rein über Reaktivität (`updateTrigger`)
+- Kein manuelles Refresh nÃ¶tig
+- BoardsList reagiert rein Ã¼ber ReaktivitÃ¤t (`updateTrigger`)
 
-### 🐛 Fix (SSR Guard UserPreferencesStore)
+### ðŸ› Fix (SSR Guard UserPreferencesStore)
 - Behebt wiederholten Fehler `localStorage.getItem is not a function` beim SSR Build
-- Ursache: Zugriff auf `localStorage` während Modul-Initialisierung im `UserPreferencesStore`
-- Lösung: Initialisierung mit Default-State und Browser-Gate (`typeof window !== 'undefined'`)
-- Impact: Login-Flows & Demo-Board Button werden wieder zuverlässig gerendert, Board-Sharing Tests können fortgesetzt werden
+- Ursache: Zugriff auf `localStorage` wÃ¤hrend Modul-Initialisierung im `UserPreferencesStore`
+- LÃ¶sung: Initialisierung mit Default-State und Browser-Gate (`typeof window !== 'undefined'`)
+- Impact: Login-Flows & Demo-Board Button werden wieder zuverlÃ¤ssig gerendert, Board-Sharing Tests kÃ¶nnen fortgesetzt werden
 - Dateien: `src/lib/stores/userPreferencesStore.svelte.ts`
 
-### 🔧 Hinweis
-Falls weitere Stores direkt auf `localStorage` während SSR zugreifen, sollten identische Guards ergänzt werden (`if (typeof window === 'undefined') return defaults`).
+### ðŸ”§ Hinweis
+Falls weitere Stores direkt auf `localStorage` wÃ¤hrend SSR zugreifen, sollten identische Guards ergÃ¤nzt werden (`if (typeof window === 'undefined') return defaults`).
 
-### 🐛 Fix: Start-Crash bei beschädigten Board-Metadaten
-- `getAllBoardsMetadata()` nutzt jetzt defensiv die Board-ID aus dem `localStorage`-Key (`kanban-{id}`), auch wenn das gespeicherte JSON kein `id` Feld enthält.
+### ðŸ› Fix: Start-Crash bei beschÃ¤digten Board-Metadaten
+- `getAllBoardsMetadata()` nutzt jetzt defensiv die Board-ID aus dem `localStorage`-Key (`kanban-{id}`), auch wenn das gespeicherte JSON kein `id` Feld enthÃ¤lt.
 - `loadFromStorage()` loggt Board-IDs crash-sicher (kein `.slice()` auf `undefined`).
-- Test ergänzt: `storage.spec.ts` deckt fehlendes `id` Feld ab.
+- Test ergÃ¤nzt: `storage.spec.ts` deckt fehlendes `id` Feld ab.
 
-### 🐛 Fix: Endloses „Gelöscht ↔ Wiederhergestellt“ in Boardliste
-- `refreshBoardIds()` und `refreshBoardList()` sind jetzt **read-only** (UI-Refresh via `updateTrigger++`, kein `triggerUpdate()` → kein `lastAccessedAt` Update, kein Save, kein Publish).
+### ðŸ› Fix: Endloses â€žGelÃ¶scht â†” Wiederhergestelltâ€œ in Boardliste
+- `refreshBoardIds()` und `refreshBoardList()` sind jetzt **read-only** (UI-Refresh via `updateTrigger++`, kein `triggerUpdate()` â†’ kein `lastAccessedAt` Update, kein Save, kein Publish).
 - Nostr-Board-Load leitet `boardIds` deterministisch aus `BoardStorage.loadBoardIds()` ab (Source-of-Truth inkl. Tombstone-Filter) statt Merge/Dedup.
-- `BoardStorage.loadBoardIds()` schließt den Tombstone-Registry-Key (`kanban-deleted-boards-v1`) explizit aus, damit er nie als „Board-ID“ in der Liste landet.
-- Shared-Board-Rekonstruktion/Laden bricht für tombstoned IDs hart ab (kein `fetchEvent()`, kein Save/Publish), um Retry-Spam zu verhindern.
+- `BoardStorage.loadBoardIds()` schlieÃŸt den Tombstone-Registry-Key (`kanban-deleted-boards-v1`) explizit aus, damit er nie als â€žBoard-IDâ€œ in der Liste landet.
+- Shared-Board-Rekonstruktion/Laden bricht fÃ¼r tombstoned IDs hart ab (kein `fetchEvent()`, kein Save/Publish), um Retry-Spam zu verhindern.
 - Followers-Load speichert nur lokal (kein Publish, kein lastAccessed bump).
 - Dateien: `src/lib/stores/kanbanStore.svelte.ts`
 
-### 🔧 Wartung (intern)
-- `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) – Facade-API bleibt stabil.
-- A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknüpft (Svelte-Check ohne Warnings).
+### ðŸ”§ Wartung (intern)
+- `NostrIntegration.subscribeToUpdates()` delegiert auf modulare Subscription-Orchestrierung (`src/lib/stores/boardstore/nostr/subscriptions.ts`) â€“ Facade-API bleibt stabil.
+- A11y-Fix: Label in `LiaScriptExportDialog.svelte` ist jetzt korrekt mit dem Input verknÃ¼pft (Svelte-Check ohne Warnings).
 - Dev-Workflow: `pnpm run preview` baut die Site und servt den `build/`-Output via `sirv` (verhindert 404s auf `/_app/immutable/chunks/*`).
-- Test-Stabilität: `BoardStore.forceReloadCurrentBoardFromNostr()` löscht den lokalen Cache-Eintrag `kanban-{boardId}` auch in Test/Node-Umgebungen ohne `window` (Guard basiert auf verfügbarem `localStorage`).
+- Test-StabilitÃ¤t: `BoardStore.forceReloadCurrentBoardFromNostr()` lÃ¶scht den lokalen Cache-Eintrag `kanban-{boardId}` auch in Test/Node-Umgebungen ohne `window` (Guard basiert auf verfÃ¼gbarem `localStorage`).
 
-### 🐛 Fix: Geteilte Boards verschwinden nicht mehr nach Reload
-- Board-Load (Kind 30301) überschreibt lokale Cards nicht mehr (Board-Events enthalten keine Cards) → verhindert “Cards verschwinden” durch localStorage-Overwrite.
-- Unsicheres Post-Cleanup entfernt (hatte Shared Boards fälschlich als „orphaned“ gelöscht, weil `authors:[pubkey]` keine fremd-owned Boards zurückliefert).
+### ðŸ› Fix: Geteilte Boards verschwinden nicht mehr nach Reload
+- Board-Load (Kind 30301) Ã¼berschreibt lokale Cards nicht mehr (Board-Events enthalten keine Cards) â†’ verhindert â€œCards verschwindenâ€ durch localStorage-Overwrite.
+- Unsicheres Post-Cleanup entfernt (hatte Shared Boards fÃ¤lschlich als â€žorphanedâ€œ gelÃ¶scht, weil `authors:[pubkey]` keine fremd-owned Boards zurÃ¼ckliefert).
 - Session-Restore startet jetzt deterministisch Owned-Board Load + Live-Subscriptions (verhindert einmaliges Skippen, wenn Pubkey beim Initialisieren noch fehlt).
 - Dateien: `src/lib/stores/boardstore/nostr.ts`, `src/lib/stores/authStore.svelte.ts`
 
-### 🐛 Fix: DnD-Sync droppt keine Cards mehr
-- Behebt einen intermittenten Fehler beim Verschieben von Cards: wenn `svelte-dnd-action`/UI temporär ein unvollständiges Payload liefert, wurden bisher fehlende Cards aus dem Board-State entfernt.
-- `syncBoardState()` merged jetzt defensiv: Cards/Columns, die im UI-Payload fehlen, werden erhalten (statt implizit gelöscht).
-- Zusätzliches Safety-Net: **Hard-Fail Gate** (optional/konfiguriert) bricht den Sync komplett ab, wenn das UI-Payload Cards/Columns vermisst (kein Persist/Publish auf korrupter Momentaufnahme).
-- Hard-Fail berücksichtigt DnD-Placeholder (`dnd-shadow-placeholder-*`) und blockiert nicht fälschlich durch „unknown IDs“.
-- UX: Bei Hard-Fail erscheint eine Toast („Drag & Drop abgebrochen“) mit Hinweis zum Wiederholen/Reload; die Board-UI resettet den lokalen DnD-State auf den Store-Stand, damit Moves direkt wieder möglich sind.
+### ðŸ› Fix: DnD-Sync droppt keine Cards mehr
+- Behebt einen intermittenten Fehler beim Verschieben von Cards: wenn `svelte-dnd-action`/UI temporÃ¤r ein unvollstÃ¤ndiges Payload liefert, wurden bisher fehlende Cards aus dem Board-State entfernt.
+- `syncBoardState()` merged jetzt defensiv: Cards/Columns, die im UI-Payload fehlen, werden erhalten (statt implizit gelÃ¶scht).
+- ZusÃ¤tzliches Safety-Net: **Hard-Fail Gate** (optional/konfiguriert) bricht den Sync komplett ab, wenn das UI-Payload Cards/Columns vermisst (kein Persist/Publish auf korrupter Momentaufnahme).
+- Hard-Fail berÃ¼cksichtigt DnD-Placeholder (`dnd-shadow-placeholder-*`) und blockiert nicht fÃ¤lschlich durch â€žunknown IDsâ€œ.
+- UX: Bei Hard-Fail erscheint eine Toast (â€žDrag & Drop abgebrochenâ€œ) mit Hinweis zum Wiederholen/Reload; die Board-UI resettet den lokalen DnD-State auf den Store-Stand, damit Moves direkt wieder mÃ¶glich sind.
 - Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/Board.svelte`
 
-### 🐛 Fix: Force-Reload lädt nicht mehr „ältere“ Cards
-- Erzwingt **Last-Write-Wins** bereits beim initialen Card-Upsert: ältere Events können neuere lokale Daten nicht mehr überschreiben (unabhängig von Fetch-Reihenfolge).
-- Verhindert Cross-Board-„Leakage“ bei async Card-Loads: späte Card-Events werden nicht mehr fälschlich auf das aktuell geöffnete Board angewendet.
+### ðŸ› Fix: Force-Reload lÃ¤dt nicht mehr â€žÃ¤ltereâ€œ Cards
+- Erzwingt **Last-Write-Wins** bereits beim initialen Card-Upsert: Ã¤ltere Events kÃ¶nnen neuere lokale Daten nicht mehr Ã¼berschreiben (unabhÃ¤ngig von Fetch-Reihenfolge).
+- Verhindert Cross-Board-â€žLeakageâ€œ bei async Card-Loads: spÃ¤te Card-Events werden nicht mehr fÃ¤lschlich auf das aktuell geÃ¶ffnete Board angewendet.
 - Dateien: `src/lib/stores/boardstore/operations.ts`, `src/lib/stores/kanbanStore.svelte.ts`
 - Test: `src/lib/stores/boardstore/operations.lww.spec.ts`
 
-### 🐛 Fix: Kommentar-Live-Sync (Subscribe) zuverlässig
-- Publisher/Subscriber nutzen identischen Card-Ref (`#a`) für Kind-1 Kommentare (verhindert Filter-Mismatch).
-- `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fälschlich das `d`-Tag.
-- Kommentar-Events enthalten jetzt zusätzlich einen `p`-Tag (Card-Autor), aus dem `cardRef` abgeleitet.
-- Subscriber-Boards aktualisieren Kommentare jetzt sofort reaktiv (kein Reload/Drag nötig) – eingehende Events werden immer auf die aktuelle Card-Instanz im Board gemerged.
+### ðŸ› Fix: Kommentar-Live-Sync (Subscribe) zuverlÃ¤ssig
+- Publisher/Subscriber nutzen identischen Card-Ref (`#a`) fÃ¼r Kind-1 Kommentare (verhindert Filter-Mismatch).
+- `e`-Tag beim Kommentar referenziert jetzt die echte Card-Event-ID (`card.eventId`) statt fÃ¤lschlich das `d`-Tag.
+- Kommentar-Events enthalten jetzt zusÃ¤tzlich einen `p`-Tag (Card-Autor), aus dem `cardRef` abgeleitet.
+- Subscriber-Boards aktualisieren Kommentare jetzt sofort reaktiv (kein Reload/Drag nÃ¶tig) â€“ eingehende Events werden immer auf die aktuelle Card-Instanz im Board gemerged.
 - Dedupe/Reconcile verhindert doppelte Kommentare nach Reload und behebt den Svelte-Fehler `each_key_duplicate` (duplicate keyed-IDs im `{#each}`).
-- Board startet Background-Subscriptions für alle Karten (Kommentare syncen auch ohne geöffneten Dialog).
-- Mehrere Konsumenten (Background + Dialog) teilen sich pro Karte eine Subscription (Ref-Counting) — Dialog stoppt Background nicht mehr.
+- Board startet Background-Subscriptions fÃ¼r alle Karten (Kommentare syncen auch ohne geÃ¶ffneten Dialog).
+- Mehrere Konsumenten (Background + Dialog) teilen sich pro Karte eine Subscription (Ref-Counting) â€” Dialog stoppt Background nicht mehr.
 - Dateien: `src/lib/stores/boardstore/nostr/comments.ts`, `src/lib/stores/boardstore/nostr/publish.ts`, `src/lib/stores/boardstore/nostr.mergeComments.spec.ts`, `src/lib/stores/boardstore/nostr.subscribeToComments.spec.ts`, `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/+page.svelte`
 
-### 🧪 Test-Hinweise (manuell)
-1. Owner öffnet ShareDialog und fügt Editor-Pubkey hinzu
-2. Editor hat BoardsList offen → Board taucht automatisch auf
-3. Entfernt Owner den Editor wieder → (Folgt in nächstem Increment: Auto-Removal)
+### ðŸ§ª Test-Hinweise (manuell)
+1. Owner Ã¶ffnet ShareDialog und fÃ¼gt Editor-Pubkey hinzu
+2. Editor hat BoardsList offen â†’ Board taucht automatisch auf
+3. Entfernt Owner den Editor wieder â†’ (Folgt in nÃ¤chstem Increment: Auto-Removal)
 
 ---
 
-## Version 4.6.1 - Demo Board Migration Fix 🔧
+## Version 4.6.1 - Demo Board Migration Fix ðŸ”§
 
 **Datum:** 20. November 2025  
 **Branch:** `feature/board-sharing`  
-**Status:** ✅ **BUGFIX - Demo Board Migration korrigiert**
+**Status:** âœ… **BUGFIX - Demo Board Migration korrigiert**
 
-### 🐛 Problem gelöst
+### ðŸ› Problem gelÃ¶st
 
 **Issue:** Eingeloggte Benutzer behielten das Demo-Board auch nach erfolgreicher Authentifizierung
 
 #### Root Cause
 - Demo-Board blieb in `boardIds` Liste nach Login
-- `getAllBoards()` filterte Demo-Board nicht korrekt für auth User
+- `getAllBoards()` filterte Demo-Board nicht korrekt fÃ¼r auth User
 - Board-Migration funktionierte nur teilweise
 
-#### ✅ Fix implementiert
+#### âœ… Fix implementiert
 
-- ✅ **Demo-Board-Migration korrigiert** 
+- âœ… **Demo-Board-Migration korrigiert** 
   - `migrateDemoBoardToRealBoard()`: Korrekte `boardIds` Aktualisierung
   - `deleteDemoBoard()`: Entfernt Demo-Board aus boardIds und localStorage
-  - `onAuthChanged()`: Neue zentrale Methode für Auth-Integration
+  - `onAuthChanged()`: Neue zentrale Methode fÃ¼r Auth-Integration
   
-- ✅ **Board-Filterung verbessert**
-  - `getAllBoards()`: Explizite Demo-Board-Filterung für auth User
-  - `filteredBoardIds` ohne 'demo-board' für authentifizierte Benutzer
+- âœ… **Board-Filterung verbessert**
+  - `getAllBoards()`: Explizite Demo-Board-Filterung fÃ¼r auth User
+  - `filteredBoardIds` ohne 'demo-board' fÃ¼r authentifizierte Benutzer
   
-- ✅ **AuthStore-Integration** 
+- âœ… **AuthStore-Integration** 
   - Alle Login-Methoden (NIP-07, nsec, OIDC) rufen `onAuthChanged()` auf
   - Ersetzt direkte `migrateDemoBoardToRealBoard()` Aufrufe
   
-- ✅ **UI-Integration**
+- âœ… **UI-Integration**
   - `BoardsList.svelte`: Demo-Session-Erstellung triggert `onAuthChanged()`
-  - Reaktive Board-Liste-Updates nach Auth-Änderungen
+  - Reaktive Board-Liste-Updates nach Auth-Ã„nderungen
 
-### 🧪 Test-Scenarios
+### ðŸ§ª Test-Scenarios
 
 **Scenario 1: Neuer User**
-- Demo-Board → Login → Demo wird zu erstem echten Board ("🏠 Mein erstes Board")
+- Demo-Board â†’ Login â†’ Demo wird zu erstem echten Board ("ðŸ  Mein erstes Board")
 
 **Scenario 2: Bestehender User**  
-- Demo-Board → Login → Demo wird gelöscht, User-Boards angezeigt
+- Demo-Board â†’ Login â†’ Demo wird gelÃ¶scht, User-Boards angezeigt
 
 ---
 
-## Version 4.6 - Demo Board System für anonyme Nutzer 🎯
+## Version 4.6 - Demo Board System fÃ¼r anonyme Nutzer ðŸŽ¯
 
 **Datum:** 28. Dezember 2024  
 **Branch:** `main`  
-**Status:** ✅ **PRODUCTION READY - MEILENSTEIN 1.6 COMPLETE**
+**Status:** âœ… **PRODUCTION READY - MEILENSTEIN 1.6 COMPLETE**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
 **Feature:** Demo Board System mit intelligenter Migration und benutzerbasierter Filterung
 
-#### ✅ Implementiert
+#### âœ… Implementiert
 
-- ✅ **Benutzerbasierte Board-Filterung** — Problem gelöst: "Es wird alle Boards von allen users gelistet"
+- âœ… **Benutzerbasierte Board-Filterung** â€” Problem gelÃ¶st: "Es wird alle Boards von allen users gelistet"
   - `getAllBoards()` filtert nach User pubkey (Owner oder Maintainer)
-  - `isUserOwnerOrMaintainer()` Helper-Methode für Berechtigung-Checks
+  - `isUserOwnerOrMaintainer()` Helper-Methode fÃ¼r Berechtigung-Checks
   - Nur eigene Boards werden in BoardsList.svelte angezeigt
 
-- ✅ **Demo Board System für Anonyme** — "Anonymen Users haben Zugriff auf ein Demo-Board"
+- âœ… **Demo Board System fÃ¼r Anonyme** â€” "Anonymen Users haben Zugriff auf ein Demo-Board"
   - `getDemoBoardsForAnonymousUser()` mit pre-konfiguriertem Demo-Content
-  - 3 Demo-Spalten: "🚀 Erste Schritte", "📝 In Arbeit", "✅ Erledigt"
-  - Hilfreiche Beispiel-Karten mit Beschreibungen für neue Nutzer
-  - Demo-Button in UI für anonyme Nutzer (BoardsList.svelte)
+  - 3 Demo-Spalten: "ðŸš€ Erste Schritte", "ðŸ“ In Arbeit", "âœ… Erledigt"
+  - Hilfreiche Beispiel-Karten mit Beschreibungen fÃ¼r neue Nutzer
+  - Demo-Button in UI fÃ¼r anonyme Nutzer (BoardsList.svelte)
 
-- ✅ **Intelligente Post-Login Migration** — Smart migration logic
+- âœ… **Intelligente Post-Login Migration** â€” Smart migration logic
   - `migrateDemoBoardToRealBoard()` in BoardStore
-  - **Hat User Boards?** → Demo Board wird gelöscht (cleanup)
-  - **Hat User keine Boards?** → Demo Board wird zu echtem Board konvertiert
+  - **Hat User Boards?** â†’ Demo Board wird gelÃ¶scht (cleanup)
+  - **Hat User keine Boards?** â†’ Demo Board wird zu echtem Board konvertiert
   - Post-Login Hooks in alle Auth-Methoden: NIP-07, nsec, OIDC
 
-#### 📋 User-Flow
+#### ðŸ“‹ User-Flow
 ```
-Anonymer User → Demo Board erstellen → Board nutzen
-                     ↓
+Anonymer User â†’ Demo Board erstellen â†’ Board nutzen
+                     â†“
               User meldet sich an
-                     ↓
+                     â†“
     Hat User eigene Boards?
-         ↙              ↘
-      JA → Demo löschen  NEIN → Demo zu Real Board
+         â†™              â†˜
+      JA â†’ Demo lÃ¶schen  NEIN â†’ Demo zu Real Board
 ```
 
-#### 📊 Features im Detail
+#### ðŸ“Š Features im Detail
 
 - **Demo Session:** 30-Tage automatisches Cleanup mit AuthStore.createDemoSession()
 - **Pre-konfigurierter Content:** 3 Spalten mit je 2-3 Beispiel-Karten
@@ -1226,8 +1280,8 @@ Anonymer User → Demo Board erstellen → Board nutzen
 - **UI Integration:** Conditional rendering in BoardsList.svelte
 - **AuthStore Integration:** Post-Login Hooks in allen Authentication-Methoden
 
-#### 📚 Dokumentation
-- **Vollständige Feature-Doku:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md`
+#### ðŸ“š Dokumentation
+- **VollstÃ¤ndige Feature-Doku:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md`
   - Technische Spezifikation & Implementation Details
   - User-Flows & Akzeptanzkriterien
   - Code-Beispiele & API-Referenz
@@ -1235,106 +1289,106 @@ Anonymer User → Demo Board erstellen → Board nutzen
 - **ROADMAP.md Updates:** Meilenstein 1.6 als COMPLETE markiert
 - **_INDEX.md Updates:** Demo Board System in Navigation integriert
 
-#### 🧪 Tests & Validierung
-- ✅ TypeScript Compilation: 0 errors, 0 warnings
-- ✅ Development Server: Erfolgreich gestartet (Port 5174)
-- ✅ Code Quality: Alle ESLint-Regeln befolgt
-- ✅ Svelte 5 Runes: Korrekte Reactive Patterns verwendet
+#### ðŸ§ª Tests & Validierung
+- âœ… TypeScript Compilation: 0 errors, 0 warnings
+- âœ… Development Server: Erfolgreich gestartet (Port 5174)
+- âœ… Code Quality: Alle ESLint-Regeln befolgt
+- âœ… Svelte 5 Runes: Korrekte Reactive Patterns verwendet
 
 ---
 
-## Version 4.5 - Kaskadierende Löschung 🗑️
+## Version 4.5 - Kaskadierende LÃ¶schung ðŸ—‘ï¸
 
 **Datum:** 13. November 2025  
 **Branch:** `sync-fixes`  
-**Status:** ✅ **IMPLEMENTIERT - Cascading Deletion**
+**Status:** âœ… **IMPLEMENTIERT - Cascading Deletion**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Problem gelöst:** Verwaiste Cards und Comments auf Nostr-Relays bei Board/Card-Löschung
+**Problem gelÃ¶st:** Verwaiste Cards und Comments auf Nostr-Relays bei Board/Card-LÃ¶schung
 
-#### ✅ Implementiert
-- ✅ **Kaskadierende Board-Löschung** — Löscht automatisch alle zugehörigen Cards inkl. Comments
-  - `Board.getAllCards()` Utility-Methode hinzugefügt
+#### âœ… Implementiert
+- âœ… **Kaskadierende Board-LÃ¶schung** â€” LÃ¶scht automatisch alle zugehÃ¶rigen Cards inkl. Comments
+  - `Board.getAllCards()` Utility-Methode hinzugefÃ¼gt
   - `NostrIntegration.deleteBoard()` erweitert mit Card-Kaskade
-  - Sequentielle Löschung für deterministische Reihenfolge
-- ✅ **Kaskadierende Card-Löschung** — Löscht automatisch alle zugehörigen Comments
+  - Sequentielle LÃ¶schung fÃ¼r deterministische Reihenfolge
+- âœ… **Kaskadierende Card-LÃ¶schung** â€” LÃ¶scht automatisch alle zugehÃ¶rigen Comments
   - `NostrIntegration.deleteCard()` erweitert mit Comment-Kaskade
-  - Nur published Comments werden auf Nostr gelöscht (eventId Check)
-- ✅ **Comment-Deletion** — Neue `deleteComment()` Methode
+  - Nur published Comments werden auf Nostr gelÃ¶scht (eventId Check)
+- âœ… **Comment-Deletion** â€” Neue `deleteComment()` Methode
   - NIP-09 konforme Kind 5 Deletion Events
   - Target-Relay-Selection basierend auf Card publishState
-  - Hohe Priorität für Löschungen
+  - Hohe PrioritÃ¤t fÃ¼r LÃ¶schungen
 
-#### 📋 Lösch-Hierarchie
+#### ðŸ“‹ LÃ¶sch-Hierarchie
 ```
-Board löschen
-  └─> Alle Cards löschen
-      └─> Alle Comments löschen
+Board lÃ¶schen
+  â””â”€> Alle Cards lÃ¶schen
+      â””â”€> Alle Comments lÃ¶schen
 ```
 
-#### 📊 Impact
-- **Vorher:** Board mit 100 Cards & 500 Comments → 600 verwaiste Events
-- **Nachher:** Board mit 100 Cards & 500 Comments → 0 verwaiste Events (601 Deletion Events)
+#### ðŸ“Š Impact
+- **Vorher:** Board mit 100 Cards & 500 Comments â†’ 600 verwaiste Events
+- **Nachher:** Board mit 100 Cards & 500 Comments â†’ 0 verwaiste Events (601 Deletion Events)
 
-#### 📚 Dokumentation
-- Vollständige Feature-Doku: `docs/FEATURE/CASCADING-DELETION.md`
+#### ðŸ“š Dokumentation
+- VollstÃ¤ndige Feature-Doku: `docs/FEATURE/CASCADING-DELETION.md`
 - Test-Szenarien & Console-Output Beispiele
 - Performance-Optimierung & Best Practices
 
 ---
 
-## Version 4.4 - Nostr Sync Sprint Complete! 🚀
+## Version 4.4 - Nostr Sync Sprint Complete! ðŸš€
 
 **Datum:** 10. November 2025  
 **Branch:** `read-boards-from-nostr`  
-**Status:** ✅ **PRODUCTION READY - Last-Write-Wins & Cross-Browser Sync**
+**Status:** âœ… **PRODUCTION READY - Last-Write-Wins & Cross-Browser Sync**
 
-### 🎯 Zusammenfassung (Nostr Sync Sprint - 06.11 bis 10.11)
+### ðŸŽ¯ Zusammenfassung (Nostr Sync Sprint - 06.11 bis 10.11)
 
-**Vollständig funktionsfähige Nostr-basierte Board-Synchronisation mit Konfliktauflösung:**
+**VollstÃ¤ndig funktionsfÃ¤hige Nostr-basierte Board-Synchronisation mit KonfliktauflÃ¶sung:**
 
-#### ✅ Implementiert & Getestet
-- ✅ **Last-Write-Wins (LWW)** — Vollständige Timestamp-basierte Konfliktauflösung
+#### âœ… Implementiert & Getestet
+- âœ… **Last-Write-Wins (LWW)** â€” VollstÃ¤ndige Timestamp-basierte KonfliktauflÃ¶sung
   - Rank-aware Card Insertion (Spalten-Reihenfolge bleibt korrekt)
-  - Millisekunden-Precision Timestamps für konsistente Sortiering
-  - Stale localStorage Überschreibungen verhindert
-- ✅ **Echo-Loop Prevention** — Eigene Nostr-Events werden 5s lang geskippt
-  - Double-Move Effekt (Spalte springt zurück) GELÖST
+  - Millisekunden-Precision Timestamps fÃ¼r konsistente Sortiering
+  - Stale localStorage Ãœberschreibungen verhindert
+- âœ… **Echo-Loop Prevention** â€” Eigene Nostr-Events werden 5s lang geskippt
+  - Double-Move Effekt (Spalte springt zurÃ¼ck) GELÃ–ST
   - Memory Leaks durch Auto-Cleanup verhindert
   - Delayed Cleanup nach 5 Sekunden
-- ✅ **Card-Duplication Bug GELÖST** — Root Cause: Stale localStorage vor frischen Nostr Events
+- âœ… **Card-Duplication Bug GELÃ–ST** â€” Root Cause: Stale localStorage vor frischen Nostr Events
   - getContextData() Serialisierung gefixt (author Fields)
   - Timestamp Handling in Konstruktoren korrigiert
   - LWW Checks in upsertCardFromNostr() implementiert
-- ✅ **Board-Storage Refactoring** — 95% Redundanz eliminiert
-  - `kanban-boards-metadata` → Single Source of Truth
-  - `lastAccessedAt` + `hasUnseenChanges` → Board-Modell
+- âœ… **Board-Storage Refactoring** â€” 95% Redundanz eliminiert
+  - `kanban-boards-metadata` â†’ Single Source of Truth
+  - `lastAccessedAt` + `hasUnseenChanges` â†’ Board-Modell
   - Auto-Migration mit Backup beim ersten Start
-- ✅ **Cross-Browser Sync** — Browser B sieht Updates von Browser A unter 500ms
+- âœ… **Cross-Browser Sync** â€” Browser B sieht Updates von Browser A unter 500ms
   - Nostr Subscriptions mit `closeOnEose: false` (persistent)
-  - $effect Guards gegen vorzeitige UI-Überschreibung
-  - isDragging Schutz (2s) während DnD-Roundtrip
-- ✅ **TypeScript: Strict Mode** — 0 Errors, 0 Warnings
+  - $effect Guards gegen vorzeitige UI-Ãœberschreibung
+  - isDragging Schutz (2s) wÃ¤hrend DnD-Roundtrip
+- âœ… **TypeScript: Strict Mode** â€” 0 Errors, 0 Warnings
 
-#### 🔴 BLOCKER identifiziert
-- **Merge-System ↔ LWW Integration** — 70 min Work, dokumentiert in `docs/NOSTR/NEXT-STEPS/`
+#### ðŸ”´ BLOCKER identifiziert
+- **Merge-System â†” LWW Integration** â€” 70 min Work, dokumentiert in `docs/NOSTR/NEXT-STEPS/`
   - Blockiert Phase 2.0 (Merge Production Start)
-  - Geplant für ~15.11.2025
-  - Dokumentation vollständig vorhanden
+  - Geplant fÃ¼r ~15.11.2025
+  - Dokumentation vollstÃ¤ndig vorhanden
 
-#### 📊 Metriken
+#### ðŸ“Š Metriken
 | Kategorie | Wert |
 |-----------|------|
 | Commits (06-10.11) | 18 Major Commits |
-| Last-Write-Wins | ✅ Vollständig |
-| Echo-Loop Tests | ✅ Alle bestanden |
-| Card-Duplication | ✅ Gefixt |
-| Storage-Redundanz | ✅ 95% eliminiert |
-| Cross-Browser Sync | ✅ < 500ms |
-| TypeScript Status | ✅ 0 errors/warnings |
+| Last-Write-Wins | âœ… VollstÃ¤ndig |
+| Echo-Loop Tests | âœ… Alle bestanden |
+| Card-Duplication | âœ… Gefixt |
+| Storage-Redundanz | âœ… 95% eliminiert |
+| Cross-Browser Sync | âœ… < 500ms |
+| TypeScript Status | âœ… 0 errors/warnings |
 
-#### 🔗 Dokumentation
+#### ðŸ”— Dokumentation
 - **Integration Analysis:** `docs/NOSTR/NEXT-STEPS/INTEGRATION-ANALYSIS-MERGE-vs-LWW.md`
 - **TODO Checklist:** `docs/NOSTR/NEXT-STEPS/MERGE-LWW-INTEGRATION-TODO.md`
 - **Overview:** `docs/NOSTR/NEXT-STEPS/MERGE-vs-LWW-OVERVIEW.md`
@@ -1346,56 +1400,56 @@ Board löschen
 
 **Datum:** 9. November 2025  
 **Branch:** `main`  
-**Status:** ✅ **PRODUCTION READY - Architecture Refactoring**
+**Status:** âœ… **PRODUCTION READY - Architecture Refactoring**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
 **Eliminiert redundantes Metadata-System - Boards sind Single Source of Truth:**
-- ✅ **95% Redundanz eliminiert**: `kanban-boards-metadata` localStorage-Key wird nicht mehr benötigt
-- ✅ **Neue Board-Felder**: `lastAccessedAt` und `hasUnseenChanges` direkt im Board-Modell
-- ✅ **Auto-Migration**: One-time automatic migration beim ersten App-Start (mit Backup)
-- ✅ **Board-Discovery**: IDs werden aus localStorage-Keys gescannt (`kanban-{id}` Pattern)
-- ✅ **Zero Data Loss**: Migration erstellt Backup vor Deletion (`kanban-boards-metadata-backup`)
-- ✅ **TypeScript**: 0 errors, 0 warnings
+- âœ… **95% Redundanz eliminiert**: `kanban-boards-metadata` localStorage-Key wird nicht mehr benÃ¶tigt
+- âœ… **Neue Board-Felder**: `lastAccessedAt` und `hasUnseenChanges` direkt im Board-Modell
+- âœ… **Auto-Migration**: One-time automatic migration beim ersten App-Start (mit Backup)
+- âœ… **Board-Discovery**: IDs werden aus localStorage-Keys gescannt (`kanban-{id}` Pattern)
+- âœ… **Zero Data Loss**: Migration erstellt Backup vor Deletion (`kanban-boards-metadata-backup`)
+- âœ… **TypeScript**: 0 errors, 0 warnings
 
-### 🐛 Problem (Before)
+### ðŸ› Problem (Before)
 
 #### Symptom: 95% Data Redundancy
 ```
 kanban-boards-metadata: [
   {
-    id: "abc",                    ← DUPLIKAT
-    name: "My Board",             ← DUPLIKAT
-    description: "...",           ← DUPLIKAT
-    author: "npub...",            ← DUPLIKAT
-    publishState: "draft",        ← DUPLIKAT
-    lastAccessed: "...",          ← UNIQUE (7%)
-    hasUnseenChanges: false       ← UNIQUE (7%)
+    id: "abc",                    â† DUPLIKAT
+    name: "My Board",             â† DUPLIKAT
+    description: "...",           â† DUPLIKAT
+    author: "npub...",            â† DUPLIKAT
+    publishState: "draft",        â† DUPLIKAT
+    lastAccessed: "...",          â† UNIQUE (7%)
+    hasUnseenChanges: false       â† UNIQUE (7%)
   }
 ]
 
 kanban-abc: {
-  id: "abc",                      ← Original
-  name: "My Board",               ← Original
-  description: "...",             ← Original
+  id: "abc",                      â† Original
+  name: "My Board",               â† Original
+  description: "...",             â† Original
   // ... 71% der Daten dupliziert!
 }
 ```
 
 #### Konsequenzen:
-- ❌ **Inkonsistenzen**: Metadata kann veraltet sein (Sync-Probleme)
-- ❌ **Performance**: Doppeltes Laden/Speichern
-- ❌ **Code-Komplexität**: Zwei Datenquellen pflegen
-- ❌ **Storage-Waste**: 71% unnötiger localStorage-Verbrauch
+- âŒ **Inkonsistenzen**: Metadata kann veraltet sein (Sync-Probleme)
+- âŒ **Performance**: Doppeltes Laden/Speichern
+- âŒ **Code-KomplexitÃ¤t**: Zwei Datenquellen pflegen
+- âŒ **Storage-Waste**: 71% unnÃ¶tiger localStorage-Verbrauch
 
-### ✅ Lösung (After)
+### âœ… LÃ¶sung (After)
 
 #### Single Source of Truth
 ```typescript
 // Board-Klasse erweitert mit neuen Feldern
 export class Board {
   public lastAccessedAt: string;   // ISO 8601 timestamp
-  public hasUnseenChanges: boolean; // Unsichtbare Änderungen von Nostr
+  public hasUnseenChanges: boolean; // Unsichtbare Ã„nderungen von Nostr
   
   // Helper-Methoden
   public updateLastAccessed(): void;
@@ -1403,20 +1457,20 @@ export class Board {
   public clearChanges(): void;
 }
 
-// localStorage enthält NUR:
+// localStorage enthÃ¤lt NUR:
 kanban-abc: {
   id: "abc",
   name: "My Board",
   lastAccessedAt: "2025-01-15T10:30:00.000Z",
   hasUnseenChanges: false,
-  columns: [...]  // Vollständige Board-Daten
+  columns: [...]  // VollstÃ¤ndige Board-Daten
 }
 
 // Board-IDs werden automatisch gescannt:
-loadBoardIds() → localStorage.keys().filter("kanban-*")
+loadBoardIds() â†’ localStorage.keys().filter("kanban-*")
 ```
 
-### 🔧 Dateien Geändert
+### ðŸ”§ Dateien GeÃ¤ndert
 
 #### 1. Board Model Extension (Phase 1)
 **src/lib/classes/BoardModel.ts**
@@ -1430,56 +1484,56 @@ loadBoardIds() → localStorage.keys().filter("kanban-*")
 **src/lib/stores/boardstore/storage.ts**
 - Line 23-47: `loadBoardIds()` scannt localStorage-Keys statt Metadata zu lesen
 - Line 60-67: `saveBoardIds()` als deprecated markiert (No-Op)
-- Line 132-134: `reconstructBoard()` lädt neue Felder
-- Line 310-380: `getAllBoardsMetadata()` lädt Header direkt aus Boards
+- Line 132-134: `reconstructBoard()` lÃ¤dt neue Felder
+- Line 310-380: `getAllBoardsMetadata()` lÃ¤dt Header direkt aus Boards
 
 #### 3. Migration Script (Phase 3)
 **src/lib/stores/boardstore/migration.ts** (NEW FILE)
-- MetadataMigration class mit vollständiger Backup/Migrate/Cleanup Logik
-- `needsMigration()`: Prüft ob Migration notwendig
+- MetadataMigration class mit vollstÃ¤ndiger Backup/Migrate/Cleanup Logik
+- `needsMigration()`: PrÃ¼ft ob Migration notwendig
 - `migrate()`: Transferiert `lastAccessed` und `hasUnseenChanges` zu Boards
 - Creates backup: `kanban-boards-metadata-backup`
 - Sets flag: `kanban-metadata-migrated`
 
 #### 4. Store Updates (Phase 3)
 **src/lib/stores/kanbanStore.svelte.ts**
-- Line 44-49: Migration wird automatisch im Constructor ausgeführt
+- Line 44-49: Migration wird automatisch im Constructor ausgefÃ¼hrt
 - Line 330-354: `loadBoard()` nutzt `board.updateLastAccessed()` und `board.clearChanges()`
 - Line 270-278: `getAllBoards()` updated mit neuen Feldern
 
 #### 5. Operations Cleanup (Phase 3)
 **src/lib/stores/boardstore/operations.ts**
-- Line 8: Import `BoardStorage` hinzugefügt
+- Line 8: Import `BoardStorage` hinzugefÃ¼gt
 - Line 619-642: `upsertBoardFromNostr()` INSERT-Pfad nutzt `BoardStorage.saveBoard()`
-- DELETED: `addBoardToMetadataList()` (lines 654-706) - nicht mehr benötigt
+- DELETED: `addBoardToMetadataList()` (lines 654-706) - nicht mehr benÃ¶tigt
 - DELETED: `setHasUnseenChanges()` (lines 712-737) - ersetzt durch `board.markAsChanged()`
 - DELETED: `clearHasUnseenChanges()` (line 745-747) - ersetzt durch `board.clearChanges()`
 
 #### 6. Nostr Handler Updates (Phase 4)
 **src/lib/stores/boardstore/nostr.ts**
-- Line 495-503: `handleBoardEvent()` lädt Background-Board und nutzt `board.markAsChanged()`
-- Line 621-629: `handleCardEvent()` lädt Background-Board und nutzt `board.markAsChanged()`
+- Line 495-503: `handleBoardEvent()` lÃ¤dt Background-Board und nutzt `board.markAsChanged()`
+- Line 621-629: `handleCardEvent()` lÃ¤dt Background-Board und nutzt `board.markAsChanged()`
 
-### 📊 Impact
+### ðŸ“Š Impact
 
 | Metrik | Before (v4.2) | After (v4.3) |
 |--------|---------------|--------------|
 | **localStorage Keys** | 2 (metadata + board) | 1 (board only) |
-| **Data Redundancy** | 95% | 0% ✅ |
+| **Data Redundancy** | 95% | 0% âœ… |
 | **Board Load Time** | ~20ms | ~15ms (-25%) |
 | **Code Complexity** | 749 lines | 651 lines (-13%) |
 | **Migration Time** | N/A | < 100ms (one-time) |
 
-### ⚠️ Breaking Changes
+### âš ï¸ Breaking Changes
 
 #### Removed APIs
 ```typescript
-// ❌ DELETED from BoardOperations:
+// âŒ DELETED from BoardOperations:
 BoardOperations.addBoardToMetadataList()
 BoardOperations.setHasUnseenChanges()
 BoardOperations.clearHasUnseenChanges()
 
-// ✅ Replaced with Board methods:
+// âœ… Replaced with Board methods:
 board.updateLastAccessed()
 board.markAsChanged()
 board.clearChanges()
@@ -1487,10 +1541,10 @@ board.clearChanges()
 
 #### localStorage Structure
 ```typescript
-// ❌ REMOVED:
+// âŒ REMOVED:
 localStorage.getItem('kanban-boards-metadata')
 
-// ✅ NEW Discovery Pattern:
+// âœ… NEW Discovery Pattern:
 const keys = Object.keys(localStorage).filter(k => 
   k.startsWith('kanban-') && 
   !k.includes('-metadata') && 
@@ -1498,22 +1552,22 @@ const keys = Object.keys(localStorage).filter(k =>
 );
 ```
 
-### 🚀 Migration Guide
+### ðŸš€ Migration Guide
 
 **Automatic Migration:**
-Migration läuft automatisch beim ersten App-Start (v4.3+). User-Aktion nicht erforderlich!
+Migration lÃ¤uft automatisch beim ersten App-Start (v4.3+). User-Aktion nicht erforderlich!
 
 **Manual Verification (Optional):**
 ```typescript
 // Browser Console:
 localStorage.getItem('kanban-metadata-migrated')
-// → "true" wenn Migration erfolgreich
+// â†’ "true" wenn Migration erfolgreich
 
 localStorage.getItem('kanban-boards-metadata-backup')
-// → Original Metadata als JSON (Backup)
+// â†’ Original Metadata als JSON (Backup)
 
 localStorage.getItem('kanban-boards-metadata')
-// → null (gelöscht nach Migration)
+// â†’ null (gelÃ¶scht nach Migration)
 ```
 
 **Rollback (if needed):**
@@ -1522,36 +1576,36 @@ localStorage.getItem('kanban-boards-metadata')
 const backup = localStorage.getItem('kanban-boards-metadata-backup');
 localStorage.setItem('kanban-boards-metadata', backup);
 localStorage.removeItem('kanban-metadata-migrated');
-// → Reload app
+// â†’ Reload app
 ```
 
-### 📝 Acceptance Criteria
+### ðŸ“ Acceptance Criteria
 
 - [x] `lastAccessedAt` und `hasUnseenChanges` sind in BoardProps
 - [x] Board-Klasse hat Helper-Methoden
 - [x] `loadBoardIds()` scannt localStorage-Keys
-- [x] `getAllBoardsMetadata()` lädt aus Boards
+- [x] `getAllBoardsMetadata()` lÃ¤dt aus Boards
 - [x] Migration erstellt Backup vor Deletion
 - [x] Migration setzt `kanban-metadata-migrated` Flag
-- [x] Veraltete Methoden gelöscht
+- [x] Veraltete Methoden gelÃ¶scht
 - [x] Nostr Handler nutzen neue Board-Methoden
 - [x] TypeScript compiliert ohne Fehler
 - [x] Dokumentation aktualisiert
 
-### 🧪 Testing
+### ðŸ§ª Testing
 
 **Automated Tests:**
 ```bash
-pnpm exec tsc --noEmit  # ✅ 0 errors
+pnpm exec tsc --noEmit  # âœ… 0 errors
 pnpm run test:unit      # TODO: Add migration tests
 ```
 
 **Manual Tests:**
-1. App starten → Migration läuft automatisch
-2. Neues Board erstellen → `lastAccessedAt` gesetzt
-3. Board laden → `lastAccessedAt` aktualisiert
-4. Nostr Event empfangen → `hasUnseenChanges` = true
-5. Board öffnen → `hasUnseenChanges` = false
+1. App starten â†’ Migration lÃ¤uft automatisch
+2. Neues Board erstellen â†’ `lastAccessedAt` gesetzt
+3. Board laden â†’ `lastAccessedAt` aktualisiert
+4. Nostr Event empfangen â†’ `hasUnseenChanges` = true
+5. Board Ã¶ffnen â†’ `hasUnseenChanges` = false
 
 ---
 
@@ -1559,41 +1613,41 @@ pnpm run test:unit      # TODO: Add migration tests
 
 **Datum:** 9. November 2025  
 **Branch:** `read-boards-from-nostr`  
-**Status:** ✅ **PRODUCTION READY - UX Critical Fix**
+**Status:** âœ… **PRODUCTION READY - UX Critical Fix**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
 **Eliminiert Echo-Loop (Doppel-Effekt) und fixt Cross-Browser Sync Delay:**
-- ✅ **Delayed Cleanup**: Eigene Events werden 5 Sekunden lang geskippt (verhindert mehrfache Echoes)
-- ✅ **isLocalDnD Guard**: $effect blockiert während DnD-Roundtrip (kein visueller Glitch)
-- ✅ **Cross-Browser Sync**: Browser B zeigt Updates von Browser A **sofort** (< 500ms)
-- ✅ **Zero Breaking Changes**: Alle bestehenden Features funktionieren
-- ✅ **TypeScript**: 0 errors, 0 warnings
+- âœ… **Delayed Cleanup**: Eigene Events werden 5 Sekunden lang geskippt (verhindert mehrfache Echoes)
+- âœ… **isLocalDnD Guard**: $effect blockiert wÃ¤hrend DnD-Roundtrip (kein visueller Glitch)
+- âœ… **Cross-Browser Sync**: Browser B zeigt Updates von Browser A **sofort** (< 500ms)
+- âœ… **Zero Breaking Changes**: Alle bestehenden Features funktionieren
+- âœ… **TypeScript**: 0 errors, 0 warnings
 
-### 🐛 Problem
+### ðŸ› Problem
 
 #### Symptom 1: Double-Move-Effekt (Browser A)
 ```
-User draggt Spalte → Spalte springt zurück → bewegt sich erneut
+User draggt Spalte â†’ Spalte springt zurÃ¼ck â†’ bewegt sich erneut
 Root Cause: Browser verarbeitet eigenes Nostr-Event als fremdes Event
 ```
 
 #### Symptom 2: Cross-Browser Sync Delay (Browser B)
 ```
-Browser A draggt Spalte → Browser B zeigt KEINE Änderung (nur nach Reload)
-Root Cause: $effect überschreibt sofort mit alter Reihenfolge
+Browser A draggt Spalte â†’ Browser B zeigt KEINE Ã„nderung (nur nach Reload)
+Root Cause: $effect Ã¼berschreibt sofort mit alter Reihenfolge
 ```
 
-### ✅ Lösung
+### âœ… LÃ¶sung
 
 #### 1. Delayed Cleanup (5 Sekunden)
 ```typescript
 // nostr.ts
 if (syncManager.isMyEvent(boardEvent.id)) {
-    console.log('⏭️ Eigenes Board-Event erkannt - SKIP');
+    console.log('â­ï¸ Eigenes Board-Event erkannt - SKIP');
     setTimeout(() => {
         syncManager.clearMyEvent(boardEvent.id);
-    }, 5000);  // ← Verhindert mehrfache Echoes!
+    }, 5000);  // â† Verhindert mehrfache Echoes!
     return;
 }
 ```
@@ -1602,24 +1656,24 @@ if (syncManager.isMyEvent(boardEvent.id)) {
 ```typescript
 // Board.svelte
 $effect(() => {
-    if (!isDragging && !isLocalDnD) {  // ← Blockiert während Roundtrip
+    if (!isDragging && !isLocalDnD) {  // â† Blockiert wÃ¤hrend Roundtrip
         if (parentIds !== localIds) {
-            columns = [...columns_inner];  // ← Update nur wenn safe
+            columns = [...columns_inner];  // â† Update nur wenn safe
         }
     }
 });
 ```
 
-### 📊 Impact
+### ðŸ“Š Impact
 
 | Metrik | Before | After |
 |--------|--------|-------|
-| **Spalten-Glitch** | ❌ Doppel-Effekt | ✅ Smooth (einmalig) |
-| **Cross-Browser** | ❌ Erst nach Reload | ✅ Sofort (< 500ms) |
-| **Echo-Handling** | ❌ Nur erstes Echo | ✅ Alle Echoes (5s) |
-| **Memory Leak** | ⚠️ Risk | ✅ Auto-Cleanup |
+| **Spalten-Glitch** | âŒ Doppel-Effekt | âœ… Smooth (einmalig) |
+| **Cross-Browser** | âŒ Erst nach Reload | âœ… Sofort (< 500ms) |
+| **Echo-Handling** | âŒ Nur erstes Echo | âœ… Alle Echoes (5s) |
+| **Memory Leak** | âš ï¸ Risk | âœ… Auto-Cleanup |
 
-### 🔧 Dateien Geändert
+### ðŸ”§ Dateien GeÃ¤ndert
 
 1. **src/lib/stores/syncManager.svelte.ts**
    - Added: `isMyEvent()` & `clearMyEvent()` public methods
@@ -1634,18 +1688,18 @@ $effect(() => {
    - Lines 65-80: `$effect` mit `isLocalDnD` guard
    - Lines 107-114: Delayed `isLocalDnD = false` (2s)
 
-### 📚 Dokumentation
+### ðŸ“š Dokumentation
 
-- **[ECHO-PREVENTION-FLOW.md](./docs/ARCHITECTURE/ECHO-PREVENTION-FLOW.md)** - Vollständige Flow-Dokumentation
+- **[ECHO-PREVENTION-FLOW.md](./docs/ARCHITECTURE/ECHO-PREVENTION-FLOW.md)** - VollstÃ¤ndige Flow-Dokumentation
 - **[BUG-FIX-ECHO-LOOP.md](./docs/TO-FIX/BUG-FIX-ECHO-LOOP.md)** - Bug-Analyse & Timeline
 
-### 🧪 Test Results
+### ðŸ§ª Test Results
 
-- ✅ Manual Testing: Browser A → Kein Doppel-Effekt
-- ✅ Cross-Browser: Browser B → Sofortige Sync (< 500ms)
-- ✅ Doppeltes Echo: Beide Echoes geskippt
-- ✅ TypeScript: 0 errors, 0 warnings
-- ✅ Production Build: Success
+- âœ… Manual Testing: Browser A â†’ Kein Doppel-Effekt
+- âœ… Cross-Browser: Browser B â†’ Sofortige Sync (< 500ms)
+- âœ… Doppeltes Echo: Beide Echoes geskippt
+- âœ… TypeScript: 0 errors, 0 warnings
+- âœ… Production Build: Success
 
 ---
 
@@ -1653,86 +1707,86 @@ $effect(() => {
 
 **Datum:** 9. November 2025  
 **Branch:** `main`  
-**Status:** ✅ **CRITICAL ARCHITECTURE FIX - Single Source of Truth**
+**Status:** âœ… **CRITICAL ARCHITECTURE FIX - Single Source of Truth**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
 **Eliminiert redundanten localStorage Key und fixt "Browser A board not visible" Bug:**
-- ✅ **Consolidated Keys**: `kanban-boards-list` eliminiert (nur `kanban-boards-metadata` bleibt)
-- ✅ **Single Source of Truth**: Board-IDs nun direkt aus Metadaten
-- ✅ **Browser A Fix**: Neu erstellte Boards sichtbar SOFORT (ohne localStorage Clear)
-- ✅ **Simplified Code**: Weniger localStorage-Keys zu verwalten
-- ✅ **TypeScript**: 0 errors, 0 warnings
-- ✅ **Zero Breaking Changes**: Deprecated Methods bleiben als NO-OP
+- âœ… **Consolidated Keys**: `kanban-boards-list` eliminiert (nur `kanban-boards-metadata` bleibt)
+- âœ… **Single Source of Truth**: Board-IDs nun direkt aus Metadaten
+- âœ… **Browser A Fix**: Neu erstellte Boards sichtbar SOFORT (ohne localStorage Clear)
+- âœ… **Simplified Code**: Weniger localStorage-Keys zu verwalten
+- âœ… **TypeScript**: 0 errors, 0 warnings
+- âœ… **Zero Breaking Changes**: Deprecated Methods bleiben als NO-OP
 
-### 🔧 Technical Details
+### ðŸ”§ Technical Details
 
 #### Problem (Bug v1.3)
 ```
-Browser A createBoard() → Board nicht in Liste sichtbar bis localStorage geleert
+Browser A createBoard() â†’ Board nicht in Liste sichtbar bis localStorage geleert
 Root Cause: createBoard() nur kanban-boards-list aktualisiert, nicht kanban-boards-metadata
 ```
 
-#### Lösung (v1.4)
+#### LÃ¶sung (v1.4)
 ```
 Before (REDUNDANT):
-  kanban-boards-list      → ["board-1", "board-2"] (nur IDs)
-  kanban-boards-metadata  → [{id, name, ...}]      (Metadaten)
+  kanban-boards-list      â†’ ["board-1", "board-2"] (nur IDs)
+  kanban-boards-metadata  â†’ [{id, name, ...}]      (Metadaten)
   
 After (SINGLE SOURCE):
-  kanban-boards-metadata  → [{id, name, ...}]      (Alles hier!)
+  kanban-boards-metadata  â†’ [{id, name, ...}]      (Alles hier!)
   loadBoardIds() extrahiert IDs direkt aus Metadaten
 ```
 
-#### Dateien Geändert
+#### Dateien GeÃ¤ndert
 
-**1. storage.ts** — Simplified Key Management
+**1. storage.ts** â€” Simplified Key Management
 ```typescript
-// ✅ loadBoardIds() jetzt: Liest NUR aus kanban-boards-metadata
-// ✅ saveBoardIds() jetzt: DEPRECATED (NO-OP)
-// ❌ BOARDS_LIST_KEY: Entfernt
+// âœ… loadBoardIds() jetzt: Liest NUR aus kanban-boards-metadata
+// âœ… saveBoardIds() jetzt: DEPRECATED (NO-OP)
+// âŒ BOARDS_LIST_KEY: Entfernt
 ```
 
-**2. operations.ts** — Removed Redundant Updates
+**2. operations.ts** â€” Removed Redundant Updates
 ```typescript
-// ✅ addBoardToMetadataList() jetzt: Updated NUR kanban-boards-metadata
-// ❌ Removed: Separate update von kanban-boards-list
+// âœ… addBoardToMetadataList() jetzt: Updated NUR kanban-boards-metadata
+// âŒ Removed: Separate update von kanban-boards-list
 ```
 
-**3. kanbanStore.svelte.ts** — createBoard() Already Calls addBoardToMetadataList()
+**3. kanbanStore.svelte.ts** â€” createBoard() Already Calls addBoardToMetadataList()
 ```typescript
-// ✅ createBoard() ruft addBoardToMetadataList() auf
-// ✅ Board sofort in Metadaten + localStorage
-// ✅ UI updates via triggerUpdate()
+// âœ… createBoard() ruft addBoardToMetadataList() auf
+// âœ… Board sofort in Metadaten + localStorage
+// âœ… UI updates via triggerUpdate()
 ```
 
-### ✅ Benefits
+### âœ… Benefits
 
 | Vorher | Nachher |
 |--------|---------|
-| 2 localStorage Keys für Board-Listen | 1 Key (Single Source of Truth) |
+| 2 localStorage Keys fÃ¼r Board-Listen | 1 Key (Single Source of Truth) |
 | Sync-Bugs zwischen Keys | Keine Sync-Probleme mehr |
 | Browser A board nicht sichtbar | Sofort sichtbar nach Erstellung |
 | saveBoardIds() + metadata separate | Alles in einem Key |
 | Komplexe Fallback-Logik | Einfacher Code |
 
-### 📋 Test Plan
+### ðŸ“‹ Test Plan
 
 Siehe: **TEST-CONSOLIDATION.md**
 
 Test Szenarien:
-- ✅ Board Creation (Browser A) — Board sofort sichtbar
-- ✅ Cross-Browser Sync (Nostr) — Browser B sieht Board von A
-- ✅ Sorting by lastAccessed — Newest first
-- ✅ Offline-Online Sync — Boards werden synchronisiert
-- ✅ localStorage Integrity — Nur kanban-boards-metadata existiert
+- âœ… Board Creation (Browser A) â€” Board sofort sichtbar
+- âœ… Cross-Browser Sync (Nostr) â€” Browser B sieht Board von A
+- âœ… Sorting by lastAccessed â€” Newest first
+- âœ… Offline-Online Sync â€” Boards werden synchronisiert
+- âœ… localStorage Integrity â€” Nur kanban-boards-metadata existiert
 
-### ⚠️ Deprecated Code (Backward Compatibility)
+### âš ï¸ Deprecated Code (Backward Compatibility)
 
 ```typescript
 // storage.ts
 public static saveBoardIds(boardIds: string[]): void {
-    console.warn('⚠️ saveBoardIds() deprecated - Use addBoardToMetadataList() instead!');
+    console.warn('âš ï¸ saveBoardIds() deprecated - Use addBoardToMetadataList() instead!');
     // NO-OP: Makes no changes to localStorage
 }
 ```
@@ -1740,19 +1794,19 @@ public static saveBoardIds(boardIds: string[]): void {
 **Reason:** 6 Calls in kanbanStore.svelte.ts still active
 **Future:** Remove in next refactoring phase (Phase 2)
 
-### 🔄 Migration
+### ðŸ”„ Migration
 
 Bestehende localStorage-Instanzen:
-- Alte `kanban-boards-list` Keys bleiben unverändert (werden ignoriert)
-- Neue Boards → nur in `kanban-boards-metadata`
+- Alte `kanban-boards-list` Keys bleiben unverÃ¤ndert (werden ignoriert)
+- Neue Boards â†’ nur in `kanban-boards-metadata`
 - Optional: User kann localStorage manuell clearen
 
-### 📊 Code Quality
+### ðŸ“Š Code Quality
 
-- **TypeScript**: ✅ 0 errors, 0 warnings
-- **Compilation**: ✅ Build successful
-- **Tests**: ✅ All existing tests still pass
-- **Console**: ✅ No errors (only deprecation warnings)
+- **TypeScript**: âœ… 0 errors, 0 warnings
+- **Compilation**: âœ… Build successful
+- **Tests**: âœ… All existing tests still pass
+- **Console**: âœ… No errors (only deprecation warnings)
 
 ---
 
@@ -1760,30 +1814,30 @@ Bestehende localStorage-Instanzen:
 
 **Datum:** 6. November 2025
 **Branch:** `feature/agent-chatstore`
-**Status:** ✅ **AI INFRASTRUCTURE COMPLETE - FOUNDATION FOR INTELLIGENT BOARDS**
+**Status:** âœ… **AI INFRASTRUCTURE COMPLETE - FOUNDATION FOR INTELLIGENT BOARDS**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Vollständige KI-Infrastruktur für intelligente Board-Verwaltung:**
-- ✅ **Agent System**: Intent-Erkennung, LLM-Integration, Multi-Phase Processing
-- ✅ **ChatStore**: Persistente Chat-Sessions mit Memory & Conversation Summaries
-- ✅ **AIPanel Component**: Chat-UI mit Action-Confirmation & Learning System
-- ✅ **Settings UI**: Zentrale Konfiguration für LLM, Relays, Lernsystem
-- ✅ **Learning Manager**: Intelligente Pattern-Erkennung mit Confidence-Scoring
-- ✅ **Structure Analysis**: Intelligente Board-Struktur-Erkennung
-- ✅ **Comprehensive Testing**: 150+ Unit Tests für alle Agent-Module
-- ✅ **Complete Documentation**: 10+ Feature-Docs + 3 Architecture-Docs
+**VollstÃ¤ndige KI-Infrastruktur fÃ¼r intelligente Board-Verwaltung:**
+- âœ… **Agent System**: Intent-Erkennung, LLM-Integration, Multi-Phase Processing
+- âœ… **ChatStore**: Persistente Chat-Sessions mit Memory & Conversation Summaries
+- âœ… **AIPanel Component**: Chat-UI mit Action-Confirmation & Learning System
+- âœ… **Settings UI**: Zentrale Konfiguration fÃ¼r LLM, Relays, Lernsystem
+- âœ… **Learning Manager**: Intelligente Pattern-Erkennung mit Confidence-Scoring
+- âœ… **Structure Analysis**: Intelligente Board-Struktur-Erkennung
+- âœ… **Comprehensive Testing**: 150+ Unit Tests fÃ¼r alle Agent-Module
+- âœ… **Complete Documentation**: 10+ Feature-Docs + 3 Architecture-Docs
 
-### ✨ Features
+### âœ¨ Features
 
 #### 1. **Agent Module System** (`src/lib/agent/`)
-   - **llmRequest.ts** — OpenAI-kompatible LLM API Integration
-   - **contentProposal.ts** — Phase 1: Content-Vorschlag Parsing
-   - **structureGeneration.ts** — Phase 2: JSON-Struktur Generierung
-   - **intentDetection.ts** — Intent-Erkennung (Board-Aktion vs Chat-Antwort)
-   - **llmIntentDetection.ts** — LLM-basierte Intent-Detection mit Fallback
-   - **actionProcessing.ts** — Board-Aktionen ausführen mit Validierung
-   - **types.ts** — Zentrale TypeScript-Interfaces für alle Module
+   - **llmRequest.ts** â€” OpenAI-kompatible LLM API Integration
+   - **contentProposal.ts** â€” Phase 1: Content-Vorschlag Parsing
+   - **structureGeneration.ts** â€” Phase 2: JSON-Struktur Generierung
+   - **intentDetection.ts** â€” Intent-Erkennung (Board-Aktion vs Chat-Antwort)
+   - **llmIntentDetection.ts** â€” LLM-basierte Intent-Detection mit Fallback
+   - **actionProcessing.ts** â€” Board-Aktionen ausfÃ¼hren mit Validierung
+   - **types.ts** â€” Zentrale TypeScript-Interfaces fÃ¼r alle Module
 
 #### 2. **ChatStore** (`src/lib/stores/chatStore.svelte.ts`)
    - Persistente Chat-Sessions (1 pro Board)
@@ -1795,17 +1849,17 @@ Bestehende localStorage-Instanzen:
 #### 3. **AIPanel Component** (`src/routes/cardsboard/AIPanel.svelte`)
    - Chat-UI mit Message-History
    - 2-Phase Response Processing
-   - Action-Confirmation Dialog (User muss bestätigen)
+   - Action-Confirmation Dialog (User muss bestÃ¤tigen)
    - Learning Pattern Visualization
    - Board Preview mit Column/Card Counts
    - Error Handling & Retry-Mechanismen
 
 #### 4. **Settings UI** (`src/lib/components/settings/SettingsPanel.svelte`)
-   - **UI/UX Tab** — Theme, Layout, Scrolling-Einstellungen
-   - **Learning System Tab** — Confidence Thresholds, Auto-Execute, Pattern Tracking
-   - **LLM Configuration Tab** — Model, Base URL, API Key, System Prompt
-   - **Nostr Relays Tab** — Public & Private Relay Management
-   - **Board Defaults Tab** — Default Columns, Publish States
+   - **UI/UX Tab** â€” Theme, Layout, Scrolling-Einstellungen
+   - **Learning System Tab** â€” Confidence Thresholds, Auto-Execute, Pattern Tracking
+   - **LLM Configuration Tab** â€” Model, Base URL, API Key, System Prompt
+   - **Nostr Relays Tab** â€” Public & Private Relay Management
+   - **Board Defaults Tab** â€” Default Columns, Publish States
 
 #### 5. **Learning Manager** (`src/lib/agent/learningManager.ts`)
    - Intelligent Pattern Recognition
@@ -1817,43 +1871,43 @@ Bestehende localStorage-Instanzen:
 #### 6. **Structure Analysis** (`src/lib/agent/structureAnalysis.ts`)
    - Erkenne Board-Struktur-Muster (Status, Phasen, Themen)
    - Intelligente Strategie-Wahl:
-     - `add_to_existing` — Nutze bestehende Spalten
-     - `mixed` — Mix aus neuen & bestehenden
-     - `create_new` — Nur neue Spalten
+     - `add_to_existing` â€” Nutze bestehende Spalten
+     - `mixed` â€” Mix aus neuen & bestehenden
+     - `create_new` â€” Nur neue Spalten
    - LLM-Instruktionen basierend auf Muster
 
 #### 7. **Comprehensive Documentation**
 
 **New Feature Documentation:**
-- ✅ `docs/FEATURE/AI-INTEGRATION.md` — Vollständige KI-Integration
-- ✅ `docs/FEATURE/TWO-PHASE-AI-RESPONSE.md` — Phase 1 & Phase 2 System
-- ✅ `docs/FEATURE/LLM-INTENT-DETECTION.md` — Intent-Erkennung Strategie
-- ✅ `docs/FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md` — Board-Struktur Analyse
-- ✅ `docs/FEATURE/TWO-PHASE-AI-RESPONSE-INTEGRATION.md` — Integration Guide
+- âœ… `docs/FEATURE/AI-INTEGRATION.md` â€” VollstÃ¤ndige KI-Integration
+- âœ… `docs/FEATURE/TWO-PHASE-AI-RESPONSE.md` â€” Phase 1 & Phase 2 System
+- âœ… `docs/FEATURE/LLM-INTENT-DETECTION.md` â€” Intent-Erkennung Strategie
+- âœ… `docs/FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md` â€” Board-Struktur Analyse
+- âœ… `docs/FEATURE/TWO-PHASE-AI-RESPONSE-INTEGRATION.md` â€” Integration Guide
 
 **New Architecture Documentation:**
-- ✅ `docs/ARCHITECTURE/STORES/CHATSTORE.md` — ChatStore API & Patterns
-- ✅ `docs/ARCHITECTURE/STORES/CHATBOTSTORE.md` — ChatBotStore (Phase 3 Preview)
-- ✅ `docs/ARCHITECTURE/AGENT/README.md` — Agent System Overview
-- ✅ `docs/ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md` — Board-Actions API
-- ✅ `docs/ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md` — Multi-Phase Flows
+- âœ… `docs/ARCHITECTURE/STORES/CHATSTORE.md` â€” ChatStore API & Patterns
+- âœ… `docs/ARCHITECTURE/STORES/CHATBOTSTORE.md` â€” ChatBotStore (Phase 3 Preview)
+- âœ… `docs/ARCHITECTURE/AGENT/README.md` â€” Agent System Overview
+- âœ… `docs/ARCHITECTURE/AGENT/AI-ACTIONS-REFERENCE.md` â€” Board-Actions API
+- âœ… `docs/ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md` â€” Multi-Phase Flows
 
 #### 8. **Comprehensive Testing**
-- **contentProposal.spec.ts** — 15+ Tests (Content parsing, Validation)
-- **structureGeneration.spec.ts** — 20+ Tests (JSON generation, Validation)
-- **intentDetection.spec.ts** — 18+ Tests (Intent recognition, Edge cases)
-- **llmIntentDetection.spec.ts** — 22+ Tests (LLM-based detection, Fallback)
-- **actionProcessing.spec.ts** — 25+ Tests (Action execution, Errors)
-- **chatStore.svelte.spec.ts** — 30+ Tests (Session management, Persistence)
-- **aiPanel.svelte.spec.ts** — 20+ Tests (UI interactions, State)
+- **contentProposal.spec.ts** â€” 15+ Tests (Content parsing, Validation)
+- **structureGeneration.spec.ts** â€” 20+ Tests (JSON generation, Validation)
+- **intentDetection.spec.ts** â€” 18+ Tests (Intent recognition, Edge cases)
+- **llmIntentDetection.spec.ts** â€” 22+ Tests (LLM-based detection, Fallback)
+- **actionProcessing.spec.ts** â€” 25+ Tests (Action execution, Errors)
+- **chatStore.svelte.spec.ts** â€” 30+ Tests (Session management, Persistence)
+- **aiPanel.svelte.spec.ts** â€” 20+ Tests (UI interactions, State)
 
 **Total: 150+ Unit Tests with 98%+ Pass Rate**
 
 #### 9. **Component Integrations**
 
 **UIPanel.svelte Updates:**
-- Sidebar-Button für KI-Panel Toggle
-- Settings-Integration für LLM-Config
+- Sidebar-Button fÃ¼r KI-Panel Toggle
+- Settings-Integration fÃ¼r LLM-Config
 - Learning Status Indicator
 
 **SettingsPanel.svelte Enhancements:**
@@ -1867,105 +1921,105 @@ Bestehende localStorage-Instanzen:
 - Settings Sheet mit SettingsPanel Integration
 - Error Notifications
 
-### 📊 Statistics
+### ðŸ“Š Statistics
 
 | Kategorie | Count | Status |
 |-----------|-------|--------|
-| **Agent Modules** | 10 | ✅ Complete |
-| **Tests** | 150+ | ✅ 98%+ Pass |
-| **Documentation Files** | 15+ | ✅ Complete |
-| **Components** | 3 major | ✅ Integrated |
-| **Stores** | 2 new | ✅ Implemented |
+| **Agent Modules** | 10 | âœ… Complete |
+| **Tests** | 150+ | âœ… 98%+ Pass |
+| **Documentation Files** | 15+ | âœ… Complete |
+| **Components** | 3 major | âœ… Integrated |
+| **Stores** | 2 new | âœ… Implemented |
 
-### 📁 File Structure
+### ðŸ“ File Structure
 
 ```
 src/lib/
-├── agent/
-│   ├── index.ts                      (exports)
-│   ├── types.ts                      (interfaces)
-│   ├── llmRequest.ts                 (LLM API)
-│   ├── contentProposal.ts            (Phase 1)
-│   ├── structureGeneration.ts        (Phase 2)
-│   ├── intentDetection.ts            (Intent recognition)
-│   ├── llmIntentDetection.ts         (LLM intent detection)
-│   ├── actionProcessing.ts           (Board actions)
-│   ├── learningManager.ts            (ML patterns)
-│   ├── structureAnalysis.ts          (Board analysis)
-│   ├── *.spec.ts                     (tests)
-│   └── *.test.ts                     (tests)
-│
-├── stores/
-│   ├── chatStore.svelte.ts           (new)
-│   ├── chatStore.svelte.spec.ts      (new)
-│   ├── settingsStore.svelte.ts       (updated)
-│   └── kanbanStore.svelte.ts         (updated)
-│
-├── components/
-│   ├── settings/
-│   │   ├── SettingsPanel.svelte      (updated)
-│   │   ├── LearningTab.svelte        (new)
-│   │   ├── LLMTab.svelte             (new)
-│   │   └── RelaysTab.svelte          (new)
-│   └── ui/
-│       ├── ActionConfirmationDialog.svelte (new)
-│       └── ...
-│
-└── routes/cardsboard/
-    ├── AIPanel.svelte                (new)
-    ├── Topbar.svelte                 (updated)
-    └── +page.svelte                  (updated)
+â”œâ”€â”€ agent/
+â”‚   â”œâ”€â”€ index.ts                      (exports)
+â”‚   â”œâ”€â”€ types.ts                      (interfaces)
+â”‚   â”œâ”€â”€ llmRequest.ts                 (LLM API)
+â”‚   â”œâ”€â”€ contentProposal.ts            (Phase 1)
+â”‚   â”œâ”€â”€ structureGeneration.ts        (Phase 2)
+â”‚   â”œâ”€â”€ intentDetection.ts            (Intent recognition)
+â”‚   â”œâ”€â”€ llmIntentDetection.ts         (LLM intent detection)
+â”‚   â”œâ”€â”€ actionProcessing.ts           (Board actions)
+â”‚   â”œâ”€â”€ learningManager.ts            (ML patterns)
+â”‚   â”œâ”€â”€ structureAnalysis.ts          (Board analysis)
+â”‚   â”œâ”€â”€ *.spec.ts                     (tests)
+â”‚   â””â”€â”€ *.test.ts                     (tests)
+â”‚
+â”œâ”€â”€ stores/
+â”‚   â”œâ”€â”€ chatStore.svelte.ts           (new)
+â”‚   â”œâ”€â”€ chatStore.svelte.spec.ts      (new)
+â”‚   â”œâ”€â”€ settingsStore.svelte.ts       (updated)
+â”‚   â””â”€â”€ kanbanStore.svelte.ts         (updated)
+â”‚
+â”œâ”€â”€ components/
+â”‚   â”œâ”€â”€ settings/
+â”‚   â”‚   â”œâ”€â”€ SettingsPanel.svelte      (updated)
+â”‚   â”‚   â”œâ”€â”€ LearningTab.svelte        (new)
+â”‚   â”‚   â”œâ”€â”€ LLMTab.svelte             (new)
+â”‚   â”‚   â””â”€â”€ RelaysTab.svelte          (new)
+â”‚   â””â”€â”€ ui/
+â”‚       â”œâ”€â”€ ActionConfirmationDialog.svelte (new)
+â”‚       â””â”€â”€ ...
+â”‚
+â””â”€â”€ routes/cardsboard/
+    â”œâ”€â”€ AIPanel.svelte                (new)
+    â”œâ”€â”€ Topbar.svelte                 (updated)
+    â””â”€â”€ +page.svelte                  (updated)
 
 docs/
-├── FEATURE/
-│   ├── AI-INTEGRATION.md             (complete spec)
-│   ├── TWO-PHASE-AI-RESPONSE.md      (phase system)
-│   ├── LLM-INTENT-DETECTION.md       (intent logic)
-│   ├── INTELLIGENT-STRUCTURE-ANALYSIS.md (structure)
-│   └── TWO-PHASE-AI-RESPONSE-INTEGRATION.md (integration)
-│
-└── ARCHITECTURE/
-    ├── AGENT/
-    │   ├── README.md                 (overview)
-    │   ├── AI-ACTIONS-REFERENCE.md   (API)
-    │   └── AI-COLLABORATIVE-GENERATION.md (flows)
-    │
-    └── STORES/
-        ├── CHATSTORE.md              (chat API)
-        └── CHATBOTSTORE.md           (preview)
+â”œâ”€â”€ FEATURE/
+â”‚   â”œâ”€â”€ AI-INTEGRATION.md             (complete spec)
+â”‚   â”œâ”€â”€ TWO-PHASE-AI-RESPONSE.md      (phase system)
+â”‚   â”œâ”€â”€ LLM-INTENT-DETECTION.md       (intent logic)
+â”‚   â”œâ”€â”€ INTELLIGENT-STRUCTURE-ANALYSIS.md (structure)
+â”‚   â””â”€â”€ TWO-PHASE-AI-RESPONSE-INTEGRATION.md (integration)
+â”‚
+â””â”€â”€ ARCHITECTURE/
+    â”œâ”€â”€ AGENT/
+    â”‚   â”œâ”€â”€ README.md                 (overview)
+    â”‚   â”œâ”€â”€ AI-ACTIONS-REFERENCE.md   (API)
+    â”‚   â””â”€â”€ AI-COLLABORATIVE-GENERATION.md (flows)
+    â”‚
+    â””â”€â”€ STORES/
+        â”œâ”€â”€ CHATSTORE.md              (chat API)
+        â””â”€â”€ CHATBOTSTORE.md           (preview)
 ```
 
-### 🔗 Related Features
+### ðŸ”— Related Features
 
 **Depends on:**
-- ✅ Phase 1-2 Core Features (BoardModel, BoardStore, UI Components)
-- ✅ Phase 1.5 Export/Import (context serialization)
-- ✅ Settings System & userPreferencesStore
+- âœ… Phase 1-2 Core Features (BoardModel, BoardStore, UI Components)
+- âœ… Phase 1.5 Export/Import (context serialization)
+- âœ… Settings System & userPreferencesStore
 
 **Enables:**
-- ⏳ Phase 3.1: LLM Tool Calling (board manipulation)
-- ⏳ Phase 3.2: OER Content Discovery (MCP integration)
-- ⏳ Phase 3.3: Autonomous Actions (auto-execute patterns)
-- ⏳ Phase 4: Collaborative AI (multi-user LLM sessions)
+- â³ Phase 3.1: LLM Tool Calling (board manipulation)
+- â³ Phase 3.2: OER Content Discovery (MCP integration)
+- â³ Phase 3.3: Autonomous Actions (auto-execute patterns)
+- â³ Phase 4: Collaborative AI (multi-user LLM sessions)
 
-### 🔍 Key Improvements
+### ðŸ” Key Improvements
 
-1. **Intelligent Content Proposal** — 2-Phase System prevents JSON generation failures
-2. **Structure Analysis** — AI respects existing board structure patterns
-3. **Learning System** — Remembers user preferences & auto-executes trusted patterns
-4. **Settings UI** — Single source of truth for all configuration
-5. **Comprehensive Testing** — 150+ tests ensure reliability
-6. **Full Documentation** — 15+ docs explain all concepts & usage
+1. **Intelligent Content Proposal** â€” 2-Phase System prevents JSON generation failures
+2. **Structure Analysis** â€” AI respects existing board structure patterns
+3. **Learning System** â€” Remembers user preferences & auto-executes trusted patterns
+4. **Settings UI** â€” Single source of truth for all configuration
+5. **Comprehensive Testing** â€” 150+ tests ensure reliability
+6. **Full Documentation** â€” 15+ docs explain all concepts & usage
 
-### ⚠️ Breaking Changes
+### âš ï¸ Breaking Changes
 
 None. This is a new feature layer on top of existing Core (Phase 1-2).
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 
 None. Feature additions only.
 
-### 📚 Documentation
+### ðŸ“š Documentation
 
 - **New Architecture:** `docs/ARCHITECTURE/AGENT/README.md`
 - **New Feature Docs:** `docs/FEATURE/AI-*.md` (5 files)
@@ -1973,27 +2027,27 @@ None. Feature additions only.
 - **ROADMAP Updated:** Phase 3 now complete (Phase 3.0-3.3)
 - **_INDEX.md Updated:** 55+ documentation files indexed
 
-### ✅ Acceptance Criteria (Phase 3.0)
+### âœ… Acceptance Criteria (Phase 3.0)
 
-- ✅ LLM Integration complete (OpenAI-compatible API)
-- ✅ 2-Phase Response System implemented
-- ✅ Intent Detection working (board vs chat)
-- ✅ ChatStore with memory & summaries
-- ✅ Learning Manager with confidence scoring
-- ✅ Settings UI with all config options
-- ✅ 150+ tests passing
-- ✅ Documentation complete
-- ✅ Zero breaking changes
+- âœ… LLM Integration complete (OpenAI-compatible API)
+- âœ… 2-Phase Response System implemented
+- âœ… Intent Detection working (board vs chat)
+- âœ… ChatStore with memory & summaries
+- âœ… Learning Manager with confidence scoring
+- âœ… Settings UI with all config options
+- âœ… 150+ tests passing
+- âœ… Documentation complete
+- âœ… Zero breaking changes
 
-### 🚀 Next Steps (Phase 3.1+)
+### ðŸš€ Next Steps (Phase 3.1+)
 
-1. **Tool Calling** — LLM can execute board actions (createCard, moveCard, etc.)
-2. **MCP Integration** — Support external data sources (lehrplan-db, methoden-sammlung)
-3. **Auto-Execute Patterns** — Learned patterns auto-execute above threshold
-4. **Streaming Responses** — Real-time token-by-token chat responses
-5. **Multi-Board Sessions** — Global chat with cross-board context
+1. **Tool Calling** â€” LLM can execute board actions (createCard, moveCard, etc.)
+2. **MCP Integration** â€” Support external data sources (lehrplan-db, methoden-sammlung)
+3. **Auto-Execute Patterns** â€” Learned patterns auto-execute above threshold
+4. **Streaming Responses** â€” Real-time token-by-token chat responses
+5. **Multi-Board Sessions** â€” Global chat with cross-board context
 
-### 🔗 Related Documentation
+### ðŸ”— Related Documentation
 
 - **Complete Setup:** `docs/FEATURE/AI-INTEGRATION.md`
 - **Phase System:** `docs/FEATURE/TWO-PHASE-AI-RESPONSE.md`
@@ -2007,19 +2061,19 @@ None. Feature additions only.
 
 **Datum:** 31. Oktober 2025
 **Branch:** `import-export`
-**Status:** ✅ **IMPORT-EXPORT FEATURE FULLY DOCUMENTED & INDEXED**
+**Status:** âœ… **IMPORT-EXPORT FEATURE FULLY DOCUMENTED & INDEXED**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
 **Phase 1.5D Import-Export Feature in docs/FEATURE/IMPORT-EXPORT.md dokumentiert:**
-- ✅ JSON-basiertes Export/Import System (bereits implementiert + getestet)
-- ✅ Drei Import-Modi: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
-- ✅ Store APIs: `exportBoardAsJson()`, `importBoardFromJson()`, `exportAllBoardsAsJson()`
-- ✅ UI Integration: ExportButton, ImportPopover mit Auto-Detect
-- ✅ 75+ Unit Tests (Backup detection, export, import, batch restore, round-trip)
-- ✅ Förder-Anforderung: **Boards sind vollständig exportierbar & importierbar** ✅
+- âœ… JSON-basiertes Export/Import System (bereits implementiert + getestet)
+- âœ… Drei Import-Modi: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
+- âœ… Store APIs: `exportBoardAsJson()`, `importBoardFromJson()`, `exportAllBoardsAsJson()`
+- âœ… UI Integration: ExportButton, ImportPopover mit Auto-Detect
+- âœ… 75+ Unit Tests (Backup detection, export, import, batch restore, round-trip)
+- âœ… FÃ¶rder-Anforderung: **Boards sind vollstÃ¤ndig exportierbar & importierbar** âœ…
 
-### ✨ Features
+### âœ¨ Features
 
 #### 1. **Feature-Dokumentation: Import-Export.md**
 - Kurzbeschreibung des Features
@@ -2028,55 +2082,55 @@ None. Feature additions only.
 - UI-Integration (ExportButton, ImportPopover)
 - Sicherheits- & Edge-Case-Behandlung
 - Akzeptanzkriterien & Test-Coverage
-- Known nächste Schritte (Phase 1.5E: Share-Link)
+- Known nÃ¤chste Schritte (Phase 1.5E: Share-Link)
 
 #### 2. **Documentation Index Updated (_INDEX.md)**
-- FEATURE/ Section: 5 → 6 Dateien (+IMPORT-EXPORT.md)
-- Total files: 43 → 44 verlinkt
+- FEATURE/ Section: 5 â†’ 6 Dateien (+IMPORT-EXPORT.md)
+- Total files: 43 â†’ 44 verlinkt
 - Alle Cross-Links aktualisiert
-- Vollständige Navigation für alle Docs
+- VollstÃ¤ndige Navigation fÃ¼r alle Docs
 
 #### 3. **ROADMAP Updated (v2.8)**
-- Phase 1.5D Status: ⏳ PLANNED → ✅ DONE
+- Phase 1.5D Status: â³ PLANNED â†’ âœ… DONE
 - Neue Version 2.8 Entry dokumentiert
 - Timeline aktualisiert
 
-### 📊 Documentation Status
+### ðŸ“Š Documentation Status
 
 **New Documentation Files:**
-- ✅ `docs/FEATURE/SHARELINK.md` (31.10.2025) - URL-basiertes Sharing
-- ✅ `docs/FEATURE/IMPORT-EXPORT.md` (31.10.2025) - JSON Export/Import
+- âœ… `docs/FEATURE/SHARELINK.md` (31.10.2025) - URL-basiertes Sharing
+- âœ… `docs/FEATURE/IMPORT-EXPORT.md` (31.10.2025) - JSON Export/Import
 
 **Updated Files:**
-- ✅ `docs/COLLABORATION/ROADMAP.md` (v2.8) - Phase 1.5D marked DONE
-- ✅ `docs/_INDEX.md` - 44/44 files indexed
-- ✅ `CHANGELOG.md` - Version history updated
+- âœ… `docs/COLLABORATION/ROADMAP.md` (v2.8) - Phase 1.5D marked DONE
+- âœ… `docs/_INDEX.md` - 44/44 files indexed
+- âœ… `CHANGELOG.md` - Version history updated
 
 **Total Documentation Coverage:**
 | Kategorie | Dateien | Status |
 |-----------|---------|--------|
-| ARCHITECTURE | 10/10 | ✅ |
-| GUIDES | 8/8 | ✅ |
-| COLLABORATION | 6/6 | ✅ |
-| TESTS | 2/2 | ✅ |
-| FEATURE | 6/6 | ✅ (neu!) |
-| REFERENCE | 1/1 | ✅ |
-| **TOTAL** | **44/44** | **✅ COMPLETE** |
+| ARCHITECTURE | 10/10 | âœ… |
+| GUIDES | 8/8 | âœ… |
+| COLLABORATION | 6/6 | âœ… |
+| TESTS | 2/2 | âœ… |
+| FEATURE | 6/6 | âœ… (neu!) |
+| REFERENCE | 1/1 | âœ… |
+| **TOTAL** | **44/44** | **âœ… COMPLETE** |
 
-### 🔗 Related Parallel Features (Phase 1.5)
+### ðŸ”— Related Parallel Features (Phase 1.5)
 
 **Parallel dokumentiert & implementiert in Phase 1.5:**
-- ✅ **Share-Link Feature** (v3.5 - URL-basiertes Sharing)
+- âœ… **Share-Link Feature** (v3.5 - URL-basiertes Sharing)
   - Dokumentation: [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md)
   - Token Encoding mit pako.deflate (76% Kompression)
   - 41 Unit Tests (100% passing)
 
-- ✅ **Import-Export Feature** (v3.6 - JSON-basiertes Backup/Restore)
+- âœ… **Import-Export Feature** (v3.6 - JSON-basiertes Backup/Restore)
   - Dokumentation: [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md)
   - 75+ Unit Tests
-  - Förder-Anforderung erfüllt
+  - FÃ¶rder-Anforderung erfÃ¼llt
 
-### 🔗 Related Documentation
+### ðŸ”— Related Documentation
 
 - **Neue Docs:** [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md) (Share-Link feature)
 - **Neue Docs:** [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md) (JSON export/import)
@@ -2091,36 +2145,36 @@ None. Feature additions only.
 
 **Datum:** 31. Oktober 2025
 **Branch:** `import-export`
-**Status:** ✅ **SHARE-LINK FEATURE COMPLETE & FULLY TESTED**
+**Status:** âœ… **SHARE-LINK FEATURE COMPLETE & FULLY TESTED**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Vollständige Share-Link Implementierung für Board-Export/Import:**
-- ✅ Share-Link-System mit Token-Kompression & URL-Encoding
-- ✅ Drei Import-Modi: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
-- ✅ Token-Size Management mit Progress-Bar (80% = Warning, 100% = Error)
-- ✅ XSS Prevention via Content Sanitization
-- ✅ 41 Unit Tests (100% Pass Rate)
-- ✅ Vollständige Dokumentation in `docs/FEATURE/SHARELINK.md`
+**VollstÃ¤ndige Share-Link Implementierung fÃ¼r Board-Export/Import:**
+- âœ… Share-Link-System mit Token-Kompression & URL-Encoding
+- âœ… Drei Import-Modi: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
+- âœ… Token-Size Management mit Progress-Bar (80% = Warning, 100% = Error)
+- âœ… XSS Prevention via Content Sanitization
+- âœ… 41 Unit Tests (100% Pass Rate)
+- âœ… VollstÃ¤ndige Dokumentation in `docs/FEATURE/SHARELINK.md`
 
-**Meilenstein:** Phase 1.5B (Board Versioning & Snapshot Management) - COMPLETE ✅
+**Meilenstein:** Phase 1.5B (Board Versioning & Snapshot Management) - COMPLETE âœ…
 
-### ✨ Implementierte Features
+### âœ¨ Implementierte Features
 
 #### 1. Share-Link Feature (`generateShareLink()`)
 
 **Topbar.svelte Integration:**
-- ✅ Share-Link Button (🔗) in Board-Einstellungen
-- ✅ Share-Dialog mit Token-Preview
-- ✅ Copy-to-Clipboard mit Success-Feedback
-- ✅ Progress-Bar für Token-Größe
+- âœ… Share-Link Button (ðŸ”—) in Board-Einstellungen
+- âœ… Share-Dialog mit Token-Preview
+- âœ… Copy-to-Clipboard mit Success-Feedback
+- âœ… Progress-Bar fÃ¼r Token-GrÃ¶ÃŸe
 
 **BoardStore API (`kanbanStore.svelte.ts`):**
-- ✅ `generateShareLink(boardId, includeToken)` - Token generieren
-- ✅ `importBoardFromJson(jsonData, mode)` - Board importieren
-- ✅ `saveImportedBoard(board, mode)` - Nach-Import Operationen
-- ✅ `exportBoardAsJson(boardId)` - Single Board Export
-- ✅ `exportAllBoardsAsJson()` - Backup aller Boards
+- âœ… `generateShareLink(boardId, includeToken)` - Token generieren
+- âœ… `importBoardFromJson(jsonData, mode)` - Board importieren
+- âœ… `saveImportedBoard(board, mode)` - Nach-Import Operationen
+- âœ… `exportBoardAsJson(boardId)` - Single Board Export
+- âœ… `exportAllBoardsAsJson()` - Backup aller Boards
 
 **Import-Modi:**
 ```typescript
@@ -2130,7 +2184,7 @@ const result = boardStore.importBoardFromJson(json, 'merge');
 // New: Mit (Imported) Suffix im Namen
 const result = boardStore.importBoardFromJson(json, 'new');
 
-// Overwrite: Originale IDs beibehalten (für Device-Sync)
+// Overwrite: Originale IDs beibehalten (fÃ¼r Device-Sync)
 const result = boardStore.importBoardFromJson(json, 'overwrite');
 ```
 
@@ -2139,62 +2193,62 @@ const result = boardStore.importBoardFromJson(json, 'overwrite');
 **Single-Layer URL Encoding (NOT double-encoded!):**
 ```
 Raw Board JSON
-  ↓
+  â†“
 JSON.stringify(board.getContextData())
-  ↓
+  â†“
 pako.deflate() [~76% Kompression]
-  ↓
+  â†“
 Base64.encode()
-  ↓
+  â†“
 encodeURIComponent() [Layer 1 only!]
-  ↓
+  â†“
 URL-safe Token (ready for ?import=)
 ```
 
 **Dekoding (Reverse):**
 ```
 Query Parameter: ?import=<TOKEN>
-  ↓
+  â†“
 decodeURIComponent()
-  ↓
+  â†“
 Base64.decode()
-  ↓
+  â†“
 pako.inflate()
-  ↓
+  â†“
 JSON.parse()
-  ↓
+  â†“
 Complete Board Object
 ```
 
 #### 3. Security & Validation
 
-- ✅ **Content Sanitization:** HTML-Tags entfernen, Special-Chars escapen
-- ✅ **Type Validation:** Struktur-Prüfung vor Import
-- ✅ **Token Size Limits:** 200KB Browser-Safe (Ziel: <80%)
-- ✅ **XSS Prevention:** Keine Script-Injection möglich
-- ✅ **Error Handling:** Graceful degradation bei fehlerhaften Tokens
+- âœ… **Content Sanitization:** HTML-Tags entfernen, Special-Chars escapen
+- âœ… **Type Validation:** Struktur-PrÃ¼fung vor Import
+- âœ… **Token Size Limits:** 200KB Browser-Safe (Ziel: <80%)
+- âœ… **XSS Prevention:** Keine Script-Injection mÃ¶glich
+- âœ… **Error Handling:** Graceful degradation bei fehlerhaften Tokens
 
 #### 4. Unit Tests (41 Tests, 100% Pass Rate)
 
 **Test-Kategorien:**
-- Token Generation & Compression (5 tests) ✅
-- URL Encoding & Query Parameters (7 tests) ✅
-- Import Modes: merge/new/overwrite (6 tests) ✅
-- Complete Workflow (3 tests) ✅
-- Error Handling & Edge Cases (6 tests) ✅
-- Token Size Management (4 tests) ✅
-- Console Logging & Debugging (4 tests) ✅
-- Store Integration (3 tests) ✅
-- Backward Compatibility (2 tests) ✅
-- Security & XSS Prevention (2 tests) ✅
-- [+ 8 additional test blocks] ✅
+- Token Generation & Compression (5 tests) âœ…
+- URL Encoding & Query Parameters (7 tests) âœ…
+- Import Modes: merge/new/overwrite (6 tests) âœ…
+- Complete Workflow (3 tests) âœ…
+- Error Handling & Edge Cases (6 tests) âœ…
+- Token Size Management (4 tests) âœ…
+- Console Logging & Debugging (4 tests) âœ…
+- Store Integration (3 tests) âœ…
+- Backward Compatibility (2 tests) âœ…
+- Security & XSS Prevention (2 tests) âœ…
+- [+ 8 additional test blocks] âœ…
 
 **Test Results:**
 ```
-✓ Test Files  1 passed (kanbanStore.share-link.spec.ts)
-✓ Tests       41 passed (41)
-✓ Duration    293ms
-✓ Status      PASS ✅
+âœ“ Test Files  1 passed (kanbanStore.share-link.spec.ts)
+âœ“ Tests       41 passed (41)
+âœ“ Duration    293ms
+âœ“ Status      PASS âœ…
 
 Full Suite: 161 passed | 1 skipped (162 total)
 ```
@@ -2202,38 +2256,38 @@ Full Suite: 161 passed | 1 skipped (162 total)
 #### 5. Documentation (`docs/FEATURE/SHARELINK.md`)
 
 **Inhalt (~400 Zeilen):**
-- ✅ Übersicht & Motivation (das Problem, die Lösung)
-- ✅ Feature-Beschreibung (Was wird geteilt, Workflow-Diagram)
-- ✅ Benutzer-Anleitung (5-Schritt Anleitung mit Screenshots)
-- ✅ Technische Architektur (Component Stack, Store API)
-- ✅ Encoding & Security (Strategie, XSS Prevention, Limits)
-- ✅ Import-Modi (Merge, New, Overwrite - Use Cases)
-- ✅ API-Referenz (Public Functions, Store Methods)
-- ✅ Testing & QA (Unit Tests, Manuelle Szenarien)
-- ✅ Fehlerbehebung (Häufige Probleme & Lösungen)
-- ✅ Zukünftige Erweiterungen (Phase 2-3 Roadmap)
+- âœ… Ãœbersicht & Motivation (das Problem, die LÃ¶sung)
+- âœ… Feature-Beschreibung (Was wird geteilt, Workflow-Diagram)
+- âœ… Benutzer-Anleitung (5-Schritt Anleitung mit Screenshots)
+- âœ… Technische Architektur (Component Stack, Store API)
+- âœ… Encoding & Security (Strategie, XSS Prevention, Limits)
+- âœ… Import-Modi (Merge, New, Overwrite - Use Cases)
+- âœ… API-Referenz (Public Functions, Store Methods)
+- âœ… Testing & QA (Unit Tests, Manuelle Szenarien)
+- âœ… Fehlerbehebung (HÃ¤ufige Probleme & LÃ¶sungen)
+- âœ… ZukÃ¼nftige Erweiterungen (Phase 2-3 Roadmap)
 
-### 📊 Quality Metrics
+### ðŸ“Š Quality Metrics
 
 | Metrik | Wert |
 |--------|------|
-| Unit Tests | 41/41 (100%) ✅ |
-| Test Coverage | Complete feature coverage ✅ |
-| Build Status | Clean (0 errors, 0 warnings) ✅ |
-| TypeScript | Strict mode compliant ✅ |
-| Overall Suite | 161/162 (99.4%) ✅ |
-| Code Regressions | 0 (all existing tests still pass) ✅ |
+| Unit Tests | 41/41 (100%) âœ… |
+| Test Coverage | Complete feature coverage âœ… |
+| Build Status | Clean (0 errors, 0 warnings) âœ… |
+| TypeScript | Strict mode compliant âœ… |
+| Overall Suite | 161/162 (99.4%) âœ… |
+| Code Regressions | 0 (all existing tests still pass) âœ… |
 
-### � Related Import-Export Feature
+### ï¿½ Related Import-Export Feature
 
 **Parallel dokumentiert in Phase 1.5:**
-- ✅ **Share-Link Feature** (v3.5 - URL-basiertes Sharing mit Kompression)
+- âœ… **Share-Link Feature** (v3.5 - URL-basiertes Sharing mit Kompression)
   - Dokumentation: [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md)
   - Token Encoding mit pako.deflate (76% Kompression)
   - Single-Layer URL-Encoding
   - 41 Unit Tests (100% passing)
 
-- ✅ **Import-Export Feature** (Phase 1.5D - JSON-basiertes Backup/Restore)
+- âœ… **Import-Export Feature** (Phase 1.5D - JSON-basiertes Backup/Restore)
   - Dokumentation: [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md)
   - Export: `exportBoardAsJson()`, `exportAllBoardsAsJson()`
   - Import: `importBoardFromJson(json, mode)` mit 3 Modi
@@ -2241,7 +2295,7 @@ Full Suite: 161 passed | 1 skipped (162 total)
   - Validierung & Error-Handling
   - 75+ Unit Tests (Backup detection, export/import, batch restore)
 
-### �🔗 Related Documentation
+### ï¿½ðŸ”— Related Documentation
 
 - **Neue Docs:** [`docs/FEATURE/SHARELINK.md`](./docs/FEATURE/SHARELINK.md) (Share-Link feature)
 - **Neue Docs:** [`docs/FEATURE/IMPORT-EXPORT.md`](./docs/FEATURE/IMPORT-EXPORT.md) (JSON export/import)
@@ -2256,22 +2310,22 @@ Full Suite: 161 passed | 1 skipped (162 total)
 
 **Datum:** 30. Oktober 2025
 **Branch:** `theme-buttons`
-**Status:** ✅ **UI CONSISTENCY COMPLETE**
+**Status:** âœ… **UI CONSISTENCY COMPLETE**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Vollständige Standardisierung aller UI-Buttons auf shadcn-svelte Komponenten:**
-- ✅ Card Footer Buttons (Card.svelte) - Kommentare, Bearbeiten, Anzeigen
-- ✅ Column Header Buttons (Column.svelte) - Karte hinzufügen, Spalte löschen
-- ✅ Board Add Column Button (Board.svelte) - Neue Spalte hinzufügen
-- ✅ Theme Buttons Dokumentation erstellt - Vollständiges Referenzhandbuch
+**VollstÃ¤ndige Standardisierung aller UI-Buttons auf shadcn-svelte Komponenten:**
+- âœ… Card Footer Buttons (Card.svelte) - Kommentare, Bearbeiten, Anzeigen
+- âœ… Column Header Buttons (Column.svelte) - Karte hinzufÃ¼gen, Spalte lÃ¶schen
+- âœ… Board Add Column Button (Board.svelte) - Neue Spalte hinzufÃ¼gen
+- âœ… Theme Buttons Dokumentation erstellt - VollstÃ¤ndiges Referenzhandbuch
 
-**Impact:** 100% konsistente Button-Nutzung im gesamten Projekt ⚡
-**Documentation:** Vollständiges Theme-System mit CSS-Variablen und Hover-Effekten ✅
+**Impact:** 100% konsistente Button-Nutzung im gesamten Projekt âš¡
+**Documentation:** VollstÃ¤ndiges Theme-System mit CSS-Variablen und Hover-Effekten âœ…
 
 ---
 
-### ✨ Implementierte Features
+### âœ¨ Implementierte Features
 
 #### 1. Button Standardisierung (Alle Komponenten)
 
@@ -2299,28 +2353,28 @@ Full Suite: 161 passed | 1 skipped (162 total)
 
 <!-- Delete Column Button -->
 <Button variant="destructive" size="sm">
-  Spalte löschen
+  Spalte lÃ¶schen
 </Button>
 ```
 
 **Board.svelte - Add Column Button:**
 ```svelte
-<!-- Neue Spalte hinzufügen -->
+<!-- Neue Spalte hinzufÃ¼gen -->
 <Button variant="outline" size="lg">
   <SquarePlusIcon class="mr-2 h-5 w-5" />
-  Neue Spalte hinzufügen
+  Neue Spalte hinzufÃ¼gen
 </Button>
 ```
 
 #### 2. Theme Buttons Dokumentation (GUIDES/THEME-BUTTONS.md)
 
 **Inhalt (~244 Zeilen):**
-- **CSS-Variablen:** Vollständige Liste aus `src/app.css` (Light + Dark Mode)
+- **CSS-Variablen:** VollstÃ¤ndige Liste aus `src/app.css` (Light + Dark Mode)
 - **Hover-Effekte:** Alle Button-Varianten mit exakten CSS-Regeln
 - **shadcn-svelte Integration:** Korrekte Import-Syntax und Verwendung
 - **Praktische Beispiele:** Alle Button-Varianten mit Code-Snippets
 - **Best Practices:** Icon-Positionierung, Accessibility, Responsive Design
-- **Troubleshooting:** Häufige Probleme und Lösungen
+- **Troubleshooting:** HÃ¤ufige Probleme und LÃ¶sungen
 
 #### 3. CSS-Variablen Dokumentation
 
@@ -2359,23 +2413,23 @@ Full Suite: 161 passed | 1 skipped (162 total)
 
 **Korrekte Lucide Import-Syntax:**
 ```typescript
-// ✅ RICHTIG
+// âœ… RICHTIG
 import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 import EditIcon from "@lucide/svelte/icons/edit";
 import SquarePlusIcon from "@lucide/svelte/icons/square-plus";
 
-// ❌ FALSCH
+// âŒ FALSCH
 import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
 ```
 
 ---
 
-### 📝 Documentation Updates
+### ðŸ“ Documentation Updates
 
 #### THEME-BUTTONS.md (NEU - 244 Zeilen)
 
 **Erstellt:** 30. Oktober 2025
-**Status:** ✅ ACTIVE - Vollständiges Theme-Referenzhandbuch
+**Status:** âœ… ACTIVE - VollstÃ¤ndiges Theme-Referenzhandbuch
 
 **Sektionen:**
 1. **CSS-Variablen:** Light + Dark Mode + Card Colors
@@ -2383,33 +2437,33 @@ import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
 3. **shadcn-svelte Verwendung:** Import-Syntax + Varianten + Best Practices
 4. **Praktische Beispiele:** Card, Column, Board Buttons
 5. **Farbanpassung:** Light/Dark Mode Konfiguration
-6. **Troubleshooting:** Häufige Probleme + Lösungen
+6. **Troubleshooting:** HÃ¤ufige Probleme + LÃ¶sungen
 
 #### _INDEX.md Updates
 
-**Neue Einträge:**
-- **Nach Thema:** "🆕 Theme Buttons & UI Guidelines" (25 min)
-- **GUIDES Struktur:** THEME-BUTTONS.md hinzugefügt
+**Neue EintrÃ¤ge:**
+- **Nach Thema:** "ðŸ†• Theme Buttons & UI Guidelines" (25 min)
+- **GUIDES Struktur:** THEME-BUTTONS.md hinzugefÃ¼gt
 - **Learning Resources:** Theme Buttons Guide verlinkt
 
-**File Count Update:** 42 → 43 Dateien (+1 THEME-BUTTONS.md)
+**File Count Update:** 42 â†’ 43 Dateien (+1 THEME-BUTTONS.md)
 
 ---
 
-### ✅ DoD Checklist (DOCUMENTATION-RULES-v3.md Compliance)
+### âœ… DoD Checklist (DOCUMENTATION-RULES-v3.md Compliance)
 
-- ✅ Code-Änderungen implementiert (3 Button-Komponenten)
-- ✅ THEME-BUTTONS.md Dokumentation erstellt (244 Zeilen)
-- ✅ _INDEX.md aktualisiert (2 neue Einträge)
-- ✅ CHANGELOG.md Eintrag hinzugefügt (dieser Eintrag)
-- ✅ CSS-Variablen dokumentiert (aus src/app.css)
-- ✅ Hover-Effekte dokumentiert (alle Varianten)
-- ✅ Icon Import-Syntax standardisiert
-- ✅ shadcn-svelte Patterns konsolidiert
+- âœ… Code-Ã„nderungen implementiert (3 Button-Komponenten)
+- âœ… THEME-BUTTONS.md Dokumentation erstellt (244 Zeilen)
+- âœ… _INDEX.md aktualisiert (2 neue EintrÃ¤ge)
+- âœ… CHANGELOG.md Eintrag hinzugefÃ¼gt (dieser Eintrag)
+- âœ… CSS-Variablen dokumentiert (aus src/app.css)
+- âœ… Hover-Effekte dokumentiert (alle Varianten)
+- âœ… Icon Import-Syntax standardisiert
+- âœ… shadcn-svelte Patterns konsolidiert
 
 ---
 
-### 📊 Statistik
+### ðŸ“Š Statistik
 
 - **Button-Komponenten:** 3 Dateien aktualisiert
 - **Neue Dokumentation:** 1 Datei (244 Zeilen)
@@ -2424,47 +2478,47 @@ import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
 
 **Datum:** 29. Oktober 2025 (Final Cleanup)  
 **Branch:** `card-design`  
-**Status:** ✅ **PHASE 1 100% COMPLETE - Zero Warnings**
+**Status:** âœ… **PHASE 1 100% COMPLETE - Zero Warnings**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Card UI Redesign Phase 1 vollständig implementiert und optimiert:**
-- ✅ Header: Compact (56px), Author-Info ins Popover Menu, Labels mit Badges
-- ✅ Content: Optimiertes Image (80px), Description 2-line Clamp
-- ✅ Footer: Prepared für AvatarStack
-- ✅ CSS: Cleanup complete - 6 alte Selektoren entfernt, 0 Warnings
+**Card UI Redesign Phase 1 vollstÃ¤ndig implementiert und optimiert:**
+- âœ… Header: Compact (56px), Author-Info ins Popover Menu, Labels mit Badges
+- âœ… Content: Optimiertes Image (80px), Description 2-line Clamp
+- âœ… Footer: Prepared fÃ¼r AvatarStack
+- âœ… CSS: Cleanup complete - 6 alte Selektoren entfernt, 0 Warnings
 
-**Timeline:** 45 Minuten vs ~150 Minuten geschätzt = 70% Zeitersparnis ⚡  
-**Compilation:** 0 errors, 0 warnings ✅  
+**Timeline:** 45 Minuten vs ~150 Minuten geschÃ¤tzt = 70% Zeitersparnis âš¡  
+**Compilation:** 0 errors, 0 warnings âœ…  
 **Dev Server:** http://localhost:5174/cardsboard (hot-reload active)
 
 ---
 
-### ✨ Implementierte Features (Phase 1)
+### âœ¨ Implementierte Features (Phase 1)
 
-#### Phase 1.1: Author-Info Popover Menu ✅
+#### Phase 1.1: Author-Info Popover Menu âœ…
 - Removed from header (was taking up space)
 - Moved to Popover dropdown menu
 - Displays: Name + abbreviated pubkey
 - Less clutter in card header
 
-#### Phase 1.2: Labels as Badges ⭐ MOST VISIBLE
+#### Phase 1.2: Labels as Badges â­ MOST VISIBLE
 - **Rendered directly under card title**
 - Max 2 visible labels + "+N" indicator
 - Colored styling: blue theme with auto dark mode
 - **CLEARLY VISIBLE IN UI** (confirmed screenshot)
 
-#### Phase 1.3: Image & Description Optimization ✅
-- Image height: 200px → 80px (60% smaller, more cards visible)
+#### Phase 1.3: Image & Description Optimization âœ…
+- Image height: 200px â†’ 80px (60% smaller, more cards visible)
 - Description: 2-line clamp with ellipsis
 - Better space efficiency
 
-#### Phase 1.4: Footer Restructuring ✅
+#### Phase 1.4: Footer Restructuring âœ…
 - Comment count icon visible
 - Prepared space for AvatarStack component (Phase 2)
 - Better visual hierarchy
 
-### 🧹 CSS Cleanup (Final Optimization)
+### ðŸ§¹ CSS Cleanup (Final Optimization)
 
 **Removed 6 old CSS selectors:**
 1. `.author-info` (author display was inline - moved to menu)
@@ -2477,21 +2531,21 @@ import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
 **Added standard CSS property:**
 - Added `line-clamp: 2` alongside `-webkit-line-clamp: 2` for cross-browser compatibility
 
-**Result:** Compilation: `0 errors and 0 warnings` ✅
+**Result:** Compilation: `0 errors and 0 warnings` âœ…
 
-### 📝 Documentation Updates
+### ðŸ“ Documentation Updates
 
 **CARD-DESIGN.md:** Updated with Phase 1 completion status and zero-warning achievement
 
-### ✅ DoD Checklist (AGENTS.md Compliance)
+### âœ… DoD Checklist (AGENTS.md Compliance)
 
-- ✅ Code changes implemented (Card.svelte CSS + HTML)
-- ✅ CARD-DESIGN.md documentation updated
-- ✅ CHANGELOG.md entry added (this file)
-- ✅ Compilation: 0 errors, 0 warnings verified
-- ✅ Dev server tested and verified working
-- ✅ User confirmed visual changes visible
-- ✅ No regressions (all functionality preserved)
+- âœ… Code changes implemented (Card.svelte CSS + HTML)
+- âœ… CARD-DESIGN.md documentation updated
+- âœ… CHANGELOG.md entry added (this file)
+- âœ… Compilation: 0 errors, 0 warnings verified
+- âœ… Dev server tested and verified working
+- âœ… User confirmed visual changes visible
+- âœ… No regressions (all functionality preserved)
 
 ---
 
@@ -2499,55 +2553,55 @@ import { MessageSquare, Edit, SquarePlus } from "lucide-svelte";
 
 **Datum:** 29. Oktober 2025  
 **Branch:** `refactore-stores`  
-**Status:** ✅ **GOVERNANCE v3.0 ACTIVE**
+**Status:** âœ… **GOVERNANCE v3.0 ACTIVE**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirektionaler Code ↔ Docs Synchronisation.
+VollstÃ¤ndige Implementierung der **Dokumentations-Governance v3.0** mit bidirektionaler Code â†” Docs Synchronisation.
 
-**Impact:** Code ohne Docs-Update → PR wird REJECTED!
+**Impact:** Code ohne Docs-Update â†’ PR wird REJECTED!
 
 ---
 
-### 📚 NEUE GOVERNANCE-REGELN v3.0
+### ðŸ“š NEUE GOVERNANCE-REGELN v3.0
 
 #### Neu: Definition of Done (DoD) Checklist - 11 Punkte MANDATORY
 
-**Regel #6: Code → Docs Synchronisation**
-- ✅ ROADMAP.md MUSS aktualisiert werden bei Code-Änderungen
-- ✅ TESTSUITE/STATUS.md MUSS aktualisiert werden bei Test-Änderungen
-- ✅ CHANGELOG.md MUSS aktualisiert werden bei Features
-- ✅ Feature-Dokumentation MUSS vorhanden sein
-- ✅ ARCHITECTURE/ Docs MÜSSEN aktualisiert werden bei Pattern-Änderungen
-- ✅ _INDEX.md MUSS aktualisiert werden bei neuen Dateien
-- ✅ Veraltete Docs MÜSSEN archiviert werden mit Migration-Notice
+**Regel #6: Code â†’ Docs Synchronisation**
+- âœ… ROADMAP.md MUSS aktualisiert werden bei Code-Ã„nderungen
+- âœ… TESTSUITE/STATUS.md MUSS aktualisiert werden bei Test-Ã„nderungen
+- âœ… CHANGELOG.md MUSS aktualisiert werden bei Features
+- âœ… Feature-Dokumentation MUSS vorhanden sein
+- âœ… ARCHITECTURE/ Docs MÃœSSEN aktualisiert werden bei Pattern-Ã„nderungen
+- âœ… _INDEX.md MUSS aktualisiert werden bei neuen Dateien
+- âœ… Veraltete Docs MÃœSSEN archiviert werden mit Migration-Notice
 
-**Regel #7: Docs → Code Synchronisation**
-- ✅ Dokumentations-Audit bei jedem Docs-Update
-- ✅ Archivierungs-Prozess mit Migration-Notices
-- ✅ Quartalsweise Dokumentations-Reviews (Q1 2026: 01.01.2026)
-- ✅ Code-Konsistenz-Checks
+**Regel #7: Docs â†’ Code Synchronisation**
+- âœ… Dokumentations-Audit bei jedem Docs-Update
+- âœ… Archivierungs-Prozess mit Migration-Notices
+- âœ… Quartalsweise Dokumentations-Reviews (Q1 2026: 01.01.2026)
+- âœ… Code-Konsistenz-Checks
 
-**Enforcement:** PR wird REJECTED wenn DoD nicht erfüllt ist!
+**Enforcement:** PR wird REJECTED wenn DoD nicht erfÃ¼llt ist!
 
 ---
 
-### 🔄 DOKUMENTATIONS-UPDATES
+### ðŸ”„ DOKUMENTATIONS-UPDATES
 
 #### 1. DOCUMENTATION-RULES-v3.md (NEU - 500+ Zeilen)
 
 **Erstellt:** 29. Oktober 2025  
-**Status:** ✅ ACTIVE - Source of Truth für Governance
+**Status:** âœ… ACTIVE - Source of Truth fÃ¼r Governance
 
 **Neue Inhalte:**
-- Regel #6: Code → Docs Sync (11-Punkt DoD Checklist)
-- Regel #7: Docs → Code Sync (Audit-Prozess)
-- Pre-Commit Hook Template (automatisierte Prüfung)
+- Regel #6: Code â†’ Docs Sync (11-Punkt DoD Checklist)
+- Regel #7: Docs â†’ Code Sync (Audit-Prozess)
+- Pre-Commit Hook Template (automatisierte PrÃ¼fung)
 - Archivierungs-Prozess mit Migration-Notices
 - Quartalsweise Dokumentations-Reviews
 - Metriken & KPIs (Sync-Rate, Dead Links, Archiv-Lag)
 - Enforcement & Compliance (Violations-Konsequenzen)
-- Pre-Merge Checklist für Reviewer
+- Pre-Merge Checklist fÃ¼r Reviewer
 
 **Dokumentation:** [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md)
 
@@ -2556,11 +2610,11 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 #### 2. DOCUMENTATION-RULES-v2.md (ARCHIVIERT)
 
 **Archiviert:** 29. Oktober 2025  
-**Status:** DEPRECATED - Migration Guide verfügbar
+**Status:** DEPRECATED - Migration Guide verfÃ¼gbar
 
 **Migration-Notice erstellt mit:**
-- Vollständigem Mapping (Regeln #1-5 bleiben gültig)
-- Link zu v3.0 für neue Regeln #6 und #7
+- VollstÃ¤ndigem Mapping (Regeln #1-5 bleiben gÃ¼ltig)
+- Link zu v3.0 fÃ¼r neue Regeln #6 und #7
 - Hinweis: v2.0 Regeln sind Teil von v3.0 (keine Breaking Changes)
 
 **Dokumentation:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/archive/DOCUMENTATION-RULES-v2.md)
@@ -2570,21 +2624,21 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 #### 3. Cross-Reference Updates (4 Dateien)
 
 **Aktualisierte Dateien:**
-- ✅ `.github/copilot-instructions.md` - Governance-Sektion hinzugefügt (30+ Zeilen)
-- ✅ `AGENTS.md` - v2.0 Sektion durch v3.0 ersetzt (40 → 20 Zeilen)
-- ✅ `docs/COLLABORATION/ROADMAP.md` - 3 Links aktualisiert
-- ✅ `docs/_INDEX.md` - Header, Tabelle, File Tree, File Count aktualisiert
+- âœ… `.github/copilot-instructions.md` - Governance-Sektion hinzugefÃ¼gt (30+ Zeilen)
+- âœ… `AGENTS.md` - v2.0 Sektion durch v3.0 ersetzt (40 â†’ 20 Zeilen)
+- âœ… `docs/COLLABORATION/ROADMAP.md` - 3 Links aktualisiert
+- âœ… `docs/_INDEX.md` - Header, Tabelle, File Tree, File Count aktualisiert
 
 **Link-Konsistenz:**
 - Alle Referenzen zeigen jetzt auf `DOCUMENTATION-RULES-v3.md` (aktiv)
 - Migration-Links zeigen auf `archive/DOCUMENTATION-RULES-v2.md`
-- File Count: 41 → 42 Dateien (+1 DOCUMENTATION-RULES-v3.md)
+- File Count: 41 â†’ 42 Dateien (+1 DOCUMENTATION-RULES-v3.md)
 
 ---
 
-### 📊 METRIKEN & KPIS (NEU in v3.0)
+### ðŸ“Š METRIKEN & KPIS (NEU in v3.0)
 
-**Dokumentations-Qualität messen:**
+**Dokumentations-QualitÃ¤t messen:**
 
 1. **Dokumentations-Sync-Rate**
    - Ziel: > 95%
@@ -2608,20 +2662,20 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 
 ---
 
-### 🚨 ENFORCEMENT & COMPLIANCE
+### ðŸš¨ ENFORCEMENT & COMPLIANCE
 
 **Compliance-Levels:**
 
 | Severity | Violation | Konsequenz |
 |----------|-----------|------------|
-| 🔴 CRITICAL | Code ohne ROADMAP.md Update | PR wird zurückgewiesen |
-| 🔴 CRITICAL | Tests ohne STATUS.md Update | PR wird zurückgewiesen |
-| 🟠 HIGH | Feature ohne Spec | PR braucht Docs-Review |
-| 🟡 MEDIUM | Veraltete Docs nicht archiviert | Technical Debt Issue |
-| 🟡 MEDIUM | Dead Links in _INDEX.md | Fix innerhalb 48h |
+| ðŸ”´ CRITICAL | Code ohne ROADMAP.md Update | PR wird zurÃ¼ckgewiesen |
+| ðŸ”´ CRITICAL | Tests ohne STATUS.md Update | PR wird zurÃ¼ckgewiesen |
+| ðŸŸ  HIGH | Feature ohne Spec | PR braucht Docs-Review |
+| ðŸŸ¡ MEDIUM | Veraltete Docs nicht archiviert | Technical Debt Issue |
+| ðŸŸ¡ MEDIUM | Dead Links in _INDEX.md | Fix innerhalb 48h |
 
-**Pre-Merge Checklist für Reviewer:**
-- [ ] Code-Änderungen vorhanden? → Docs-Check erforderlich
+**Pre-Merge Checklist fÃ¼r Reviewer:**
+- [ ] Code-Ã„nderungen vorhanden? â†’ Docs-Check erforderlich
 - [ ] ROADMAP.md aktualisiert? (Meilenstein, Acceptance Criteria, Versionshistorie)
 - [ ] TESTSUITE/STATUS.md aktualisiert? (Test-Count, Kategorien, Datum)
 - [ ] CHANGELOG.md Eintrag? (Feature, Breaking Changes)
@@ -2630,21 +2684,21 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 
 ---
 
-### 🔗 WICHTIGE LINKS
+### ðŸ”— WICHTIGE LINKS
 
 **Neue Dokumentation:**
-- [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md) - Vollständige v3.0 Regeln
+- [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md) - VollstÃ¤ndige v3.0 Regeln
 - [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/archive/DOCUMENTATION-RULES-v2.md) - Migration-Notice
 
 **Aktualisierte Dateien:**
-- `.github/copilot-instructions.md` - DoD Checklist für AI Agents
+- `.github/copilot-instructions.md` - DoD Checklist fÃ¼r AI Agents
 - `AGENTS.md` - v3.0 Governance-Referenz
 - `docs/COLLABORATION/ROADMAP.md` - v2.5 mit Governance-Milestone
 - `docs/_INDEX.md` - 42 Dateien (vorher 41)
 
 ---
 
-### 📅 TIMELINE
+### ðŸ“… TIMELINE
 
 **Phase 5 (geplant - Automation):**
 - Pre-Commit Hook Implementation (Template vorhanden in v3.0 Docs)
@@ -2652,7 +2706,7 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 - GitHub PR Template mit Docs-Checklist
 - Q1 2026 Review: Metriken messen (01.01.2026)
 
-**Nächste Schritte:**
+**NÃ¤chste Schritte:**
 1. Team-Meeting: v3.0 Regeln vorstellen
 2. DoD Checklist in alle Entwickler-Workflows integrieren
 3. Pre-Commit Hook installieren (Phase 5)
@@ -2660,49 +2714,49 @@ Vollständige Implementierung der **Dokumentations-Governance v3.0** mit bidirek
 
 ---
 
-### 🎉 IMPACT
+### ðŸŽ‰ IMPACT
 
 **Vorher (v2.0):**
-- ❌ Dokumentation oft veraltet
-- ❌ Keine klare Regel für Code-Änderungen
-- ❌ Archivierung wurde vergessen
-- ❌ 5-10 Tage Debugging durch veraltete Docs
+- âŒ Dokumentation oft veraltet
+- âŒ Keine klare Regel fÃ¼r Code-Ã„nderungen
+- âŒ Archivierung wurde vergessen
+- âŒ 5-10 Tage Debugging durch veraltete Docs
 
 **Nachher (v3.0):**
-- ✅ Dokumentation immer aktuell (DoD Checklist erzwingt Updates)
-- ✅ Code-Änderungen sind nachvollziehbar (ROADMAP, TESTSUITE, CHANGELOG)
-- ✅ Archiv-Prozess ist automatisch (Migration-Notices)
-- ✅ Neue Features haben Specs BEVOR Code geschrieben wird
-- ✅ Zeitersparnis: -5 bis -10 Tage Debugging pro Phase!
+- âœ… Dokumentation immer aktuell (DoD Checklist erzwingt Updates)
+- âœ… Code-Ã„nderungen sind nachvollziehbar (ROADMAP, TESTSUITE, CHANGELOG)
+- âœ… Archiv-Prozess ist automatisch (Migration-Notices)
+- âœ… Neue Features haben Specs BEVOR Code geschrieben wird
+- âœ… Zeitersparnis: -5 bis -10 Tage Debugging pro Phase!
 
 ---
 
 ## Version 3.1 - Author Field Attribution & Documentation Consolidation
 
 **Datum:** 23. Oktober 2025  
-**Branch:** `connect-stores` → main  
-**Status:** ✅ **CRITICAL FIXES + DOCUMENTATION COMPLETE**
+**Branch:** `connect-stores` â†’ main  
+**Status:** âœ… **CRITICAL FIXES + DOCUMENTATION COMPLETE**
 
-### 🎯 Zusammenfassung der Änderungen
+### ðŸŽ¯ Zusammenfassung der Ã„nderungen
 
 Zwei kritische Sessions mit umfassenden Fixes:
 
 1. **Session 4:** Root Cause Analysis - Entdeckung, dass `getContextData()` Methoden `author` Felder nicht serialisierten
 2. **Session 5:** 4 kritische Code-Fixes + 6 neue Dokumentations-Dateien + 2 Major Meta-Docs Updates
 
-**Impact:** Author-Felder werden jetzt korrekt für Board, Card und Comment gespeichert und angezeigt
+**Impact:** Author-Felder werden jetzt korrekt fÃ¼r Board, Card und Comment gespeichert und angezeigt
 
 ---
 
-### 🔴 KRITISCHE FIXES (Root Cause: getContextData() Serialisierung)
+### ðŸ”´ KRITISCHE FIXES (Root Cause: getContextData() Serialisierung)
 
 #### Fix 1: Card.getContextData() - Line ~145
 
-**Problem:** Card-Instanzen hatten `author` Feld, aber `getContextData()` gab es nicht zurück
-- ❌ VORHER: `{ id, heading, content, labels, ... }` ← author FEHLT
-- ✅ NACHHER: `{ id, heading, content, labels, author, ... }` ← author zurückgegeben
+**Problem:** Card-Instanzen hatten `author` Feld, aber `getContextData()` gab es nicht zurÃ¼ck
+- âŒ VORHER: `{ id, heading, content, labels, ... }` â† author FEHLT
+- âœ… NACHHER: `{ id, heading, content, labels, author, ... }` â† author zurÃ¼ckgegeben
 
-**Code-Änderung:**
+**Code-Ã„nderung:**
 ```typescript
 getContextData() {
   return {
@@ -2710,30 +2764,30 @@ getContextData() {
     heading: this.heading,
     content: this.content,
     labels: this.labels,
-    author: this.author,  // ← HINZUGEFÜGT
+    author: this.author,  // â† HINZUGEFÃœGT
     // ... weitere Felder ...
   };
 }
 ```
 
-**Impact:** Board-Daten verloren nach Reload ❌ → Vollständige Persistierung ✅
+**Impact:** Board-Daten verloren nach Reload âŒ â†’ VollstÃ¤ndige Persistierung âœ…
 
 ---
 
 #### Fix 2: Board.getContextData() - Line ~373
 
-**Problem:** Board-Instanzen hatten `author` Feld, aber `getContextData()` gab es nicht zurück
-- ❌ VORHER: `{ id, name, columns: [...], ... }` ← author FEHLT
-- ✅ NACHHER: `{ id, name, columns: [...], author, ... }` ← author zurückgegeben
+**Problem:** Board-Instanzen hatten `author` Feld, aber `getContextData()` gab es nicht zurÃ¼ck
+- âŒ VORHER: `{ id, name, columns: [...], ... }` â† author FEHLT
+- âœ… NACHHER: `{ id, name, columns: [...], author, ... }` â† author zurÃ¼ckgegeben
 
-**Code-Änderung:**
+**Code-Ã„nderung:**
 ```typescript
 getContextData() {
   return {
     id: this.id,
     name: this.name,
     columns: this.columns.map(c => c.getContextData()),
-    author: this.author,  // ← HINZUGEFÜGT
+    author: this.author,  // â† HINZUGEFÃœGT
     // ... weitere Felder ...
   };
 }
@@ -2745,234 +2799,234 @@ getContextData() {
 // Zum:  Omit<BoardProps, 'columns'> & { columns: ..., author: string | undefined }
 ```
 
-**Impact:** Board-Author nicht geladen ❌ → Vollständige Persistierung ✅
+**Impact:** Board-Author nicht geladen âŒ â†’ VollstÃ¤ndige Persistierung âœ…
 
 ---
 
 #### Fix 3: reconstructBoard() - Line ~264 in kanbanStore.svelte.ts
 
-**Problem:** Beim Hydrationieren von localStorage wurde `author` Feld für Cards nicht geladen
-- ❌ VORHER: `new Card({ heading, content, labels, ... })` ← author nicht geladen
-- ✅ NACHHER: `new Card({ heading, content, labels, author, ... })` ← author geladen
+**Problem:** Beim Hydrationieren von localStorage wurde `author` Feld fÃ¼r Cards nicht geladen
+- âŒ VORHER: `new Card({ heading, content, labels, ... })` â† author nicht geladen
+- âœ… NACHHER: `new Card({ heading, content, labels, author, ... })` â† author geladen
 
-**Code-Änderung:**
+**Code-Ã„nderung:**
 ```typescript
 // In reconstructBoard() Card-Rekonstruktion:
 const card = new Card({
   heading: cardData.heading,
   content: cardData.content,
   labels: cardData.labels,
-  author: cardData.author,  // ← HINZUGEFÜGT
+  author: cardData.author,  // â† HINZUGEFÃœGT
   // ... weitere Felder ...
 });
 ```
 
-**Impact:** Card-Author weg nach Reload ❌ → Wird korrekt geladen ✅
+**Impact:** Card-Author weg nach Reload âŒ â†’ Wird korrekt geladen âœ…
 
 ---
 
 #### Fix 4: createBoard() & createCard() - Lines ~401, ~716
 
 **Problem:** Neue Boards/Karten bekamen lange Hex-Pubkeys statt lesbarer Namen
-- ❌ VORHER: `author: authStore.getPubkey()` → "0000abc123..." (64 Zeichen)
-- ✅ NACHHER: `author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'` → "Alice" (lesbarer Name)
+- âŒ VORHER: `author: authStore.getPubkey()` â†’ "0000abc123..." (64 Zeichen)
+- âœ… NACHHER: `author: authStore.getUserName() || authStore.getPubkey() || 'anonymous'` â†’ "Alice" (lesbarer Name)
 
-**Code-Änderung (createBoard):**
+**Code-Ã„nderung (createBoard):**
 ```typescript
 public createBoard(name: string, description?: string): string {
   const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
-  //              ↑ userName bevorzugt!
+  //              â†‘ userName bevorzugt!
   
   const board = new Board({
     name,
     description,
-    author  // ← Nutzt Fallback-Kette
+    author  // â† Nutzt Fallback-Kette
   });
   // ...
 }
 ```
 
-**Code-Änderung (createCard):**
+**Code-Ã„nderung (createCard):**
 ```typescript
 public createCard(columnId: string, heading: string): string {
   const author = authStore.getUserName() || authStore.getPubkey() || 'anonymous';
-  //              ↑ userName bevorzugt!
+  //              â†‘ userName bevorzugt!
   
   const column = this.board.findColumn(columnId);
-  const card = new Card({ heading, author });  // ← Nutzt Fallback-Kette
+  const card = new Card({ heading, author });  // â† Nutzt Fallback-Kette
   // ...
 }
 ```
 
-**Impact:** Pubkeys in UI ❌ → Lesbare Namen ✅
+**Impact:** Pubkeys in UI âŒ â†’ Lesbare Namen âœ…
 
 ---
 
 #### Fix 5: CardDetailsDialog.svelte - Comment Author Display
 
 **Problem:** Kommentare zeigten `authStore.getPubkey()` statt lesbarer Namen
-- ❌ VORHER: Kommentar-Autor: "0000abc123..." (Hex)
-- ✅ NACHHER: Kommentar-Autor: "Alice" (lesbarer Name)
+- âŒ VORHER: Kommentar-Autor: "0000abc123..." (Hex)
+- âœ… NACHHER: Kommentar-Autor: "Alice" (lesbarer Name)
 
-**Code-Änderung:**
+**Code-Ã„nderung:**
 ```svelte
 <script>
   import { authStore } from '$lib/stores/authStore.svelte.js';
-  // ← IMPORT HINZUGEFÜGT
+  // â† IMPORT HINZUGEFÃœGT
 </script>
 
 <div class="comment-header">
-  <!-- ❌ FALSCH
+  <!-- âŒ FALSCH
   Von: {authStore.getPubkey()}
   -->
   
-  <!-- ✅ RICHTIG - Fallback-Kette -->
+  <!-- âœ… RICHTIG - Fallback-Kette -->
   Von: {authStore.getUserName() || authStore.getPubkey() || 'anonymous'}
 </div>
 ```
 
-**Impact:** Unverständliche Pubkeys ❌ → Verständliche Namen ✅
+**Impact:** UnverstÃ¤ndliche Pubkeys âŒ â†’ VerstÃ¤ndliche Namen âœ…
 
 ---
 
-### 📊 Serialisierungs-Chain nach Fixes
+### ðŸ“Š Serialisierungs-Chain nach Fixes
 
 **Vorher (Buggy):**
 ```
-Model: board.author = 'Alice' ✓
-    ↓
-getContextData(): { ...properties... } ✗ (author FEHLT!)
-    ↓
-localStorage: "author": null ✗
-    ↓
-After Reload: board.author = undefined ✗ (VERLOREN!)
+Model: board.author = 'Alice' âœ“
+    â†“
+getContextData(): { ...properties... } âœ— (author FEHLT!)
+    â†“
+localStorage: "author": null âœ—
+    â†“
+After Reload: board.author = undefined âœ— (VERLOREN!)
 ```
 
 **Nachher (Fixed):**
 ```
-Model: board.author = 'Alice' ✓
-    ↓
-getContextData(): { ...properties, author: 'Alice' } ✓
-    ↓
-localStorage: "author": "Alice" ✓
-    ↓
-After Reload: board.author = 'Alice' ✓ (WIEDERHERGESTELLT!)
+Model: board.author = 'Alice' âœ“
+    â†“
+getContextData(): { ...properties, author: 'Alice' } âœ“
+    â†“
+localStorage: "author": "Alice" âœ“
+    â†“
+After Reload: board.author = 'Alice' âœ“ (WIEDERHERGESTELLT!)
 ```
 
 ---
 
-### 📚 Neue Dokumentations-Dateien (in /docs)
+### ðŸ“š Neue Dokumentations-Dateien (in /docs)
 
 #### docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md
 **Inhalt (~300 Zeilen):**
-- ✅ Root Cause Analysis (warum author nicht gespeichert wurde)
-- ✅ Alle 4 Code-Fixes mit genauen Line-References
-- ✅ Before/After Code-Vergleiche
-- ✅ Serialisierungs-Flow Diagramm
-- ✅ Testing Procedures
-- ✅ Key Learnings: "Alle $state Felder MÜSSEN in getContextData()"
-- ✅ Future Phase Planning (NIP-07, Nostr Publishing)
+- âœ… Root Cause Analysis (warum author nicht gespeichert wurde)
+- âœ… Alle 4 Code-Fixes mit genauen Line-References
+- âœ… Before/After Code-Vergleiche
+- âœ… Serialisierungs-Flow Diagramm
+- âœ… Testing Procedures
+- âœ… Key Learnings: "Alle $state Felder MÃœSSEN in getContextData()"
+- âœ… Future Phase Planning (NIP-07, Nostr Publishing)
 
 #### docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md
 **Inhalt (~400 Zeilen):**
-- ✅ Quick Start (3-Schritt Setup)
-- ✅ Vollständige AuthStore API Reference
+- âœ… Quick Start (3-Schritt Setup)
+- âœ… VollstÃ¤ndige AuthStore API Reference
   - Methods: `loginWithDummy()`, `loginWithNsec()`, `loginWithNIP07()`, `logout()`
   - Getters: `getUserName()`, `getPubkey()`, `getNpub()`, `isLoggedIn`
   - Session Management: `saveSession()`, `restoreSession()`
-- ✅ localStorage Format Dokumentation
-- ✅ SSR-Safety Patterns (`typeof window` Checks)
-- ✅ Integration mit BoardStore (Author-Attribution)
-- ✅ Testing Checklist
-- ✅ Phase 2 Planning (NIP-07 Browser Extension)
-- ✅ Security Notes (Private Keys NIE in Storage!)
-- ✅ Common Errors & Solutions
-- ✅ Full Working Example (Login + Board + Comments)
+- âœ… localStorage Format Dokumentation
+- âœ… SSR-Safety Patterns (`typeof window` Checks)
+- âœ… Integration mit BoardStore (Author-Attribution)
+- âœ… Testing Checklist
+- âœ… Phase 2 Planning (NIP-07 Browser Extension)
+- âœ… Security Notes (Private Keys NIE in Storage!)
+- âœ… Common Errors & Solutions
+- âœ… Full Working Example (Login + Board + Comments)
 
 ---
 
-### 🔧 Updates zu bestehenden Meta-Docs
+### ðŸ”§ Updates zu bestehenden Meta-Docs
 
 #### AGENTS.md - Neue Sections X & XI
 
 **Section X: getContextData() Serialisierung Pattern**
-- ✅ 200+ Zeilen mit vollständiger Dokumentation
-- ✅ Rule: "Alle öffentlichen $state Felder MÜSSEN in getContextData() sein"
-- ✅ Serialisierungs-Kette Diagram
-- ✅ Praktisches Beispiel: author Field Fix
-- ✅ Impact Analysis & Warum Kritisch
-- ✅ Checkliste für neue Felder
+- âœ… 200+ Zeilen mit vollstÃ¤ndiger Dokumentation
+- âœ… Rule: "Alle Ã¶ffentlichen $state Felder MÃœSSEN in getContextData() sein"
+- âœ… Serialisierungs-Kette Diagram
+- âœ… Praktisches Beispiel: author Field Fix
+- âœ… Impact Analysis & Warum Kritisch
+- âœ… Checkliste fÃ¼r neue Felder
 
 **Section XI: Author Attribution & Benutzer-Kontext**
-- ✅ 150+ Zeilen mit Implementierungs-Details
-- ✅ Fallback-Kette: getUserName() → getPubkey() → 'anonymous'
-- ✅ Wo author zugewiesen wird (createBoard, createCard, comments)
-- ✅ Wo author angezeigt wird (UI Components)
-- ✅ AuthStore Integration Reference
+- âœ… 150+ Zeilen mit Implementierungs-Details
+- âœ… Fallback-Kette: getUserName() â†’ getPubkey() â†’ 'anonymous'
+- âœ… Wo author zugewiesen wird (createBoard, createCard, comments)
+- âœ… Wo author angezeigt wird (UI Components)
+- âœ… AuthStore Integration Reference
 
 #### copilot-instructions.md - Neue Sections 21 & 22
 
 **Section 21: CRITICAL getContextData() Pattern**
-- ✅ 150+ Zeilen Rules & Violations
-- ✅ Real-World Beispiel: author Field Bug-Fix
-- ✅ Violation Detection Patterns
-- ✅ Enforcement Checklist
-- ✅ FAQ: Warum Felder verschwinden
+- âœ… 150+ Zeilen Rules & Violations
+- âœ… Real-World Beispiel: author Field Bug-Fix
+- âœ… Violation Detection Patterns
+- âœ… Enforcement Checklist
+- âœ… FAQ: Warum Felder verschwinden
 
 **Section 22: Author Attribution Pattern**
-- ✅ 100+ Zeilen mit Fallback-Kette
-- ✅ Wo author zugewiesen wird (Store Methods)
-- ✅ Wo author angezeigt wird (UI Components)
-- ✅ Auth-Integration mit LeftSidebarFooter
-- ✅ SSR-Safe Storage Patterns
+- âœ… 100+ Zeilen mit Fallback-Kette
+- âœ… Wo author zugewiesen wird (Store Methods)
+- âœ… Wo author angezeigt wird (UI Components)
+- âœ… Auth-Integration mit LeftSidebarFooter
+- âœ… SSR-Safe Storage Patterns
 
 ---
 
-### ✅ Validation & Testing
+### âœ… Validation & Testing
 
 | Check | Status | Details |
 |-------|--------|---------|
-| TypeScript Compilation | ✅ | `pnpm run check`: 0 errors, 0 warnings |
-| localStorage Test | ✅ | `board.author` = "Dev User" (not null, not pubkey) |
-| Browser Console Test | ✅ | Card author visible in devtools storage |
-| After-Reload Test | ✅ | board.author persists across F5 reload |
-| Comment Author Test | ✅ | Shows "Alice" not "0000..." |
-| New Card Author Test | ✅ | Auto-assigned from authStore.getUserName() |
-| All 4 Fixes Verified | ✅ | Each fix individually tested |
+| TypeScript Compilation | âœ… | `pnpm run check`: 0 errors, 0 warnings |
+| localStorage Test | âœ… | `board.author` = "Dev User" (not null, not pubkey) |
+| Browser Console Test | âœ… | Card author visible in devtools storage |
+| After-Reload Test | âœ… | board.author persists across F5 reload |
+| Comment Author Test | âœ… | Shows "Alice" not "0000..." |
+| New Card Author Test | âœ… | Auto-assigned from authStore.getUserName() |
+| All 4 Fixes Verified | âœ… | Each fix individually tested |
 
 ---
 
-### 📋 Dateien Modifiziert
+### ðŸ“‹ Dateien Modifiziert
 
-| Datei | Änderung | Status |
+| Datei | Ã„nderung | Status |
 |-------|----------|--------|
-| `src/lib/classes/BoardModel.ts` | 2 Fixes (Card + Board getContextData Line ~145, ~373) | ✅ |
-| `src/lib/stores/kanbanStore.svelte.ts` | 3 Fixes (reconstructBoard ~264, createBoard ~401, createCard ~716) | ✅ |
-| `src/routes/cardsboard/CardDetailsDialog.svelte` | 1 Fix (comment author display) | ✅ |
-| `AGENTS.md` | 2 neue Sections X & XI (~350 Zeilen) | ✅ |
-| `copilot-instructions.md` | 2 neue Sections 21 & 22 (~250 Zeilen) | ✅ |
-| `docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md` | NEW (~300 Zeilen) | ✅ |
-| `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md` | NEW (~400 Zeilen) | ✅ |
+| `src/lib/classes/BoardModel.ts` | 2 Fixes (Card + Board getContextData Line ~145, ~373) | âœ… |
+| `src/lib/stores/kanbanStore.svelte.ts` | 3 Fixes (reconstructBoard ~264, createBoard ~401, createCard ~716) | âœ… |
+| `src/routes/cardsboard/CardDetailsDialog.svelte` | 1 Fix (comment author display) | âœ… |
+| `AGENTS.md` | 2 neue Sections X & XI (~350 Zeilen) | âœ… |
+| `copilot-instructions.md` | 2 neue Sections 21 & 22 (~250 Zeilen) | âœ… |
+| `docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md` | NEW (~300 Zeilen) | âœ… |
+| `docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md` | NEW (~400 Zeilen) | âœ… |
 
 ---
 
-### 🎯 Key Learnings für Zukünftige Development
+### ðŸŽ¯ Key Learnings fÃ¼r ZukÃ¼nftige Development
 
 **Pattern: getContextData() Serialisierung**
 ```
-REGEL: Alle $state Felder auf Model-Klassen MÜSSEN in getContextData() sein!
+REGEL: Alle $state Felder auf Model-Klassen MÃœSSEN in getContextData() sein!
 
 Wenn Feld fehlt:
-- ❌ localStorage hat null/undefined
-- ❌ Nach Browser-Reload ist Feld weg
-- ❌ Benutzer-Daten verloren
-- ❌ Nostr Events unvollständig
+- âŒ localStorage hat null/undefined
+- âŒ Nach Browser-Reload ist Feld weg
+- âŒ Benutzer-Daten verloren
+- âŒ Nostr Events unvollstÃ¤ndig
 
-Checklist für neue Felder:
+Checklist fÃ¼r neue Felder:
 1. Definiere auf Klasse (public field?: string)
-2. Füge zu Props-Interface hinzu
+2. FÃ¼ge zu Props-Interface hinzu
 3. Setze im Constructor
-4. WICHTIG: Füge zu getContextData() hinzu
+4. WICHTIG: FÃ¼ge zu getContextData() hinzu
 5. Update Return-Type Dokumentation
 6. In reconstructBoard() laden
 ```
@@ -2985,37 +3039,37 @@ const author = authStore.getUserName()    // 1. Best: Readable name
   || 'anonymous';                         // 3. Last resort
 
 NIEMALS:
-const author = authStore.getPubkey();     // ❌ Zeigt Hex, nicht Name!
+const author = authStore.getPubkey();     // âŒ Zeigt Hex, nicht Name!
 ```
 
 ---
 
-### 🚀 Nächste Schritte
+### ðŸš€ NÃ¤chste Schritte
 
 **Phase 1.5: Export/Import Feature (auf Basis dieser Fixes)**
-- Nutzt `getContextData()` Serialisierung vollständig
-- Boards können exportiert/importiert werden
-- Round-Trip Testing: export → import → export (sollte identisch sein)
+- Nutzt `getContextData()` Serialisierung vollstÃ¤ndig
+- Boards kÃ¶nnen exportiert/importiert werden
+- Round-Trip Testing: export â†’ import â†’ export (sollte identisch sein)
 
 **Phase 2: NIP-07 Integration (nutzt AuthStore)**
-- Browser Extension für Signing
+- Browser Extension fÃ¼r Signing
 - Private Keys NIE lokal speichern
 - Nutzt `authStore.getPubkey()` for Nostr Events
 
 **Phase 3: Nostr Publishing (nutzt Board.author, Card.author)**
 - Events haben korrekte author/creator Tags
-- Audit Trail für alle Änderungen
+- Audit Trail fÃ¼r alle Ã„nderungen
 - Multi-User Support
 
 ---
 
-### 📊 Statistik
+### ðŸ“Š Statistik
 
 - **Code Fixes:** 5 kritische Fixes
 - **Neue Docs:** 2 permanent architektur-Dateien (~700 Zeilen)
 - **Meta-Docs Updates:** 2 Major Dokumente (~600 neue Zeilen)
 - **Total Value:** Monateslange Debugging verhindert
-- **Build Status:** ✅ 0 Errors, ✅ All Tests Pass
+- **Build Status:** âœ… 0 Errors, âœ… All Tests Pass
 
 ---
 
@@ -3023,51 +3077,51 @@ const author = authStore.getPubkey();     // ❌ Zeigt Hex, nicht Name!
 
 **Datum:** 23. Oktober 2025  
 **Branch:** `feature/comments`  
-**Status:** ✅ **PHASE A+B PRODUCTION-READY**
+**Status:** âœ… **PHASE A+B PRODUCTION-READY**
 
-### Zusammenfassung der Änderungen
+### Zusammenfassung der Ã„nderungen
 
 Der `feature/comments` Branch implementiert das **Meilenstein 1.3 Kommentar-System** mit:
-- ✅ **Phase A:** UI-Formular mit Kommentar-Eingabe (DONE)
-- ✅ **Phase B:** Reaktivitätskette & Persistierung (DONE)
-- ✅ **Bonus:** Debugging-Features für localStorage-Tests
-- ✅ **Bonus:** TypeScript-Fehlerbehandlung für shadcn-svelte Components
+- âœ… **Phase A:** UI-Formular mit Kommentar-Eingabe (DONE)
+- âœ… **Phase B:** ReaktivitÃ¤tskette & Persistierung (DONE)
+- âœ… **Bonus:** Debugging-Features fÃ¼r localStorage-Tests
+- âœ… **Bonus:** TypeScript-Fehlerbehandlung fÃ¼r shadcn-svelte Components
 
 ---
 
-### 📝 Implementierte Features
+### ðŸ“ Implementierte Features
 
-#### 1. UI-Formular für Kommentare (Phase A) ✅
+#### 1. UI-Formular fÃ¼r Kommentare (Phase A) âœ…
 
 **Datei:** `src/routes/cardsboard/CardDetailsDialog.svelte`
 
-- Textarea für Kommentar-Input mit Validierung
+- Textarea fÃ¼r Kommentar-Input mit Validierung
 - Kommentare-Liste mit Scroll-Bereich
-- Delete-Button für jeden Kommentar
+- Delete-Button fÃ¼r jeden Kommentar
 - Loading-State mit animiertem Spinner
 - Icons: `SendIcon`, `TrashIcon`, `LoaderIcon` (korrekte `@lucide/svelte/icons/*` Syntax)
 - Datumsanzeige (lokalisiert auf Deutsch)
 - Empty-State: "Keine Kommentare vorhanden"
 
-**Funktionalität:**
+**FunktionalitÃ¤t:**
 ```typescript
-// Kommentar hinzufügen mit Auto-Reset
+// Kommentar hinzufÃ¼gen mit Auto-Reset
 await boardStore.addComment(cardId, commentText, 'anonymous');
 commentText = ''; // Auto-Clear nach erfolreichem Absenden
 
-// Kommentar löschen mit Bestätigung
+// Kommentar lÃ¶schen mit BestÃ¤tigung
 await boardStore.deleteComment(cardId, commentId);
 ```
 
 ---
 
-#### 2. Reaktivitätskette (Phase B) ✅
+#### 2. ReaktivitÃ¤tskette (Phase B) âœ…
 
 **Dateien:** `src/lib/stores/kanbanStore.svelte.ts`, `src/routes/cardsboard/Card.svelte`
 
-**Problem (FIXED):** Kommentar-Anzahl wurde nicht aktualisiert bei Änderungen
+**Problem (FIXED):** Kommentar-Anzahl wurde nicht aktualisiert bei Ã„nderungen
 
-**Lösung - 4 Teile:**
+**LÃ¶sung - 4 Teile:**
 
 a) **kanbanStore.svelte.ts - Dependency Tracking erweitern**
    - Direkter Zugriff auf `card.comments` Arrays in `uiData` $derived
@@ -3078,8 +3132,8 @@ b) **Card.svelte - Lokale Kommentare State**
    let localComments = $state(card.comments || []);
    ```
 
-c) **Card.svelte - $effect für Kommentar-Sync**
-   - Vergleicht Comments via JSON für Änderungserkennung
+c) **Card.svelte - $effect fÃ¼r Kommentar-Sync**
+   - Vergleicht Comments via JSON fÃ¼r Ã„nderungserkennung
    - Aktualisiert nur lokale State (nicht Prop)
 
 d) **Template - localComments verwenden**
@@ -3089,22 +3143,22 @@ d) **Template - localComments verwenden**
    </div>
    ```
 
-**Reaktivitätskette:**
+**ReaktivitÃ¤tskette:**
 ```
 boardStore.addComment()
-  → card.addComment() (Model)
-  → triggerUpdate() [CRITICAL]
-  → updateTrigger++ ($state)
-  → uiData $derived recalculated
-  → Card.svelte $effect triggered
-  → localComments updated
-  → Template re-renders ✅
-  → localStorage saved ✅
+  â†’ card.addComment() (Model)
+  â†’ triggerUpdate() [CRITICAL]
+  â†’ updateTrigger++ ($state)
+  â†’ uiData $derived recalculated
+  â†’ Card.svelte $effect triggered
+  â†’ localComments updated
+  â†’ Template re-renders âœ…
+  â†’ localStorage saved âœ…
 ```
 
 ---
 
-#### 3. Debugging-Feature: localStorage Test-Helper ✅
+#### 3. Debugging-Feature: localStorage Test-Helper âœ…
 
 **Datei:** `src/lib/stores/kanbanStore.svelte.ts`
 
@@ -3134,13 +3188,13 @@ board.columns.forEach(col => {
 
 ---
 
-#### 4. TypeScript-Fehlerbehandlung ✅
+#### 4. TypeScript-Fehlerbehandlung âœ…
 
 **Datei:** `tsconfig.json`
 
 **Problem:** `pnpm tsc --noEmit` scheiterte bei shadcn-svelte Export-Statements in `index.ts` Dateien
 
-**Lösung:**
+**LÃ¶sung:**
 ```json
 {
   "compilerOptions": {
@@ -3153,50 +3207,50 @@ board.columns.forEach(col => {
 ```
 
 **Ergebnis:**
-- ✅ `pnpm run check` (svelte-check): 0 errors ✅
-- ✅ `pnpm tsc --noEmit`: 0 errors ✅
-- ✅ `pnpm run build`: Funktioniert einwandfrei ✅
+- âœ… `pnpm run check` (svelte-check): 0 errors âœ…
+- âœ… `pnpm tsc --noEmit`: 0 errors âœ…
+- âœ… `pnpm run build`: Funktioniert einwandfrei âœ…
 
 ---
 
-### 📊 Build & Test Status
+### ðŸ“Š Build & Test Status
 
 | Command | Status | Details |
 |---------|--------|---------|
-| `pnpm run check` | ✅ PASS | 0 errors, 0 warnings |
-| `pnpm tsc --noEmit` | ✅ PASS | 0 errors (nach tsconfig.json Fix) |
-| `pnpm run build` | ✅ PASS | Build erfolgreich |
-| `pnpm run lint` | ✅ PASS | 0 linting errors |
+| `pnpm run check` | âœ… PASS | 0 errors, 0 warnings |
+| `pnpm tsc --noEmit` | âœ… PASS | 0 errors (nach tsconfig.json Fix) |
+| `pnpm run build` | âœ… PASS | Build erfolgreich |
+| `pnpm run lint` | âœ… PASS | 0 linting errors |
 
 ---
 
-### 📋 Acceptance Criteria (Meilenstein 1.3)
+### ðŸ“‹ Acceptance Criteria (Meilenstein 1.3)
 
 | Kriterium | Status | Details |
 |-----------|--------|---------|
-| UI-Formular implementiert | ✅ | CardDetailsDialog.svelte mit vollständiger Funktionalität |
-| Kommentare persistent (localStorage) | ✅ | triggerUpdate() integriert, saveToStorage() funktioniert |
-| Reaktivität funktioniert | ✅ | Kommentar-Anzahl aktualisiert sofort |
-| Tests durchgeführt | ✅ | Manuelle Tests in Browser bestätigt |
-| TypeScript strict mode | ✅ | Keine Type-Fehler |
-| Compliance Regeln | ✅ | 15/15 copilot-instructions erfüllt |
-| Kommentare-Reaktivität | ✅ | Comments werden sofort nach Hinzufügen/Löschen aktualisiert |
-| localStorage bei Reload | ✅ | Kommentare bleiben nach F5-Reload sichtbar |
+| UI-Formular implementiert | âœ… | CardDetailsDialog.svelte mit vollstÃ¤ndiger FunktionalitÃ¤t |
+| Kommentare persistent (localStorage) | âœ… | triggerUpdate() integriert, saveToStorage() funktioniert |
+| ReaktivitÃ¤t funktioniert | âœ… | Kommentar-Anzahl aktualisiert sofort |
+| Tests durchgefÃ¼hrt | âœ… | Manuelle Tests in Browser bestÃ¤tigt |
+| TypeScript strict mode | âœ… | Keine Type-Fehler |
+| Compliance Regeln | âœ… | 15/15 copilot-instructions erfÃ¼llt |
+| Kommentare-ReaktivitÃ¤t | âœ… | Comments werden sofort nach HinzufÃ¼gen/LÃ¶schen aktualisiert |
+| localStorage bei Reload | âœ… | Kommentare bleiben nach F5-Reload sichtbar |
 
 ---
 
-### 🔄 Dateien modifiziert
+### ðŸ”„ Dateien modifiziert
 
-| Datei | Änderung | Zeilen | Status |
+| Datei | Ã„nderung | Zeilen | Status |
 |-------|----------|--------|--------|
-| `src/lib/stores/kanbanStore.svelte.ts` | Dependency Tracking + window.CURRENT_KANBAN_BOARD_ID | +20 | ✅ |
-| `src/routes/cardsboard/Card.svelte` | localComments State + $effect Sync | +15 | ✅ |
-| `tsconfig.json` | TypeScript Konfiguration für shadcn-svelte | +8 | ✅ |
-| `docs/FEATURE/COMMENTS.md` | Vollständige Feature-Dokumentation | +569 | ✅ |
+| `src/lib/stores/kanbanStore.svelte.ts` | Dependency Tracking + window.CURRENT_KANBAN_BOARD_ID | +20 | âœ… |
+| `src/routes/cardsboard/Card.svelte` | localComments State + $effect Sync | +15 | âœ… |
+| `tsconfig.json` | TypeScript Konfiguration fÃ¼r shadcn-svelte | +8 | âœ… |
+| `docs/FEATURE/COMMENTS.md` | VollstÃ¤ndige Feature-Dokumentation | +569 | âœ… |
 
 ---
 
-### 🚀 Phase C-E (Geplant)
+### ðŸš€ Phase C-E (Geplant)
 
 - **Phase C:** AuthStore Integration (echte Nostr pubkeys)
 - **Phase D:** Nostr Kind 1 Events Publishing
@@ -3209,22 +3263,22 @@ board.columns.forEach(col => {
 **Datum:** 17. Oktober 2025  
 **Version:** 2.0
 
-### Zusammenfassung der Änderungen
+### Zusammenfassung der Ã„nderungen
 
-Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, um die Nostr-Integration, Offline-Funktionalität und das Kommentar-System vollständig zu spezifizieren.
+Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, um die Nostr-Integration, Offline-FunktionalitÃ¤t und das Kommentar-System vollstÃ¤ndig zu spezifizieren.
 
 ---
 
 ## Neue Sektionen
 
-### ✅ V.1 Nostr-Integration (erweitert)
+### âœ… V.1 Nostr-Integration (erweitert)
 
-**Was wurde hinzugefügt:**
+**Was wurde hinzugefÃ¼gt:**
 
 1. **Event-Mapping Tabelle**
-   - Klare Zuordnung: Klasse → Nostr Event Kind
-   - Board → 30301, Card → 30302, Comment → 1
-   - `publishState` → Custom Tag `["state", "draft|published|archived"]`
+   - Klare Zuordnung: Klasse â†’ Nostr Event Kind
+   - Board â†’ 30301, Card â†’ 30302, Comment â†’ 1
+   - `publishState` â†’ Custom Tag `["state", "draft|published|archived"]`
 
 2. **Event-Serialisierung Spezifikation**
    - Neue Datei: `src/lib/utils/nostrEvents.ts`
@@ -3232,19 +3286,19 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
      - `boardToNostrEvent()` / `nostrEventToBoard()`
      - `cardToNostrEvent()` / `nostrEventToCard()`
      - `createCommentEvent()`
-   - Vollständige Beispiel-Implementierung für `boardToNostrEvent()`
+   - VollstÃ¤ndige Beispiel-Implementierung fÃ¼r `boardToNostrEvent()`
 
 **Dateien betroffen:**
 - NEU: `src/lib/utils/nostrEvents.ts`
 
 ---
 
-### ✅ VI. Offline-First Strategie & Synchronisation (NEU)
+### âœ… VI. Offline-First Strategie & Synchronisation (NEU)
 
-**Was wurde hinzugefügt:**
+**Was wurde hinzugefÃ¼gt:**
 
 1. **Architektur-Diagramm**
-   - Visualisierung der Layer: UI → BoardStore → SyncManager → NDK → Relays
+   - Visualisierung der Layer: UI â†’ BoardStore â†’ SyncManager â†’ NDK â†’ Relays
    - Klare Separation of Concerns
 
 2. **Sync Manager Implementierung**
@@ -3254,7 +3308,7 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
      - Online/Offline Detection
      - Automatischer Retry-Mechanismus
      - `publishOrQueue()` API
-   - **Vollständige Code-Implementierung** (~150 Zeilen)
+   - **VollstÃ¤ndige Code-Implementierung** (~150 Zeilen)
 
 3. **BoardStore Integration**
    - Erweiterung um SyncManager
@@ -3262,7 +3316,7 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
      - `publishCardUpdate()`
      - `loadFromNostr()`
      - `subscribeToUpdates()`
-   - Live-Subscriptions für Echtzeit-Updates
+   - Live-Subscriptions fÃ¼r Echtzeit-Updates
 
 4. **Conflict Resolution Strategie**
    - Last-Write-Wins (Standard)
@@ -3279,26 +3333,26 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
 
 ---
 
-### ✅ VII. Kommentar-System Spezifikation (NEU)
+### âœ… VII. Kommentar-System Spezifikation (NEU)
 
-**Was wurde hinzugefügt:**
+**Was wurde hinzugefÃ¼gt:**
 
 1. **Architektur-Entscheidung**
    - Kommentare als separate Nostr Events (Kind 1)
-   - Vorteile dokumentiert (Kompatibilität, Timeline, Reactions)
+   - Vorteile dokumentiert (KompatibilitÃ¤t, Timeline, Reactions)
 
 2. **Event-Struktur**
-   - Tags: `e`, `p`, `a`-tag für Card-Referenz
-   - Alternative: NIP-22 (Kind 42) erwähnt
+   - Tags: `e`, `p`, `a`-tag fÃ¼r Card-Referenz
+   - Alternative: NIP-22 (Kind 42) erwÃ¤hnt
 
 3. **Card-Klasse Erweiterung**
    - Neue Properties: `eventId`, `author`
    - Neue Methoden:
-     - `loadCommentsFromNostr(ndk)` - Lädt alle Kommentare
+     - `loadCommentsFromNostr(ndk)` - LÃ¤dt alle Kommentare
      - `addCommentToNostr(ndk, text)` - Erstellt Kommentar auf Nostr
-     - `deleteCommentFromNostr(ndk, id)` - Löscht Kommentar (NIP-09)
+     - `deleteCommentFromNostr(ndk, id)` - LÃ¶scht Kommentar (NIP-09)
      - `subscribeToComments(ndk, callback)` - Live-Updates
-   - **Vollständige Code-Implementierung** (~100 Zeilen)
+   - **VollstÃ¤ndige Code-Implementierung** (~100 Zeilen)
 
 4. **BoardStore Integration**
    - Neue Methoden:
@@ -3308,7 +3362,7 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
    - Fehlerbehandlung mit Fallback
 
 5. **UI-Integration Beispiel**
-   - Vollständiges `Card.svelte` Code-Beispiel
+   - VollstÃ¤ndiges `Card.svelte` Code-Beispiel
    - Comment-Loading mit `$effect`
    - Add/Delete Comment Handling
 
@@ -3319,17 +3373,17 @@ Die `AGENTS.md` Spezifikation wurde um **vier kritische Sektionen** erweitert, u
 
 ---
 
-### ✅ VIII. Test-Suite (umbenannt von VI)
+### âœ… VIII. Test-Suite (umbenannt von VI)
 
-**Was wurde geändert:**
+**Was wurde geÃ¤ndert:**
 
 1. **Sektion umbenannt** von "VI" zu "VIII" (Nummerierung angepasst)
 
-2. **Erweiterte Tests hinzugefügt**
+2. **Erweiterte Tests hinzugefÃ¼gt**
    - Nostr Event Serialization Tests
    - Offline Queue Simulation
    - Comment System Tests
-   - Vollständige Code-Beispiele
+   - VollstÃ¤ndige Code-Beispiele
 
 3. **Testabdeckung**
    - Bestehende Tests: Board, Column, Card, AI
@@ -3346,8 +3400,8 @@ Die Tabelle in "V. Zu liefernde Dateien" wurde erweitert um:
 
 | Neue Datei | Beschreibung | Status |
 |------------|-------------|--------|
-| `src/lib/utils/nostrEvents.ts` | Event Serialization/Deserialization | ❌ |
-| `src/lib/stores/syncManager.ts` | Offline-Sync Manager | ❌ |
+| `src/lib/utils/nostrEvents.ts` | Event Serialization/Deserialization | âŒ |
+| `src/lib/stores/syncManager.ts` | Offline-Sync Manager | âŒ |
 
 ---
 
@@ -3358,7 +3412,7 @@ Die Tabelle in "V. Zu liefernde Dateien" wurde erweitert um:
 - **Nostr Events:** ~200 Zeilen Code (Serialization)
 - **Sync Manager:** ~150 Zeilen Code (Queue, Retry, Online-Detection)
 - **Kommentar-System:** ~150 Zeilen Code (Card-Erweiterung + Store-Integration)
-- **Tests:** ~50 Zeilen zusätzliche Tests
+- **Tests:** ~50 Zeilen zusÃ¤tzliche Tests
 
 **Gesamt:** ~550 Zeilen neue Spezifikation
 
@@ -3371,15 +3425,15 @@ Keine neuen NPM-Pakete erforderlich. Verwendet bestehende:
 
 ---
 
-## Architektur-Änderungen
+## Architektur-Ã„nderungen
 
 ### Vorher (AGENTS.md v1.0):
 
 ```
 UI Components
-    ↓
+    â†“
 BoardStore ($state)
-    ↓
+    â†“
 BoardModel Classes
 ```
 
@@ -3387,34 +3441,34 @@ BoardModel Classes
 
 ```
 UI Components
-    ↓
+    â†“
 BoardStore ($state)
-    ↓                    ↓
+    â†“                    â†“
 BoardModel Classes    SyncManager
-    ↓                    ↓
-Nostr Events ←→ Event Queue (IndexedDB)
-    ↓
-NDK → Nostr Relays
+    â†“                    â†“
+Nostr Events â†â†’ Event Queue (IndexedDB)
+    â†“
+NDK â†’ Nostr Relays
 ```
 
 ---
 
 ## Breaking Changes
 
-**Keine Breaking Changes** für bestehenden Code.
+**Keine Breaking Changes** fÃ¼r bestehenden Code.
 
 Alle Erweiterungen sind **additiv**:
-- Neue Dateien hinzugefügt
+- Neue Dateien hinzugefÃ¼gt
 - Bestehende Klassen erweitert (backward-compatible)
 - Neue optionale Methoden
 
 ---
 
-## Nächste Schritte für Entwickler
+## NÃ¤chste Schritte fÃ¼r Entwickler
 
 ### Phase 1: Nostr Events (1-2 Tage)
 1. `src/lib/utils/nostrEvents.ts` implementieren
-2. Tests für Serialization schreiben
+2. Tests fÃ¼r Serialization schreiben
 3. Mit echten Nostr-Events testen
 
 ### Phase 2: Sync Manager (2-3 Tage)
@@ -3430,33 +3484,33 @@ Alle Erweiterungen sind **additiv**:
 ### Phase 4: Kommentar-System (1-2 Tage)
 1. Card-Klasse um Nostr-Methoden erweitern
 2. BoardStore Comment-API implementieren
-3. UI für Kommentare bauen
+3. UI fÃ¼r Kommentare bauen
 
 ### Phase 5: Testing (1 Tag)
 1. Erweiterte Test-Suite implementieren
-2. Offline-Tests durchführen
+2. Offline-Tests durchfÃ¼hren
 3. Multi-Device Sync testen
 
-**Geschätzte Gesamtdauer:** 7-10 Arbeitstage
+**GeschÃ¤tzte Gesamtdauer:** 7-10 Arbeitstage
 
 ---
 
 ## Dokumentations-Updates
 
 ### Neue Dateien erstellt:
-- ✅ `NDK.md` - Vollständige NDK-Integration Dokumentation
-- ✅ `ANALYSE.md` - Codebase-Analyse & Roadmap
-- ✅ `CHANGELOG.md` - Dieses Dokument
+- âœ… `NDK.md` - VollstÃ¤ndige NDK-Integration Dokumentation
+- âœ… `ANALYSE.md` - Codebase-Analyse & Roadmap
+- âœ… `CHANGELOG.md` - Dieses Dokument
 
 ### Aktualisierte Dateien:
-- ✅ `AGENTS.md` - Erweiterte Spezifikation
-- ⏳ `README.md` - Sollte aktualisiert werden mit Hinweisen auf neue Docs
+- âœ… `AGENTS.md` - Erweiterte Spezifikation
+- â³ `README.md` - Sollte aktualisiert werden mit Hinweisen auf neue Docs
 
 ---
 
 ## Referenzen
 
-- [AGENTS.md](./AGENTS.md) - Vollständige Spezifikation
+- [AGENTS.md](./AGENTS.md) - VollstÃ¤ndige Spezifikation
 - [NDK.md](./NDK.md) - NDK Integration Guide
 - [Kanban-NIP.md](./Kanban-NIP.md) - Nostr Event Schema
 - [ANALYSE.md](./ANALYSE.md) - Status & Roadmap
@@ -3475,27 +3529,27 @@ Alle Erweiterungen sind **additiv**:
 Gleiche Lizenz wie das Hauptprojekt.
 
 
-## Version 3.5 - Theme für alle Routes aktiviert
+## Version 3.5 - Theme fÃ¼r alle Routes aktiviert
 
 **Datum:** 30. Oktober 2025  
 **Branch:** `theme-all-routes`  
-**Status:** ✅ **THEME COVERAGE COMPLETE**
+**Status:** âœ… **THEME COVERAGE COMPLETE**
 
-### 🎯 Zusammenfassung
+### ðŸŽ¯ Zusammenfassung
 
-**Vollständige Theme-Aktivierung für alle Routes:**
-- ✅ Main Page (+page.svelte) - Auth Buttons & Profile
-- ✅ Test Suite (test/+page.svelte) - Test Execution Buttons  
-- ✅ AuthStore Tests (test/authstore/+page.svelte) - Auth Test Buttons
-- ✅ Settings Tests (test/settings/+page.svelte) - Config & Debug Buttons
-- ✅ Merge Tests (test/merge/+page.svelte) - Conflict Resolution Buttons
+**VollstÃ¤ndige Theme-Aktivierung fÃ¼r alle Routes:**
+- âœ… Main Page (+page.svelte) - Auth Buttons & Profile
+- âœ… Test Suite (test/+page.svelte) - Test Execution Buttons  
+- âœ… AuthStore Tests (test/authstore/+page.svelte) - Auth Test Buttons
+- âœ… Settings Tests (test/settings/+page.svelte) - Config & Debug Buttons
+- âœ… Merge Tests (test/merge/+page.svelte) - Conflict Resolution Buttons
 
-**Impact:** Theme-System jetzt auf **allen Routes** aktiv ⚡  
-**Documentation:** THEME-BUTTONS.md erweitert mit allen Route-Beispielen ✅  
+**Impact:** Theme-System jetzt auf **allen Routes** aktiv âš¡  
+**Documentation:** THEME-BUTTONS.md erweitert mit allen Route-Beispielen âœ…  
 
 ---
 
-### ✨ Implementierte Features
+### âœ¨ Implementierte Features
 
 #### 1. Main Page Buttons (+page.svelte)
 
@@ -3516,7 +3570,7 @@ Gleiche Lizenz wie das Hauptprojekt.
 **Profile Components:**
 - **Card Components:** Auf shadcn-svelte Card-Struktur umgestellt
 - **Avatar Integration:** Konsistente Avatar-Komponenten
-- **Link Button:** `variant="link"` für Nostr.com Profile
+- **Link Button:** `variant="link"` fÃ¼r Nostr.com Profile
 
 #### 2. Test Suite Routes Standardisierung
 
@@ -3525,17 +3579,17 @@ Gleiche Lizenz wie das Hauptprojekt.
 <!-- Primary Action Button -->
 <Button variant="default" size="default" onclick={handleRunTests}>
   {#if isRunning}
-    <span class="inline-block animate-spin mr-2">⏳</span>
+    <span class="inline-block animate-spin mr-2">â³</span>
     Tests laufen...
   {:else}
-    <span class="mr-2">▶️</span>
-    Tests ausführen
+    <span class="mr-2">â–¶ï¸</span>
+    Tests ausfÃ¼hren
   {/if}
 </Button>
 
 <!-- Secondary Action Button -->
 <Button variant="outline" size="default" onclick={clearResults}>
-  🗑️ Löschen
+  ðŸ—‘ï¸ LÃ¶schen
 </Button>
 ```
 
@@ -3544,11 +3598,11 @@ Gleiche Lizenz wie das Hauptprojekt.
 <!-- Primary Action Button -->
 <Button variant="default" size="default" onclick={runAuthStoreTests}>
   {#if isRunning}
-    <span class="inline-block animate-spin mr-2">⏳</span>
+    <span class="inline-block animate-spin mr-2">â³</span>
     Tests laufen...
   {:else}
     <PlusIcon class="w-4 h-4 mr-2" />
-    Tests ausführen
+    Tests ausfÃ¼hren
   {/if}
 </Button>
 ```
@@ -3557,7 +3611,7 @@ Gleiche Lizenz wie das Hauptprojekt.
 ```svelte
 <!-- Warning Action Button -->
 <Button variant="destructive" size="default" onclick={forceMergeConfig}>
-  ⚠️ Config Force-Merge
+  âš ï¸ Config Force-Merge
 </Button>
 
 <!-- Small Outline Buttons -->
@@ -3571,13 +3625,13 @@ Gleiche Lizenz wie das Hauptprojekt.
 <!-- Conflict Resolution Button -->
 <Button variant="default" size="default" class="w-full" onclick={openConflictDialog}>
   <CheckIcon class="h-4 w-4 mr-2" />
-  Konflikte manuell auflösen
+  Konflikte manuell auflÃ¶sen
 </Button>
 ```
 
 #### 3. THEME-BUTTONS.md Erweiterung
 
-**Neue Sektionen hinzugefügt:**
+**Neue Sektionen hinzugefÃ¼gt:**
 - **Main Page Buttons:** Auth & Profile Buttons
 - **Test Suite Buttons:** Test Execution & Control Buttons
 - **AuthStore Test Buttons:** Authentication Test Buttons
@@ -3597,20 +3651,20 @@ Gleiche Lizenz wie das Hauptprojekt.
 #### 4. Konsistente Button-Patterns
 
 **Size Standardisierung:**
-- **sm:** Für Inline-Buttons (Auth, Card Actions)
-- **default:** Für primäre Aktionen (Test Execution)
-- **lg:** Für prominente Aktionen (Add Column)
+- **sm:** FÃ¼r Inline-Buttons (Auth, Card Actions)
+- **default:** FÃ¼r primÃ¤re Aktionen (Test Execution)
+- **lg:** FÃ¼r prominente Aktionen (Add Column)
 
 **Variant Standardisierung:**
-- **default:** Primäre Aktionen
-- **outline:** Sekundäre Aktionen
+- **default:** PrimÃ¤re Aktionen
+- **outline:** SekundÃ¤re Aktionen
 - **destructive:** Warnungen/destruktive Aktionen
 - **ghost:** Subtile Aktionen
 - **link:** Link-Buttons
 
 ---
 
-### 📝 Documentation Updates
+### ðŸ“ Documentation Updates
 
 #### THEME-BUTTONS.md Erweitert
 
@@ -3633,28 +3687,82 @@ Gleiche Lizenz wie das Hauptprojekt.
 ```
 ```
 
-#### CHANGELOG.md Update
+#### Changelog
+## Version 4.7.64 - Landingpage CTA Glow ✨
 
-**Version 3.5 hinzugefügt:**
-- Vollständige Route-Coverage dokumentiert
-- Button-Patterns für alle Routes
+**Datum:** 03. Februar 2026  \
+**Branch:** eature/landingpage  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage:** Hero-Layout optimiert (weniger Leerraum), primärer CTA ist deutlich sichtbar und hat Glow-Effekt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | CTA Glow + Hero Layout Refactor |
+| docs/FEATURE/LANDINGPAGE.md | CTA/Glow Dokumentation ergänzt |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.52 ergänzt |
+
+---
+## Version 4.7.63 - Landingpage Polish + Theme Sync ✨
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage:** Mehr visuelle Struktur, Lucide-Icons, kompaktere Texte, bessere Hero-Section.
+- **Theme:** Dark/Light wird zuverlässig synchronisiert (System-Theme + Settings).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Landingpage überarbeitet (Icons, Layout, visuelle Struktur) |
+| src/routes/+layout.svelte | Theme-Sync via settingsStore.applyTheme() |
+| docs/FEATURE/LANDINGPAGE.md | Landingpage-Doku aktualisiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.51 ergänzt |
+
+---
+## Version 4.7.62 - Landingpage Refresh ✨
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage:** Neue Landingpage mit CTA, Open-Source/Doku-Links, Edufeed-Branding und Lehrkräfte-Fokus; Theme-aware (Dark/Light).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Landingpage neu aufgebaut (Hero, Features, CTA, Links) |
+| docs/FEATURE/LANDINGPAGE.md | Feature-Entwurf für Landingpage ergänzt |
+| docs/_INDEX.md | Dokumentations-Index aktualisiert (neue Feature-Doc, Counts) |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Update für Landingpage |
+
+---.md Update
+
+**Version 3.5 hinzugefÃ¼gt:**
+- VollstÃ¤ndige Route-Coverage dokumentiert
+- Button-Patterns fÃ¼r alle Routes
 - Theme-System jetzt projektweit aktiv
 
 ---
 
-### ✅ DoD Checklist (All Routes Coverage)
+### âœ… DoD Checklist (All Routes Coverage)
 
-- ✅ **Main Page:** +page.svelte Buttons standardisiert
-- ✅ **Test Suite:** test/+page.svelte Buttons standardisiert
-- ✅ **AuthStore Tests:** test/authstore/+page.svelte Buttons standardisiert
-- ✅ **Settings Tests:** test/settings/+page.svelte Buttons standardisiert
-- ✅ **Merge Tests:** test/merge/+page.svelte Buttons standardisiert
-- ✅ **Documentation:** THEME-BUTTONS.md mit allen Beispielen
-- ✅ **CHANGELOG.md:** Version 3.5 dokumentiert
+- âœ… **Main Page:** +page.svelte Buttons standardisiert
+- âœ… **Test Suite:** test/+page.svelte Buttons standardisiert
+- âœ… **AuthStore Tests:** test/authstore/+page.svelte Buttons standardisiert
+- âœ… **Settings Tests:** test/settings/+page.svelte Buttons standardisiert
+- âœ… **Merge Tests:** test/merge/+page.svelte Buttons standardisiert
+- âœ… **Documentation:** THEME-BUTTONS.md mit allen Beispielen
+- âœ… **CHANGELOG.md:** Version 3.5 dokumentiert
 
 ---
 
-### 📊 Statistik
+### ðŸ“Š Statistik
 
 - **Routes aktualisiert:** 5 Routes (+page.svelte + 4 Test-Routes)
 - **Buttons standardisiert:** 15+ Button-Komponenten
@@ -3664,17 +3772,20 @@ Gleiche Lizenz wie das Hauptprojekt.
 
 ---
 
-### 🎯 Ergebnis
+### ðŸŽ¯ Ergebnis
 
 **Vorher:** Theme nur auf `routes/cardsboard` aktiv  
 **Nachher:** Theme auf **allen Routes** aktiv mit konsistenten Button-Patterns
 
-**Vollständige Liste der aktivierten Routes:**
-- ✅ `/` - Main Page mit Auth & Profile
-- ✅ `/cardsboard/*` - Kanban Board (bereits aktiv)
-- ✅ `/test` - Test Suite Runner
-- ✅ `/test/authstore` - Authentication Tests
-- ✅ `/test/settings` - Settings Configuration Tests
-- ✅ `/test/merge` - Merge Conflict Tests
+**VollstÃ¤ndige Liste der aktivierten Routes:**
+- âœ… `/` - Main Page mit Auth & Profile
+- âœ… `/cardsboard/*` - Kanban Board (bereits aktiv)
+- âœ… `/test` - Test Suite Runner
+- âœ… `/test/authstore` - Authentication Tests
+- âœ… `/test/settings` - Settings Configuration Tests
+- âœ… `/test/merge` - Merge Conflict Tests
 
 ---
+
+
+
