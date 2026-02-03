@@ -3,6 +3,7 @@
 </svelte:head>
 
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Badge } from "$lib/components/ui/badge/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
@@ -18,6 +19,39 @@
 	import SparklesIcon from "@lucide/svelte/icons/sparkles";
 	import UsersIcon from "@lucide/svelte/icons/users";
 	import GraduationCapIcon from "@lucide/svelte/icons/graduation-cap";
+
+	import * as Avatar from "$lib/components/ui/avatar/index.js";
+	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+	import LogInIcon from "@lucide/svelte/icons/log-in";
+	import LogOutIcon from "@lucide/svelte/icons/log-out";
+	import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
+	import { authStore } from "$lib/stores/authStore.svelte.js";
+	import LoginDialog from "./cardsboard/LoginDialog.svelte";
+
+	// Reaktive Werte aus AuthStore
+	let isAuthenticated = $derived(authStore.isAuthenticated);
+	let currentUser = $derived(authStore.currentUser);
+
+	// Dialog State
+	let loginDialogOpen = $state(false);
+
+	async function handleLogout() {
+		authStore.logout();
+		loginDialogOpen = false;
+	}
+
+	function handleGoToBoards() {
+		goto("/cardsboard");
+	}
+
+	/**
+	 * Formatiert Public Key für Anzeige
+	 */
+	function formatPubkey(pubkey?: string): string {
+		if (!pubkey) return 'Unknown';
+		return `${pubkey.slice(0, 4)}...${pubkey.slice(-4)}`;
+	}
+	
 
 	const quickLinks = [
 		{
@@ -84,25 +118,25 @@
 </script>
 
 <header class="border-b backdrop-blur supports-[backdrop-filter]:bg-background/60 landing-header-bg">
-	<div class="container mx-auto flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
+	<div class="container mx-auto flex items-center justify-between gap-4 py-4">
 		<a
 			href="https://edufeed.org/"
 			class="flex items-center gap-4 px-3 py-2"
 			target="_blank"
 			rel="noreferrer"
 		>
-			<div class="landing-muted flex h-14 w-14 items-center justify-center overflow-hidden">
+			<div class="landing-muted flex h-12 w-12 items-center justify-center overflow-hidden sm:h-14 sm:w-14">
 				<img
 					src="https://blossom.edufeed.org/924b425d644d5543fdf613122de39f680bf4704348caaa4b5f46d10fa7d493f6.webp"
 					alt="Edufeed Logo"
-					class="h-16 w-16 object-cover"
+					class="h-12 w-12 object-cover sm:h-16 sm:w-16"
 					loading="lazy"
 				/>
 			</div>
 			<div>
 				<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Edufeed</p>
 				<p class="text-xl font-semibold text-foreground">Kanban-Editor</p>
-				<p class="text-xs text-muted-foreground">Unterrichtsplanung mit KI &amp; OER</p>
+				<p class="hidden sm:block text-xs text-muted-foreground">Unterrichtsplanung mit KI &amp; OER</p>
 			</div>
 		</a>
 
@@ -116,10 +150,60 @@
 					rel="noreferrer"
 					class="landing-nav-link"
 				>
-					<svelte:component this={link.icon} class="size-4" />
-					{link.label}
+					<link.icon class="size-4" />
+					<span class="hidden sm:inline">{link.label}</span>
 				</Button>
 			{/each}
+
+			<div class="ml-4">
+			{#if isAuthenticated && currentUser}
+				<!-- User ist angemeldet -->
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger class="bg-secondary rounded-md">
+						<div class="px-2 py-2 sm:px-3 sm:py-2 flex items-center gap-2" data-testid="auth-user-avatar">
+							<Avatar.Root class="h-8 w-8 flex-shrink-0">
+								<Avatar.Image src="" alt={authStore.getDisplayName()} />
+								<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
+									{authStore.getUserInitials()}
+								</Avatar.Fallback>
+							</Avatar.Root>
+							<div class="hidden sm:block">
+								<p class="text-sm font-semibold">{authStore.getDisplayName()}</p>
+								<p class="text-xs text-muted-foreground font-mono">
+									{formatPubkey(currentUser.pubkey)}
+								</p>
+							</div>
+						</div>
+						
+					</DropdownMenu.Trigger>
+
+					<DropdownMenu.Content align="end" class="w-56">
+						<DropdownMenu.Item class="gap-2  editor-menu-item" onclick={handleGoToBoards}>
+							<SquareKanbanIcon class="h-4 w-4" />
+							<span>Meine Boards</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<!-- Logout -->
+						<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
+							<LogOutIcon class="h-4 w-4" />
+							<span>Abmelden</span>
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			{:else}
+				<!-- User ist nicht angemeldet - Login Button -->
+				<Button
+					onclick={() => (loginDialogOpen = true)}
+					variant="outline"
+					class="gap-2 landing-outline"
+					size="sm"
+					data-testid="login-button"
+				>
+					<LogInIcon class="h-4 w-4" />
+					<span class="hidden sm:inline">Anmelden</span>
+				</Button>
+			{/if}
+			</div>
 		</nav>
 	</div>
 </header>
@@ -198,7 +282,7 @@
 						{#each quickSteps as step}
 							<div class="landing-surface flex items-start gap-3 rounded-xl border p-3">
 								<div class="landing-primary-tint flex size-10 items-center justify-center rounded-lg">
-									<svelte:component this={step.icon} class="size-5" />
+									<step.icon class="size-5" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold">{step.title}</p>
@@ -257,7 +341,7 @@
 			<Card.Root class="landing-surface h-full border">
 				<Card.Header class="space-y-2">
 					<div class="landing-primary-tint flex size-10 items-center justify-center rounded-lg">
-						<svelte:component this={card.icon} class="size-5" />
+							<card.icon class="size-5" />
 					</div>
 					<Card.Title>{card.title}</Card.Title>
 					<Card.Description>{card.description}</Card.Description>
@@ -366,6 +450,8 @@
 		</div>
 	</section>
 </main>
+
+<LoginDialog bind:open={loginDialogOpen} />
 
 <style>
 	:global(.landing-header-bg) {

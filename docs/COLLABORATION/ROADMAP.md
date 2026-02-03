@@ -1,7 +1,7 @@
 ﻿# ðŸ—ºï¸ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.52 (Landingpage CTA Glow - 03. Februar 2026)  
-**Aktualisiert:** 03. Februar 2026 (Landingpage CTA Glow).  
+**Version:** 3.57 (Mobile Branding Verdichtung - 03. Februar 2026)  
+**Aktualisiert:** 03. Februar 2026 (Mobile Branding Verdichtung).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,11 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.57 | 03.02.2026 | ✨ Mobile Header: Logo kleiner, Unterzeile ausgeblendet. |
+| 3.56 | 03.02.2026 | 🧭 Header: Navigation bleibt rechts neben dem Branding (Mobile). |
+| 3.55 | 03.02.2026 | 🧭 Mobile Header: Top-Navigation zeigt nur Icons + Avatar. |
+| 3.54 | 03.02.2026 | 🧹 Sidebar: „Meine Boards“ nur noch auf der Landingpage. |
+| 3.53 | 03.02.2026 | 🧩 Svelte 5 Fixes: DropdownMenu ohne `asChild`, dynamische Icons modernisiert. |
 | 3.52 | 03.02.2026 | ✨ Landingpage: CTA Glow + Hero Layout Optimierung |
 | 3.51 | 03.02.2026 | ✨ Landingpage polish + Theme-Sync (Dark/Light) |
 | 3.50 | 03.02.2026 | 🧭 Landingpage überarbeitet (CTA, Links, Lehrkräfte-Fokus, Dark/Light Theme) |

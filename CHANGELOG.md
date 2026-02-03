@@ -1,4 +1,86 @@
 ﻿# Changelog
+## Version 4.7.69 - Mobile Branding Verdichtung ✨
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage Header:** Logo kleiner und Unterzeile auf Mobile ausgeblendet.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Mobile Branding verdichtet |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.57 ergänzt |
+
+---
+## Version 4.7.68 - Header Layout Mobile Row 🧭
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage Header:** Navigation bleibt rechts neben dem Branding (auch auf Mobile).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Header-Layout auf eine Zeile umgestellt |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.56 ergänzt |
+
+---
+## Version 4.7.67 - Mobile Top-Navigation Icons 🧭
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ UI
+- **Landingpage Header:** Auf Mobile werden in der Top-Navigation nur Icons und der Avatar angezeigt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Labels in der Top-Navigation auf Mobile ausgeblendet |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.55 ergänzt |
+
+---
+## Version 4.7.66 - Sidebar Menübereinigung 🧹
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sidebar:** „Meine Boards“ entfernt (nur Landingpage zeigt den Link).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/cardsboard/LeftSidebarFooter.svelte | Link „Meine Boards“ entfernt |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.54 ergänzt |
+
+---
+## Version 4.7.65 - Svelte 5 Dropdown & Icon Fixes 🧩
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Svelte 5:** `DropdownMenu.Item` nutzt kein `asChild` mehr (Landingpage + Sidebar Footer).
+- **Svelte 5:** Dynamic Icons ohne `<svelte:component>` in der Landingpage.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | `asChild` entfernt, dynamische Icons modernisiert |
+| src/routes/cardsboard/LeftSidebarFooter.svelte | `asChild` entfernt, Navigation via `goto()` |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.53 ergänzt |
+
+---
 ## Version 4.7.64 - Landingpage CTA Glow ✨
 
 **Datum:** 03. Februar 2026  \

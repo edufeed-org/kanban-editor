@@ -84,7 +84,7 @@
 					</DropdownMenu.Trigger>
 
 					<DropdownMenu.Content align="start" class="w-56 ml-4">
-						
+
 						<!-- Profil bearbeiten -->
 						<DropdownMenu.Item onclick={() => showProfileEditor = true} class="gap-2 editor-menu-item">
 							<UserIcon class="h-4 w-4" />
