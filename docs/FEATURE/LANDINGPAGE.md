@@ -46,7 +46,7 @@ Ziele:
 - Open-Source & dezentral (Nostr Events)
 - KI-gestützte Board-Aktionen via Tool-System
 - Speziell für Lehrkräfte und Unterrichtsplanung konzipiert
-- Förderhinweis: OER Strategie des BMBG
+- Förderhinweis: OER Strategie des BMBF
 
 ## IV. Fehler / Edge Cases
 

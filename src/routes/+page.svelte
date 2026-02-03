@@ -164,6 +164,7 @@
 							size="lg"
 							href="/cardsboard"
 							class="landing-cta h-12 w-full gap-2 px-6 text-base sm:w-auto"
+							data-sveltekit-preload-data="off"
 						>
 							Starte jetzt dein erstes Board
 							<ArrowRightIcon class="size-4" />
@@ -236,7 +237,7 @@
 			</div>
 
 			<p class="mt-6 text-sm text-muted-foreground">
-				Gefördert durch die OER-Strategie des BMBG.
+				Gefördert durch die OER-Strategie des BMBF.
 				<a
 					href="https://www.oer-strategie.de/foerdern/foerderrichtlinien/oe_sprints/"
 					target="_blank"
@@ -339,7 +340,7 @@
 					KI-Unterstützung weiter.
 				</p>
 			</div>
-			<Button size="lg" href="/cardsboard" class="landing-cta h-11 gap-2 px-6">
+			<Button size="lg" href="/cardsboard" class="landing-cta h-11 gap-2 px-6" data-sveltekit-preload-data="off">
 				Board starten
 				<ArrowRightIcon class="size-4" />
 			</Button>
@@ -439,6 +440,7 @@
 		opacity: 0.9;
 		z-index: -1;
 		transition: opacity 150ms ease;
+		pointer-events: none;
 	}
 
 	:global(.landing-cta:hover) {
