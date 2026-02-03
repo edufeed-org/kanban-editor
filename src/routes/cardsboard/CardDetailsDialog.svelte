@@ -832,7 +832,7 @@
 						</div>
 					{:else}
 						<div 
-							class="p-3 bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center {readOnly ? '' : 'cursor-pointer hover:bg-muted/50 transition-colors'}"
+							class="p-3 min-h-[100px] bg-muted/30 rounded-md text-sm border border-dashed text-muted-foreground text-center {readOnly ? '' : ' cursor-pointer hover:bg-muted/80 transition-colors'}"
 							in:fade={{ duration: 200, delay: 50 }}
 							out:fade={{ duration: 150 }}
 							onclick={() => !readOnly && (isEditingDescription = true)}
