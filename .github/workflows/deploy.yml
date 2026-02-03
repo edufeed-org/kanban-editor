@@ -1,11 +1,13 @@
-name: Deploy to GitHub Pages
+name: Deploy to Server
 
 on:
   push:
-    branches: 'cardsboard' # default branch
+    branches: 
+    - 'cardsboard' # default branch
+    - 'deploy-server' # TODO: delete before merging
 
 jobs:
-  build_site:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       packages: read
@@ -38,24 +40,17 @@ jobs:
           pnpm run build
           echo '${{ secrets.CONFIG_JSON }}' > build/config.json
 
-      - name: Upload Artifacts
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: 'build/'
-
-  deploy:
-    needs: build_site
-    runs-on: ubuntu-latest
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Set up SSH key
+        run: |
+          env
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/kanban_service_account
+          chmod 600 ~/.ssh/kanban_service_account
+          ssh-keyscan -p 22 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          sudo apt-get install sshpass
+      
+      - name: Deploy with rsync
+        run: |
+          rsync -az --delete \
+            build/ \
+            ${{ secrets.SSH_PRIVATE_KEY }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
