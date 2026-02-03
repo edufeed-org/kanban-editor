@@ -2,9 +2,7 @@ name: Deploy to Server
 
 on:
   push:
-    branches: 
-    - 'cardsboard' # default branch
-    - 'deploy-server' # TODO: delete before merging
+    branches: cardsboard
 
 jobs:
   deploy:
@@ -48,7 +46,6 @@ jobs:
           chmod 600 ~/.ssh/user
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-          # scp -r -i ~/.ssh/user build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
 
       - name: Deploy with rsync
         run: |
