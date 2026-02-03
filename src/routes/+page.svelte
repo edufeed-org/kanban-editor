@@ -17,6 +17,7 @@
 	import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
 	import SparklesIcon from "@lucide/svelte/icons/sparkles";
 	import UsersIcon from "@lucide/svelte/icons/users";
+	import GraduationCapIcon from "@lucide/svelte/icons/graduation-cap";
 
 	const quickLinks = [
 		{
@@ -86,21 +87,21 @@
 	<div class="container mx-auto flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
 		<a
 			href="https://edufeed.org/"
-			class="landing-surface flex items-center gap-4 rounded-2xl border px-3 py-2 shadow-sm"
+			class="flex items-center gap-4 px-3 py-2"
 			target="_blank"
 			rel="noreferrer"
 		>
-			<div class="landing-muted flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border">
+			<div class="landing-muted flex h-14 w-14 items-center justify-center overflow-hidden">
 				<img
 					src="https://blossom.edufeed.org/924b425d644d5543fdf613122de39f680bf4704348caaa4b5f46d10fa7d493f6.webp"
 					alt="Edufeed Logo"
-					class="h-10 w-10 object-cover"
+					class="h-16 w-16 object-cover"
 					loading="lazy"
 				/>
 			</div>
 			<div>
 				<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Edufeed</p>
-				<p class="text-xl font-semibold text-foreground">KI-Kanban-Board</p>
+				<p class="text-xl font-semibold text-foreground">Kanban-Editor</p>
 				<p class="text-xs text-muted-foreground">Unterrichtsplanung mit KI &amp; OER</p>
 			</div>
 		</a>
@@ -273,6 +274,24 @@
 				</Card.Content>
 			</Card.Root>
 		{/each}
+	</section>
+
+	<section class="container mx-auto px-4 py-12 text-center">
+		<h2 class="text-2xl font-semibold">Willkommen zum Onboarding</h2>
+		<p class="mt-2 text-muted-foreground">
+			Neu hier? Erfahre in unserem interaktiven Onboarding-Tool alles Wichtige über Edufeed und das Nostr-Protokoll.
+		</p>
+		<Button
+			variant="outline"
+			size="lg"
+			href="https://edufeed-org.github.io/onboarding-tool/"
+			target="_blank"
+			rel="noreferrer"
+			class="mt-6 landing-outline h-12 gap-2 px-6 text-base"
+		>
+			Onboarding starten
+			<GraduationCapIcon class="size-4" />
+		</Button>
 	</section>
 
 	<section class="landing-muted">
