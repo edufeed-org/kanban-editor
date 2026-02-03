@@ -48,4 +48,11 @@ jobs:
           chmod 600 ~/.ssh/user
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-          scp -r -i ~/.ssh/user build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
+          # scp -r -i ~/.ssh/user build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
+
+      - name: Deploy with rsync
+        run: |
+          rsync -az --delete \
+          -e "ssh -i ~/.ssh/user" \
+          build/ \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
