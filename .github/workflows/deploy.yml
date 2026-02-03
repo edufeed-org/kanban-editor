@@ -1,11 +1,11 @@
-name: Deploy to Server
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: cardsboard
+    branches: 'cardsboard' # default branch
 
 jobs:
-  deploy:
+  build_site:
     runs-on: ubuntu-latest
     permissions:
       packages: read
@@ -38,18 +38,24 @@ jobs:
           pnpm run build
           echo '${{ secrets.CONFIG_JSON }}' > build/config.json
 
-      - name: Set up SSH key
-        run: |
-          env
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/user
-          chmod 600 ~/.ssh/user
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+      - name: Upload Artifacts
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: 'build/'
 
-      - name: Deploy with rsync
-        run: |
-          rsync -az --delete \
-          -e "ssh -i ~/.ssh/user" \
-          build/ \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
+  deploy:
+    needs: build_site
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

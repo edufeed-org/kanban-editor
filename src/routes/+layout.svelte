@@ -56,6 +56,8 @@
   const authStore = initializeAuth(ndk);
 
   onMount(async () => {
+    // Apply theme (system/light/dark) on initial load
+    settingsStore.applyTheme();
     // 🔌 FIRST: Wait for NDK to connect before proceeding
     // This prevents "NDK not initialized" race conditions
     // ⚡ OPTIMIZATION: Connection timeout nach 3 Sekunden
@@ -126,6 +128,12 @@
       });
     }
 	});
+
+  // Keep theme in sync when settings change
+  $effect(() => {
+    settingsStore.settings.theme;
+    settingsStore.applyTheme();
+  });
 
   // Aktualisiere Board-Author wenn User sich einloggt
   $effect(() => {

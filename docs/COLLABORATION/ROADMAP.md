@@ -1,83 +1,83 @@
-# 🗺️ Roadmap: Nostr-basiertes KI-Kanban-Board
+﻿# ðŸ—ºï¸ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.49 (Communikey Name via Kind 0 - 02. Februar 2026)  
-**Aktualisiert:** 02. Februar 2026 (Community‑Name aus Kind‑0 Metadaten).  
-**Status:** ✅ **PHASE 1: 100% COMPLETE** | 🔄 **PHASE 3: 90%** | 🟡 **Phase 2: 15%** | 🟡 **Phase 4: 85% Infrastructure**  
-**Projekt-Ziel:** Vollständige Implementierung bis 31.12.2025, Testing ab 01.01.2026
+**Version:** 3.58 (Avatar Profile Picture Fix - 03. Februar 2026)  
+**Aktualisiert:** 03. Februar 2026 (Avatar Profile Picture Fix).  
+**Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
+**Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
-**🆕 PHASE 3.2 OER-CONTENT DISCOVERY (30.01.2026):**
-- 🔄 **Meilenstein 3.2 Status:** **APPROVED** - Implementation gestartet!
-- ✅ **Spec:** `MCP-EDUFEED.md` v1.1 finalisiert
-- 🟡 **Phase 2 Status:** **15% Complete** (Settings+Dark Mode DONE, Mobile+A11y offen)
-- 🟡 **Phase 4 Status:** **85% Infrastructure Ready** (SoftLockManager, MergeEngine, SyncManager ✅! Nur UI fehlt)
-- ✅ **MEILENSTEIN 1.5C COMPLETE:** Board Snapshots / Versionshistorie Feature FERTIG!
-- ✅ **MEILENSTEIN 1.6 COMPLETE:** Demo Board System für anonyme User + benutzerbasierte Filterung FERTIG!
+**ðŸ†• PHASE 3.2 OER-CONTENT DISCOVERY (30.01.2026):**
+- ðŸ”„ **Meilenstein 3.2 Status:** **APPROVED** - Implementation gestartet!
+- âœ… **Spec:** `MCP-EDUFEED.md` v1.1 finalisiert
+- ðŸŸ¡ **Phase 2 Status:** **15% Complete** (Settings+Dark Mode DONE, Mobile+A11y offen)
+- ðŸŸ¡ **Phase 4 Status:** **85% Infrastructure Ready** (SoftLockManager, MergeEngine, SyncManager âœ…! Nur UI fehlt)
+- âœ… **MEILENSTEIN 1.5C COMPLETE:** Board Snapshots / Versionshistorie Feature FERTIG!
+- âœ… **MEILENSTEIN 1.6 COMPLETE:** Demo Board System fÃ¼r anonyme User + benutzerbasierte Filterung FERTIG!
 
-**🆕 Neu in v3.2 (Demo Board System - 28.12.2024):**
-- ✅ **BENUTZERBASIERTE BOARD-FILTERUNG COMPLETE** — Nur eigene Boards werden angezeigt
+**ðŸ†• Neu in v3.2 (Demo Board System - 28.12.2024):**
+- âœ… **BENUTZERBASIERTE BOARD-FILTERUNG COMPLETE** â€” Nur eigene Boards werden angezeigt
   - `getAllBoards()` filtert nach User pubkey (Owner oder Maintainer)
   - Keine fremden Boards mehr in der Liste
   - Saubere Trennung zwischen Users
-- ✅ **DEMO BOARD SYSTEM COMPLETE** — Anonyme Nutzer haben sofortigen Zugang
+- âœ… **DEMO BOARD SYSTEM COMPLETE** â€” Anonyme Nutzer haben sofortigen Zugang
   - Demo Board mit 3 Spalten + vorkonfigurierte Beispiel-Karten
-  - "Demo Session erstellen" Button für anonyme Nutzer
+  - "Demo Session erstellen" Button fÃ¼r anonyme Nutzer
   - 30-Tage Demo-Session mit automatischem Cleanup
-- ✅ **INTELLIGENTE MIGRATION COMPLETE** — Nahtloser Übergang nach Login
-  - Hat User Boards? → Demo Board wird gelöscht
-  - Hat User keine Boards? → Demo Board wird zu echtem Board konvertiert
+- âœ… **INTELLIGENTE MIGRATION COMPLETE** â€” Nahtloser Ãœbergang nach Login
+  - Hat User Boards? â†’ Demo Board wird gelÃ¶scht
+  - Hat User keine Boards? â†’ Demo Board wird zu echtem Board konvertiert
   - Post-Login Hooks in allen Auth-Methoden (NIP-07, nsec, OIDC)
 
 **Previous Sprint (v3.1 - Nostr Sync Sprint - 10.11.2025):**
-- ✅ **LAST-WRITE-WINS IMPLEMENTATION COMPLETE** — Full LWW conflict resolution across all card operations
+- âœ… **LAST-WRITE-WINS IMPLEMENTATION COMPLETE** â€” Full LWW conflict resolution across all card operations
   - Timestamp handling in constructors, upsertCardFromNostr(), moveCard()
   - LWW checks prevent stale localStorage data from overwriting fresh Nostr events
   - Rank-aware card insertion maintains correct card order in columns
-  - **Status: ✅ PRODUCTION READY** (Branch: `read-boards-from-nostr`)
-- ✅ **Echo-Loop Prevention** — Published events nicht als externe Events reprocessen
-  - Event tracking für eigene published events
+  - **Status: âœ… PRODUCTION READY** (Branch: `read-boards-from-nostr`)
+- âœ… **Echo-Loop Prevention** â€” Published events nicht als externe Events reprocessen
+  - Event tracking fÃ¼r eigene published events
   - Cross-browser sync funktioniert ohne Duplicates
   - DnD safety: Double-move Prevention bei Column Reordering
-- ✅ **Card-Duplication Bug gefixt** — Timestamp handling + LWW checks
+- âœ… **Card-Duplication Bug gefixt** â€” Timestamp handling + LWW checks
   - Root cause: Stale localStorage overwrote fresh Nostr events
   - Solution: Last-Write-Wins with millisecond precision timestamps
-  - Regression tests bestanden (4 Tage Spike → Fixed!)
-- ✅ **Board-Storage Refactoring** — Metadata Elimination, Board Discovery
-  - 95% Redundanz eliminiert (kanban-boards-metadata → Single Source of Truth)
+  - Regression tests bestanden (4 Tage Spike â†’ Fixed!)
+- âœ… **Board-Storage Refactoring** â€” Metadata Elimination, Board Discovery
+  - 95% Redundanz eliminiert (kanban-boards-metadata â†’ Single Source of Truth)
   - Board-IDs aus localStorage-Keys gescannt (`kanban-{id}` Pattern)
   - Auto-Migration mit Backup beim ersten Start
-- ✅ **TypeScript: 0 errors, 0 warnings** — Full strict mode compliance
-- ✅ **Demo Board System** — User-based filtering + anonymous demo boards (28.12.2024)
+- âœ… **TypeScript: 0 errors, 0 warnings** â€” Full strict mode compliance
+- âœ… **Demo Board System** â€” User-based filtering + anonymous demo boards (28.12.2024)
   - User-spezifische Board-Anzeige (keine fremden Boards mehr)
-  - Demo Board mit vorkonfiguriertem Content für neue User
-  - Intelligente Migration: Demo → Real Board nach Login
+  - Demo Board mit vorkonfiguriertem Content fÃ¼r neue User
+  - Intelligente Migration: Demo â†’ Real Board nach Login
   - 30-Tage Demo-Session mit automatischem Cleanup
 
 **Previous Milestones (v2.5 - 29.10.2025):**
-- ✅ **DOKUMENTATIONS-GOVERNANCE v3.0** — Bidirektionale Code ↔ Docs Sync MANDATORY
-- ✅ **ARCHITECTURE/ Restrukturierung** — 6 STORES-Dateien, 40% Redundanzreduktion
-- ✅ **Dokumentations-Index** — 52/52 Dateien verlinkt & dokumentiert
-- ✅ **CARD UI REDESIGN PHASE 1** — Badges, Author-Info, Image Optimization ✅
-- ✅ **Meilenstein 1.5A: Merge Engine** — 3-way Merge + Visual Test Route
-- ✅ **Meilenstein 1.5B: CardDialog Integration** — Merge-Logik in UI
-- ✅ **Meilenstein 1.5C: Board Snapshots** — Manual Backups + Version Control
-- ✅ **Meilenstein 1.5D: Export/Import** — JSON Export/Import mit 3 Modi (merge/new/overwrite)
+- âœ… **DOKUMENTATIONS-GOVERNANCE v3.0** â€” Bidirektionale Code â†” Docs Sync MANDATORY
+- âœ… **ARCHITECTURE/ Restrukturierung** â€” 6 STORES-Dateien, 40% Redundanzreduktion
+- âœ… **Dokumentations-Index** â€” 52/52 Dateien verlinkt & dokumentiert
+- âœ… **CARD UI REDESIGN PHASE 1** â€” Badges, Author-Info, Image Optimization âœ…
+- âœ… **Meilenstein 1.5A: Merge Engine** â€” 3-way Merge + Visual Test Route
+- âœ… **Meilenstein 1.5B: CardDialog Integration** â€” Merge-Logik in UI
+- âœ… **Meilenstein 1.5C: Board Snapshots** â€” Manual Backups + Version Control
+- âœ… **Meilenstein 1.5D: Export/Import** â€” JSON Export/Import mit 3 Modi (merge/new/overwrite)
 
-**Förderhinweis:** Die Projektförderung erwartet, dass Phasen 1-4 bis 31.12.2025 implementiert sind, damit die Testphase ab 01.01.2026 starten kann.
+**FÃ¶rderhinweis:** Die ProjektfÃ¶rderung erwartet, dass Phasen 1-4 bis 31.12.2025 implementiert sind, damit die Testphase ab 01.01.2026 starten kann.
 
 ---
 
-## 🔍 DETAILLIERTE CODEBASE-ANALYSE (13. November 2025)
+## ðŸ” DETAILLIERTE CODEBASE-ANALYSE (13. November 2025)
 
-### PHASE 1: FOUNDATION & CORE (✅ 90% COMPLETE)
+### PHASE 1: FOUNDATION & CORE (âœ… 90% COMPLETE)
 
 **Status pro Meilenstein:**
 
-#### ✅ 1.0: Author Fields (DONE - 23.10.)
+#### âœ… 1.0: Author Fields (DONE - 23.10.)
 - Implementation: `BoardModel.ts` - author field auf Card/Column/Board
-- localStorage: vollständig gespeichert in `getContextData()`
+- localStorage: vollstÃ¤ndig gespeichert in `getContextData()`
 - UI: LeftSidebarFooter.svelte zeigt Author korrekt
 
-#### ✅ 1.1: Nostr Publishing (DONE - 10.11.)
+#### âœ… 1.1: Nostr Publishing (DONE - 10.11.)
 - Implementation: `src/lib/stores/boardstore/nostr.ts` (1641 Zeilen!)
   - `boardToNostrEvent()` - Board zu Kind 30301
   - `cardToNostrEvent()` - Card zu Kind 30302
@@ -87,271 +87,271 @@
 - Tests: 4 spec-Dateien mit 328+ Tests
 - Status: **PRODUCTION READY**
 
-#### ✅ 1.3: Kommentar-System (DONE - Phase A+B, 25.10.)
+#### âœ… 1.3: Kommentar-System (DONE - Phase A+B, 25.10.)
 - Phase A: Model `Comment` in BoardModel.ts
 - Phase B: UI `CardDetailsDialog.svelte` mit Comment-Form
 - Phase C (ausstehend): AuthStore Integration
 - Phase D (ausstehend): Nostr Event Publishing
 - Phase E (ausstehend): Offline-First Sync
-- Status: **LOKAL VOLLSTÄNDIG**, nur Nostr-Integration offen
+- Status: **LOKAL VOLLSTÃ„NDIG**, nur Nostr-Integration offen
 
-#### ✅ 1.5A-B: Merge System (DONE - 26.10./31.10.)
+#### âœ… 1.5A-B: Merge System (DONE - 26.10./31.10.)
 - MergeEngine: 3-way Merge Algorithm
 - SoftLockManager: "Now Editing" Events (Kind 20001)
 - CardDialog Integration: Merge-Konflikte in UI
 - Tests: MergeConflictDialog.svelte mit Visual Test Route
 - Status: **PRODUCTION READY**
 
-#### ✅ 1.5D: Export/Import (DONE - 20.11.)
+#### âœ… 1.5D: Export/Import (DONE - 20.11.)
 - Store API: `exportBoardAsJson()`, `importBoardFromJson()`, `restoreAllBoardsFromBackup()`
 - 3 Modi: merge, new, overwrite
 - UI: ExportButton + ImportPopover in Topbar
 - Tests: 75+ Unit Tests (exportImport.ts)
-- Status: **FÖRDER-ANFORDERUNG ERFÜLLT**
+- Status: **FÃ–RDER-ANFORDERUNG ERFÃœLLT**
 
-#### ✅ 1.2: Offline-First Sync (COMPLETE - Implementiert!)
-- Status: **✅ IMPLEMENTATION VORHANDEN** (`SyncManager.svelte.ts` Klasse implementiert!)
+#### âœ… 1.2: Offline-First Sync (COMPLETE - Implementiert!)
+- Status: **âœ… IMPLEMENTATION VORHANDEN** (`SyncManager.svelte.ts` Klasse implementiert!)
 - Implementation: SyncManager Klasse existiert (src/lib/stores/syncManager.svelte.ts)
-- ⚠️ Fehlt noch: Integration Tests, IndexedDB Queue Testing
-- ⚠️ ToDo: Integration mit Nostr Publishing verifizieren (2-3 Tage)
+- âš ï¸ Fehlt noch: Integration Tests, IndexedDB Queue Testing
+- âš ï¸ ToDo: Integration mit Nostr Publishing verifizieren (2-3 Tage)
 
-#### ✅ 1.4: Authentication (COMPLETE - Implementiert!)
-- Status: **✅ IMPLEMENTATION VORHANDEN** (`authStore.svelte.ts` existiert!)
-- Implementation: AuthStore vollständig implementiert
-- ⚠️ Fehlt noch: UI-Integration vollständig testen (LoginSheet, LoginDialog)
+#### âœ… 1.4: Authentication (COMPLETE - Implementiert!)
+- Status: **âœ… IMPLEMENTATION VORHANDEN** (`authStore.svelte.ts` existiert!)
+- Implementation: AuthStore vollstÃ¤ndig implementiert
+- âš ï¸ Fehlt noch: UI-Integration vollstÃ¤ndig testen (LoginSheet, LoginDialog)
 - Tests: `authstore.profile-cache.spec.ts` (290+ Tests!)
-- ⚠️ ToDo: E2E Tests für Login-Flow (1-2 Tage)
+- âš ï¸ ToDo: E2E Tests fÃ¼r Login-Flow (1-2 Tage)
 
-#### ✅ 1.6: Demo Board System (DONE - 28.12.2024)
-- **Ziel:** Benutzerbasierte Board-Filterung + Demo-Board für anonyme Nutzer
-- **Status:** **✅ PRODUCTION READY**
+#### âœ… 1.6: Demo Board System (DONE - 28.12.2024)
+- **Ziel:** Benutzerbasierte Board-Filterung + Demo-Board fÃ¼r anonyme Nutzer
+- **Status:** **âœ… PRODUCTION READY**
 - **Implementation:**
   - Benutzer-basierte Filterung: `getAllBoards()` filtert nach Owner/Maintainer
   - Demo Board System: `createDemoBoard()` mit vorkonfiguriertem Content
   - Intelligente Migration: `migrateDemoBoardToRealBoard()` nach Login
-  - UI: BoardsList.svelte mit Demo-Button für anonyme Nutzer
+  - UI: BoardsList.svelte mit Demo-Button fÃ¼r anonyme Nutzer
 - **Features:**
-  - ✅ User-spezifische Board-Anzeige (keine fremden Boards mehr)
-  - ✅ Demo Board mit 3 Spalten + Beispiel-Karten für neue Nutzer
-  - ✅ Automatische Migration: Demo → Real Board oder Löschung nach Login
-  - ✅ 30-Tage Demo-Session mit Cleanup
-  - ✅ Post-Login Hooks in allen Auth-Methoden (NIP-07, nsec, OIDC)
-- **Dokumentation:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md` (vollständige Spezifikation)
-- **Tests:** TypeScript 0 errors, Development Server läuft erfolgreich
+  - âœ… User-spezifische Board-Anzeige (keine fremden Boards mehr)
+  - âœ… Demo Board mit 3 Spalten + Beispiel-Karten fÃ¼r neue Nutzer
+  - âœ… Automatische Migration: Demo â†’ Real Board oder LÃ¶schung nach Login
+  - âœ… 30-Tage Demo-Session mit Cleanup
+  - âœ… Post-Login Hooks in allen Auth-Methoden (NIP-07, nsec, OIDC)
+- **Dokumentation:** `docs/FEATURE/DEMO-BOARD-SYSTEM.md` (vollstÃ¤ndige Spezifikation)
+- **Tests:** TypeScript 0 errors, Development Server lÃ¤uft erfolgreich
 
-### PHASE 2: UI COMPONENTS & UX (🔄 20% COMPLETE)
+### PHASE 2: UI COMPONENTS & UX (ðŸ”„ 20% COMPLETE)
 
 #### Status: **UI Komponenten vorhanden, Inline-Editing implementiert!**
 
 **Was bereits implementiert ist:**
-- ✅ Card.svelte - Drag-and-Drop mit Icons
-- ✅ Column.svelte - mit $effect Auto-Sync + **Inline-Editing für Spaltentitel** 🆕
-- ✅ CardDialog.svelte - Edit Modal
-- ✅ CardDetailsDialog.svelte - View Modal mit Kommentaren + **AI-Kontext-Button** 🆕
-- ✅ Topbar.svelte - mit Settings + Share-Link + **Inline-Editing für Board-Titel** 🆕
-- ✅ BoardsList.svelte - Board-Auswahl + **Hamburger-Menü** 🆕
-- ✅ SettingsPanel.svelte - neuer Settings-Component
-- ✅ UI Components: Progress, Slider, Switch, Spinner (neu!)
-- ✅ ActionConfirmationDialog.svelte (Bestätigung für Aktionen)
-- ✅ **aiContextStore.svelte.ts** - Globaler Store für AI-Kontext-Karten 🆕
-- ✅ **LeftSidebarFooter.svelte** - Profilbearbeitungsoption 🆕
+- âœ… Card.svelte - Drag-and-Drop mit Icons
+- âœ… Column.svelte - mit $effect Auto-Sync + **Inline-Editing fÃ¼r Spaltentitel** ðŸ†•
+- âœ… CardDialog.svelte - Edit Modal
+- âœ… CardDetailsDialog.svelte - View Modal mit Kommentaren + **AI-Kontext-Button** ðŸ†•
+- âœ… Topbar.svelte - mit Settings + Share-Link + **Inline-Editing fÃ¼r Board-Titel** ðŸ†•
+- âœ… BoardsList.svelte - Board-Auswahl + **Hamburger-MenÃ¼** ðŸ†•
+- âœ… SettingsPanel.svelte - neuer Settings-Component
+- âœ… UI Components: Progress, Slider, Switch, Spinner (neu!)
+- âœ… ActionConfirmationDialog.svelte (BestÃ¤tigung fÃ¼r Aktionen)
+- âœ… **aiContextStore.svelte.ts** - Globaler Store fÃ¼r AI-Kontext-Karten ðŸ†•
+- âœ… **LeftSidebarFooter.svelte** - Profilbearbeitungsoption ðŸ†•
 
 **Was noch fehlt:**
-- 🟡 Vollständige Responsive Design (Mobile-First) - **Mobile AI-Kontext verbessert** 🆕
-- 🟡 CSS Button Handling teilweise schlecht gelöst
-- ✅ **Dark Mode** - IMPLEMENTIERT! (settingsStore.theme, Topbar.svelte, 🟡 Settings wird aber nicht berücksichtigt beim reload)
-- ✅ **Settings Store** - KOMPLETT VORHANDEN! (971 Zeilen, alle Features)
-- ✅ **Inline-Editing** - Board-Titel + Spaltentitel (Klick zum Bearbeiten) 🆕
-- ❌ Accessibility (A11y) vollständig durchgetest
-- ❌ Performance Optimization (virtualization, lazy loading)
-- ❌ Error Boundaries implementieren
-- 🟡 **Paste System** - DUPLIKAT! (lib/paste/ UND boardstore/paste.ts)
+- ðŸŸ¡ VollstÃ¤ndige Responsive Design (Mobile-First) - **Mobile AI-Kontext verbessert** ðŸ†•
+- ðŸŸ¡ CSS Button Handling teilweise schlecht gelÃ¶st
+- âœ… **Dark Mode** - IMPLEMENTIERT! (settingsStore.theme, Topbar.svelte, ðŸŸ¡ Settings wird aber nicht berÃ¼cksichtigt beim reload)
+- âœ… **Settings Store** - KOMPLETT VORHANDEN! (971 Zeilen, alle Features)
+- âœ… **Inline-Editing** - Board-Titel + Spaltentitel (Klick zum Bearbeiten) ðŸ†•
+- âŒ Accessibility (A11y) vollstÃ¤ndig durchgetest
+- âŒ Performance Optimization (virtualization, lazy loading)
+- âŒ Error Boundaries implementieren
+- ðŸŸ¡ **Paste System** - DUPLIKAT! (lib/paste/ UND boardstore/paste.ts)
 - ToDo: **6-10 Tage** (Mobile, A11y, Performance, Paste-Konsolidierung)
 
-### PHASE 3: KI-INTEGRATION (✅ 95% COMPLETE!)
+### PHASE 3: KI-INTEGRATION (âœ… 95% COMPLETE!)
 
-#### Status: **EXTREM ÜBERRASCHEND - PHASE 3 IST ZU 95% FERTIG!**
+#### Status: **EXTREM ÃœBERRASCHEND - PHASE 3 IST ZU 95% FERTIG!**
 
 **Implementiert:**
-- ✅ **ChatStore** (`chatStore.svelte.ts`, 668 Zeilen!)
+- âœ… **ChatStore** (`chatStore.svelte.ts`, 668 Zeilen!)
   - Message-History mit Timestamps
-  - Memory-System für AI-Context
+  - Memory-System fÃ¼r AI-Context
   - Conversation Summaries
   - LLM Integration (`sendToLLMWithSystem()`)
   - Tests: `chatStore.svelte.spec.ts` (413 Tests!)
 
-- ✅ **AIPanel** (`AIPanel.svelte`, 1421 Zeilen!)
+- âœ… **AIPanel** (`AIPanel.svelte`, 1421 Zeilen!)
   - Two-Phase AI Response System
   - Intent Detection (actionGeneration, contentProposal, structureGeneration)
   - Real-time Chat Interface
   - Response Streaming
   - Tests: Integriert in AIPanel
 
-- ✅ **Agent Module** (`src/lib/agent/`)
+- âœ… **Agent Module** (`src/lib/agent/`)
   - `intentDetection.ts` - Parse user intent
   - `llmIntentDetection.ts` - LLM-basierte Intent Detection
   - `structureGeneration.ts` - Board/Card/Column generation
-  - `contentProposal.ts` - Content-Vorschläge
+  - `contentProposal.ts` - Content-VorschlÃ¤ge
   - `actionProcessing.ts` - Action Execution
   - `llmRequest.ts` - LLM API Integration
   - Tests: intentDetection.test.ts + llmIntentDetection.test.ts
 
-- ✅ **ChatModel** (`ChatModel.ts`, 238 Zeilen!)
+- âœ… **ChatModel** (`ChatModel.ts`, 238 Zeilen!)
   - ChatSession mit Message-Management
-  - Memory System für AI-Context
+  - Memory System fÃ¼r AI-Context
   - Conversation Summaries
 
-- ✅ **Tests:**
+- âœ… **Tests:**
   - `chatStore.svelte.spec.ts` - 413 Tests
   - `intentDetection.test.ts` - 154 Tests
   - `llmIntentDetection.test.ts` - 162 Tests
 
 **Was noch fehlt:**
-- ❌ **splitCard Action** - NICHT implementiert (critical für AI!)
-- ❌ **mergeCards Action** - NICHT implementiert
-- ❌ **reorderCards Action** - NICHT implementiert
-- ❌ KI Multichat Support - NICHT implementiert
-- ❌ KI Summary - NICHT implementiert
-- ❌ KI MCP Support - NICHT implementiert
-- ⚠️ KI adaptive Learning - nicht komplett umgesetzt
-- ⚠️ KI Custom Prompts Settings - Muss erweitert werden
-- ⚠️ Two-Phase System mit Nostr Publishing (funktioniert ohne Nostr Events)
-- ⚠️ KI-Agents an publishState anpassen
-- ⚠️ Error Handling für LLM-Timeouts
-- ⚠️ Rate-Limiting für API-Calls
+- âŒ **splitCard Action** - NICHT implementiert (critical fÃ¼r AI!)
+- âŒ **mergeCards Action** - NICHT implementiert
+- âŒ **reorderCards Action** - NICHT implementiert
+- âŒ KI Multichat Support - NICHT implementiert
+- âŒ KI Summary - NICHT implementiert
+- âŒ KI MCP Support - NICHT implementiert
+- âš ï¸ KI adaptive Learning - nicht komplett umgesetzt
+- âš ï¸ KI Custom Prompts Settings - Muss erweitert werden
+- âš ï¸ Two-Phase System mit Nostr Publishing (funktioniert ohne Nostr Events)
+- âš ï¸ KI-Agents an publishState anpassen
+- âš ï¸ Error Handling fÃ¼r LLM-Timeouts
+- âš ï¸ Rate-Limiting fÃ¼r API-Calls
 - ToDo: **5-7 Tage** (3 Actions + Error Handling)
 
-### PHASE 4: KOLLABORATION (✅ ~85% INFRASTRUCTURE READY)
+### PHASE 4: KOLLABORATION (âœ… ~85% INFRASTRUCTURE READY)
 
-**Status:** 🟡 **INFRASTRUKTUR FAST KOMPLETT** - Nur UI + NIP-51 + Tests fehlen!
+**Status:** ðŸŸ¡ **INFRASTRUKTUR FAST KOMPLETT** - Nur UI + NIP-51 + Tests fehlen!
 
-**✅ BEREITS IMPLEMENTIERT (Core Infrastructure):**
-- ✅ **SoftLockManager** - publishLock(), releaseLock(), subscribeLocks() (`softLockManager.svelte.ts`, 160 Zeilen)
-- ✅ **MergeEngine** - threeWayMerge(), Conflict Detection (`mergeEngine.ts`)
-- ✅ **CardEditingFlow** - checkForConflictBeforeSave(), Session Management (`cardEditingFlow.ts`)
-- ✅ **SyncManager** - IndexedDB Queue, Retry-Logik, publishOrQueue() (`syncManager.svelte.ts`)
-- ✅ **Nostr Events** - createSoftLockEvent(), Kind 20001 Ephemeral Events
-- ✅ **Last-Write-Wins** - Timestamp-basierte Conflict Resolution
-- ✅ **Maintainers Support** - p-tags in Board Events (nostrEvents.ts Line 96)
+**âœ… BEREITS IMPLEMENTIERT (Core Infrastructure):**
+- âœ… **SoftLockManager** - publishLock(), releaseLock(), subscribeLocks() (`softLockManager.svelte.ts`, 160 Zeilen)
+- âœ… **MergeEngine** - threeWayMerge(), Conflict Detection (`mergeEngine.ts`)
+- âœ… **CardEditingFlow** - checkForConflictBeforeSave(), Session Management (`cardEditingFlow.ts`)
+- âœ… **SyncManager** - IndexedDB Queue, Retry-Logik, publishOrQueue() (`syncManager.svelte.ts`)
+- âœ… **Nostr Events** - createSoftLockEvent(), Kind 20001 Ephemeral Events
+- âœ… **Last-Write-Wins** - Timestamp-basierte Conflict Resolution
+- âœ… **Maintainers Support** - p-tags in Board Events (nostrEvents.ts Line 96)
 
-**❌ WAS NOCH FEHLT (UI + Integration):**
-- ❌ **Share Dialog UI** - Topbar Panel für Board-Sharing (3-5 Tage)
-- ❌ **Presence-Indicator UI** - "Alice arbeitet gerade hier" Badge (2-3 Tage)
-- ❌ **Live-Notifications** - Toast für Kommentare/Moves (1-2 Tage)
-- ❌ **NIP-51 Integration** - Board-Sharing API (2-3 Tage)
-- ❌ **BoardRole enum** - Permission System (Owner/Editor/Viewer) (1 Tag)
-- ❌ **Soft-Lock UI Integration** - CardDetailsDialog warnings (1-2 Tage)
-- ❌ **E2E Tests** - Multi-Browser Playwright Tests (3-4 Tage)
+**âŒ WAS NOCH FEHLT (UI + Integration):**
+- âŒ **Share Dialog UI** - Topbar Panel fÃ¼r Board-Sharing (3-5 Tage)
+- âŒ **Presence-Indicator UI** - "Alice arbeitet gerade hier" Badge (2-3 Tage)
+- âŒ **Live-Notifications** - Toast fÃ¼r Kommentare/Moves (1-2 Tage)
+- âŒ **NIP-51 Integration** - Board-Sharing API (2-3 Tage)
+- âŒ **BoardRole enum** - Permission System (Owner/Editor/Viewer) (1 Tag)
+- âŒ **Soft-Lock UI Integration** - CardDetailsDialog warnings (1-2 Tage)
+- âŒ **E2E Tests** - Multi-Browser Playwright Tests (3-4 Tage)
 
 **Verbleibender Aufwand: ~12-17 Tage (nicht 26-30!)**
 
 ---
 
-## 🧐 KEY INSIGHTS (Codebase Analysis - 13.11.2025)
+## ðŸ§ KEY INSIGHTS (Codebase Analysis - 13.11.2025)
 
-✅ **Phase 1 praktisch komplett** — Auth + Offline-Sync IMPLEMENTIERT! (nur Testing fehlt: 3-5 Tage)  
-✅ **Phase 3 fast fertig** — 90% implementiert! (nur 3 AI Actions fehlen: splitCard, mergeCards, reorderCards)  
-✅ **Last-Write-Wins Production-Ready** — Vollständig implementiert & getestet  
-✅ **Comment-System lokal komplett** — Nur Nostr-Integration offen  
-✅ **Chat + AIPanel vorhanden** — 2000+ Zeilen Code, 600+ Tests!  
-✅ **Settings Store KOMPLETT** — 971 Zeilen, Dark Mode, Learning Config, MCP URLs, alles da!  
-⚠️ **Phase 2 fortgeschrittener** — Settings+Dark Mode ✅, nur Mobile+A11y fehlt (8-12 Tage)  
-🟡 **Paste System DUPLIKAT** — lib/paste/ UND boardstore/paste.ts (Konsolidierung nötig: 1 Tag)  
-🔴 **NEUER CRITICAL PATH:** 3 AI Actions (5 Tage) + Phase 2 Rest (12 Tage) + Phase 4 (15 Tage) = 32 Tage  
-⚡ **Neue Deadline-Projektion:** 15.12.2025 möglich! (Phase 4 Infrastruktur spart 11 Tage)
+âœ… **Phase 1 praktisch komplett** â€” Auth + Offline-Sync IMPLEMENTIERT! (nur Testing fehlt: 3-5 Tage)  
+âœ… **Phase 3 fast fertig** â€” 90% implementiert! (nur 3 AI Actions fehlen: splitCard, mergeCards, reorderCards)  
+âœ… **Last-Write-Wins Production-Ready** â€” VollstÃ¤ndig implementiert & getestet  
+âœ… **Comment-System lokal komplett** â€” Nur Nostr-Integration offen  
+âœ… **Chat + AIPanel vorhanden** â€” 2000+ Zeilen Code, 600+ Tests!  
+âœ… **Settings Store KOMPLETT** â€” 971 Zeilen, Dark Mode, Learning Config, MCP URLs, alles da!  
+âš ï¸ **Phase 2 fortgeschrittener** â€” Settings+Dark Mode âœ…, nur Mobile+A11y fehlt (8-12 Tage)  
+ðŸŸ¡ **Paste System DUPLIKAT** â€” lib/paste/ UND boardstore/paste.ts (Konsolidierung nÃ¶tig: 1 Tag)  
+ðŸ”´ **NEUER CRITICAL PATH:** 3 AI Actions (5 Tage) + Phase 2 Rest (12 Tage) + Phase 4 (15 Tage) = 32 Tage  
+âš¡ **Neue Deadline-Projektion:** 15.12.2025 mÃ¶glich! (Phase 4 Infrastruktur spart 11 Tage)
 
 ---
 
-## �📊 Übersicht nach Phasen
+## ï¿½ðŸ“Š Ãœbersicht nach Phasen
 
-| Phase | Priorität | Fokus | Status |
+| Phase | PrioritÃ¤t | Fokus | Status |
 |-------|-----------|-------|--------|
-| **Phase 1** | 🔴 Required / Funded | Core Data Model + Nostr Events + Merge System | **✅ ~95% COMPLETE** |
-| **Phase 1.5** | 🔴 Required / Funded | Board Versioning + Merge + Export/Import (Förder-Anforderung) | **✅ COMPLETE** |
-| **Phase 2** | 🔴 Required / Funded | UI Components + Offline-First + Merge Integration | **🟡 ~15% COMPLETE** |
-| **Phase 3** | 🔴 Required / Funded | KI-Integration (**AI AGENT INFRASTRUCTURE**) | **✅ ~90% COMPLETE** |
-| **Phase 4** | 🔴 **CRITICAL** / Funded | **Kollaboration bis 31.12.2025!** | **🟡 ~85% INFRASTRUCTURE READY** |
-| **Phase 4 (Testing)** | 🟠 Testing / Funded | **Testphase 01.01. - 31.01.2026** | **PLANNED** |
-| **Phase 5** | ⚪ Nice-to-have | Erweiterte Features | FUTURE |
+| **Phase 1** | ðŸ”´ Required / Funded | Core Data Model + Nostr Events + Merge System | **âœ… ~95% COMPLETE** |
+| **Phase 1.5** | ðŸ”´ Required / Funded | Board Versioning + Merge + Export/Import (FÃ¶rder-Anforderung) | **âœ… COMPLETE** |
+| **Phase 2** | ðŸ”´ Required / Funded | UI Components + Offline-First + Merge Integration | **ðŸŸ¡ ~15% COMPLETE** |
+| **Phase 3** | ðŸ”´ Required / Funded | KI-Integration (**AI AGENT INFRASTRUCTURE**) | **âœ… ~90% COMPLETE** |
+| **Phase 4** | ðŸ”´ **CRITICAL** / Funded | **Kollaboration bis 31.12.2025!** | **ðŸŸ¡ ~85% INFRASTRUCTURE READY** |
+| **Phase 4 (Testing)** | ðŸŸ  Testing / Funded | **Testphase 01.01. - 31.01.2026** | **PLANNED** |
+| **Phase 5** | âšª Nice-to-have | Erweiterte Features | FUTURE |
 
 ---
 
-## 📅 Timeline-Visualisierung (OKTOBER - JANUAR)
+## ðŸ“… Timeline-Visualisierung (OKTOBER - JANUAR)
 
 ```
 OKTOBER 2025
-════════════════════════════════════════════════════════════════════
-26.10  ────── 31.10
-       Phase 1.5B: CardDialog Integration (5 Tage) ✓
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+26.10  â”€â”€â”€â”€â”€â”€ 31.10
+       Phase 1.5B: CardDialog Integration (5 Tage) âœ“
 
 NOVEMBER 2025
-════════════════════════════════════════════════════════════════════
-06.11  ⚡ MILESTONE
-       ✅ Phase 3.0 AI Agent Infrastructure COMPLETE!
-       🤖 10 Agent-Module, ChatStore, AIPanel, 150+ Tests
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+06.11  âš¡ MILESTONE
+       âœ… Phase 3.0 AI Agent Infrastructure COMPLETE!
+       ðŸ¤– 10 Agent-Module, ChatStore, AIPanel, 150+ Tests
 
-10.11  ⚡ NOSTR SYNC SPRINT COMPLETE!
-       ✅ Last-Write-Wins (LWW) IMPLEMENTIERT & TESTED
-       ✅ Echo-Loop Prevention working
-       ✅ Card-Duplication Bug GELÖST
-       ✅ Board-Storage Refactoring (95% Redundanz weg!)
-       🔴 NÄCHSTER SCHRITT: Merge-System ↔ LWW Integration (70 min, doku: docs/NOSTR/NEXT-STEPS/)
+10.11  âš¡ NOSTR SYNC SPRINT COMPLETE!
+       âœ… Last-Write-Wins (LWW) IMPLEMENTIERT & TESTED
+       âœ… Echo-Loop Prevention working
+       âœ… Card-Duplication Bug GELÃ–ST
+       âœ… Board-Storage Refactoring (95% Redundanz weg!)
+       ðŸ”´ NÃ„CHSTER SCHRITT: Merge-System â†” LWW Integration (70 min, doku: docs/NOSTR/NEXT-STEPS/)
 
-10.11  ────── 20.11
-       Phase 1.5D: Export/Import (10 Tage) 🔴 FÖRDER-ANFORDERUNG
-       Phase 2.0: Merge Production (9 Tage) ⬇️ 
-       ↑ PARALLEL
+10.11  â”€â”€â”€â”€â”€â”€ 20.11
+       Phase 1.5D: Export/Import (10 Tage) ðŸ”´ FÃ–RDER-ANFORDERUNG
+       Phase 2.0: Merge Production (9 Tage) â¬‡ï¸ 
+       â†‘ PARALLEL
        
-       🔴 BLOCKER ANALYSIS READY: Merge-LWW Integration needs to happen before full Phase 2.0
-       → 3 Fixes documented, ready for implementation
-       → Check: docs/NOSTR/NEXT-STEPS/ for integration plan
+       ðŸ”´ BLOCKER ANALYSIS READY: Merge-LWW Integration needs to happen before full Phase 2.0
+       â†’ 3 Fixes documented, ready for implementation
+       â†’ Check: docs/NOSTR/NEXT-STEPS/ for integration plan
 
-20.11  ────── 01.12
+20.11  â”€â”€â”€â”€â”€â”€ 01.12
        Phase 2.1: UI Komponenten (11 Tage) + Phase 2.2: UX Polish (10 Tage) MERGED
-       ⬇️ Optimization: Diese können jetzt parallel laufen!
+       â¬‡ï¸ Optimization: Diese kÃ¶nnen jetzt parallel laufen!
 
-01.12  ────── 10.12
+01.12  â”€â”€â”€â”€â”€â”€ 10.12
        Phase 2.3: Performance (9 Tage)
 
-10.12  ────── 23.12
+10.12  â”€â”€â”€â”€â”€â”€ 23.12
        Phase 4.1: Board-Sharing (13 Tage)
 
-20.12  ────── 31.12
+20.12  â”€â”€â”€â”€â”€â”€ 31.12
        Phase 4.2: Echtzeit-Kollaboration (11 Tage) 
-       🎯 DEADLINE: Phase 2 + Phase 4 FERTIG!
+       ðŸŽ¯ DEADLINE: Phase 2 + Phase 4 FERTIG!
 
 31.12
-       ✅ Phase 1: COMPLETE
-       ✅ Phase 3.0: COMPLETE  
-       ✅ Phase 2: SHOULD BE DONE
-       ✅ Phase 4: SHOULD BE DONE (or very close)
+       âœ… Phase 1: COMPLETE
+       âœ… Phase 3.0: COMPLETE  
+       âœ… Phase 2: SHOULD BE DONE
+       âœ… Phase 4: SHOULD BE DONE (or very close)
 
 JANUAR 2026
-════════════════════════════════════════════════════════════════════
-01.01  ────── 31.01
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+01.01  â”€â”€â”€â”€â”€â”€ 31.01
        Phase 3.1+: KI-Integration (50 Tage)
        Phase 4: Testing & QA (31 Tage)
-       ↑ PARALLEL - FOKUS auf Fehlerbehandlung
+       â†‘ PARALLEL - FOKUS auf Fehlerbehandlung
 ```
 
 ---
 
 
-## ⏱️ Zeitplan (aktualisiert 10.11.2025)
+## â±ï¸ Zeitplan (aktualisiert 10.11.2025)
 
 | Phase | Meilenstein | Start | Ende | Dauer | Status |
 |-------|-------------|-------|------|-------|--------|
-| **1** | 1.0 - Author Fields | 20.10. | ✅ 23.10. | 3 Tage | **DONE** |
-| **1** | 1.1 - Nostr Publishing | 23.10. | ✅ 10.11. | 18 Tage | **✅ DONE** (Last-Write-Wins Complete!) |
+| **1** | 1.0 - Author Fields | 20.10. | âœ… 23.10. | 3 Tage | **DONE** |
+| **1** | 1.1 - Nostr Publishing | 23.10. | âœ… 10.11. | 18 Tage | **âœ… DONE** (Last-Write-Wins Complete!) |
 | **1** | 1.2 - Offline Sync | 05.11. | 15.11. | 10 Tage | PLANNED |
-| **1** | 1.3 - Comments | 20.10. | ✅ 25.10. | 5 Tage | **DONE (Phase A+B)** |
-| **1.5** | 1.5A - Merge Engine | 20.10. | ✅ 26.10. | 6 Tage | **DONE** |
-| **1.5** | 1.5B - Merge Integration | 26.10. | ✅ 31.10. | 5 Tage | **DONE** |
+| **1** | 1.3 - Comments | 20.10. | âœ… 25.10. | 5 Tage | **DONE (Phase A+B)** |
+| **1.5** | 1.5A - Merge Engine | 20.10. | âœ… 26.10. | 6 Tage | **DONE** |
+| **1.5** | 1.5B - Merge Integration | 26.10. | âœ… 31.10. | 5 Tage | **DONE** |
 | **1.5** | 1.5C - Snapshots | 01.11. | 10.11. | 9 Tage | PLANNED |
-| **1.5** | 1.5D - Export/Import | 10.11. | 20.11. | 10 Tage | **IN PROGRESS** (Förder-Anforderung!) |
-| **3.0** | AI Agent Infrastructure | 06.11. | ✅ **06.11.** | - | **✅ COMPLETE** |
+| **1.5** | 1.5D - Export/Import | 10.11. | 20.11. | 10 Tage | **IN PROGRESS** (FÃ¶rder-Anforderung!) |
+| **3.0** | AI Agent Infrastructure | 06.11. | âœ… **06.11.** | - | **âœ… COMPLETE** |
 | **1** | 1.4 - Auth | 15.11. | 25.11. | 10 Tage | PLANNED |
-| **🔴 CRITICAL** | **Merge-LWW Integration** | **Doku: 10.11.** | **15.11.** | **70 min** | **🔴 BLOCKER für Phase 2.0** |
+| **ðŸ”´ CRITICAL** | **Merge-LWW Integration** | **Doku: 10.11.** | **15.11.** | **70 min** | **ðŸ”´ BLOCKER fÃ¼r Phase 2.0** |
 | **2.0** | Merge Production | 15.11. | 22.11. | 7 Tage | BLOCKED (awaiting Merge-LWW integration) |
 | **2.1** | UI Komponenten (50% saved) | 20.11. | 01.12. | 11 Tage | PLANNED (after 2.0) |
 | **2.2** | UX Polish & A11y | 01.12. | 10.12. | 9 Tage | PLANNED |
@@ -364,237 +364,237 @@ JANUAR 2026
 
 ---
 
-## 🔴 Phase 1: Foundation & Core Implementation (Priorität: Hoch)
+## ðŸ”´ Phase 1: Foundation & Core Implementation (PrioritÃ¤t: Hoch)
 
-### 🆕 Abgeschlossene Meilensteine
+### ðŸ†• Abgeschlossene Meilensteine
 
-#### ✅ 1.0: Author Field Attribution (COMPLETED 23. Oktober 2025)
+#### âœ… 1.0: Author Field Attribution (COMPLETED 23. Oktober 2025)
 
 **Ziel:** Board und Card Author-Felder werden korrekt zu localStorage gespeichert  
-**Status:** ✅ **DONE**
+**Status:** âœ… **DONE**
 
 **Was wurde gefixt:**
-- ✅ Card.getContextData() gibt jetzt `author` zurück (Line ~145)
-- ✅ Board.getContextData() gibt jetzt `author` zurück (Line ~373)
-- ✅ reconstructBoard() lädt jetzt `author` korrekt (Line ~264)
-- ✅ createBoard() & createCard() nutzen userName Fallback-Kette (Lines ~401, ~716)
-- ✅ Comments zeigen lesbare Namen statt Hex-Pubkeys
+- âœ… Card.getContextData() gibt jetzt `author` zurÃ¼ck (Line ~145)
+- âœ… Board.getContextData() gibt jetzt `author` zurÃ¼ck (Line ~373)
+- âœ… reconstructBoard() lÃ¤dt jetzt `author` korrekt (Line ~264)
+- âœ… createBoard() & createCard() nutzen userName Fallback-Kette (Lines ~401, ~716)
+- âœ… Comments zeigen lesbare Namen statt Hex-Pubkeys
 
 **Dokumentation:**
-- 📚 [`docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](../ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) - Vollständige Root-Cause Analyse
-- 📚 [`docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](../GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) - AuthStore API Reference
-- 📚 `AGENTS.md` Sections X & XI - Critical Patterns für Zukunft
-- 📚 `copilot-instructions.md` Sections 21 & 22 - Rules & Violations
+- ðŸ“š [`docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md`](../ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md) - VollstÃ¤ndige Root-Cause Analyse
+- ðŸ“š [`docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md`](../GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md) - AuthStore API Reference
+- ðŸ“š `AGENTS.md` Sections X & XI - Critical Patterns fÃ¼r Zukunft
+- ðŸ“š `copilot-instructions.md` Sections 21 & 22 - Rules & Violations
 
 **Key Learnings:**
-- **Pattern:** Alle `$state` Felder MÜSSEN in `getContextData()` sein!
-- **Pattern:** Fallback-Kette: userName → pubkey → 'anonymous'
-- **Pattern:** Serialisierungs-Chain: Model → getContextData() → Storage → After-Reload
+- **Pattern:** Alle `$state` Felder MÃœSSEN in `getContextData()` sein!
+- **Pattern:** Fallback-Kette: userName â†’ pubkey â†’ 'anonymous'
+- **Pattern:** Serialisierungs-Chain: Model â†’ getContextData() â†’ Storage â†’ After-Reload
 
-**Impact für Zukunft:**
-- ✅ Phase 1.5 (Export/Import): Nutzt jetzt korrekt serialisierte Daten
-- ✅ Phase 2 (NIP-07): AuthStore vollständig dokumentiert
-- ✅ Phase 3 (Nostr Publishing): Board/Card Author sind korrekt initialisiert
+**Impact fÃ¼r Zukunft:**
+- âœ… Phase 1.5 (Export/Import): Nutzt jetzt korrekt serialisierte Daten
+- âœ… Phase 2 (NIP-07): AuthStore vollstÃ¤ndig dokumentiert
+- âœ… Phase 3 (Nostr Publishing): Board/Card Author sind korrekt initialisiert
 
 ---
 
-#### ✅ Dokumentations-Restrukturierung (COMPLETED 29. Oktober 2025)
+#### âœ… Dokumentations-Restrukturierung (COMPLETED 29. Oktober 2025)
 
 **Ziel:** ARCHITECTURE/ Dokumentation nach "ONE Topic = ONE Document" Prinzip restrukturieren  
-**Status:** ✅ **DONE**
+**Status:** âœ… **DONE**
 
 **Was wurde umgesetzt:**
 
 1. **STORES/ Subdirectory erstellt** (6 fokussierte Dokumente)
-   - ✅ `STORES/README.md` - Store-Übersicht & Debugging-Tools
-   - ✅ `STORES/BOARDSTORE.md` - Multi-Board Management (18 Rules)
-   - ✅ `STORES/AUTHSTORE.md` - Authentication & Session (15 Rules)
-   - ✅ `STORES/SETTINGSSTORE.md` - Theme, Relays, LLM Config (12 Rules)
-   - ✅ `STORES/CHATBOTSTORE.md` - LLM Integration Spec (8 Rules, Phase 3)
-   - ✅ `STORES/SYNCMANAGER.md` - Offline-Sync Spec (7 Rules, Phase 1.2)
+   - âœ… `STORES/README.md` - Store-Ãœbersicht & Debugging-Tools
+   - âœ… `STORES/BOARDSTORE.md` - Multi-Board Management (18 Rules)
+   - âœ… `STORES/AUTHSTORE.md` - Authentication & Session (15 Rules)
+   - âœ… `STORES/SETTINGSSTORE.md` - Theme, Relays, LLM Config (12 Rules)
+   - âœ… `STORES/CHATBOTSTORE.md` - LLM Integration Spec (8 Rules, Phase 3)
+   - âœ… `STORES/SYNCMANAGER.md` - Offline-Sync Spec (7 Rules, Phase 1.2)
 
 2. **Dokumentations-Konsolidierung** (40% Redundanz-Reduktion)
-   - ✅ NOSTR-USER.md (1700 Zeilen) → `STORES/AUTHSTORE.md` (Store-Logik) + `AUTH-UI-COMPONENTS.md` (UI)
-   - ✅ SIDEBAR-LOGIN.md → `AUTH-UI-COMPONENTS.md` (mit echten Codebase-Komponenten)
-   - ✅ NDK.md refactored (Offline-Sync Duplikate entfernt, ~100 Zeilen)
-   - ✅ REACTIVITY.md bleibt als Svelte 5 Runes Master-File
+   - âœ… NOSTR-USER.md (1700 Zeilen) â†’ `STORES/AUTHSTORE.md` (Store-Logik) + `AUTH-UI-COMPONENTS.md` (UI)
+   - âœ… SIDEBAR-LOGIN.md â†’ `AUTH-UI-COMPONENTS.md` (mit echten Codebase-Komponenten)
+   - âœ… NDK.md refactored (Offline-Sync Duplikate entfernt, ~100 Zeilen)
+   - âœ… REACTIVITY.md bleibt als Svelte 5 Runes Master-File
 
 3. **AUTH-UI-COMPONENTS.md** (Neue Datei)
-   - ✅ LoginSheet (src/lib/components/auth/) - Sheet-basiertes Login-Modal
-   - ✅ LoginDialog (src/routes/cardsboard/) - Dialog-basiertes Login für Kanban
-   - ✅ LeftSidebarFooter (src/routes/cardsboard/) - User-Anzeige in Sidebar
-   - ✅ ProfileEditor (src/lib/components/auth/) - Profil-Editor Modal
-   - ✅ Alle Komponenten verifiziert mit echter Codebase (keine Phantom-Komponenten mehr!)
+   - âœ… LoginSheet (src/lib/components/auth/) - Sheet-basiertes Login-Modal
+   - âœ… LoginDialog (src/routes/cardsboard/) - Dialog-basiertes Login fÃ¼r Kanban
+   - âœ… LeftSidebarFooter (src/routes/cardsboard/) - User-Anzeige in Sidebar
+   - âœ… ProfileEditor (src/lib/components/auth/) - Profil-Editor Modal
+   - âœ… Alle Komponenten verifiziert mit echter Codebase (keine Phantom-Komponenten mehr!)
 
 4. **Navigation aktualisiert**
-   - ✅ `_INDEX.md` komplett überarbeitet (37 → 41 total docs)
-   - ✅ ARCHITECTURE/ Struktur: 4 Root + 6 STORES/ = 10 Dateien
-   - ✅ Frontend Dev Learning Path aktualisiert (11 Items)
-   - ✅ Nostr Dev Learning Path aktualisiert (6 Items)
-   - ✅ Nach Thema Tabelle aktualisiert (14 Topics)
+   - âœ… `_INDEX.md` komplett Ã¼berarbeitet (37 â†’ 41 total docs)
+   - âœ… ARCHITECTURE/ Struktur: 4 Root + 6 STORES/ = 10 Dateien
+   - âœ… Frontend Dev Learning Path aktualisiert (11 Items)
+   - âœ… Nostr Dev Learning Path aktualisiert (6 Items)
+   - âœ… Nach Thema Tabelle aktualisiert (14 Topics)
 
 5. **Archive & Migration**
-   - ✅ NOSTR-USER-OLD.md archiviert (mit MIGRATION-NOTICE)
-   - ✅ SIDEBAR-LOGIN.md archiviert (mit umfassendem Mapping)
-   - ✅ Alte AUTHSTORE.md, SETTINGSSTORE.md, STORES.md archiviert
-   - ✅ Alle Migration Notices mit Mapping-Tabellen & Developer-Guide
+   - âœ… NOSTR-USER-OLD.md archiviert (mit MIGRATION-NOTICE)
+   - âœ… SIDEBAR-LOGIN.md archiviert (mit umfassendem Mapping)
+   - âœ… Alte AUTHSTORE.md, SETTINGSSTORE.md, STORES.md archiviert
+   - âœ… Alle Migration Notices mit Mapping-Tabellen & Developer-Guide
 
 **Dokumentation:**
-- 📚 [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Übersicht
-- 📚 [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten
-- 📚 [`docs/_INDEX.md`](../docs/_INDEX.md) - Komplett aktualisierte Navigation
-- 📚 [`archive/MIGRATION-NOTICE-NOSTR-USER.md`](../archive/MIGRATION-NOTICE-NOSTR-USER.md)
-- 📚 [`archive/MIGRATION-NOTICE-SIDEBAR-LOGIN.md`](../archive/MIGRATION-NOTICE-SIDEBAR-LOGIN.md)
+- ðŸ“š [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Ãœbersicht
+- ðŸ“š [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten
+- ðŸ“š [`docs/_INDEX.md`](../docs/_INDEX.md) - Komplett aktualisierte Navigation
+- ðŸ“š [`archive/MIGRATION-NOTICE-NOSTR-USER.md`](../archive/MIGRATION-NOTICE-NOSTR-USER.md)
+- ðŸ“š [`archive/MIGRATION-NOTICE-SIDEBAR-LOGIN.md`](../archive/MIGRATION-NOTICE-SIDEBAR-LOGIN.md)
 
 **Key Metrics:**
 - **Redundanz-Reduktion:** 40% weniger Duplikate
-- **Dokumenten-Anzahl:** +4 neue (STORES/), -7 archivierte = +11 netto (37 → 41)
-- **ARCHITECTURE/ Struktur:** Von 14 flat files → 10 files (4 root + 6 STORES/)
+- **Dokumenten-Anzahl:** +4 neue (STORES/), -7 archivierte = +11 netto (37 â†’ 41)
+- **ARCHITECTURE/ Struktur:** Von 14 flat files â†’ 10 files (4 root + 6 STORES/)
 - **Cross-References:** Alle 12 Links zwischen STORES docs aktualisiert
 
 **Governance-Compliance:**
-- ✅ ONE Topic = ONE Document (DOCUMENTATION-RULES-v3.md)
-- ✅ Alle neuen Docs in `/docs/` (keine Root-Level Docs)
-- ✅ Alle Docs in `_INDEX.md` verlinkt mit Navigation
-- ✅ Timestamps & Version-Tags hinzugefügt
-- ✅ Cross-References aktualisiert
+- âœ… ONE Topic = ONE Document (DOCUMENTATION-RULES-v3.md)
+- âœ… Alle neuen Docs in `/docs/` (keine Root-Level Docs)
+- âœ… Alle Docs in `_INDEX.md` verlinkt mit Navigation
+- âœ… Timestamps & Version-Tags hinzugefÃ¼gt
+- âœ… Cross-References aktualisiert
 
-**Impact für Entwicklung:**
-- ✅ **Phase 1.2 (Offline-Sync):** SYNCMANAGER.md ist klare Spec für Implementation
-- ✅ **Phase 1.4 (Auth):** AUTHSTORE.md + AUTH-UI-COMPONENTS.md = vollständige Spec
-- ✅ **Phase 3 (KI):** CHATBOTSTORE.md gibt klare Architektur vor
-- ✅ **Onboarding:** Neue Devs finden Docs 60% schneller (zentralisierte Navigation)
-- ✅ **Wartbarkeit:** Updates in einem Dokument statt 3-5 fragmentierten Files
+**Impact fÃ¼r Entwicklung:**
+- âœ… **Phase 1.2 (Offline-Sync):** SYNCMANAGER.md ist klare Spec fÃ¼r Implementation
+- âœ… **Phase 1.4 (Auth):** AUTHSTORE.md + AUTH-UI-COMPONENTS.md = vollstÃ¤ndige Spec
+- âœ… **Phase 3 (KI):** CHATBOTSTORE.md gibt klare Architektur vor
+- âœ… **Onboarding:** Neue Devs finden Docs 60% schneller (zentralisierte Navigation)
+- âœ… **Wartbarkeit:** Updates in einem Dokument statt 3-5 fragmentierten Files
 
-**Zeit-Ersparnis für zukünftige Phasen:**
-- Phase 1.4 (Auth): -1 Tag (Spec ist vollständig)
+**Zeit-Ersparnis fÃ¼r zukÃ¼nftige Phasen:**
+- Phase 1.4 (Auth): -1 Tag (Spec ist vollstÃ¤ndig)
 - Phase 1.2 (Offline): -0.5 Tage (SYNCMANAGER.md ist ready)
 - Phase 3 (KI): -1 Tag (CHATBOTSTORE.md klar definiert)
 - **Total: -2.5 Tage Entwicklungszeit eingespart durch bessere Docs!**
 
 ---
 
-#### ✅ Dokumentations-Governance v3.0 (COMPLETED 29. Oktober 2025)
+#### âœ… Dokumentations-Governance v3.0 (COMPLETED 29. Oktober 2025)
 
-**Ziel:** Bidirektionale Code ↔ Docs Synchronisation etablieren  
-**Status:** ✅ **DONE**
+**Ziel:** Bidirektionale Code â†” Docs Synchronisation etablieren  
+**Status:** âœ… **DONE**
 
 **Was wurde umgesetzt:**
 
 1. **DOCUMENTATION-RULES-v3.md erstellt** (Neue Governance)
-   - ✅ RULE #6: Code → Docs Synchronisation (11-Punkt DoD Checklist)
-   - ✅ RULE #7: Docs → Code Synchronisation (Audit-Prozess)
-   - ✅ Pre-Commit Hook Template (automatisierte Prüfung)
-   - ✅ Archivierungs-Prozess mit Migration-Notices
-   - ✅ Quartalsweise Dokumentations-Reviews
-   - ✅ Metriken & KPIs (Sync-Rate, Dead Links, Archiv-Lag)
-   - ✅ Enforcement & Compliance (Violations-Konsequenzen)
-   - ✅ Pre-Merge Checklist für Reviewer
+   - âœ… RULE #6: Code â†’ Docs Synchronisation (11-Punkt DoD Checklist)
+   - âœ… RULE #7: Docs â†’ Code Synchronisation (Audit-Prozess)
+   - âœ… Pre-Commit Hook Template (automatisierte PrÃ¼fung)
+   - âœ… Archivierungs-Prozess mit Migration-Notices
+   - âœ… Quartalsweise Dokumentations-Reviews
+   - âœ… Metriken & KPIs (Sync-Rate, Dead Links, Archiv-Lag)
+   - âœ… Enforcement & Compliance (Violations-Konsequenzen)
+   - âœ… Pre-Merge Checklist fÃ¼r Reviewer
 
-2. **Definition of Done (DoD) für Code-Änderungen**
-   - ✅ 11-Punkt Checklist MANDATORY für jede Code-Änderung
-   - ✅ ROADMAP.md MUSS aktualisiert werden
-   - ✅ TESTSUITE/STATUS.md MUSS bei Test-Änderungen aktualisiert werden
-   - ✅ CHANGELOG.md MUSS bei Features aktualisiert werden
-   - ✅ Feature-spezifische Docs MÜSSEN vorhanden sein
-   - ✅ _INDEX.md MUSS bei neuen Docs aktualisiert werden
-   - ✅ Veraltete Docs MÜSSEN archiviert werden
+2. **Definition of Done (DoD) fÃ¼r Code-Ã„nderungen**
+   - âœ… 11-Punkt Checklist MANDATORY fÃ¼r jede Code-Ã„nderung
+   - âœ… ROADMAP.md MUSS aktualisiert werden
+   - âœ… TESTSUITE/STATUS.md MUSS bei Test-Ã„nderungen aktualisiert werden
+   - âœ… CHANGELOG.md MUSS bei Features aktualisiert werden
+   - âœ… Feature-spezifische Docs MÃœSSEN vorhanden sein
+   - âœ… _INDEX.md MUSS bei neuen Docs aktualisiert werden
+   - âœ… Veraltete Docs MÃœSSEN archiviert werden
 
 3. **Dokumentations-Audit-Prozess**
-   - ✅ 5-Punkt Checklist für Docs-Updates
-   - ✅ Code-Konsistenz-Prüfung
-   - ✅ Archivierungs-Workflow definiert
-   - ✅ Quartalsweise Reviews geplant (Q1 2026: 01.01.2026)
+   - âœ… 5-Punkt Checklist fÃ¼r Docs-Updates
+   - âœ… Code-Konsistenz-PrÃ¼fung
+   - âœ… Archivierungs-Workflow definiert
+   - âœ… Quartalsweise Reviews geplant (Q1 2026: 01.01.2026)
 
 4. **Metriken & KPIs**
-   - ✅ Dokumentations-Sync-Rate (Ziel: >95%)
-   - ✅ Veraltete Dokumentation (Ziel: 0)
-   - ✅ Archivierungs-Lag (Ziel: <7 Tage)
-   - ✅ Dead Links (Ziel: 0)
-   - ✅ Test-Dokumentation-Sync (Ziel: 100%)
+   - âœ… Dokumentations-Sync-Rate (Ziel: >95%)
+   - âœ… Veraltete Dokumentation (Ziel: 0)
+   - âœ… Archivierungs-Lag (Ziel: <7 Tage)
+   - âœ… Dead Links (Ziel: 0)
+   - âœ… Test-Dokumentation-Sync (Ziel: 100%)
 
 5. **Automatisierung (Phase 5 vorbereitet)**
-   - ✅ Pre-Commit Hook Template (bash)
-   - ✅ CI/CD Integration-Spec
-   - ✅ GitHub PR Template mit Docs-Checklist
+   - âœ… Pre-Commit Hook Template (bash)
+   - âœ… CI/CD Integration-Spec
+   - âœ… GitHub PR Template mit Docs-Checklist
 
 **Dokumentation:**
-- 📚 [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - Vollständige v3.0 Regeln
-- 📚 [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration-Notice (v2.0 deprecated)
-- 📚 `ROADMAP.md` Section - Diese Sektion dokumentiert v3.0 Completion
+- ðŸ“š [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - VollstÃ¤ndige v3.0 Regeln
+- ðŸ“š [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration-Notice (v2.0 deprecated)
+- ðŸ“š `ROADMAP.md` Section - Diese Sektion dokumentiert v3.0 Completion
 
 **Key Metrics:**
 - **Compliance:** Ab 29.10.2025 MANDATORY
-- **Coverage:** Alle Code-Änderungen ab jetzt mit Docs-Update
+- **Coverage:** Alle Code-Ã„nderungen ab jetzt mit Docs-Update
 - **Automation:** Pre-Commit Hook template ready (Phase 5 Implementation)
 
 **Enforcement:**
-- 🔴 **CRITICAL:** Code ohne ROADMAP.md Update → PR rejected
-- 🔴 **CRITICAL:** Tests ohne STATUS.md Update → PR rejected
-- 🟠 **HIGH:** Feature ohne Spec → PR needs Docs-Review
-- 🟡 **MEDIUM:** Veraltete Docs → Technical Debt Issue
+- ðŸ”´ **CRITICAL:** Code ohne ROADMAP.md Update â†’ PR rejected
+- ðŸ”´ **CRITICAL:** Tests ohne STATUS.md Update â†’ PR rejected
+- ðŸŸ  **HIGH:** Feature ohne Spec â†’ PR needs Docs-Review
+- ðŸŸ¡ **MEDIUM:** Veraltete Docs â†’ Technical Debt Issue
 
-**Impact für Entwicklung:**
-- ✅ **Phase 1-4:** Alle Code-Änderungen MÜSSEN DoD Checklist erfüllen
-- ✅ **Phase 5:** Pre-Commit Hook automatisiert Prüfung
-- ✅ **Langfristig:** Dokumentation ist immer aktuell, keine veralteten Docs
-- ✅ **Onboarding:** Neue Devs haben immer aktuelle Dokumentation
-- ✅ **Code-Qualität:** Bessere Spec → besserer Code
+**Impact fÃ¼r Entwicklung:**
+- âœ… **Phase 1-4:** Alle Code-Ã„nderungen MÃœSSEN DoD Checklist erfÃ¼llen
+- âœ… **Phase 5:** Pre-Commit Hook automatisiert PrÃ¼fung
+- âœ… **Langfristig:** Dokumentation ist immer aktuell, keine veralteten Docs
+- âœ… **Onboarding:** Neue Devs haben immer aktuelle Dokumentation
+- âœ… **Code-QualitÃ¤t:** Bessere Spec â†’ besserer Code
 
 **Timeline-Impact:**
-- **Keine zusätzliche Zeit** - Dokumentation war schon immer erforderlich
+- **Keine zusÃ¤tzliche Zeit** - Dokumentation war schon immer erforderlich
 - **Zeitersparnis:** -2.5 Tage durch bessere Docs (bereits in Phase 1-3 eingerechnet)
 - **Prevention:** Verhindert 5-10 Tage Debugging durch veraltete Docs pro Phase!
 
-**Nächste Schritte (Phase 5):**
-- [ ] Pre-Commit Hook implementieren (automatisierte Prüfung)
+**NÃ¤chste Schritte (Phase 5):**
+- [ ] Pre-Commit Hook implementieren (automatisierte PrÃ¼fung)
 - [ ] CI/CD Pipeline erweitern (GitHub Actions)
 - [ ] GitHub PR Template mit Docs-Checklist
 - [ ] Q1 2026 Review: Metriken messen (Sync-Rate, Dead Links, etc.)
 
 ---
 
-### Meilenstein 1.1: Nostr Event Publishing (Priorität: Hoch)
+### Meilenstein 1.1: Nostr Event Publishing (PrioritÃ¤t: Hoch)
 
-**Ziel:** Board und Card Events können publiziert werden  
-**Status:** 🔄 IN PROGRESS
+**Ziel:** Board und Card Events kÃ¶nnen publiziert werden  
+**Status:** ðŸ”„ IN PROGRESS
 
 #### Zu implementieren:
 
-- [ ] **`src/lib/utils/nostrEvents.ts`** – Event Serialisierung
+- [ ] **`src/lib/utils/nostrEvents.ts`** â€“ Event Serialisierung
   - [ ] `boardToNostrEvent(board, ndk): NDKEvent`
   - [ ] `nostrEventToBoard(event): BoardProps`
   - [ ] `cardToNostrEvent(card, columnName, rank, boardRef, ndk): NDKEvent`
   - [ ] `nostrEventToCard(event): CardProps`
   - [ ] `createCommentEvent(text, cardRef, cardEventId, ndk): NDKEvent`
 
-- [ ] **`src/lib/stores/kanbanStore.svelte.ts`** – Integration mit NDK
+- [ ] **`src/lib/stores/kanbanStore.svelte.ts`** â€“ Integration mit NDK
   - [ ] Ersetze `console.log()` mit echtem `event.publish()`
   - [ ] Implementiere `publishToNostr()` Methode
-  - [ ] Implementiere `loadFromNostr()` für initiales Laden
-  - [ ] Implementiere `subscribeToUpdates()` für Live-Updates
+  - [ ] Implementiere `loadFromNostr()` fÃ¼r initiales Laden
+  - [ ] Implementiere `subscribeToUpdates()` fÃ¼r Live-Updates
 
 - [ ] **Tests**
-  - [ ] Unit-Tests für `nostrEvents.ts`
+  - [ ] Unit-Tests fÃ¼r `nostrEvents.ts`
   - [ ] Integration-Tests mit Mock-NDK
-  - [ ] Serialisierungstests (Board → Event → Board Round-Trip)
+  - [ ] Serialisierungstests (Board â†’ Event â†’ Board Round-Trip)
 
 **Acceptance Criteria:**
-- ✅ Board-Events werden mit Kind 30301 publiziert
-- ✅ Card-Events werden mit Kind 30302 publiziert
-- ✅ `publishState` wird als Custom Tag korrekt gespeichert
-- ✅ Events können ohne Fehler zurück deserialisiert werden
+- âœ… Board-Events werden mit Kind 30301 publiziert
+- âœ… Card-Events werden mit Kind 30302 publiziert
+- âœ… `publishState` wird als Custom Tag korrekt gespeichert
+- âœ… Events kÃ¶nnen ohne Fehler zurÃ¼ck deserialisiert werden
 
 ---
 
-### Meilenstein 1.2: Offline-First Synchronisation (Priorität: Hoch)
+### Meilenstein 1.2: Offline-First Synchronisation (PrioritÃ¤t: Hoch)
 
 **Ziel:** Events werden gequeued wenn offline, synced wenn online  
-**Status:** 🟡 PLANNED
+**Status:** ðŸŸ¡ PLANNED
 
 #### Zu implementieren:
 
-- [ ] **`src/lib/stores/syncManager.ts`** – Offline Event Queue
+- [ ] **`src/lib/stores/syncManager.ts`** â€“ Offline Event Queue
   - [ ] Event Queue mit `svelte-persisted-store` (IndexedDB)
   - [ ] Online/Offline Status Detection
   - [ ] `publishOrQueue()` API
@@ -614,68 +614,68 @@ JANUAR 2026
   - [ ] Retry-Mechanismus testen
 
 **Acceptance Criteria:**
-- ✅ Events werden in IndexedDB gequeued wenn offline
-- ✅ Bei Reconnect werden alle gepufferten Events publiziert
-- ✅ Max. 3 Retry-Versuche, dann Event entfernen
-- ✅ Queue ist persistent (bleibt über Browser-Neustarts)
+- âœ… Events werden in IndexedDB gequeued wenn offline
+- âœ… Bei Reconnect werden alle gepufferten Events publiziert
+- âœ… Max. 3 Retry-Versuche, dann Event entfernen
+- âœ… Queue ist persistent (bleibt Ã¼ber Browser-Neustarts)
 
 ---
 
-### Meilenstein 1.5: Board Versioning & Snapshot Management (Priorität: Hoch) — **Neu 26.10.2025**
+### Meilenstein 1.5: Board Versioning & Snapshot Management (PrioritÃ¤t: Hoch) â€” **Neu 26.10.2025**
 
-**Ziel:** Manuelle Board-Snapshots ermöglichen Versions-Kontrolle + Conflict Resolution Framework  
-**Status:** 🔄 IN PROGRESS (Core: ✅ Implementiert, Integration: 🔄 Geplant)
+**Ziel:** Manuelle Board-Snapshots ermÃ¶glichen Versions-Kontrolle + Conflict Resolution Framework  
+**Status:** ðŸ”„ IN PROGRESS (Core: âœ… Implementiert, Integration: ðŸ”„ Geplant)
 
-**Abhängig von:** [`COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md)
+**AbhÃ¤ngig von:** [`COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md)
 
-#### Phase 1.5A: Core Merge Engine — ✅ DONE (26.10.2025)
+#### Phase 1.5A: Core Merge Engine â€” âœ… DONE (26.10.2025)
 
-- ✅ **mergeEngine.ts** — 3-way Merge Algorithm
-  - ✅ `threeWayMerge(base, mine, theirs)` – Automatische Konflikt-Detection
-  - ✅ `applyMergeResolution()` – User-Auflösung anwenden
-  - ✅ Conflict-Threshold: <30% auto-merge, >30% manual
+- âœ… **mergeEngine.ts** â€” 3-way Merge Algorithm
+  - âœ… `threeWayMerge(base, mine, theirs)` â€“ Automatische Konflikt-Detection
+  - âœ… `applyMergeResolution()` â€“ User-AuflÃ¶sung anwenden
+  - âœ… Conflict-Threshold: <30% auto-merge, >30% manual
 
-- ✅ **softLockManager.svelte.ts** — Ephemeral "Now Editing" Events (Kind 20001)
-  - ✅ `publishLock()` – Warnt andere Nutzer
-  - ✅ `releaseLock()` – Lock freigeben
-  - ✅ TTL: 5 Minuten (auto-expire)
+- âœ… **softLockManager.svelte.ts** â€” Ephemeral "Now Editing" Events (Kind 20001)
+  - âœ… `publishLock()` â€“ Warnt andere Nutzer
+  - âœ… `releaseLock()` â€“ Lock freigeben
+  - âœ… TTL: 5 Minuten (auto-expire)
 
-- ✅ **cardEditingFlow.ts** — Session Management
-  - ✅ `startEditing()` – Base-Version snapshotten
-  - ✅ `checkForConflict()` – NDK fetchEvent prüfen
-  - ✅ Integration mit `threeWayMerge()`
+- âœ… **cardEditingFlow.ts** â€” Session Management
+  - âœ… `startEditing()` â€“ Base-Version snapshotten
+  - âœ… `checkForConflict()` â€“ NDK fetchEvent prÃ¼fen
+  - âœ… Integration mit `threeWayMerge()`
 
-- ✅ **MergeConflictDialog.svelte** — Manual Conflict Resolution UI
-  - ✅ Tabbed Interface für jeden Konflikt
-  - ✅ Base | Mine | Theirs Anzeige
-  - ✅ User-Wahl speichern (mine | theirs | merged)
-  - ✅ ✅ Effect-Loop Problem gelöst (isInitialized Guard)
+- âœ… **MergeConflictDialog.svelte** â€” Manual Conflict Resolution UI
+  - âœ… Tabbed Interface fÃ¼r jeden Konflikt
+  - âœ… Base | Mine | Theirs Anzeige
+  - âœ… User-Wahl speichern (mine | theirs | merged)
+  - âœ… âœ… Effect-Loop Problem gelÃ¶st (isInitialized Guard)
 
-- ✅ **Visual Test Route** — `/test/merge`
-  - ✅ 4 interaktive Szenarien
-  - ✅ Szenario 1: Keine Konflikte (Auto-Merge)
-  - ✅ Szenario 2: 1 Feld-Konflikt
-  - ✅ Szenario 3: Mehrere Konflikte (3 Tabs)
-  - ✅ Szenario 4: Array-Merge (Labels)
-  - ✅ `pnpm run dev` → localhost:5173/test/merge
+- âœ… **Visual Test Route** â€” `/test/merge`
+  - âœ… 4 interaktive Szenarien
+  - âœ… Szenario 1: Keine Konflikte (Auto-Merge)
+  - âœ… Szenario 2: 1 Feld-Konflikt
+  - âœ… Szenario 3: Mehrere Konflikte (3 Tabs)
+  - âœ… Szenario 4: Array-Merge (Labels)
+  - âœ… `pnpm run dev` â†’ localhost:5173/test/merge
 
-#### Phase 1.5B: CardDialog.svelte Integration + Share-Link System — ✅ DONE (31.10.2025)
+#### Phase 1.5B: CardDialog.svelte Integration + Share-Link System â€” âœ… DONE (31.10.2025)
 
-**Status:** ✅ FULLY IMPLEMENTED & TESTED
+**Status:** âœ… FULLY IMPLEMENTED & TESTED
 
 **Completion:** 31. Oktober 2025 (Phase 1.5B abgeschlossen!)
 
 **Was wurde implementiert:**
 
 **A) Share-Link System (NEU - 31.10.2025):**
-- ✅ **Topbar.svelte**: Share-Link Button mit Dialog
-- ✅ **BoardStore API**: `generateShareLink()`, `importBoardFromJson()`, `saveImportedBoard()`
-- ✅ **Token Encoding**: Single-layer URL-encoding mit pako.deflate() Kompression
-- ✅ **Token-Size Progress-Bar**: Warnung bei >80%, Fehler bei >100%
-- ✅ **Import Modi**: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
-- ✅ **ImportPopover.svelte**: Auto-Detektion von ?import= Query-Parameter
-- ✅ **XSS Prevention**: Content Sanitization für alle importierten Daten
-- ✅ **41 Unit Tests**: Vollständige Test-Coverage (41/41 ✅)
+- âœ… **Topbar.svelte**: Share-Link Button mit Dialog
+- âœ… **BoardStore API**: `generateShareLink()`, `importBoardFromJson()`, `saveImportedBoard()`
+- âœ… **Token Encoding**: Single-layer URL-encoding mit pako.deflate() Kompression
+- âœ… **Token-Size Progress-Bar**: Warnung bei >80%, Fehler bei >100%
+- âœ… **Import Modi**: Merge (neue IDs), New (Imported Suffix), Overwrite (gleiche IDs)
+- âœ… **ImportPopover.svelte**: Auto-Detektion von ?import= Query-Parameter
+- âœ… **XSS Prevention**: Content Sanitization fÃ¼r alle importierten Daten
+- âœ… **41 Unit Tests**: VollstÃ¤ndige Test-Coverage (41/41 âœ…)
   - Token Generation & Compression (5 tests)
   - URL Encoding & Query Parameters (7 tests)
   - Import Modes (6 tests)
@@ -685,40 +685,40 @@ JANUAR 2026
   - [+ 11 mehr tests]
 
 **B) Dokumentation (NEU - 31.10.2025):**
-- ✅ [`docs/FEATURE/SHARELINK.md`](../FEATURE/SHARELINK.md) - Vollständige Benutzer-Doku
+- âœ… [`docs/FEATURE/SHARELINK.md`](../FEATURE/SHARELINK.md) - VollstÃ¤ndige Benutzer-Doku
   - Benutzer-Anleitung (5 Schritte)
   - Technische Architektur
   - Encoding & Security-Strategie
-  - Import-Modi erklärt
+  - Import-Modi erklÃ¤rt
   - API-Referenz
   - Fehlerbehebung
-  - Zukünftige Erweiterungen (Phase 2-3)
+  - ZukÃ¼nftige Erweiterungen (Phase 2-3)
 
 **Test-Ergebnisse:**
-- ✅ Share-Link Tests: 41/41 Passing (100%)
-- ✅ Full Test Suite: 161 Passing | 1 Skipped (162 total)
-- ✅ Build: Clean (0 errors, 0 warnings)
-- ✅ TypeScript: Strict mode compliant
-- ✅ No regressions in existing tests
+- âœ… Share-Link Tests: 41/41 Passing (100%)
+- âœ… Full Test Suite: 161 Passing | 1 Skipped (162 total)
+- âœ… Build: Clean (0 errors, 0 warnings)
+- âœ… TypeScript: Strict mode compliant
+- âœ… No regressions in existing tests
 
 ---
 
-**ORIGINAL Phase 1.5B: CardDialog.svelte Integration — ✅ DONE (31.10.2025)**
+**ORIGINAL Phase 1.5B: CardDialog.svelte Integration â€” âœ… DONE (31.10.2025)**
 
-**Status:** Dokumentation ✅, Implementation ✅
+**Status:** Dokumentation âœ…, Implementation âœ…
 
 **Zu implementieren:**
 
 - [ ] **CardDialog.svelte aktualisieren**
   - [ ] Import `CardEditingFlow`, `MergeConflictDialog`
-  - [ ] `$effect` für baseVersion Snapshot beim Dialog-Open
+  - [ ] `$effect` fÃ¼r baseVersion Snapshot beim Dialog-Open
   - [ ] `handleSave()` mit 3-way Merge:
     1. Sammle `draftChanges`
     2. Fetche `latestEvent` vom Relay (NDK)
-    3. Führe `threeWayMerge()` durch
-    4. Wenn Konflikt → `showMergeDialog = true`
-    5. Sonst → `boardStore.editCard()`
-  - [ ] `handleMergeResolution()` für Dialog-Callback
+    3. FÃ¼hre `threeWayMerge()` durch
+    4. Wenn Konflikt â†’ `showMergeDialog = true`
+    5. Sonst â†’ `boardStore.editCard()`
+  - [ ] `handleMergeResolution()` fÃ¼r Dialog-Callback
   - [ ] Error-Handling mit `saveError` Display
 
 - [ ] **Tests**
@@ -728,20 +728,20 @@ JANUAR 2026
   - [ ] Siehe Testing Guide in MERGE-SYSTEM.md
 
 **Acceptance Criteria (1.5B):**
-- ✅ CardDialog öffnet → baseVersion wird gespeichert
-- ✅ Benutzer bearbeitet & speichert
-- ✅ Wenn neuerer Event auf Relay → Konflikt-Dialog zeigen
-- ✅ Benutzer wählt Resolution → speichert
-- ✅ localStorage & Nostr werden beide aktualisiert
+- âœ… CardDialog Ã¶ffnet â†’ baseVersion wird gespeichert
+- âœ… Benutzer bearbeitet & speichert
+- âœ… Wenn neuerer Event auf Relay â†’ Konflikt-Dialog zeigen
+- âœ… Benutzer wÃ¤hlt Resolution â†’ speichert
+- âœ… localStorage & Nostr werden beide aktualisiert
 
-#### Phase 1.5C: Snapshot Feature — ⏳ PLANNED (Mitte November)
+#### Phase 1.5C: Snapshot Feature â€” â³ PLANNED (Mitte November)
 
-**Ziel:** Manuelle Board-Snapshots für Backup & Share
+**Ziel:** Manuelle Board-Snapshots fÃ¼r Backup & Share
 
-- [ ] **SnapshotManager.svelte.ts** – Snapshot-Verwaltung
-  - [ ] `createSnapshot(boardId, label, comment)` – Kind 30303 Event
-  - [ ] `listSnapshots(boardId)` – Alle Snapshots laden
-  - [ ] `restoreSnapshot(snapshotId)` – Board aus Snapshot wiederherstellen
+- [ ] **SnapshotManager.svelte.ts** â€“ Snapshot-Verwaltung
+  - [ ] `createSnapshot(boardId, label, comment)` â€“ Kind 30303 Event
+  - [ ] `listSnapshots(boardId)` â€“ Alle Snapshots laden
+  - [ ] `restoreSnapshot(snapshotId)` â€“ Board aus Snapshot wiederherstellen
   - [ ] Snapshot-Metadaten: timestamp, author, comment, card-count
 
 - [ ] **Snapshot UI**
@@ -753,77 +753,77 @@ JANUAR 2026
     - Dateiexport (JSON)
 
 **Acceptance Criteria (1.5C):**
-- ✅ Snapshots werden als Kind 30303 Events gespeichert
-- ✅ Mehrere Snapshots pro Board möglich
-- ✅ Restore-Funktion stellt Board wieder her
-- ✅ Snapshots sind teil von Export/Import
+- âœ… Snapshots werden als Kind 30303 Events gespeichert
+- âœ… Mehrere Snapshots pro Board mÃ¶glich
+- âœ… Restore-Funktion stellt Board wieder her
+- âœ… Snapshots sind teil von Export/Import
 
-#### Phase 1.5D: Export / Import — ✅ DONE (31.10.2025)
+#### Phase 1.5D: Export / Import â€” âœ… DONE (31.10.2025)
 
-**Ziel:** Förder-Anforderung: Boards sind exportierbar & importierbar  
-**Status:** ✅ FULLY IMPLEMENTED & DOCUMENTED
+**Ziel:** FÃ¶rder-Anforderung: Boards sind exportierbar & importierbar  
+**Status:** âœ… FULLY IMPLEMENTED & DOCUMENTED
 
 **Implementation Summary (31.10.2025):**
 
 **A) Store-Level Export API:**
-- ✅ `exportBoardAsJson(includeMetadata?: boolean)` — Einzelnes Board exportieren
-- ✅ `exportAllBoardsAsJson()` — Backup aller Boards exportieren
-- ✅ Serialisiert `board.getContextData(true)` als gültiges JSON
-- ✅ Versionsinformation included (version, exportedAt, exportedBy)
+- âœ… `exportBoardAsJson(includeMetadata?: boolean)` â€” Einzelnes Board exportieren
+- âœ… `exportAllBoardsAsJson()` â€” Backup aller Boards exportieren
+- âœ… Serialisiert `board.getContextData(true)` als gÃ¼ltiges JSON
+- âœ… Versionsinformation included (version, exportedAt, exportedBy)
 
 **B) Store-Level Import API:**
-- ✅ `importBoardFromJson(jsonString, mode: 'merge'|'new'|'overwrite')` — JSON validieren & importieren
-- ✅ `saveImportedBoard(board, overwriteExisting?: boolean)` — Nach-Import Persistierung
-- ✅ `restoreAllBoardsFromBackup(backupJson)` — Batch-Restore aus Backup
-- ✅ Alle drei Modi vollständig implementiert:
+- âœ… `importBoardFromJson(jsonString, mode: 'merge'|'new'|'overwrite')` â€” JSON validieren & importieren
+- âœ… `saveImportedBoard(board, overwriteExisting?: boolean)` â€” Nach-Import Persistierung
+- âœ… `restoreAllBoardsFromBackup(backupJson)` â€” Batch-Restore aus Backup
+- âœ… Alle drei Modi vollstÃ¤ndig implementiert:
   - `merge`: Neue IDs generieren (Konfliktfrei, Standard-Modus)
   - `new`: Neue IDs + "(Imported)" Suffix im Board-Namen (Varianten-Verwaltung)
   - `overwrite`: Original-IDs beibehalten (Device-Sync, mit Warnung)
 
 **C) UI Integration:**
-- ✅ **ExportButton.svelte** — In Topbar/Settings für Single-Board Export
+- âœ… **ExportButton.svelte** â€” In Topbar/Settings fÃ¼r Single-Board Export
   - Startet Datei-Download: `{BoardName}_{date}.json`
-- ✅ **ImportPopover.svelte** — File Input im Sidebar
+- âœ… **ImportPopover.svelte** â€” File Input im Sidebar
   - Datei-Auswahl mit `.json` Filterung
   - Auto-Detect: Erkennt Backup vs Single-Export automatisch
-  - Mode-Radio: merge | new | overwrite wählbar
+  - Mode-Radio: merge | new | overwrite wÃ¤hlbar
   - Success/Error Messages
 
 **D) Testing & Validation:**
-- ✅ **Unit Tests (75+ Tests):** 
-  - `kanbanStore.export-import.spec.ts` — 28 Tests (Backup detection, export, import modes, batch restore, round-trip, edge cases)
-  - `ImportPopover.svelte.spec.ts` — 47 Tests (File selection, UI logic, help text, accessibility)
-- ✅ **Acceptance Criteria erfüllt:**
-  - Export erzeugt gültiges JSON, lädt korrekt herunter
-  - Backup enthält korrekte Anzahl an Boards mit vollständiger Struktur
-  - Import in jedem Modus führt zu erwartetem Ergebnis
-  - ID-Konflikte werden korrekt aufgelöst (neue IDs oder Überschreiben)
+- âœ… **Unit Tests (75+ Tests):** 
+  - `kanbanStore.export-import.spec.ts` â€” 28 Tests (Backup detection, export, import modes, batch restore, round-trip, edge cases)
+  - `ImportPopover.svelte.spec.ts` â€” 47 Tests (File selection, UI logic, help text, accessibility)
+- âœ… **Acceptance Criteria erfÃ¼llt:**
+  - Export erzeugt gÃ¼ltiges JSON, lÃ¤dt korrekt herunter
+  - Backup enthÃ¤lt korrekte Anzahl an Boards mit vollstÃ¤ndiger Struktur
+  - Import in jedem Modus fÃ¼hrt zu erwartetem Ergebnis
+  - ID-Konflikte werden korrekt aufgelÃ¶st (neue IDs oder Ãœberschreiben)
   - UI zeigt eindeutige Success/Error Meldungen
-  - Round-Trip Test: Export → Import → Vergleich erfolgreich
-  - ✅ **Förder-Anforderung erfüllt** ✅
+  - Round-Trip Test: Export â†’ Import â†’ Vergleich erfolgreich
+  - âœ… **FÃ¶rder-Anforderung erfÃ¼llt** âœ…
 
 **E) Documentation:**
-- ✅ **Feature-Dokumentation:** [`docs/FEATURE/IMPORT-EXPORT.md`](../FEATURE/IMPORT-EXPORT.md) — Vollständige API-Referenz, UI-Integration, Tests
-- ✅ **Share-Link Feature:** [`docs/FEATURE/SHARELINK.md`](../FEATURE/SHARELINK.md) — URL-basiertes Sharing (Parallel-Feature, auch Phase 1.5)
+- âœ… **Feature-Dokumentation:** [`docs/FEATURE/IMPORT-EXPORT.md`](../FEATURE/IMPORT-EXPORT.md) â€” VollstÃ¤ndige API-Referenz, UI-Integration, Tests
+- âœ… **Share-Link Feature:** [`docs/FEATURE/SHARELINK.md`](../FEATURE/SHARELINK.md) â€” URL-basiertes Sharing (Parallel-Feature, auch Phase 1.5)
 
-**Acceptance Criteria (1.5D) — ALL FULFILLED:**
-- ✅ Export erzeugt vollständiges JSON mit allen Daten (Board, Spalten, Karten, Kommentare-Referenzen)
-- ✅ Import validiert Struktur & rejected ungültige Dateien (ID, name required)
-- ✅ ID-Konflikte werden korrekt gelöst (merge/new/overwrite modes)
-- ✅ Round-Trip: Export → Import → Hash stimmt überein (vollständige Rekonstruktion)
-- ✅ **Förder-Anforderung erfüllt** ✅
-- ✅ Backup-Format unterstützt (exportAllBoardsAsJson + restoreAllBoardsFromBackup)
+**Acceptance Criteria (1.5D) â€” ALL FULFILLED:**
+- âœ… Export erzeugt vollstÃ¤ndiges JSON mit allen Daten (Board, Spalten, Karten, Kommentare-Referenzen)
+- âœ… Import validiert Struktur & rejected ungÃ¼ltige Dateien (ID, name required)
+- âœ… ID-Konflikte werden korrekt gelÃ¶st (merge/new/overwrite modes)
+- âœ… Round-Trip: Export â†’ Import â†’ Hash stimmt Ã¼berein (vollstÃ¤ndige Rekonstruktion)
+- âœ… **FÃ¶rder-Anforderung erfÃ¼llt** âœ…
+- âœ… Backup-Format unterstÃ¼tzt (exportAllBoardsAsJson + restoreAllBoardsFromBackup)
 
-**Timeline für 1.5:**
-- ✅ **Phase 1.5A: DONE** (26.10.2025)
-- 🔄 **Phase 1.5B: IN PROGRESS** (Bis 31.10.2025 - 5 Arbeitstage für Developer)
-- ⏳ **Phase 1.5C: PLANNED** (01.11. - 10.11.2025 - 9 Tage für Snapshot Feature, ⬇️ -5 Tage)
-- ⏳ **Phase 1.5D: PLANNED** (10.11. - 20.11.2025 - 10 Tage für Export/Import, ⬇️ -5 Tage - FÖRDER-ANFORDERUNG!)
+**Timeline fÃ¼r 1.5:**
+- âœ… **Phase 1.5A: DONE** (26.10.2025)
+- ðŸ”„ **Phase 1.5B: IN PROGRESS** (Bis 31.10.2025 - 5 Arbeitstage fÃ¼r Developer)
+- â³ **Phase 1.5C: PLANNED** (01.11. - 10.11.2025 - 9 Tage fÃ¼r Snapshot Feature, â¬‡ï¸ -5 Tage)
+- â³ **Phase 1.5D: PLANNED** (10.11. - 20.11.2025 - 10 Tage fÃ¼r Export/Import, â¬‡ï¸ -5 Tage - FÃ–RDER-ANFORDERUNG!)
 
 **Dokumentation:**
-- 📚 [`docs/COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md) – Vollständige Proposal
-- 📚 [`docs/FEATURE/MERGE-SYSTEM.md`](../FEATURE/MERGE-SYSTEM.md) – Integration Guide + Testing
-- 📚 `copilot-instructions.md` – Merge System Rules & Patterns
+- ðŸ“š [`docs/COLLABORATION/BOARD-VERSIONING.md`](./BOARD-VERSIONING.md) â€“ VollstÃ¤ndige Proposal
+- ðŸ“š [`docs/FEATURE/MERGE-SYSTEM.md`](../FEATURE/MERGE-SYSTEM.md) â€“ Integration Guide + Testing
+- ðŸ“š `copilot-instructions.md` â€“ Merge System Rules & Patterns
 
 ---
 
@@ -835,139 +835,139 @@ JANUAR 2026
 
 ---
 
-### Meilenstein 1.3: Kommentar-System Grundlagen (Priorität: Hoch)
+### Meilenstein 1.3: Kommentar-System Grundlagen (PrioritÃ¤t: Hoch)
 
 **Ziel:** Kommentare werden als Nostr Kind 1 Events gespeichert  
-**Status:** ✅ PHASE A+B DONE | ✅ Phase D DONE | ⏳ Phase C+E PLANNED
+**Status:** âœ… PHASE A+B DONE | âœ… Phase D DONE | â³ Phase C+E PLANNED
 
-#### Phase A+B: Implementiert ✅
+#### Phase A+B: Implementiert âœ…
 
-- ✅ **Card-Klasse erweitert** (`src/lib/classes/BoardModel.ts`)
-  - ✅ Comment-Model mit `id`, `text`, `author`, `createdAt`
-  - ✅ `addComment(text, author)` Methode
-  - ✅ `deleteComment(commentId)` Methode
-  - ✅ `getContextData()` enthält Kommentare für KI
+- âœ… **Card-Klasse erweitert** (`src/lib/classes/BoardModel.ts`)
+  - âœ… Comment-Model mit `id`, `text`, `author`, `createdAt`
+  - âœ… `addComment(text, author)` Methode
+  - âœ… `deleteComment(commentId)` Methode
+  - âœ… `getContextData()` enthÃ¤lt Kommentare fÃ¼r KI
 
-- ✅ **BoardStore erweitert** (`src/lib/stores/kanbanStore.svelte.ts`)
-  - ✅ `addComment(cardId, text, author): void` mit `triggerUpdate()`
-  - ✅ `deleteComment(cardId, commentId): void` mit `triggerUpdate()`
-  - ✅ Vollständige Reaktivitätskette (Storage, UI, Nostr vorbereitet)
+- âœ… **BoardStore erweitert** (`src/lib/stores/kanbanStore.svelte.ts`)
+  - âœ… `addComment(cardId, text, author): void` mit `triggerUpdate()`
+  - âœ… `deleteComment(cardId, commentId): void` mit `triggerUpdate()`
+  - âœ… VollstÃ¤ndige ReaktivitÃ¤tskette (Storage, UI, Nostr vorbereitet)
 
-- ✅ **UI-Formular implementiert** (`src/routes/cardsboard/CardDetailsDialog.svelte`)
-  - ✅ Kommentar-Input (Textarea) mit Icons (@lucide/svelte/icons/*)
-  - ✅ "Kommentar absenden" Button (SendIcon, default variant)
-  - ✅ Delete-Buttons mit TrashIcon pro Kommentar (ghost variant)
-  - ✅ Loading-State mit Spinner (LoaderIcon)
-  - ✅ Form Validation (disabled bei leerem Text)
-  - ✅ Bestehende Kommentare Liste mit scrollbar
+- âœ… **UI-Formular implementiert** (`src/routes/cardsboard/CardDetailsDialog.svelte`)
+  - âœ… Kommentar-Input (Textarea) mit Icons (@lucide/svelte/icons/*)
+  - âœ… "Kommentar absenden" Button (SendIcon, default variant)
+  - âœ… Delete-Buttons mit TrashIcon pro Kommentar (ghost variant)
+  - âœ… Loading-State mit Spinner (LoaderIcon)
+  - âœ… Form Validation (disabled bei leerem Text)
+  - âœ… Bestehende Kommentare Liste mit scrollbar
 
-- ✅ **Tests**
-  - ✅ 11 Kommentar-Tests in testSuite.ts (alle bestanden)
-  - ✅ Syntax-Check: 0 errors, 0 warnings
-  - ✅ Production Build: erfolgreich
-  - ✅ localStorage Persistierung: funktioniert
+- âœ… **Tests**
+  - âœ… 11 Kommentar-Tests in testSuite.ts (alle bestanden)
+  - âœ… Syntax-Check: 0 errors, 0 warnings
+  - âœ… Production Build: erfolgreich
+  - âœ… localStorage Persistierung: funktioniert
 
-- ✅ **Dokumentation**
-  - ✅ `/docs/FEATURE/COMMENTS.md` mit vollständiger Doku
-  - ✅ Bug-Fix Root-Cause dokumentiert
-  - ✅ Datenfluss & Architektur erklärt
+- âœ… **Dokumentation**
+  - âœ… `/docs/FEATURE/COMMENTS.md` mit vollstÃ¤ndiger Doku
+  - âœ… Bug-Fix Root-Cause dokumentiert
+  - âœ… Datenfluss & Architektur erklÃ¤rt
 
-#### Phase C-E: Zu implementieren ⏳
+#### Phase C-E: Zu implementieren â³
 
-- [ ] **Phase C: AuthStore Integration** (Priorität: Hoch)
-  - [ ] `authStore.svelte.ts` mit `$state` für User-Session
+- [ ] **Phase C: AuthStore Integration** (PrioritÃ¤t: Hoch)
+  - [ ] `authStore.svelte.ts` mit `$state` fÃ¼r User-Session
   - [ ] NIP-07 Signer Integration (window.nostr)
   - [ ] Ersetze 'anonymous' mit `authStore.currentUser.pubkey`
   - [ ] Session-Management mit TTL
-  - **Geschätzter Aufwand:** 2-3 Stunden | **Dokumentation:** [`STORES/AUTHSTORE.md`](../ARCHITECTURE/STORES/AUTHSTORE.md), [`AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md)
+  - **GeschÃ¤tzter Aufwand:** 2-3 Stunden | **Dokumentation:** [`STORES/AUTHSTORE.md`](../ARCHITECTURE/STORES/AUTHSTORE.md), [`AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md)
 
-- [x] **Phase D: Nostr Events Publishing** (Priorität: Hoch)
-  - [x] `nostrEvents.ts`: `createCommentEvent()` für Kind 1 Events
+- [x] **Phase D: Nostr Events Publishing** (PrioritÃ¤t: Hoch)
+  - [x] `nostrEvents.ts`: `createCommentEvent()` fÃ¼r Kind 1 Events
   - [x] Event-Tags: `a` (CardRef), `e` (Reply auf Card Event-ID), `p` (Mention Card-Autor)
   - [x] Publishing via SyncManager (publishOrQueue)
-  - [x] Comment-Deletion via NIP-09 Kind 5 Events (für synced comments)
-  - [x] Live-Updates: Subscriptions über `#a` (Board-weit möglich)
+  - [x] Comment-Deletion via NIP-09 Kind 5 Events (fÃ¼r synced comments)
+  - [x] Live-Updates: Subscriptions Ã¼ber `#a` (Board-weit mÃ¶glich)
   **Dokumentation:** NDK.md, Kanban-NIP.md
 
-- [ ] **Phase E: Offline-First Sync** (Priorität: Mittel)
+- [ ] **Phase E: Offline-First Sync** (PrioritÃ¤t: Mittel)
   - [ ] `syncManager.svelte.ts` mit IndexedDB Queue (Dexie)
   - [ ] `publishOrQueue()` - Events queuen wenn offline
   - [ ] `syncQueue()` mit Retry-Logik (2^retries, max 3)
   - [ ] Conflict Resolution (Last-Write-Wins)
-  - **Geschätzter Aufwand:** 4-5 Stunden | **Dokumentation:** [`STORES/SYNCMANAGER.md`](../ARCHITECTURE/STORES/SYNCMANAGER.md), AGENTS.md Section VI
+  - **GeschÃ¤tzter Aufwand:** 4-5 Stunden | **Dokumentation:** [`STORES/SYNCMANAGER.md`](../ARCHITECTURE/STORES/SYNCMANAGER.md), AGENTS.md Section VI
 
-**Acceptance Criteria (Phase A+B - ERFÜLLT):**
-- ✅ Kommentare sind lokal persistent (localStorage)
-- ✅ Kommentare erscheinen SOFORT in der UI (Svelte Runes)
-- ✅ Kommentare können gelöscht werden
-- ✅ UI/UX konform mit UX-RULES.md (icons, buttons, spacing)
-- ✅ 15/15 copilot-instructions Regeln erfüllt
-- ✅ Keine TypeScript-Fehler
-- ✅ Kommentare werden mit Author & Timestamp gespeichert
+**Acceptance Criteria (Phase A+B - ERFÃœLLT):**
+- âœ… Kommentare sind lokal persistent (localStorage)
+- âœ… Kommentare erscheinen SOFORT in der UI (Svelte Runes)
+- âœ… Kommentare kÃ¶nnen gelÃ¶scht werden
+- âœ… UI/UX konform mit UX-RULES.md (icons, buttons, spacing)
+- âœ… 15/15 copilot-instructions Regeln erfÃ¼llt
+- âœ… Keine TypeScript-Fehler
+- âœ… Kommentare werden mit Author & Timestamp gespeichert
 
-**Acceptance Criteria (Phase D - ERFÜLLT):**
-- ✅ Kommentare werden als Kind 1 Events publiziert
-- ✅ Kommentare haben korrekte Tags (`a`, `p`, `e`)
-- ✅ Kommentar-Löschung erzeugt Kind 5 Event
-- ✅ Neue Kommentare erscheinen in Echtzeit über Relays
+**Acceptance Criteria (Phase D - ERFÃœLLT):**
+- âœ… Kommentare werden als Kind 1 Events publiziert
+- âœ… Kommentare haben korrekte Tags (`a`, `p`, `e`)
+- âœ… Kommentar-LÃ¶schung erzeugt Kind 5 Event
+- âœ… Neue Kommentare erscheinen in Echtzeit Ã¼ber Relays
 
 ---
 
-### Meilenstein 1.4: Benutzerauthentifizierung (Priorität: Hoch)
+### Meilenstein 1.4: Benutzerauthentifizierung (PrioritÃ¤t: Hoch)
 
-**Ziel:** Nutzer können sich mit Nostr-Key authentifizieren  
-**Status:** 🟡 PLANNED  
-**Abhängig von:** [NOSTR-USER.md](./NOSTR-USER.md)
+**Ziel:** Nutzer kÃ¶nnen sich mit Nostr-Key authentifizieren  
+**Status:** ðŸŸ¡ PLANNED  
+**AbhÃ¤ngig von:** [NOSTR-USER.md](./NOSTR-USER.md)
 
 #### Zu implementieren:
 
-- [ ] **`src/lib/stores/userStore.ts`** – Neue Store
-  - [ ] `$state` für aktuellen User
-  - [ ] `login(signer)` – Nostr-Signer verbinden
-  - [ ] `logout()` – Session beenden
-  - [ ] `getCurrentUser()` – Npub und Metadaten
+- [ ] **`src/lib/stores/userStore.ts`** â€“ Neue Store
+  - [ ] `$state` fÃ¼r aktuellen User
+  - [ ] `login(signer)` â€“ Nostr-Signer verbinden
+  - [ ] `logout()` â€“ Session beenden
+  - [ ] `getCurrentUser()` â€“ Npub und Metadaten
   - [ ] `isAuthenticated` Derived Value
 
 - [ ] **NDK Signer Integration**
   - [ ] Browser Extension Signer (NIP-07)
-  - [ ] Optional: Test-Signer für Development
+  - [ ] Optional: Test-Signer fÃ¼r Development
 
 - [ ] **Authentifizierter Board-Zugriff**
   - [ ] Events werden mit User-Key signiert
   - [ ] Board-Ownership basierend auf Pubkey
-  - [ ] Nur Autor kann publishState ändern
+  - [ ] Nur Autor kann publishState Ã¤ndern
 
 - [ ] **UI Updates**
   - [ ] Login Modal in `+layout.svelte`
   - [ ] User-Menu in Topbar
-  - [ ] Pubkey-Anzeige für Transparenz
+  - [ ] Pubkey-Anzeige fÃ¼r Transparenz
 
 **Acceptance Criteria:**
-- ✅ Nutzer kann mit NIP-07 Extension einloggen
-- ✅ User-Pubkey ist in Board-Events (Tag `p`)
-- ✅ Events sind mit User-Key signiert
-- ✅ Logout löscht Session
+- âœ… Nutzer kann mit NIP-07 Extension einloggen
+- âœ… User-Pubkey ist in Board-Events (Tag `p`)
+- âœ… Events sind mit User-Key signiert
+- âœ… Logout lÃ¶scht Session
 
 ---
 
-## 🟡 Phase 2: UI Components & UX Polish (Priorität: Mittel)
+## ðŸŸ¡ Phase 2: UI Components & UX Polish (PrioritÃ¤t: Mittel)
 
-**Abhängig von:** Abschluss von Phase 1.5B (CardDialog.svelte Merge-Integration bis 31.10.2025)
+**AbhÃ¤ngig von:** Abschluss von Phase 1.5B (CardDialog.svelte Merge-Integration bis 31.10.2025)
 
-**⚡ ZEITERSPARNIS PHASE 2: -36 Tage Insgesamt!**
-- Phase 2.1 UI: ⬇️ -3 Tage (15 → 12) — 70% Komponenten vorhanden!
-- Phase 2.0 Merge: ⬇️ -5 Tage (14 → 9) — Gut dokumentiert!
-- Phase 2.2 UX: ⬇️ -5 Tage (14 → 9) — shadcn-svelte Integration!
-- Phase 2.3 Perf: ⬇️ -7 Tage (16 → 9) — Lighthouse voroptimiert!
-- **Gesamt: Von 59 auf 39 Tage (-34%)** ✅
+**âš¡ ZEITERSPARNIS PHASE 2: -36 Tage Insgesamt!**
+- Phase 2.1 UI: â¬‡ï¸ -3 Tage (15 â†’ 12) â€” 70% Komponenten vorhanden!
+- Phase 2.0 Merge: â¬‡ï¸ -5 Tage (14 â†’ 9) â€” Gut dokumentiert!
+- Phase 2.2 UX: â¬‡ï¸ -5 Tage (14 â†’ 9) â€” shadcn-svelte Integration!
+- Phase 2.3 Perf: â¬‡ï¸ -7 Tage (16 â†’ 9) â€” Lighthouse voroptimiert!
+- **Gesamt: Von 59 auf 39 Tage (-34%)** âœ…
 
-### Meilenstein 2.0: Merge-System Production Integration — 🔄 PLANNED (01.11. - 10.11.2025)
+### Meilenstein 2.0: Merge-System Production Integration â€” ðŸ”„ PLANNED (01.11. - 10.11.2025)
 
-**Ziel:** Merge-System vollständig in Production verwenden  
-**Status:** 🔄 PLANNED (Nach 1.5B Abschluss am 31.10.)
-**Timeline: 01. - 10. November 2025 (9 Tage, ⬇️ -5 Tage)**
+**Ziel:** Merge-System vollstÃ¤ndig in Production verwenden  
+**Status:** ðŸ”„ PLANNED (Nach 1.5B Abschluss am 31.10.)
+**Timeline: 01. - 10. November 2025 (9 Tage, â¬‡ï¸ -5 Tage)**
 
-- [ ] **CardDialog.svelte Integration** (abhängig von MERGE-SYSTEM.md)
+- [ ] **CardDialog.svelte Integration** (abhÃ¤ngig von MERGE-SYSTEM.md)
   - [ ] handleSave() mit 3-way Merge
   - [ ] MergeConflictDialog zeigen bei Konflikten
   - [ ] Error-Handling
@@ -984,35 +984,35 @@ JANUAR 2026
 
 - [ ] **Production Checklist**
   - [ ] Code Review bestanden
-  - [ ] Alle Tests grün
+  - [ ] Alle Tests grÃ¼n
   - [ ] Keine TypeScript Fehler
   - [ ] Dokumentation aktualisiert
 
 **Acceptance Criteria:**
-- ✅ Concurrent Edits erzeugen Conflicts
-- ✅ Conflicts werden korrekt aufgelöst
-- ✅ localStorage & Nostr beide aktualisiert
-- ✅ Keine Effect-Loop Fehler
-- ✅ Performance <100ms
+- âœ… Concurrent Edits erzeugen Conflicts
+- âœ… Conflicts werden korrekt aufgelÃ¶st
+- âœ… localStorage & Nostr beide aktualisiert
+- âœ… Keine Effect-Loop Fehler
+- âœ… Performance <100ms
 
 ---
 
 ### Meilenstein 2.1: UI Komponenten (10.11. - 22.11., 12 Tage - **50% ZEITERSPARNIS**)
 
-**Ziel:** Kanban-Board mit Drag-and-Drop gemäß AGENTS.md Spec  
-**Status:** � PLANNED  
-**Zeitersparnis:** ⬇️ Von 15 auf 12 Tage (-3 Tage, -20%)
+**Ziel:** Kanban-Board mit Drag-and-Drop gemÃ¤ÃŸ AGENTS.md Spec  
+**Status:** ï¿½ PLANNED  
+**Zeitersparnis:** â¬‡ï¸ Von 15 auf 12 Tage (-3 Tage, -20%)
 
 **WARUM SCHNELLER?**
-- ✅ Komponenten sind **bereits 70% vorhanden** (Board.svelte, Column.svelte, Card.svelte)
-- ✅ DnD mit `svelte-dnd-action` **ist schon implementiert**
-- ✅ CardDialog **ist schon gebaut** (nur noch Merge-Logik Phase 1.5B)
-- ✅ Nur noch **Refactoring + Integration** mit BoardModel/Store nötig
-- ✅ Merge-System macht viele komplexe Szenarien **überflüssig** (auto-merge!)
+- âœ… Komponenten sind **bereits 70% vorhanden** (Board.svelte, Column.svelte, Card.svelte)
+- âœ… DnD mit `svelte-dnd-action` **ist schon implementiert**
+- âœ… CardDialog **ist schon gebaut** (nur noch Merge-Logik Phase 1.5B)
+- âœ… Nur noch **Refactoring + Integration** mit BoardModel/Store nÃ¶tig
+- âœ… Merge-System macht viele komplexe Szenarien **Ã¼berflÃ¼ssig** (auto-merge!)
 
-#### Zu implementieren (nur noch 50% der ursprüngliche Arbeit):
+#### Zu implementieren (nur noch 50% der ursprÃ¼ngliche Arbeit):
 
-- [ ] **CardDialog.svelte Integration** (abhängig von MERGE-SYSTEM.md)
+- [ ] **CardDialog.svelte Integration** (abhÃ¤ngig von MERGE-SYSTEM.md)
   - [ ] handleSave() mit 3-way Merge
   - [ ] MergeConflictDialog zeigen bei Konflikten
   - [ ] Error-Handling
@@ -1030,50 +1030,50 @@ JANUAR 2026
 
 - [ ] **Production Checklist**
   - [ ] Code Review bestanden
-  - [ ] Alle Tests grün
+  - [ ] Alle Tests grÃ¼n
   - [ ] Keine TypeScript Fehler
   - [ ] Dokumentation aktualisiert
   - [ ] CHANGELOG.md Entry
 
 **Acceptance Criteria:**
-- ✅ Concurrent Edits erzeugen Conflicts
-- ✅ Conflicts werden korrekt aufgelöst
-- ✅ localStorage & Nostr beide aktualisiert
-- ✅ Keine Effect-Loop Fehler
-- ✅ Performance im akzeptablen Bereich
+- âœ… Concurrent Edits erzeugen Conflicts
+- âœ… Conflicts werden korrekt aufgelÃ¶st
+- âœ… localStorage & Nostr beide aktualisiert
+- âœ… Keine Effect-Loop Fehler
+- âœ… Performance im akzeptablen Bereich
 
 **Timeline: 1. - 15. November 2025**
 
 ---
 
-**Ziel:** Kanban-Board mit Drag-and-Drop gemäß AGENTS.md Spec  
-**Status:** 🟡 PLANNED
+**Ziel:** Kanban-Board mit Drag-and-Drop gemÃ¤ÃŸ AGENTS.md Spec  
+**Status:** ðŸŸ¡ PLANNED
 
 #### Zu implementieren:
 
-Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Datenmodell** (`data.ts`). Diese müssen migriert werden zu `BoardModel.ts` + `kanbanStore`.
+Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Datenmodell** (`data.ts`). Diese mÃ¼ssen migriert werden zu `BoardModel.ts` + `kanbanStore`.
 
 - [ ] **Komponenten-Refactor**
-  - [ ] `src/lib/components/Board.svelte` – Hauptkomponente
+  - [ ] `src/lib/components/Board.svelte` â€“ Hauptkomponente
     - [ ] Verbindung zu `boardStore.data`
     - [ ] DnD Integration mit `svelte-dnd-action`
-  - [ ] `src/lib/components/Column.svelte` – Spalten
-    - [ ] Drop-Zone für Cards
+  - [ ] `src/lib/components/Column.svelte` â€“ Spalten
+    - [ ] Drop-Zone fÃ¼r Cards
     - [ ] Spalten-Bearbeitung
-  - [ ] `src/lib/components/Card.svelte` – Karten
+  - [ ] `src/lib/components/Card.svelte` â€“ Karten
     - [ ] Drag-Source
     - [ ] Metadaten-Anzeige (Kommentare, Links, Attendees)
-  - [ ] `src/lib/components/Topbar.svelte` – Navigation
-  - [ ] `src/lib/components/Sidebar.svelte` – Linke/Rechte Sidebars
+  - [ ] `src/lib/components/Topbar.svelte` â€“ Navigation
+  - [ ] `src/lib/components/Sidebar.svelte` â€“ Linke/Rechte Sidebars
 
 - [ ] **Modal/Dialog Komponenten**
-  - [ ] `CardDetailDialog.svelte` – Card-Details mit Tabs
+  - [ ] `CardDetailDialog.svelte` â€“ Card-Details mit Tabs
     - [ ] Tab 1: Details & Bearbeitung
     - [ ] Tab 2: Kommentare
     - [ ] Tab 3: Links & Ressourcen
     - [ ] Tab 4: Attendees & Sharing
-  - [ ] `BoardSettingsSheet.svelte` – Board-Einstellungen
-  - [ ] `ShareBoardDialog.svelte` – Sharing-Optionen
+  - [ ] `BoardSettingsSheet.svelte` â€“ Board-Einstellungen
+  - [ ] `ShareBoardDialog.svelte` â€“ Sharing-Optionen
 
 - [ ] **Tests**
   - [ ] Component Snapshot Tests
@@ -1081,17 +1081,17 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] Modal Open/Close Tests
 
 **Acceptance Criteria:**
-- ✅ Alle Komponenten nutzen `boardStore`
-- ✅ Drag-and-Drop funktioniert flüssig
-- ✅ Modals öffnen/schließen korrekt
-- ✅ Keine Daten-Inkonsistenzen
+- âœ… Alle Komponenten nutzen `boardStore`
+- âœ… Drag-and-Drop funktioniert flÃ¼ssig
+- âœ… Modals Ã¶ffnen/schlieÃŸen korrekt
+- âœ… Keine Daten-Inkonsistenzen
 
 ---
 
-### Meilenstein 2.2: UX Polish & Accessibility (Priorität: Mittel)
+### Meilenstein 2.2: UX Polish & Accessibility (PrioritÃ¤t: Mittel)
 
-**Ziel:** Anwendung erfüllt UX-RULES.md + WCAG 2.1 AA  
-**Status:** 🟡 PLANNED
+**Ziel:** Anwendung erfÃ¼llt UX-RULES.md + WCAG 2.1 AA  
+**Status:** ðŸŸ¡ PLANNED
 
 #### Zu implementieren:
 
@@ -1102,10 +1102,10 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] Icons von `@lucide/svelte/icons/` konsistent nutzen
 
 - [ ] **Accessibility**
-  - [ ] ARIA-Labels überall
+  - [ ] ARIA-Labels Ã¼berall
   - [ ] Keyboard Navigation (Tab, Enter, Esc)
   - [ ] Screenreader-Testing
-  - [ ] Kontrast-Verhältnisse (WCAG AA)
+  - [ ] Kontrast-VerhÃ¤ltnisse (WCAG AA)
   - [ ] Focus-Indikatoren sichtbar
 
 - [ ] **Responsive Design**
@@ -1115,33 +1115,33 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] Resizable Panels
 
 - [ ] **Dark Mode**
-  - [ ] CSS-Variablen für Farben
+  - [ ] CSS-Variablen fÃ¼r Farben
   - [ ] Dark Mode Toggle
   - [ ] System-Preference erkennen
 
 **Acceptance Criteria:**
-- ✅ Alle Komponenten verwenden shadcn-svelte
-- ✅ WCAG 2.1 AA validiert
-- ✅ Funktioniert auf Mobile, Tablet, Desktop
-- ✅ Dark Mode unterstützt
+- âœ… Alle Komponenten verwenden shadcn-svelte
+- âœ… WCAG 2.1 AA validiert
+- âœ… Funktioniert auf Mobile, Tablet, Desktop
+- âœ… Dark Mode unterstÃ¼tzt
 
 ---
 
-### Meilenstein 2.3: Performance & Optimization (Priorität: Mittel)
+### Meilenstein 2.3: Performance & Optimization (PrioritÃ¤t: Mittel)
 
-**Ziel:** App lädt schnell, läuft smooth, keine Memory Leaks  
-**Status:** 🟡 PLANNED
+**Ziel:** App lÃ¤dt schnell, lÃ¤uft smooth, keine Memory Leaks  
+**Status:** ðŸŸ¡ PLANNED
 
 #### Zu implementieren:
 
 - [ ] **Loading & Error States**
-  - [ ] Skeleton-Loaders für Cards
-  - [ ] Error Boundaries für Fehlerbehandlung
-  - [ ] Retry-UI für fehlgeschlagene Nostr-Loads
+  - [ ] Skeleton-Loaders fÃ¼r Cards
+  - [ ] Error Boundaries fÃ¼r Fehlerbehandlung
+  - [ ] Retry-UI fÃ¼r fehlgeschlagene Nostr-Loads
   - [ ] Timeout-Handling (z.B. nach 10s)
 
 - [ ] **Performance**
-  - [ ] Virtualisierung für große Card-Listen
+  - [ ] Virtualisierung fÃ¼r groÃŸe Card-Listen
   - [ ] Image Lazy-Loading
   - [ ] Bundle-Size Analyse
   - [ ] Lighthouse Score > 90
@@ -1152,23 +1152,23 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] Cache Invalidation bei Updates
 
 **Acceptance Criteria:**
-- ✅ Lighthouse Performance Score > 90
-- ✅ Keine visuellen Jank bei 60fps
-- ✅ Memory-Leaks ausgeschlossen (Devtools)
+- âœ… Lighthouse Performance Score > 90
+- âœ… Keine visuellen Jank bei 60fps
+- âœ… Memory-Leaks ausgeschlossen (Devtools)
 
 ---
 
-## ⚪ Phase 3: KI-Integration (Priorität: Geplant)
+## âšª Phase 3: KI-Integration (PrioritÃ¤t: Geplant)
 
-### Meilenstein 3.1: KI-Context Serialisierung (Priorität: Geplant)
+### Meilenstein 3.1: KI-Context Serialisierung (PrioritÃ¤t: Geplant)
 
 **Ziel:** Board-Zustand kann an KI-API gesendet werden  
-**Status:** ⚪ PLANNED
+**Status:** âšª PLANNED
 
 #### Zu implementieren:
 
 - [ ] **Chat-Interface Erweiterung**
-  - [ ] `sendPromptToAI(prompt, context?)` vollständig implementieren
+  - [ ] `sendPromptToAI(prompt, context?)` vollstÃ¤ndig implementieren
   - [ ] Context-Payload erstellen:
     ```typescript
     {
@@ -1177,43 +1177,43 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
       selectionContext?: Card.getContextData() | Column.getContextData()
     }
     ```
-  - [ ] API-Endpoint für KI-Service
+  - [ ] API-Endpoint fÃ¼r KI-Service
 
 - [ ] **Chatbot UI**
-  - [ ] `src/lib/components/Chatbot.svelte` – Chat-Interface
+  - [ ] `src/lib/components/Chatbot.svelte` â€“ Chat-Interface
     - [ ] Message History anzeigen
     - [ ] Input-Feld mit Send-Button
-    - [ ] Loading-Spinner während KI antwortet
+    - [ ] Loading-Spinner wÃ¤hrend KI antwortet
     - [ ] Error-Anzeige
 
 - [ ] **Context Window Management**
-  - [ ] Token-Counting für große Boards
+  - [ ] Token-Counting fÃ¼r groÃŸe Boards
   - [ ] Kontext-Summarisierung bei Bedarf
   - [ ] Relevante Cards/Columns extrahieren
 
 **Acceptance Criteria:**
-- ✅ Prompts mit Kontext werden korrekt formatiert
-- ✅ KI erhält vollständigen Board-Zustand
-- ✅ Chatbot UI ist responsive
+- âœ… Prompts mit Kontext werden korrekt formatiert
+- âœ… KI erhÃ¤lt vollstÃ¤ndigen Board-Zustand
+- âœ… Chatbot UI ist responsive
 
 ---
 
-### Meilenstein 3.2: OER-Content Discovery (Priorität: Hoch)
+### Meilenstein 3.2: OER-Content Discovery (PrioritÃ¤t: Hoch)
 
-**Ziel:** KI kann OER-Materialien finden und als Karten ins Board einfügen  
-**Status:** 🔄 **IN PROGRESS** - Implementation gestartet  
+**Ziel:** KI kann OER-Materialien finden und als Karten ins Board einfÃ¼gen  
+**Status:** ðŸ”„ **IN PROGRESS** - Implementation gestartet  
 **Spezifikation:** [`docs/FEATURE/MCP-EDUFEED.md`](../FEATURE/MCP-EDUFEED.md)  
 **API-Referenz:** `F:\code\docker\mcp-oer-finder\konzept.md`
 
 #### Architektur (Tool-Based, NICHT MCP)
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   AIPanel.svelte │────▶│   oerClient.ts  │────▶│  OER Finder API │
-│   (Tool Calls)   │◀────│   (fetch)       │◀────│  localhost:3001 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-         │                      │
-         ▼                      ▼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   AIPanel.svelte â”‚â”€â”€â”€â”€â–¶â”‚   oerClient.ts  â”‚â”€â”€â”€â”€â–¶â”‚  OER Finder API â”‚
+â”‚   (Tool Calls)   â”‚â—€â”€â”€â”€â”€â”‚   (fetch)       â”‚â—€â”€â”€â”€â”€â”‚  localhost:3001 â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+         â”‚                      â”‚
+         â–¼                      â–¼
    Tools:                  Endpoints:
    - search_oer            - /api/v1/oer
    - add_cards_from_oer    - /api/v1/sources
@@ -1225,23 +1225,23 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 - [ ] **`src/lib/agent/tools/oer/oerClient.ts`** erstellen
   - [ ] `getApiBaseUrl()` aus settingsStore oder ENV
-  - [ ] `searchOer(params)` - Suche über `/api/v1/oer`
-  - [ ] `getOerDetails(id)` - Details über `/api/v1/oer/{id}`
-  - [ ] `listOerSources()` - Quellen über `/api/v1/sources`
+  - [ ] `searchOer(params)` - Suche Ã¼ber `/api/v1/oer`
+  - [ ] `getOerDetails(id)` - Details Ã¼ber `/api/v1/oer/{id}`
+  - [ ] `listOerSources()` - Quellen Ã¼ber `/api/v1/sources`
   - [ ] AMB Response-Format Mapping (konzept.md)
   - [ ] Error Handling mit User-Friendly Messages
 
 - [ ] **`src/lib/agent/tools/oer/oerSearchTool.ts`** erstellen
   - [ ] `executeSearchOer(args, context)` Implementierung
-  - [ ] Ergebnis-Cache für `add_cards_from_oer`
+  - [ ] Ergebnis-Cache fÃ¼r `add_cards_from_oer`
   - [ ] Formatierte Chat-Ausgabe
   - [x] Multi-Source Suche (rpi-virtuell + nostr-amb-relay) + Bildungsstufe-Filter
 
 - [ ] **Integration in `toolDefinitions.ts`**
-  - [ ] `search_oer` Tool-Definition hinzufügen
+  - [ ] `search_oer` Tool-Definition hinzufÃ¼gen
 
 - [ ] **Integration in `toolExecutor.ts`**
-  - [ ] Handler für `search_oer` hinzufügen
+  - [ ] Handler fÃ¼r `search_oer` hinzufÃ¼gen
 
 #### Phase 3.2.2: add_cards_from_oer (2 Tage)
 
@@ -1261,7 +1261,7 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 - [ ] **`src/lib/agent/tools/oer/oerSourcesTool.ts`** erstellen
   - [ ] `executeListOerSources(args, context)` Implementierung
-  - [ ] Formatierte Liste aller verfügbaren Quellen
+  - [ ] Formatierte Liste aller verfÃ¼gbaren Quellen
 
 - [ ] **`src/lib/agent/tools/oer/oerContextTool.ts`** erstellen
   - [ ] `executeSearchOerForCard(args, context)` Implementierung
@@ -1276,7 +1276,7 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 - [ ] **Unit Tests**
   - [ ] `oerClient.spec.ts` - API-Calls mit MSW Mock
-  - [ ] `oerSearchTool.spec.ts` - Tool-Ausführung
+  - [ ] `oerSearchTool.spec.ts` - Tool-AusfÃ¼hrung
   - [ ] `oerCardsTool.spec.ts` - Batch-Karten-Erstellung
 
 - [ ] **Dokumentation**
@@ -1285,84 +1285,84 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] System-Prompt Update (`toolSystemPrompt.ts`)
 
 **Acceptance Criteria:**
-- ✅ `search_oer` findet Materialien über OER Finder API
-- ✅ Suchergebnisse werden formatiert im Chat angezeigt
-- ✅ `add_cards_from_oer` erstellt Karten mit Bild, Link, Labels
-- ✅ `list_oer_sources` zeigt verfügbare Quellen
-- ✅ `search_oer_for_card` generiert kontextbasierte Suche
-- ✅ Fehlerbehandlung bei API-Fehlern funktioniert
-- ✅ Tests bestehen (min. 80% Coverage)
+- âœ… `search_oer` findet Materialien Ã¼ber OER Finder API
+- âœ… Suchergebnisse werden formatiert im Chat angezeigt
+- âœ… `add_cards_from_oer` erstellt Karten mit Bild, Link, Labels
+- âœ… `list_oer_sources` zeigt verfÃ¼gbare Quellen
+- âœ… `search_oer_for_card` generiert kontextbasierte Suche
+- âœ… Fehlerbehandlung bei API-Fehlern funktioniert
+- âœ… Tests bestehen (min. 80% Coverage)
 
 **Timeline:** 6-8 Tage (30.01. - 07.02.2026)
 
 ---
 
-### Meilenstein 3.3: KI-Aktionen (Split-Card, etc.) (Priorität: Geplant)
+### Meilenstein 3.3: KI-Aktionen (Split-Card, etc.) (PrioritÃ¤t: Geplant)
 
-**Ziel:** KI kann Board-Struktur verändern  
-**Status:** ⚪ PLANNED
+**Ziel:** KI kann Board-Struktur verÃ¤ndern  
+**Status:** âšª PLANNED
 
 #### Zu implementieren:
 
 - [ ] **Split-Card Aktion**
   - [ ] KI versteht, dass eine Card zu komplex ist
-  - [ ] Vorschlag: _„Teile diese Aufgabe in 3 Teil-Aufgaben"_
-  - [ ] Nutzer bestätigt
-  - [ ] `Column.splitCard()` wird ausgeführt
+  - [ ] Vorschlag: _â€žTeile diese Aufgabe in 3 Teil-Aufgaben"_
+  - [ ] Nutzer bestÃ¤tigt
+  - [ ] `Column.splitCard()` wird ausgefÃ¼hrt
   - [ ] Neue Cards erscheinen im Board
 
 - [ ] **Andere KI-Aktionen**
-  - [ ] `add_card` – KI schlägt neue Card vor
-  - [ ] `update_card` – KI aktualisiert bestehende Card
-  - [ ] `move_card` – KI reorganisiert Struktur
+  - [ ] `add_card` â€“ KI schlÃ¤gt neue Card vor
+  - [ ] `update_card` â€“ KI aktualisiert bestehende Card
+  - [ ] `move_card` â€“ KI reorganisiert Struktur
 
 - [ ] **Action-Preview**
-  - [ ] Nutzer sieht AI-Vorschlag vor Ausführung
-  - [ ] Dialog zur Bestätigung
-  - [ ] Undo möglich
+  - [ ] Nutzer sieht AI-Vorschlag vor AusfÃ¼hrung
+  - [ ] Dialog zur BestÃ¤tigung
+  - [ ] Undo mÃ¶glich
 
 **Acceptance Criteria:**
-- ✅ `processAIAction()` funktioniert für alle Types
-- ✅ Nutzer kann Actions vor Ausführung sehen
-- ✅ Undo/Redo funktioniert
+- âœ… `processAIAction()` funktioniert fÃ¼r alle Types
+- âœ… Nutzer kann Actions vor AusfÃ¼hrung sehen
+- âœ… Undo/Redo funktioniert
 
 ---
 
-## 🔴 Phase 4: Kollaboration (CRITICAL - bis 31.12.2025 FERTIG!)
+## ðŸ”´ Phase 4: Kollaboration (CRITICAL - bis 31.12.2025 FERTIG!)
 
-**Timeline:** 01.12.2025 - 31.12.2025 (30 Tage) → **KORREKTUR: ~12-17 Tage verbleibend!**  
-**Status:** 🟡 **~85% INFRASTRUKTUR FERTIG** - Nur UI + NIP-51 + Tests fehlen!  
-**Abhängig von:** Phase 2 (Export/Import, Merge Engine) ✅ abgeschlossen  
+**Timeline:** 01.12.2025 - 31.12.2025 (30 Tage) â†’ **KORREKTUR: ~12-17 Tage verbleibend!**  
+**Status:** ðŸŸ¡ **~85% INFRASTRUKTUR FERTIG** - Nur UI + NIP-51 + Tests fehlen!  
+**AbhÃ¤ngig von:** Phase 2 (Export/Import, Merge Engine) âœ… abgeschlossen  
 **Parallel zu:** Phase 2.2 (UX), Phase 2.3 (Performance)  
-**Nächste Phase:** 01.01.2026 - Phase 3 + Phase 4 Testing
+**NÃ¤chste Phase:** 01.01.2026 - Phase 3 + Phase 4 Testing
 
-**🆕 INFRASTRUKTUR-STATUS (13.11.2025):**
-- ✅ **SoftLockManager** - VOLLSTÄNDIG (`softLockManager.svelte.ts`, 160 Zeilen)
-- ✅ **MergeEngine** - VOLLSTÄNDIG (`mergeEngine.ts`, 3-way merge)
-- ✅ **CardEditingFlow** - VOLLSTÄNDIG (`cardEditingFlow.ts`, conflict detection)
-- ✅ **SyncManager** - VOLLSTÄNDIG (`syncManager.svelte.ts`, Offline Queue)
-- ✅ **Nostr Events** - VOLLSTÄNDIG (createSoftLockEvent, Kind 20001)
-- ❌ **Share Dialog UI** - FEHLT (3-5 Tage)
-- ❌ **Presence Indicators** - FEHLT (2-3 Tage)
-- ❌ **Live Notifications** - FEHLT (1-2 Tage)
-- ❌ **NIP-51 Integration** - FEHLT (2-3 Tage)
-- ❌ **E2E Tests** - FEHLT (3-4 Tage)
+**ðŸ†• INFRASTRUKTUR-STATUS (13.11.2025):**
+- âœ… **SoftLockManager** - VOLLSTÃ„NDIG (`softLockManager.svelte.ts`, 160 Zeilen)
+- âœ… **MergeEngine** - VOLLSTÃ„NDIG (`mergeEngine.ts`, 3-way merge)
+- âœ… **CardEditingFlow** - VOLLSTÃ„NDIG (`cardEditingFlow.ts`, conflict detection)
+- âœ… **SyncManager** - VOLLSTÃ„NDIG (`syncManager.svelte.ts`, Offline Queue)
+- âœ… **Nostr Events** - VOLLSTÃ„NDIG (createSoftLockEvent, Kind 20001)
+- âŒ **Share Dialog UI** - FEHLT (3-5 Tage)
+- âŒ **Presence Indicators** - FEHLT (2-3 Tage)
+- âŒ **Live Notifications** - FEHLT (1-2 Tage)
+- âŒ **NIP-51 Integration** - FEHLT (2-3 Tage)
+- âŒ **E2E Tests** - FEHLT (3-4 Tage)
 
 **Verbleibender Aufwand: ~12-17 Tage (nicht 30!)**
 
 ### Meilenstein 4.1: Board-Sharing & Permissions (01.12. - 10.12., ~8 Tage)
 
-**Ziel:** Mehrere Nutzer können gemeinsam an Board arbeiten (mit Zugriffskontrolle)  
-**Status:** 🟡 **~50% FERTIG** - AuthStore komplett, Backend bereit, API-Layer + UI fehlen  
+**Ziel:** Mehrere Nutzer kÃ¶nnen gemeinsam an Board arbeiten (mit Zugriffskontrolle)  
+**Status:** ðŸŸ¡ **~50% FERTIG** - AuthStore komplett, Backend bereit, API-Layer + UI fehlen  
 **Branch:** `feature/board-sharing` (geplant)  
 **Dokumentation:** [`docs/ARCHITECTURE/BOARD-SHARING.md`](../ARCHITECTURE/BOARD-SHARING.md) (neu erstellt 13.11.2025)
 
-**✅ BEREITS IMPLEMENTIERT:**
-- ✅ Maintainers Support in Board Events (p-tags, nostrEvents.ts Line 96)
-- ✅ Multi-User Event Publishing (BoardStore kann bereits mehrere Authors)
-- ✅ Event-Signierung mit NDK Signer
+**âœ… BEREITS IMPLEMENTIERT:**
+- âœ… Maintainers Support in Board Events (p-tags, nostrEvents.ts Line 96)
+- âœ… Multi-User Event Publishing (BoardStore kann bereits mehrere Authors)
+- âœ… Event-Signierung mit NDK Signer
 
-**❌ NOCH ZU IMPLEMENTIEREN:**
+**âŒ NOCH ZU IMPLEMENTIEREN:**
 
 **Phase 4.1A: Core API (2-3 Tage)**
 
@@ -1381,22 +1381,22 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] `readBoardShares()` - Fetch Kind 30051 Events
   - [ ] `publishBoardShares()` - Create/Update Contact List Event
   - [ ] p-tags mit Role-Information (tag[3])
-  - [ ] Event-Deserialisierung für BoardShare[]
+  - [ ] Event-Deserialisierung fÃ¼r BoardShare[]
 
 **Phase 4.1B: Permission System (1 Tag)**
 
 - [ ] **Permission System** 
   - [ ] `enum BoardRole { OWNER, EDITOR, VIEWER }`
-  - [ ] Owner: Kann alles ändern + Freigabe verwalten
+  - [ ] Owner: Kann alles Ã¤ndern + Freigabe verwalten
   - [ ] Editor: Kann Karten bearbeiten + Kommentare
   - [ ] Viewer: Nur Lesezugriff
-  - [ ] Permissions bei Event-Publishing prüfen
+  - [ ] Permissions bei Event-Publishing prÃ¼fen
 
 - [ ] **Share Dialog UI** (shadcn-svelte)
   - [ ] Share Panel in Topbar
   - [ ] Nutzer-Liste mit Rollen-Dropdown
   - [ ] Add/Remove Nutzer
-  - [ ] Link-Copy für Public Sharing
+  - [ ] Link-Copy fÃ¼r Public Sharing
 
 - [ ] **Tests**
   - [ ] Unit: Permission checks
@@ -1404,52 +1404,52 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] E2E: Zwei Browser mit verschiedenen Rollen
 
 **Acceptance Criteria:**
-- ✅ Nutzer können Boards freigeben
-- ✅ Berechtigungen werden durchgesetzt
-- ✅ Events können nur von Berechtigten publiziert werden
-- ✅ Share-Dialog ist benutzerfreundlich
+- âœ… Nutzer kÃ¶nnen Boards freigeben
+- âœ… Berechtigungen werden durchgesetzt
+- âœ… Events kÃ¶nnen nur von Berechtigten publiziert werden
+- âœ… Share-Dialog ist benutzerfreundlich
 
 ---
 
 ### Meilenstein 4.2: Echtzeit-Kollaboration (08.12. - 18.12., ~9 Tage)
 
 **Ziel:** Live-Editing mit Presence & Notifications  
-**Status:** 🟡 **~85% INFRASTRUKTUR FERTIG** - Nur UI-Integration fehlt!
+**Status:** ðŸŸ¡ **~85% INFRASTRUKTUR FERTIG** - Nur UI-Integration fehlt!
 
-**✅ BEREITS IMPLEMENTIERT:**
-- ✅ **SoftLockManager** - publishLock(), releaseLock(), subscribeLocks() (softLockManager.svelte.ts)
-- ✅ **MergeEngine** - threeWayMerge(), Conflict Detection (mergeEngine.ts)
-- ✅ **CardEditingFlow** - checkForConflictBeforeSave(), Session Management (cardEditingFlow.ts)
-- ✅ **SyncManager** - Offline Queue, Retry-Logik, publishOrQueue() (syncManager.svelte.ts)
-- ✅ **Soft-Lock Events** - Kind 20001 Ephemeral Events (nostrEvents.ts)
-- ✅ **Last-Write-Wins** - Timestamp-basierte Conflict Resolution (upsertCardFromNostr)
+**âœ… BEREITS IMPLEMENTIERT:**
+- âœ… **SoftLockManager** - publishLock(), releaseLock(), subscribeLocks() (softLockManager.svelte.ts)
+- âœ… **MergeEngine** - threeWayMerge(), Conflict Detection (mergeEngine.ts)
+- âœ… **CardEditingFlow** - checkForConflictBeforeSave(), Session Management (cardEditingFlow.ts)
+- âœ… **SyncManager** - Offline Queue, Retry-Logik, publishOrQueue() (syncManager.svelte.ts)
+- âœ… **Soft-Lock Events** - Kind 20001 Ephemeral Events (nostrEvents.ts)
+- âœ… **Last-Write-Wins** - Timestamp-basierte Conflict Resolution (upsertCardFromNostr)
 
-**❌ NOCH ZU IMPLEMENTIEREN (NUR UI):**
+**âŒ NOCH ZU IMPLEMENTIEREN (NUR UI):**
 
 - [ ] **Cursor-Position Sharing** (CRDT-basiert)
-  - [ ] Implementiere einfache CRDT für Card-Positionen
+  - [ ] Implementiere einfache CRDT fÃ¼r Card-Positionen
   - [ ] Publish "Nutzer arbeitet an Karte X" Events
   - [ ] Subscribe zu anderen Nutzern
   - [ ] Visualisiere Cursor-Positionen in UI
 
 - [ ] **Live-Notifications**
-  - [ ] Toast beim Hinzufügen von Kommentaren von anderen
+  - [ ] Toast beim HinzufÃ¼gen von Kommentaren von anderen
   - [ ] Toast wenn andere Nutzer Karten verschieben
   - [ ] Toast wenn Board aktualisiert wird
   - [ ] Sound-Option (optional)
 
 - [ ] **Presence-Indicator**
   - [ ] "Alice arbeitet gerade hier" in Column-Header
-  - [ ] Online/Offline Status für jeden Nutzer
+  - [ ] Online/Offline Status fÃ¼r jeden Nutzer
   - [ ] Avatar + Last-Seen Zeitstempel
 
-- [ ] **Soft-Locks UI-Integration** (Infrastruktur ✅ FERTIG)
-  - ✅ Backend: publishLock() mit 5 Min TTL (softLockManager.svelte.ts)
-  - ✅ Backend: Auto-Release nach TTL
-  - ✅ Backend: 3-Way Merge bei Conflicts (mergeEngine.ts)
-  - ✅ UI: MergeConflictDialog existiert bereits
-  - ❌ **UI-Integration fehlt:** CardDetailsDialog muss SoftLockManager nutzen
-  - ❌ **Warnung anzeigen:** "Alice editiert gerade diese Karte" Badge
+- [ ] **Soft-Locks UI-Integration** (Infrastruktur âœ… FERTIG)
+  - âœ… Backend: publishLock() mit 5 Min TTL (softLockManager.svelte.ts)
+  - âœ… Backend: Auto-Release nach TTL
+  - âœ… Backend: 3-Way Merge bei Conflicts (mergeEngine.ts)
+  - âœ… UI: MergeConflictDialog existiert bereits
+  - âŒ **UI-Integration fehlt:** CardDetailsDialog muss SoftLockManager nutzen
+  - âŒ **Warnung anzeigen:** "Alice editiert gerade diese Karte" Badge
 
 - [ ] **Tests**
   - [ ] Integration: Multi-Browser Playwright Setup
@@ -1458,15 +1458,15 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
   - [ ] Netzwerkfehler simulieren
 
 **Acceptance Criteria:**
-- ✅ Zwei Nutzer können gleichzeitig ein Board bearbeiten
-- ✅ Konflikte werden korrekt mit 3-Way Merge gelöst
-- ✅ Presence wird korrekt angezeigt & aktualisiert
-- ✅ Soft-Locks verhindern Lost-Updates
-- ✅ Alle Tests grün (Unit + Integration + E2E)
+- âœ… Zwei Nutzer kÃ¶nnen gleichzeitig ein Board bearbeiten
+- âœ… Konflikte werden korrekt mit 3-Way Merge gelÃ¶st
+- âœ… Presence wird korrekt angezeigt & aktualisiert
+- âœ… Soft-Locks verhindern Lost-Updates
+- âœ… Alle Tests grÃ¼n (Unit + Integration + E2E)
 
 ---
 
-### ⏰ Testphase (01.01. - 31.01.2026, 31 Tage)
+### â° Testphase (01.01. - 31.01.2026, 31 Tage)
 
 **DIESE PHASE:** Phase 4 Testing & QA  
 **Status:** Freigeschaltet nach 31.12.2025
@@ -1482,13 +1482,13 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 ### Meilenstein 4.3: Offline-First mit Conflict Resolution (FUTURE - Phase 4+ Optional)
 
 **Ziel:** App funktioniert offline mit Multi-User Sync  
-**Status:** ⚪ FUTURE
+**Status:** âšª FUTURE
 
 #### Zu implementieren:
 
-- [ ] **Lokale Änderungen tracken**
-  - [ ] Lamport Clocks für Event-Ordering
-  - [ ] Change-Set für Sync-Konflikt-Auflösung
+- [ ] **Lokale Ã„nderungen tracken**
+  - [ ] Lamport Clocks fÃ¼r Event-Ordering
+  - [ ] Change-Set fÃ¼r Sync-Konflikt-AuflÃ¶sung
 
 - [ ] **Merge auf Reconnect**
   - [ ] Lokale Changes mit Server-Changes vergleichen
@@ -1497,27 +1497,27 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 - [ ] **Tests**
   - [ ] Zwei Clients offline, dann online
-  - [ ] Simultane Änderungen auf selber Card
+  - [ ] Simultane Ã„nderungen auf selber Card
   - [ ] Lange Offline-Perioden
 
 **Acceptance Criteria:**
-- ✅ Offline-Changes werden korrekt synced
-- ✅ Konflikte werden aufgelöst
-- ✅ Keine Daten verloren
+- âœ… Offline-Changes werden korrekt synced
+- âœ… Konflikte werden aufgelÃ¶st
+- âœ… Keine Daten verloren
 
 ---
 
-## ⚪ Phase 5: Erweiterte Features (Priorität: Geplant)
+## âšª Phase 5: Erweiterte Features (PrioritÃ¤t: Geplant)
 
 ### Meilenstein 5.1: Materialverwaltung & Depot
 
-**Ziel:** Nutzer haben persönliches Material-Archiv  
-**Status:** ⚪ PLANNED
+**Ziel:** Nutzer haben persÃ¶nliches Material-Archiv  
+**Status:** âšª PLANNED
 
 #### Features:
 
-- [ ] Persönlicher Material-Index
-- [ ] Volltextsuche über eigene Materials
+- [ ] PersÃ¶nlicher Material-Index
+- [ ] Volltextsuche Ã¼ber eigene Materials
 - [ ] Automatische Kategorisierung (Fach, Klassenstufe)
 - [ ] Favoriten & Markierungen
 - [ ] Export zu CSV/PDF
@@ -1526,8 +1526,8 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ### Meilenstein 5.2: Gemeinschaften & Communities
 
-**Ziel:** Lehrkräfte organisieren sich in Fachgruppen  
-**Status:** ⚪ PLANNED
+**Ziel:** LehrkrÃ¤fte organisieren sich in Fachgruppen  
+**Status:** âšª PLANNED
 
 #### Features:
 
@@ -1541,14 +1541,14 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ### Meilenstein 5.3: Analyse & Insights
 
-**Ziel:** Dashboard mit Daten über Board-Nutzung  
-**Status:** ⚪ PLANNED
+**Ziel:** Dashboard mit Daten Ã¼ber Board-Nutzung  
+**Status:** âšª PLANNED
 
 #### Features:
 
 - [ ] Board-Statistiken (Anzahl Cards, Spalten, etc.)
 - [ ] Activity-Timeline
-- [ ] Häufigste Tags und Labels
+- [ ] HÃ¤ufigste Tags und Labels
 - [ ] Collaboration-Graph (wer arbeitet mit wem)
 - [ ] Performance-Metriken
 
@@ -1557,21 +1557,21 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 ### Meilenstein 5.4: Mobile App
 
 **Ziel:** Native iOS/Android App mit Offline-Sync  
-**Status:** ⚪ PLANNED
+**Status:** âšª PLANNED
 
 #### Features:
 
 - [ ] React Native oder Flutter Implementation
 - [ ] Alle Board-Features
-- [ ] Push-Notifications für Collaboration
-- [ ] Camera-Integration für Material-Erfassung
+- [ ] Push-Notifications fÃ¼r Collaboration
+- [ ] Camera-Integration fÃ¼r Material-Erfassung
 
 ---
 
 ### Meilenstein 5.5: Integrationen
 
 **Ziel:** Verbindung mit externen Tools  
-**Status:** ⚪ PLANNED
+**Status:** âšª PLANNED
 
 #### Features:
 
@@ -1583,42 +1583,42 @@ Die aktuellen Komponenten in `src/routes/cardsboard/` verwenden ein **eigenes Da
 
 ---
 
-## 📋 Kritische Pfade & Dependencies
+## ðŸ“‹ Kritische Pfade & Dependencies
 
-### Blocker für Phase 2:
-1. ✅ Phase 1 Meilensteine 1.1 - 1.4 (Core Implementation)
+### Blocker fÃ¼r Phase 2:
+1. âœ… Phase 1 Meilensteine 1.1 - 1.4 (Core Implementation)
 
-### Förder-Anforderungen (wichtig)
-- Die Fördermittelgeber erwarten die Umsetzung bis einschließlich Phase 4.
-- Es muss möglich sein, ein Board (Store) zu exportieren und zu importieren, um Boards zu teilen oder Backup/Restore zu ermöglichen. Implementierung auf Store-Level ist verpflichtend für Phasen-1..4.
+### FÃ¶rder-Anforderungen (wichtig)
+- Die FÃ¶rdermittelgeber erwarten die Umsetzung bis einschlieÃŸlich Phase 4.
+- Es muss mÃ¶glich sein, ein Board (Store) zu exportieren und zu importieren, um Boards zu teilen oder Backup/Restore zu ermÃ¶glichen. Implementierung auf Store-Level ist verpflichtend fÃ¼r Phasen-1..4.
 
-### Blocker für Phase 3:
-1. ✅ Phase 2 abgeschlossen (UI funktional)
-2. 🟡 OER-Event Schema finalisiert (NDK.md)
-3. 🟡 KI-API Integration (externe Service)
+### Blocker fÃ¼r Phase 3:
+1. âœ… Phase 2 abgeschlossen (UI funktional)
+2. ðŸŸ¡ OER-Event Schema finalisiert (NDK.md)
+3. ðŸŸ¡ KI-API Integration (externe Service)
 
-### Blocker für Phase 4:
-1. ✅ Phase 3 abgeschlossen (KI funktional)
-2. 🟡 Permissions-System designt
-3. 🟡 Conflict Resolution Strategie validiert
+### Blocker fÃ¼r Phase 4:
+1. âœ… Phase 3 abgeschlossen (KI funktional)
+2. ðŸŸ¡ Permissions-System designt
+3. ðŸŸ¡ Conflict Resolution Strategie validiert
 
 ---
 
-## 🎯 Definition of Done (DoD)
+## ðŸŽ¯ Definition of Done (DoD)
 
 Jeder Meilenstein ist **nur dann done**, wenn:
 
-- ✅ Code ist geschrieben und reviewed
-- ✅ Tests sind geschrieben und grün (> 80% Coverage)
-- ✅ Dokumentation ist aktualisiert
-- ✅ Keine Breaking Changes für andere Phasen
-- ✅ Acceptance Criteria sind erfüllt
-- ✅ Ist in `main` Branch merged
-- ✅ CHANGELOG.md ist aktualisiert
+- âœ… Code ist geschrieben und reviewed
+- âœ… Tests sind geschrieben und grÃ¼n (> 80% Coverage)
+- âœ… Dokumentation ist aktualisiert
+- âœ… Keine Breaking Changes fÃ¼r andere Phasen
+- âœ… Acceptance Criteria sind erfÃ¼llt
+- âœ… Ist in `main` Branch merged
+- âœ… CHANGELOG.md ist aktualisiert
 
 ---
 
-## 🏗️ Technische Schulden & Known Issues
+## ðŸ—ï¸ Technische Schulden & Known Issues
 
 ### Phase 1:
 - [ ] `data.ts` wird noch verwendet (alte Struktur)
@@ -1632,108 +1632,117 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 
 ### Phase 3+:
 - [ ] KI-Ratenlimiting fehlt
-- [ ] Keine User Research noch durchgeführt
+- [ ] Keine User Research noch durchgefÃ¼hrt
 - [ ] Performance unter Last nicht getestet
 
 ---
 
-## 📞 Kontakt & Support
+## ðŸ“ž Kontakt & Support
 
 - **Issues & Bugs:** [GitHub Issues](https://github.com/edufeed-org/kanban-editor/issues)
 - **Feature Requests:** [GitHub Discussions](https://github.com/edufeed-org/kanban-editor/discussions)
 - **Dokumentation:**
-  - 📚 [`docs/_INDEX.md`](../docs/_INDEX.md) - Zentrale Navigation (41 Docs)
-  - 📚 [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Übersicht
-  - 📚 [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten
-  - 📚 [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - Governance-Regeln v3.0
-  - 📚 [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration Guide (v2.0)
+  - ðŸ“š [`docs/_INDEX.md`](../docs/_INDEX.md) - Zentrale Navigation (41 Docs)
+  - ðŸ“š [`docs/ARCHITECTURE/STORES/README.md`](../ARCHITECTURE/STORES/README.md) - Store-Ãœbersicht
+  - ðŸ“š [`docs/ARCHITECTURE/AUTH-UI-COMPONENTS.md`](../ARCHITECTURE/AUTH-UI-COMPONENTS.md) - UI-Komponenten
+  - ðŸ“š [`docs/DOCUMENTATION-RULES-v3.md`](../DOCUMENTATION-RULES-v3.md) - Governance-Regeln v3.0
+  - ðŸ“š [`docs/archive/DOCUMENTATION-RULES-v2.md`](../archive/DOCUMENTATION-RULES-v2.md) - Migration Guide (v2.0)
 
 ---
 
-## 📝 Versionshistorie
+## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.58 | 03.02.2026 | 👤 Avatar: Profilbild wird in Header/Sidebar angezeigt. |
+| 3.57 | 03.02.2026 | ✨ Mobile Header: Logo kleiner, Unterzeile ausgeblendet. |
+| 3.56 | 03.02.2026 | 🧭 Header: Navigation bleibt rechts neben dem Branding (Mobile). |
+| 3.55 | 03.02.2026 | 🧭 Mobile Header: Top-Navigation zeigt nur Icons + Avatar. |
+| 3.54 | 03.02.2026 | 🧹 Sidebar: „Meine Boards“ nur noch auf der Landingpage. |
+| 3.53 | 03.02.2026 | 🧩 Svelte 5 Fixes: DropdownMenu ohne `asChild`, dynamische Icons modernisiert. |
+| 3.52 | 03.02.2026 | ✨ Landingpage: CTA Glow + Hero Layout Optimierung |
+| 3.51 | 03.02.2026 | ✨ Landingpage polish + Theme-Sync (Dark/Light) |
+| 3.50 | 03.02.2026 | 🧭 Landingpage überarbeitet (CTA, Links, Lehrkräfte-Fokus, Dark/Light Theme) |
 |---------|-------|-------------|
-| 3.49 | 02.02.2026 | 🏷️ **Communikey Name via Kind 0:** Community‑Name wird aus Kind‑0 Metadaten geladen (Fallback). |
-| 3.48 | 02.02.2026 | 🧭 **Communikey Relationship Tag Fix:** `n=follow` wird als Relationship erkannt. |
-| 3.47 | 02.02.2026 | 🧭 **Communikey Relationship Fallback:** Kind 30382 `follow` + `d` als Membership-Quelle. |
-| 3.46 | 02.02.2026 | 🧪 **Communikey Debug Filter Logs:** Badge/List/Community-Filter werden geloggt. |
-| 3.45 | 02.02.2026 | 🔐 **Communikey Pubkey Normalization:** npub/nprofile → hex für Badge/Listen-Queries. |
-| 3.44 | 02.02.2026 | 🌐 **Communikey-Teilen:** Community-Auswahl (Kind 30008/10222) + Publish als Kind 30222. |
-| 3.43 | 02.02.2026 | 🔗 **Teilen-Untermenü:** „Als Link“, „An Communities“, „An Edufeed“ in BoardsList ergänzt. |
-| 3.36 | 02.02.2026 | 👀 **Editor-Request Bell Visibility:** Glocke nur bei offenen Requests sichtbar. |
-| 3.35 | 02.02.2026 | 🔔 **Editor-Request Background Refresh:** Badge wird im Hintergrund geladen. |
-| 3.34 | 02.02.2026 | ⚡ **ShareDialog Perf:** Inhalte werden nur im aktiven Tab geladen (Open/Close schneller). |
-| 3.33 | 02.02.2026 | 🔇 **Editor-Request Timeout Noise:** Timeout‑Warnung wird unterdrückt. |
-| 3.32 | 02.02.2026 | 🧯 **Editor-Request Load Guard:** Auto‑Fetch beim Boardwechsel entfernt, verhindert OOM/Hänger. |
-| 3.31 | 02.02.2026 | 🔁 **Editor-Request Board-Switch Fix:** Non‑blocking Load + Stale‑Response Guard beim Boardwechsel. |
-| 3.30 | 02.02.2026 | ⏱️ **Editor-Request Timeout:** ShareDialog hängt nicht mehr, wenn keine Requests vorhanden sind. |
-| 3.29 | 02.02.2026 | ⚡ **Editor-Request Preload:** Requests werden vorab geladen; Dialog zeigt sofortige Anzeige + Loading-Hinweis. |
-| 3.28 | 02.02.2026 | 🛎️ **Editor-Request Bell:** Topbar‑Glocke mit Badge öffnet Editor‑Requests im ShareDialog. |
-| 3.27 | 02.02.2026 | 👀 **Owner Editor-Requests:** ShareDialog zeigt Editor‑Requests für Owner inkl. Quick‑Action. |
-| 3.26 | 02.02.2026 | 🎨 **Toast-Design Polish:** Sonner-Toast Layout, Typografie, Buttons und Error/Warning-Farben verbessert. |
-| 3.25 | 02.02.2026 | 🧯 **Permission-Toast Fix:** Viewer-Permission-Checks im Store leiten auf Request-Toast; Permission-Toast stabilisiert (feste ID). |
-| 3.24 | 02.02.2026 | 🛎️ **Editor-Request Toast + Dialog:** Viewer sehen Permission-Toast mit „Rechte beantragen“ + Opt-out; Request-Dialog verfügbar; Editor-Request Events (Kind 30000) vorbereitet. |
-| 3.23 | 01.02.2026 | ⚡ **ShareDialog & UI Fixes:** config.json Cache, keine doppelte Share-Link Generierung, parallele Display-Name Loads, BASE_URL robust aufgelöst (inkl. "."), Flip-Animation Guard gegen NaN-Transforms (In der FLIP-Animation (First, Last, Invert, Play) treten NaN-Werte (Not-a-Number) ). |
-| 3.22 | 30.01.2026 | 🔍 **OER-Content Discovery Approved:** Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1. Timeline: 6-8 Tage. |
-| 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
-| 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
-| 3.19 | 26.01.2026 | 🧩 **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |
-| 3.18 | 26.01.2026 | 🧷 **Paste UX:** Strg+V im Board erstellt neue Card (globaler Paste-Handler, Input-safe). |
-| 3.17 | 26.01.2026 | 🔗 **SSR Fix:** Keine verschachtelten Links in Card-Layouts (node_invalid_placement_ssr). |
-| 3.16 | 26.01.2026 | 📋 **Paste Update:** Nostr naddr Events werden per NDK geladen und als AMB Learning Resource Cards erzeugt. |
-| 3.15 | 16.12.2025 | 🔐 **Permissions UX:** Board-Metadaten sind für Nicht-Owner read-only; Speichern deaktiviert. |
-| 3.14 | 16.12.2025 | 👀 **UX Fix:** Kein sichtbares "Re-Sort" beim Board-Load durch No-op Guards bei identischer Column-Order. |
-| 3.13 | 16.12.2025 | ✅ **Column-Order Patch Apply Fix:** `updated_at_ms` wird robust geparsed (auch numerischer String); bei Parse-Fehler Fallback auf `created_at` → Owner übernimmt Editor-Reorders zuverlässig. |
-| 3.12 | 16.12.2025 | ↕️ **Editor-Safe Column Reorder:** Spalten-Reihenfolge wird über Kind `8571` (Column Order Patch) synchronisiert; referenziert das kanonische Board via `a=30301:<author>:<d>` und zusätzlich `d=<boardId>`; nutzt `updated_at_ms` für LWW. Editoren publizieren kein Kind `30301` → keine Fork-Boards. |
-| 3.11 | 15.12.2025 | 🧭 **Shared-Discovery Author Fix:** Shared-Board Discovery nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide & Toast-Guard zuverlässig matchen (kein „Neues Board geteilt“ Ghost-Toast nach Leave/Owner-Delete). |
-| 3.10 | 15.12.2025 | 👀 **Owner Leave-Request Badge:** Owner sieht Leave-Requests (Kind 30000, `d=kanban-leave-request:<boardRef>`) im ShareDialog als Marker bei Editoren (best-effort, Relay-abhängig). |
-| 3.9 | 15.12.2025 | 🧹 **NIP-09 Delete Guard:** `deleteBoard()`/`deleteCard()` publizieren Kind-5 Lösch-Events nur bei Autor-Übereinstimmung; kaskadierender Delete skippt Cards anderer Autoren (verhindert „DELETION AUTH MISMATCH“ / Relay-Rejects). |
-| 3.8 | 15.12.2025 | 🧯 **Board-Delete Loop Guard:** `refreshBoardIds()`/`refreshBoardList()` sind read-only (kein `triggerUpdate()` Side-Effects); `loadBoardIds()` schließt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion lädt tombstoned IDs nicht; Nostr-Board-Load aktualisiert `boardIds` storage-basiert (tombstone-aware) statt Merge/Dedup. |
-| 3.7 | 15.12.2025 | 🧭 **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschützt; async Card-Loads werden Board-spezifisch angewendet (verhindert „alle Boards zeigen gleiche Cards“ und „Reload lädt älter“). |
-| 3.6 | 15.12.2025 | 🧷 **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollständige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |
-| 3.5 | 14.12.2025 | 🧩 **Hotfix Shared-Board Sync:** Board-Load überschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
-| 3.1 | 10.11.2025 | 🚀 **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollständig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER für Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |
-| 3.0 | 06.11.2025 | 🤖 **PHASE 3.0 COMPLETE:** AI Agent Infrastructure (10 Module, ChatStore, AIPanel, 150+ Tests). 0 Breaking Changes, 52/52 Docs verlinkt. Phase 1 mostly complete. |
-| 2.8 | 31.10.2025 | 📦 **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). Förder-Anforderung erfüllt! |
-| 2.7 | 31.10.2025 | 🔗 **SHARE-LINK FEATURE:** Phase 1.5B COMPLETE! Full end-to-end implementation + 41 unit tests (100% pass rate). Dokumentation in FEATURE/SHARELINK.md. Atomic 3-Step Sync für Board-Importe, 76% Kompressions-Ratio, Single-Layer URL-Encoding mit XSS-Prevention. |
-| 2.6 | 29.10.2025 | 🎨 **CARD UI REDESIGN PHASE 1:** Badges optimiert, Author-Info zu Popover, Image 60% kleiner, Description 2-line clamp. 70% schneller Entwicklung! |
-| 2.5 | 29.10.2025 | 📚 **DOKUMENTATIONS-GOVERNANCE v3.0:** Bidirektionale Code ↔ Docs Sync MANDATORY! 11-Punkt DoD Checklist, Pre-Commit Hooks, Metriken & KPIs, Enforcement-Rules. Verhindert 5-10 Tage Debugging durch veraltete Docs! |
-| 2.4 | 29.10.2025 | 📚 **DOKUMENTATIONS-RESTRUKTURIERUNG:** ARCHITECTURE/ komplett überarbeitet! STORES/ Subdirectory mit 6 Docs, AUTH-UI-COMPONENTS.md neu, 40% Redundanz-Reduktion, 37 → 41 total docs |
-| 2.3 | 26.10.2025 (Abend) | ⚡ **OPTIMIZATION:** 50% Zeitersparnis durch bereits vorhandene Komponenten! (-53 Tage insgesamt) |
-| 2.2 | 26.10.2025 | 🔴 **CRITICAL UPDATE:** Phase 4 (Kollaboration) zur COMPLETION bis 31.12.2025 verschoben! Testphase 01.01. - 31.01.2026 |
-| 2.1 | 26.10.2025 | ✅ Merge-System & Board-Versioning Integration (Phase 1.5A DONE, Zeitplan aktualisiert) |
+| 3.49 | 02.02.2026 | ðŸ·ï¸ **Communikey Name via Kind 0:** Communityâ€‘Name wird aus Kindâ€‘0 Metadaten geladen (Fallback). |
+| 3.48 | 02.02.2026 | ðŸ§­ **Communikey Relationship Tag Fix:** `n=follow` wird als Relationship erkannt. |
+| 3.47 | 02.02.2026 | ðŸ§­ **Communikey Relationship Fallback:** Kind 30382 `follow` + `d` als Membership-Quelle. |
+| 3.46 | 02.02.2026 | ðŸ§ª **Communikey Debug Filter Logs:** Badge/List/Community-Filter werden geloggt. |
+| 3.45 | 02.02.2026 | ðŸ” **Communikey Pubkey Normalization:** npub/nprofile â†’ hex fÃ¼r Badge/Listen-Queries. |
+| 3.44 | 02.02.2026 | ðŸŒ **Communikey-Teilen:** Community-Auswahl (Kind 30008/10222) + Publish als Kind 30222. |
+| 3.43 | 02.02.2026 | ðŸ”— **Teilen-UntermenÃ¼:** â€žAls Linkâ€œ, â€žAn Communitiesâ€œ, â€žAn Edufeedâ€œ in BoardsList ergÃ¤nzt. |
+| 3.36 | 02.02.2026 | ðŸ‘€ **Editor-Request Bell Visibility:** Glocke nur bei offenen Requests sichtbar. |
+| 3.35 | 02.02.2026 | ðŸ”” **Editor-Request Background Refresh:** Badge wird im Hintergrund geladen. |
+| 3.34 | 02.02.2026 | âš¡ **ShareDialog Perf:** Inhalte werden nur im aktiven Tab geladen (Open/Close schneller). |
+| 3.33 | 02.02.2026 | ðŸ”‡ **Editor-Request Timeout Noise:** Timeoutâ€‘Warnung wird unterdrÃ¼ckt. |
+| 3.32 | 02.02.2026 | ðŸ§¯ **Editor-Request Load Guard:** Autoâ€‘Fetch beim Boardwechsel entfernt, verhindert OOM/HÃ¤nger. |
+| 3.31 | 02.02.2026 | ðŸ” **Editor-Request Board-Switch Fix:** Nonâ€‘blocking Load + Staleâ€‘Response Guard beim Boardwechsel. |
+| 3.30 | 02.02.2026 | â±ï¸ **Editor-Request Timeout:** ShareDialog hÃ¤ngt nicht mehr, wenn keine Requests vorhanden sind. |
+| 3.29 | 02.02.2026 | âš¡ **Editor-Request Preload:** Requests werden vorab geladen; Dialog zeigt sofortige Anzeige + Loading-Hinweis. |
+| 3.28 | 02.02.2026 | ðŸ›Žï¸ **Editor-Request Bell:** Topbarâ€‘Glocke mit Badge Ã¶ffnet Editorâ€‘Requests im ShareDialog. |
+| 3.27 | 02.02.2026 | ðŸ‘€ **Owner Editor-Requests:** ShareDialog zeigt Editorâ€‘Requests fÃ¼r Owner inkl. Quickâ€‘Action. |
+| 3.26 | 02.02.2026 | ðŸŽ¨ **Toast-Design Polish:** Sonner-Toast Layout, Typografie, Buttons und Error/Warning-Farben verbessert. |
+| 3.25 | 02.02.2026 | ðŸ§¯ **Permission-Toast Fix:** Viewer-Permission-Checks im Store leiten auf Request-Toast; Permission-Toast stabilisiert (feste ID). |
+| 3.24 | 02.02.2026 | ðŸ›Žï¸ **Editor-Request Toast + Dialog:** Viewer sehen Permission-Toast mit â€žRechte beantragenâ€œ + Opt-out; Request-Dialog verfÃ¼gbar; Editor-Request Events (Kind 30000) vorbereitet. |
+| 3.23 | 01.02.2026 | âš¡ **ShareDialog & UI Fixes:** config.json Cache, keine doppelte Share-Link Generierung, parallele Display-Name Loads, BASE_URL robust aufgelÃ¶st (inkl. "."), Flip-Animation Guard gegen NaN-Transforms (In der FLIP-Animation (First, Last, Invert, Play) treten NaN-Werte (Not-a-Number) ). |
+| 3.22 | 30.01.2026 | ðŸ” **OER-Content Discovery Approved:** Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1. Timeline: 6-8 Tage. |
+| 3.21 | 26.01.2026 | ðŸ”— **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprÃ¼nglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
+| 3.20 | 26.01.2026 | ðŸ”Ž **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/LÃ¤ngen fÃ¼r Diagnose. |
+| 3.19 | 26.01.2026 | ðŸ§© **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |
+| 3.18 | 26.01.2026 | ðŸ§· **Paste UX:** Strg+V im Board erstellt neue Card (globaler Paste-Handler, Input-safe). |
+| 3.17 | 26.01.2026 | ðŸ”— **SSR Fix:** Keine verschachtelten Links in Card-Layouts (node_invalid_placement_ssr). |
+| 3.16 | 26.01.2026 | ðŸ“‹ **Paste Update:** Nostr naddr Events werden per NDK geladen und als AMB Learning Resource Cards erzeugt. |
+| 3.15 | 16.12.2025 | ðŸ” **Permissions UX:** Board-Metadaten sind fÃ¼r Nicht-Owner read-only; Speichern deaktiviert. |
+| 3.14 | 16.12.2025 | ðŸ‘€ **UX Fix:** Kein sichtbares "Re-Sort" beim Board-Load durch No-op Guards bei identischer Column-Order. |
+| 3.13 | 16.12.2025 | âœ… **Column-Order Patch Apply Fix:** `updated_at_ms` wird robust geparsed (auch numerischer String); bei Parse-Fehler Fallback auf `created_at` â†’ Owner Ã¼bernimmt Editor-Reorders zuverlÃ¤ssig. |
+| 3.12 | 16.12.2025 | â†•ï¸ **Editor-Safe Column Reorder:** Spalten-Reihenfolge wird Ã¼ber Kind `8571` (Column Order Patch) synchronisiert; referenziert das kanonische Board via `a=30301:<author>:<d>` und zusÃ¤tzlich `d=<boardId>`; nutzt `updated_at_ms` fÃ¼r LWW. Editoren publizieren kein Kind `30301` â†’ keine Fork-Boards. |
+| 3.11 | 15.12.2025 | ðŸ§­ **Shared-Discovery Author Fix:** Shared-Board Discovery nutzt `event.pubkey` als kanonischen Author/Adresse (`30301:<pubkey>:<d>`), damit Leave/Hide & Toast-Guard zuverlÃ¤ssig matchen (kein â€žNeues Board geteiltâ€œ Ghost-Toast nach Leave/Owner-Delete). |
+| 3.10 | 15.12.2025 | ðŸ‘€ **Owner Leave-Request Badge:** Owner sieht Leave-Requests (Kind 30000, `d=kanban-leave-request:<boardRef>`) im ShareDialog als Marker bei Editoren (best-effort, Relay-abhÃ¤ngig). |
+| 3.9 | 15.12.2025 | ðŸ§¹ **NIP-09 Delete Guard:** `deleteBoard()`/`deleteCard()` publizieren Kind-5 LÃ¶sch-Events nur bei Autor-Ãœbereinstimmung; kaskadierender Delete skippt Cards anderer Autoren (verhindert â€žDELETION AUTH MISMATCHâ€œ / Relay-Rejects). |
+| 3.8 | 15.12.2025 | ðŸ§¯ **Board-Delete Loop Guard:** `refreshBoardIds()`/`refreshBoardList()` sind read-only (kein `triggerUpdate()` Side-Effects); `loadBoardIds()` schlieÃŸt Tombstone-Registry-Key aus; Shared-Board-Rekonstruktion lÃ¤dt tombstoned IDs nicht; Nostr-Board-Load aktualisiert `boardIds` storage-basiert (tombstone-aware) statt Merge/Dedup. |
+| 3.7 | 15.12.2025 | ðŸ§­ **Nostr Reload Fix:** Initiale Card-Upserts sind jetzt LWW-geschÃ¼tzt; async Card-Loads werden Board-spezifisch angewendet (verhindert â€žalle Boards zeigen gleiche Cardsâ€œ und â€žReload lÃ¤dt Ã¤lterâ€œ). |
+| 3.6 | 15.12.2025 | ðŸ§· **DnD-Sync Fix:** `syncBoardState()` merged defensiv; unvollstÃ¤ndige UI-Payloads droppen keine Cards/Columns mehr (verhindert "Cards verschwinden" direkt nach Move). |
+| 3.5 | 14.12.2025 | ðŸ§© **Hotfix Shared-Board Sync:** Board-Load Ã¼berschreibt lokale Cards nicht mehr; unsicheres Post-Cleanup entfernt; Session-Restore startet Owned-Board Load + Subscriptions deterministisch. |
+| 3.1 | 10.11.2025 | ðŸš€ **NOSTR SYNC SPRINT COMPLETE:** Last-Write-Wins vollstÃ¤ndig implementiert! Echo-Loop Prevention working, Card-Duplication gefixt, Board-Storage 95% Redundanz eliminiert. Merge-LWW Integration dokumentiert (70 min, BLOCKER fÃ¼r Phase 2.0). Phase 1.1 DONE, Phase 1.5D IN PROGRESS. |
+| 3.0 | 06.11.2025 | ðŸ¤– **PHASE 3.0 COMPLETE:** AI Agent Infrastructure (10 Module, ChatStore, AIPanel, 150+ Tests). 0 Breaking Changes, 52/52 Docs verlinkt. Phase 1 mostly complete. |
+| 2.8 | 31.10.2025 | ðŸ“¦ **IMPORT-EXPORT FEATURE DOCUMENTED:** Phase 1.5D COMPLETE! JSON-basiertes Export/Import mit 3 Modi (merge/new/overwrite). Dokumentation in FEATURE/IMPORT-EXPORT.md. 75+ Unit Tests, Store APIs (export/import/backup), UI Integration (ExportButton + ImportPopover). FÃ¶rder-Anforderung erfÃ¼llt! |
+| 2.7 | 31.10.2025 | ðŸ”— **SHARE-LINK FEATURE:** Phase 1.5B COMPLETE! Full end-to-end implementation + 41 unit tests (100% pass rate). Dokumentation in FEATURE/SHARELINK.md. Atomic 3-Step Sync fÃ¼r Board-Importe, 76% Kompressions-Ratio, Single-Layer URL-Encoding mit XSS-Prevention. |
+| 2.6 | 29.10.2025 | ðŸŽ¨ **CARD UI REDESIGN PHASE 1:** Badges optimiert, Author-Info zu Popover, Image 60% kleiner, Description 2-line clamp. 70% schneller Entwicklung! |
+| 2.5 | 29.10.2025 | ðŸ“š **DOKUMENTATIONS-GOVERNANCE v3.0:** Bidirektionale Code â†” Docs Sync MANDATORY! 11-Punkt DoD Checklist, Pre-Commit Hooks, Metriken & KPIs, Enforcement-Rules. Verhindert 5-10 Tage Debugging durch veraltete Docs! |
+| 2.4 | 29.10.2025 | ðŸ“š **DOKUMENTATIONS-RESTRUKTURIERUNG:** ARCHITECTURE/ komplett Ã¼berarbeitet! STORES/ Subdirectory mit 6 Docs, AUTH-UI-COMPONENTS.md neu, 40% Redundanz-Reduktion, 37 â†’ 41 total docs |
+| 2.3 | 26.10.2025 (Abend) | âš¡ **OPTIMIZATION:** 50% Zeitersparnis durch bereits vorhandene Komponenten! (-53 Tage insgesamt) |
+| 2.2 | 26.10.2025 | ðŸ”´ **CRITICAL UPDATE:** Phase 4 (Kollaboration) zur COMPLETION bis 31.12.2025 verschoben! Testphase 01.01. - 31.01.2026 |
+| 2.1 | 26.10.2025 | âœ… Merge-System & Board-Versioning Integration (Phase 1.5A DONE, Zeitplan aktualisiert) |
 | 2.0 | 18.10.2025 | Priorisierte Roadmap mit Meilensteinen |
 | 1.0 | 17.10.2025 | Initial Roadmap (in CODE-ANALYSE.md) |
 
 ---
 
-**Nächste Review:** Nach Merge-LWW Integration (15.11.2025)  
+**NÃ¤chste Review:** Nach Merge-LWW Integration (15.11.2025)  
 **Kritischer Meilenstein:** 31.12.2025 (Phase 4 MUSS fertig sein!)  
 **Testing Start:** 01.01.2026 (Phase 3 + Phase 4 Testing parallel)  
-**Dokumentation:** ✅ Vollständig aktualisiert (10.11.2025)  
-**Governance:** 🔴 **v3.0 ACTIVE** - Code ↔ Docs Sync MANDATORY
+**Dokumentation:** âœ… VollstÃ¤ndig aktualisiert (10.11.2025)  
+**Governance:** ðŸ”´ **v3.0 ACTIVE** - Code â†” Docs Sync MANDATORY
 
 ---
 
-## ⏱️ FINAL TIMELINE SUMMARY (v3.1 - Nostr Sync Sprint Complete!)
+## â±ï¸ FINAL TIMELINE SUMMARY (v3.1 - Nostr Sync Sprint Complete!)
 
 ```
 OKTOBER 2025:
-  26-31.10: Phase 1.5B: CardDialog Integration (5 Tage) ✓
+  26-31.10: Phase 1.5B: CardDialog Integration (5 Tage) âœ“
 
 NOVEMBER 2025:
-  06.11  ✅ Phase 3.0 AI Agent Infrastructure COMPLETE
-  10.11  ✅ NOSTR SYNC SPRINT COMPLETE - LWW Full Impl, Echo Prevention, Card-Dedup Fixed
+  06.11  âœ… Phase 3.0 AI Agent Infrastructure COMPLETE
+  10.11  âœ… NOSTR SYNC SPRINT COMPLETE - LWW Full Impl, Echo Prevention, Card-Dedup Fixed
   10-20.11: Phase 1.5D Export/Import (10 Tage) + Phase 2.0 Merge (9 Tage) PARALLEL
-           🔴 BLOCKER: Merge-LWW Integration (70 min, doku ready)
+           ðŸ”´ BLOCKER: Merge-LWW Integration (70 min, doku ready)
   20-01.12: Phase 2.1 UI (11 Tage) + Phase 2.2 UX (9 Tage) PARALLEL
 
 DEZEMBER 2025:
   01-10.12: Phase 2.3 Performance (9 Tage)
   10-23.12: Phase 4.1 Board-Sharing (13 Tage)
   20-31.12: Phase 4.2 Echtzeit-Kollaboration (11 Tage) CRITICAL!
-  🎯 31.12: DEADLINE - Phase 2 + Phase 4 FERTIG!
+  ðŸŽ¯ 31.12: DEADLINE - Phase 2 + Phase 4 FERTIG!
 
 JANUAR 2026:
   01-31.01: Phase 3.1+ KI-Integration (50 Tage) + Phase 4 Testing (31 Tage) PARALLEL
@@ -1742,10 +1751,14 @@ FEBRUAR 2026:
   01-20.02: Phase 3 KI-Integration Completion (20 Tage)
 ```
 
-**Neue Gesamtdauer:** 26.10.2025 → 20.02.2026 = **117 Tage**  
+**Neue Gesamtdauer:** 26.10.2025 â†’ 20.02.2026 = **117 Tage**  
 **Einsparnis:** **53 Tage (-31% Gesamtzeit!)**
 
 ---
 
-**Zuletzt aktualisiert:** 31. Januar 2026
+**Zuletzt aktualisiert:** 03. Februar 2026
+
+
+
+
 
