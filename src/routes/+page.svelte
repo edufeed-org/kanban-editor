@@ -162,7 +162,10 @@
 					<DropdownMenu.Trigger class="bg-secondary rounded-md">
 						<div class="px-2 py-2 sm:px-3 sm:py-2 flex items-center gap-2" data-testid="auth-user-avatar">
 							<Avatar.Root class="h-8 w-8 flex-shrink-0">
-								<Avatar.Image src="" alt={authStore.getDisplayName()} />
+								<Avatar.Image
+									src={currentUser.profile?.picture || currentUser.profile?.image || ""}
+									alt={authStore.getDisplayName()}
+								/>
 								<Avatar.Fallback class={`${authStore.getAvatarColor()} text-white text-xs font-semibold`}>
 									{authStore.getUserInitials()}
 								</Avatar.Fallback>

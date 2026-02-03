@@ -1,4 +1,21 @@
 ﻿# Changelog
+## Version 4.7.70 - Avatar Profile Picture Fix 👤
+
+**Datum:** 03. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Avatar:** Profilbild aus den Settings wird im Header und in der Sidebar angezeigt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/+page.svelte | Avatar nutzt `profile.picture`/`profile.image` |
+| src/routes/cardsboard/LeftSidebarFooter.svelte | Avatar nutzt `profile.picture`/`profile.image` |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.58 ergänzt |
+
+---
 ## Version 4.7.69 - Mobile Branding Verdichtung ✨
 
 **Datum:** 03. Februar 2026  \
