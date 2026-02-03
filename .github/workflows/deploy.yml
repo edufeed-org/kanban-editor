@@ -48,10 +48,6 @@ jobs:
           chmod 600 ~/.ssh/user
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-          ssh -i ~/.ssh/user ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ichbinhierrrrrrrrrr"
-      
-      - name: Deploy with rsync
-        run: |
           rsync -az --delete \
             build/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/kanban-editor
