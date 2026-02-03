@@ -83,7 +83,7 @@
 </script>
 
 <header class="border-b backdrop-blur supports-[backdrop-filter]:bg-background/60 landing-header-bg">
-	<div class="container flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
+	<div class="container mx-auto flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
 		<a
 			href="https://edufeed.org/"
 			class="landing-surface flex items-center gap-4 rounded-2xl border px-3 py-2 shadow-sm"
@@ -127,7 +127,7 @@
 	<section class="relative overflow-hidden">
 		<div class="landing-hero-bg absolute inset-0" aria-hidden="true"></div>
 
-		<div class="container relative px-4 pb-12 pt-12">
+		<div class="container relative mx-auto px-4 pb-12 pt-12">
 			<div class="grid gap-10 md:grid-cols-2 md:items-start">
 				<div class="space-y-6">
 					<div class="flex flex-wrap items-center gap-2">
