@@ -47,7 +47,9 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/user
           chmod 600 ~/.ssh/user
           ssh-keyscan -p 22 ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
           sudo apt-get install sshpass
+          ssh -i ~/.ssh/user ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ichbinhierrrrrrrrrr"
       
       - name: Deploy with rsync
         run: |
