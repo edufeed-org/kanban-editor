@@ -184,6 +184,27 @@
 		editLabels = [...(card.labels || [])];
 	});
 
+	// Auto-focus & select title when dialog opens for a newly-created card
+	// (e.g. default heading 'Neue Karte')
+	// svelte-ignore non_reactive_update
+	let titleInput: HTMLInputElement | null;
+
+	$effect(() => {
+		if (open && titleInput) {
+			// Wait a tick to ensure DOM is rendered and editName is synced
+			if (editName === 'Neue Karte') {
+				setTimeout(() => {
+					try {
+						titleInput?.focus();
+						titleInput?.select();
+					} catch (e) {
+						console.debug('Could not focus/select title input', e);
+					}
+				}, 50);
+			}
+		}
+	});
+
 	const attendees = $derived(
 		card.attendees && card.attendees.length > 0
 			? card.attendees
@@ -477,6 +498,7 @@
 				<input
 					type="text"
 					bind:value={editName}
+					bind:this={titleInput}
 					onblur={readOnly ? undefined : handleRenameChange}
 					onkeydown={readOnly ? undefined : (e) => e.key === 'Enter' && handleRenameChange()}
 					disabled={readOnly}
