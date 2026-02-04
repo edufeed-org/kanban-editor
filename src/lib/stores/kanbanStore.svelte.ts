@@ -1538,11 +1538,14 @@ export class BoardStore {
         if (cardId) {
             // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
             this.board.updateLastAccessed();
+
+            if (options?.publish === false) {
+                this.triggerUpdate({ publish: false });
+                return cardId;
+            }
             
             this.triggerUpdate();
-            if (options?.publish !== false) {
-                this.publishCardAsync(cardId);
-            }
+            this.publishCardAsync(cardId);
         }
         
         return cardId || '';
@@ -1633,7 +1636,7 @@ export class BoardStore {
         }
     }
 
-    public createColumn(name: string, color?: string): string {
+    public createColumn(name: string, color?: string, options?: { publish?: boolean }): string {
         // Permission Check: Kann Benutzer Spalten erstellen?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -1646,6 +1649,11 @@ export class BoardStore {
         
         if (columnId) {
             this._columnOrder = [...this._columnOrder, columnId];
+            if (options?.publish === false) {
+                this.triggerUpdate({ publish: false });
+                return columnId;
+            }
+
             if (PermissionChecks.canPublishBoard(userRole, boardId)) {
                 this.triggerUpdate();
                 this.publishBoardAsync();
@@ -1697,7 +1705,7 @@ export class BoardStore {
         }
     }
 
-    public deleteColumn(columnId: string): void {
+    public deleteColumn(columnId: string, options?: { publish?: boolean }): void {
         // Permission Check: Kann Benutzer Spalten löschen?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -1708,6 +1716,11 @@ export class BoardStore {
         
         if (BoardOperations.deleteColumn(this.board, columnId)) {
             this._columnOrder = this._columnOrder.filter(id => id !== columnId);
+            if (options?.publish === false) {
+                this.triggerUpdate({ publish: false });
+                return;
+            }
+
             if (PermissionChecks.canPublishBoard(userRole, boardId)) {
                 this.triggerUpdate();
                 this.publishBoardAsync();

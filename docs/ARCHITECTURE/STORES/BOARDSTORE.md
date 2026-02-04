@@ -314,7 +314,7 @@ public getAllBoards(): Array<{ id: string; name: string; updatedAt: number }> {
 ### Karte erstellen
 
 ```typescript
-public createCard(columnId: string, name: string, description?: string): string {
+public createCard(columnId: string, name: string, description?: string, options?: { publish?: boolean }): string {
     const author = authStore.getPubkey() || 'anonymous';
     const authorName = authStore.getUserName() || author;
     
@@ -341,6 +341,11 @@ private addCard(columnId: string, props: CardProps) {
     if (!column) throw new Error(`Spalte ${columnId} nicht gefunden.`);
     const card = column.addCard(props);
     
+    if (options?.publish === false) {
+        this.triggerUpdate({ publish: false });
+        return card.id;
+    }
+
     this.triggerUpdate();  // ← ESSENTIAL!
     this.publishCardToNostr(card.id).catch(err => {
         console.error("Fehler beim Publizieren der Karte:", err)
@@ -394,11 +399,17 @@ private updateCard(cardId: string, updates: Partial<CardProps>): void {
 **Konsequenz:** Neue Spalten von Maintainern sind nur sichtbar, wenn der Column-Patch die Spalte **anlegt** und die Order verteilt.
 
 ```typescript
-public createColumn(name: string, color?: string): string {
+public createColumn(name: string, color?: string, options?: { publish?: boolean }): string {
     const columnId = BoardOperations.createColumn(this.board, name, color);
     if (!columnId) return '';
 
     this._columnOrder = [...this._columnOrder, columnId];
+
+    // Bulk-Operations (z.B. populate_board): Zwischen-Publishes unterdrücken
+    if (options?.publish === false) {
+        this.triggerUpdate({ publish: false });
+        return columnId;
+    }
 
     if (PermissionChecks.canPublishBoard(userRole, boardId)) {
         this.triggerUpdate();
@@ -416,10 +427,28 @@ public createColumn(name: string, color?: string): string {
 **Hinweis:** Column-Order Patches **löschen** keine Spalten (defensive Merge). Löschen ist für Nicht-Owner nur lokal.
 **Update:** Maintainer-Deletes werden jetzt als `del`-Tags im Column-Patch gesendet und entfernen Spalten kollaborativ.
 
+**Bulk-Hinweis:** `deleteColumn(columnId, { publish: false })` unterdrückt Zwischen‑Publishes in Massenoperationen
+(z.B. populate_board) und wird am Ende durch ein einzelnes 30301 bzw. Batch‑Patch ersetzt.
+
 ### Shared Boards: Owner-only 30301
 
 Für geteilte Boards akzeptieren wir **nur Owner‑signierte** Board‑Events (30301).
 Maintainern bleiben Column‑Patches (8571) und Card‑Events (30302).
+
+### Board-Event mit leeren Spalten
+
+Wenn ein Owner‑Board‑Event **keine `col`‑Tags** enthält, wird das Board als **leer** behandelt
+(alle Spalten und Karten werden entfernt).
+
+### populate_board: Single Final Publish
+
+`populate_board` führt alle Spalten‑/Karten‑Änderungen lokal durch und publiziert **genau einmal am Ende**
+(über `updateBoardMeta`). Zwischen‑Publishes würden sonst 30301‑Events mit **Teil‑Spalten** erzeugen.
+
+### Card-Events vor Column-Events (Race Condition)
+
+Card-Events können **vor** dem Column-Patch eintreffen. Falls die Zielspalte fehlt, werden die Cards **gequeued** und
+nach dem Column-Patch automatisch eingefügt (publish: false).
 
 ### Card-Events vor Column-Events (Race Condition)
 

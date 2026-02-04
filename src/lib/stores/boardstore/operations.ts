@@ -847,7 +847,11 @@ export class BoardOperations {
             }
             
             // 2. ⚡ NEU: Spalten-Synchronisation (Reihenfolge + Metadaten)
-            if (boardProps.columns && boardProps.columns.length > 0) {
+            if (Array.isArray(boardProps.columns) && boardProps.columns.length === 0) {
+                // ⚡ CRITICAL: Empty columns list means delete all columns (and cards)
+                currentBoard.columns = [];
+                console.log('🧹 Synchronized empty columns from Nostr (cleared board columns)');
+            } else if (boardProps.columns && boardProps.columns.length > 0) {
                 // Erstelle Map: columnId → Column-Instanz
                 const existingColumnsMap = new Map(
                     currentBoard.columns.map(c => [c.id, c])

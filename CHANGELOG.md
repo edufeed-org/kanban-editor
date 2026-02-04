@@ -1,4 +1,84 @@
 ﻿# Changelog
+## Version 4.7.86 - Populate AIPanel Publish Options 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** AIPanel gibt `publish:false` an `createColumn`/`deleteColumn` durch (keine Zwischen‑30301).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/cardsboard/AIPanel.svelte | publish‑Optionen weitergereicht |
+
+---
+## Version 4.7.85 - Populate Card Publish Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** createCard mit `publish:false` triggert kein Board‑Publish während populate_board.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | triggerUpdate({ publish: false }) bei createCard‑Bulk |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | createCard publish‑Option dokumentiert |
+
+---
+## Version 4.7.84 - Populate Single Final Publish 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert Board nur einmal am Ende (keine Zwischen‑30301 nach erster Spalte).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Early publishBoardIfOwner entfernt |
+
+---
+## Version 4.7.83 - Populate Bulk Publish Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board unterdrückt Zwischen‑Publishes bei Spalten‑Create/Delete und publiziert erst am Ende.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | create/delete column mit publish:false bei populate |
+| src/lib/stores/kanbanStore.svelte.ts | createColumn/deleteColumn publish‑Optionen |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Bulk‑Publish Guard dokumentiert |
+
+---
+## Version 4.7.82 - Board-Event Empty Columns Clear 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Owner‑30301 ohne `col`‑Tags leert die Spalten (und Cards) korrekt auf Maintainer‑Boards.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/operations.ts | Leere Columns aus 30301 anwenden |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.70 ergänzt |
+
+---
 ## Version 4.7.81 - AI Populate Default Column Cleanup 🧹
 
 **Datum:** 04. Februar 2026  \

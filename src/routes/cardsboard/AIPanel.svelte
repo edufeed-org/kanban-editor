@@ -300,9 +300,10 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
           currentUserPubkey: null, // TODO: Get from authStore when available
           currentUserName: null,   // TODO: Get from authStore when available
           boardStore: {
-            createColumn: (name: string, color?: string) => boardStore.createColumn(name, color),
+            createColumn: (name: string, color?: string, options?: { publish?: boolean }) =>
+              boardStore.createColumn(name, color, options),
             updateColumn: (columnId: string, updates: any) => boardStore.updateColumn(columnId, updates),
-            deleteColumn: (columnId: string) => boardStore.deleteColumn(columnId),
+            deleteColumn: (columnId: string, options?: { publish?: boolean }) => boardStore.deleteColumn(columnId, options),
             createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) =>
               boardStore.createCard(columnId, heading, content, options),
             editCard: (cardId: string, updates: any) => boardStore.editCard(cardId, updates),

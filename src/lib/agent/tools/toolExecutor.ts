@@ -239,9 +239,9 @@ export interface ExecutionContext {
     nostrIntegration?: NostrIntegration;
     // BoardStore reference for direct API calls
     boardStore?: {
-        createColumn: (name: string, color?: string) => string;
+        createColumn: (name: string, color?: string, options?: { publish?: boolean }) => string;
         updateColumn: (columnId: string, updates: any) => void;
-        deleteColumn: (columnId: string) => void;
+        deleteColumn: (columnId: string, options?: { publish?: boolean }) => void;
         createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) => string;
         editCard: (cardId: string, updates: any) => void;
         deleteCard: (cardId: string) => Promise<void>;
@@ -401,7 +401,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 // Spalte erstellen falls nicht vorhanden
                 if (!column) {
                     if (ctx.boardStore?.createColumn) {
-                        const colId = ctx.boardStore.createColumn(colDef.name);
+                        const colId = ctx.boardStore.createColumn(colDef.name, undefined, { publish: false });
                         column = ctx.board.findColumn(colId);
                     } else {
                         const colId = BoardOperations.createColumn(ctx.board, colDef.name);
@@ -467,7 +467,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
             for (const col of columnsToDelete) {
                 console.log(`🗑️ Lösche ungenutzte Spalte: ${col.name}`);
                 if (ctx.boardStore?.deleteColumn) {
-                    ctx.boardStore.deleteColumn(col.id);
+                    ctx.boardStore.deleteColumn(col.id, { publish: false });
                 } else {
                     BoardOperations.deleteColumn(ctx.board, col.id);
                 }
@@ -486,10 +486,6 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
             });
         }
 
-        if (ctx.boardStore?.publishBoardIfOwner) {
-            ctx.boardStore.publishBoardIfOwner();
-        }
-        
         // 4. Board-Metadaten persistieren (inkl. Nostr)
         if ((title || description) && ctx.boardStore?.updateBoardMeta) {
             ctx.boardStore.updateBoardMeta({ 
