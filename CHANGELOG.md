@@ -1,4 +1,19 @@
 ﻿# Changelog
+## Version 4.7.93 - Card Delete Author Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Karten‑Löschung wird blockiert, wenn der Nutzer nicht Autor ist (verhindert Desync).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Author‑Check vor deleteCard |
+
+---
 ## Version 4.7.92 - Card Description Title Deduper 🧹
 
 **Datum:** 04. Februar 2026  \

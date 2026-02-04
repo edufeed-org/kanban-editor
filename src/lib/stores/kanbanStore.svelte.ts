@@ -1619,6 +1619,17 @@ export class BoardStore {
             this.showPermissionDeniedToast('Du hast keine Berechtigung, Karten zu löschen.', userRole);
             return; // Silently fail - Permission denied message already shown
         }
+
+        const result = this.board.findCardAndColumn(cardId);
+        if (!result) return;
+        const currentPubkey = this.getCurrentUserPubkey();
+        if (result.card.author && currentPubkey && result.card.author !== currentPubkey) {
+            this.showPermissionDeniedToast(
+                'Nur der Autor der Karte kann sie löschen (NIP-09). Bitte den Autor kontaktieren.',
+                userRole
+            );
+            return;
+        }
         
         // Lösche Card lokal UND auf Nostr (via BoardOperations)
         const success = await BoardOperations.deleteCard(
