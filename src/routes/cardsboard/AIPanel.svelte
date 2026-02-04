@@ -330,10 +330,10 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         
         // Step 7: Handle results based on tool type
         // Check for respond/ask_clarification tools - these should show their message directly
-        const responseResults = toolResults.filter(r => 
+        const responseResults = toolResults.filter((r: ToolResult) => 
           r.tool_name === 'respond' || r.tool_name === 'ask_clarification'
         );
-        const actionResults = toolResults.filter(r => 
+        const actionResults = toolResults.filter((r: ToolResult) => 
           r.tool_name !== 'respond' && r.tool_name !== 'ask_clarification'
         );
         
@@ -343,7 +343,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
           console.log('📋 [Tool-Based] Action results:', summary);
           if (summary.trim()) {
             // 📚 Check for OER search results to show interactive buttons
-            const oerSearchResult = actionResults.find(r => r.tool_name === 'search_oer');
+            const oerSearchResult = actionResults.find((r: ToolResult) => r.tool_name === 'search_oer');
             const oerResults = oerSearchResult?.result?.results as OerResultData[] | undefined;
             
             chatStore.addMessage(summary, 'assistant', oerResults);

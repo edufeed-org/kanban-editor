@@ -344,7 +344,7 @@ async function executeCreateBoard(args: any, ctx: ExecutionContext): Promise<Too
  * - Optional: Löscht unpassende Spalten (removeUnusedColumns)
  */
 async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<ToolResult> {
-    const { title, description, removeUnusedColumns } = args;
+    const { title, description } = args;
     
     // columns kann als String (JSON) oder als Array kommen - beide Fälle behandeln
     let columns = args.columns;
@@ -365,7 +365,14 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
         }
     }
     
-    console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns });
+    const effectiveRemoveUnusedColumns =
+        typeof args.removeUnusedColumns === 'boolean'
+            ? args.removeUnusedColumns
+            : Array.isArray(columns) && columns.length > 0
+                ? true
+                : false;
+
+    console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns: effectiveRemoveUnusedColumns });
     
     try {
         // 1. Board-Metadaten aktualisieren
@@ -375,14 +382,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
         const createdColumns: string[] = [];
         const createdColumnMeta: Array<{ id: string; name?: string; color?: string }> = [];
         const createdCards: { column: string; heading: string }[] = [];
-                const effectiveRemoveUnusedColumns =
-                    typeof args.removeUnusedColumns === 'boolean'
-                        ? args.removeUnusedColumns
-                        : Array.isArray(columns) && columns.length > 0
-                            ? true
-                            : false;
-
-                console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns: effectiveRemoveUnusedColumns });
+        const createdCardIds: string[] = [];
         const usedColumnNames: string[] = []; // Track welche Spalten genutzt werden
         
         // 2. Spalten und Karten erstellen
@@ -458,7 +458,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
         // 3. Ungenutzte Spalten löschen (wenn angefordert)
         const deletedColumns: string[] = [];
         const deletedColumnIds: string[] = [];
-        if (removeUnusedColumns && usedColumnNames.length > 0) {
+        if (effectiveRemoveUnusedColumns && usedColumnNames.length > 0) {
             // Sammle Spalten die nicht in usedColumnNames sind
             const columnsToDelete = ctx.board.columns.filter(
                 col => !usedColumnNames.includes(col.name.toLowerCase().trim())
@@ -468,7 +468,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 console.log(`🗑️ Lösche ungenutzte Spalte: ${col.name}`);
                 if (ctx.boardStore?.deleteColumn) {
                     ctx.boardStore.deleteColumn(col.id);
-                    if (effectiveRemoveUnusedColumns && usedColumnNames.length > 0) {
+                } else {
                     BoardOperations.deleteColumn(ctx.board, col.id);
                 }
                 deletedColumns.push(col.name);
