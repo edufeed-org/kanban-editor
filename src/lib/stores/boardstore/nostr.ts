@@ -621,6 +621,7 @@ export class NostrIntegration {
             columnOrder?: string[];
             columns?: Array<{ id: string; name?: string; color?: string }>;
             deletedColumnIds?: string[];
+            deletedCardIds?: string[];
         }
     ): Promise<void> {
         if (!this.ndk) return;
@@ -628,7 +629,8 @@ export class NostrIntegration {
         const hasOrder = Array.isArray(args.columnOrder) && args.columnOrder.length > 0;
         const hasColumns = Array.isArray(args.columns) && args.columns.length > 0;
         const hasDeletes = Array.isArray(args.deletedColumnIds) && args.deletedColumnIds.length > 0;
-        if (!hasOrder && !hasColumns && !hasDeletes) return;
+        const hasCardDeletes = Array.isArray(args.deletedCardIds) && args.deletedCardIds.length > 0;
+        if (!hasOrder && !hasColumns && !hasDeletes && !hasCardDeletes) return;
 
         try {
             if (!board.author) {
@@ -643,6 +645,7 @@ export class NostrIntegration {
                     columnOrder: args.columnOrder,
                     columns: args.columns,
                     deletedColumnIds: args.deletedColumnIds,
+                    deletedCardIds: args.deletedCardIds,
                     updatedAtMs: Date.now(),
                 },
                 this.ndk
@@ -655,6 +658,7 @@ export class NostrIntegration {
                 orderLen: Array.isArray(args.columnOrder) ? args.columnOrder.length : 0,
                 colsLen: Array.isArray(args.columns) ? args.columns.length : 0,
                 delLen: Array.isArray(args.deletedColumnIds) ? args.deletedColumnIds.length : 0,
+                delCardLen: Array.isArray(args.deletedCardIds) ? args.deletedCardIds.length : 0,
             });
 
             const publishState = board.publishState || 'private';

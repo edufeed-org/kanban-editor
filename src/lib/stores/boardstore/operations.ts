@@ -6,6 +6,7 @@ import { generateDTag, generateTimestamp } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
 import type { NostrIntegration } from './nostr.js';
 import { BoardStorage } from './storage.js';
+import { isCardTombstoned } from './deletedCards.js';
 
 export type SyncBoardStateStrategy = 'defensive-merge' | 'hard-fail';
 
@@ -583,6 +584,11 @@ export class BoardOperations {
         cardProps: CardProps
     ): boolean {
         console.log(`📥 upsertCardFromNostr: ${cardProps.heading || cardProps.id}`);
+
+        if (cardProps?.id && isCardTombstoned(board.id, cardProps.id)) {
+            console.warn(`⛔ Skipping tombstoned card ${cardProps.id}`);
+            return false;
+        }
 
         const toTimestampMs = (value: unknown): number => {
             if (value === null || value === undefined) return 0;

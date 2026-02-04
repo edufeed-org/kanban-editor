@@ -23,6 +23,7 @@ export async function handleColumnOrderPatchEvent(
 	const orderTag = tags.find((t) => Array.isArray(t) && t[0] === 'order');
 	const colTags = tags.filter((t) => Array.isArray(t) && t[0] === 'col' && typeof t[1] === 'string');
 	const delTags = tags.filter((t) => Array.isArray(t) && t[0] === 'del' && typeof t[1] === 'string');
+	const delCardTags = tags.filter((t) => Array.isArray(t) && t[0] === 'del-card' && typeof t[1] === 'string');
 	const updatedMsTag = tags.find(
 		(t) => Array.isArray(t) && t[0] === 'updated_at_ms' && typeof t[1] === 'string'
 	);
@@ -84,7 +85,11 @@ export async function handleColumnOrderPatchEvent(
 		.map((t) => t?.[1])
 		.filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-	if (columnOrder.length === 0 && columnUpdates.length === 0 && deletedColumnIds.length === 0) {
+	const deletedCardIds = delCardTags
+		.map((t) => t?.[1])
+		.filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+	if (columnOrder.length === 0 && columnUpdates.length === 0 && deletedColumnIds.length === 0 && deletedCardIds.length === 0) {
 		console.warn('[ColumnOrderPatch] ⚠️ empty patch (no order, no col updates); ignoring', { id: event.id, boardId });
 		return false;
 	}
@@ -109,6 +114,7 @@ export async function handleColumnOrderPatchEvent(
 			columnOrder,
 			columnUpdates,
 			deletedColumnIds,
+			deletedCardIds,
 			eventTimeMs,
 			publisherPubkey: typeof event.pubkey === 'string' ? event.pubkey : undefined,
 			})

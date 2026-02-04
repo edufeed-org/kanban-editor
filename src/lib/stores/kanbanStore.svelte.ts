@@ -23,6 +23,7 @@ import { PermissionChecks } from '$lib/utils/permissionCheck.js';
 import { showEditorPermissionToast } from '$lib/utils/permissionToast.js';
 import { toast } from 'svelte-sonner';
 import { clearAllBoardTombstones, clearBoardTombstone, isBoardTombstoned } from './boardstore/deletedBoards.js';
+import { tombstoneCard } from './boardstore/deletedCards.js';
 
 export type { CardItem, UIColumn };
 
@@ -1624,10 +1625,11 @@ export class BoardStore {
         if (!result) return;
         const currentPubkey = this.getCurrentUserPubkey();
         if (result.card.author && currentPubkey && result.card.author !== currentPubkey) {
-            this.showPermissionDeniedToast(
-                'Nur der Autor der Karte kann sie löschen (NIP-09). Bitte den Autor kontaktieren.',
-                userRole
-            );
+            result.column.deleteCard(cardId);
+            this.board.updateLastAccessed();
+            tombstoneCard(this.board.id, cardId);
+            this.triggerUpdate({ publish: false });
+            await this.publishColumnPatchAsync({ deletedCardIds: [cardId] });
             return;
         }
         
@@ -1641,6 +1643,7 @@ export class BoardStore {
         if (success) {
             // ⚡ Update lastAccessedAt damit Board in Liste nach oben rutscht
             this.board.updateLastAccessed();
+            tombstoneCard(this.board.id, cardId);
             
             this.triggerUpdate();
             this.publishBoardAsync();
@@ -1863,6 +1866,7 @@ export class BoardStore {
         columnOrder?: string[];
         columns?: Array<{ id: string; name?: string; color?: string }>;
         deletedColumnIds?: string[];
+        deletedCardIds?: string[];
     }): Promise<void> {
         await this.nostrIntegration.publishColumnPatch(this.board, args);
     }
@@ -1878,17 +1882,20 @@ export class BoardStore {
             color?: string;
         }>;
         deletedColumnIds?: string[];
+        deletedCardIds?: string[];
         eventTimeMs: number;
         publisherPubkey?: string;
     }): boolean {
         const { boardId, columnOrder, eventTimeMs } = args;
         const columnUpdates = Array.isArray(args.columnUpdates) ? args.columnUpdates : [];
         const deletedColumnIds = Array.isArray(args.deletedColumnIds) ? args.deletedColumnIds : [];
+        const deletedCardIds = Array.isArray(args.deletedCardIds) ? args.deletedCardIds : [];
         if (boardId !== this.board.id) return false;
         const hasOrderPatch = Array.isArray(columnOrder) && columnOrder.length > 0;
         const hasMetaPatch = columnUpdates.length > 0;
         const hasDeletePatch = deletedColumnIds.length > 0;
-        if (!hasOrderPatch && !hasMetaPatch && !hasDeletePatch) return false;
+        const hasCardDeletePatch = deletedCardIds.length > 0;
+        if (!hasOrderPatch && !hasMetaPatch && !hasDeletePatch && !hasCardDeletePatch) return false;
         if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return false;
         if (eventTimeMs < this.lastColumnOrderPatchAtMs) return false;
 
@@ -1912,7 +1919,31 @@ export class BoardStore {
             }
         }
 
-        // 1) Column metadata patches (name/color)
+        // 1) Card deletions (explicit)
+        if (hasCardDeletePatch) {
+            const deleteSet = new Set(deletedCardIds.filter((id) => typeof id === 'string' && id.length > 0));
+            if (deleteSet.size > 0) {
+                for (const id of deleteSet) {
+                    tombstoneCard(this.board.id, id);
+                }
+                for (const col of this.board.columns) {
+                    const before = col.cards.length;
+                    col.cards = col.cards.filter((c) => !deleteSet.has(c.id));
+                    if (col.cards.length !== before) {
+                        didChange = true;
+                    }
+                }
+
+                for (const [colId, pending] of this.pendingCardEventsByColumn.entries()) {
+                    const next = pending.filter((c) => !deleteSet.has(String(c.id || '')));
+                    if (next.length !== pending.length) {
+                        this.pendingCardEventsByColumn.set(colId, next);
+                    }
+                }
+            }
+        }
+
+        // 2) Column metadata patches (name/color)
         if (hasMetaPatch) {
             for (const patch of columnUpdates) {
                 if (!patch?.id) continue;
@@ -1968,7 +1999,7 @@ export class BoardStore {
             }
         }
 
-        // 2) Column order patch
+        // 3) Column order patch
         if (hasOrderPatch) {
             const existingColumnIds = this.board.columns.map((c) => c.id);
             const existingSet = new Set(existingColumnIds);

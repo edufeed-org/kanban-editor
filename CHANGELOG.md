@@ -1,4 +1,39 @@
 ﻿# Changelog
+## Version 4.7.95 - Deleted Card Tombstones 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Gelöschte Cards werden tombstoned und nicht durch Nostr‑Reload resurrected.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/deletedCards.ts | Card‑Tombstones |
+| src/lib/stores/boardstore/operations.ts | Tombstone‑Guard bei upsert |
+| src/lib/stores/kanbanStore.svelte.ts | Tombstone setzen bei Delete/Patch |
+
+---
+## Version 4.7.94 - Collaborative Card Delete Patch 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Nicht‑Autoren löschen Cards kollaborativ via Column‑Patch (`del-card`).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/utils/nostrEvents.ts | `del-card` Tags |
+| src/lib/stores/boardstore/nostr.ts | deletedCardIds publish |
+| src/lib/stores/boardstore/nostr/handlers/columnOrderPatch.ts | del-card handling |
+| src/lib/stores/kanbanStore.svelte.ts | Patch‑Delete bei Author‑Mismatch |
+
+---
 ## Version 4.7.93 - Card Delete Author Guard 🧹
 
 **Datum:** 04. Februar 2026  \
