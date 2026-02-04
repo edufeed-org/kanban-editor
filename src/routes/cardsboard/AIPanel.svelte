@@ -303,11 +303,14 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             createColumn: (name: string, color?: string) => boardStore.createColumn(name, color),
             updateColumn: (columnId: string, updates: any) => boardStore.updateColumn(columnId, updates),
             deleteColumn: (columnId: string) => boardStore.deleteColumn(columnId),
-            createCard: (columnId: string, heading: string, content?: string) => boardStore.createCard(columnId, heading, content),
+            createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) =>
+              boardStore.createCard(columnId, heading, content, options),
             editCard: (cardId: string, updates: any) => boardStore.editCard(cardId, updates),
             deleteCard: (cardId: string) => boardStore.deleteCard(cardId),
             moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId),
-            updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates)
+            updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates),
+            publishColumnPatchBatch: (args: { columns?: Array<{ id: string; name?: string; color?: string }>; deletedColumnIds?: string[]; columnOrder?: string[]; cardIdsToPublish?: string[] }) =>
+              boardStore.publishColumnPatchBatch(args)
           },
           triggerUpdate: () => console.warn('[AIPanel] triggerUpdate called - use boardStore API methods instead')
         };

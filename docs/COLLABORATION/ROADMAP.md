@@ -1,7 +1,7 @@
-﻿# ðŸ—ºï¸ Roadmap: Nostr-basiertes KI-Kanban-Board
+﻿# Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.59 (Column-Patch Sync für Maintainer - 04. Februar 2026)  
-**Aktualisiert:** 04. Februar 2026 (Column-Patch Sync für Maintainer).  
+**Version:** 3.66 (Pending Cards Flush nach Board-Event - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (Pending Cards Flush nach Board-Event).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,13 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.66 | 04.02.2026 | ✅ Pending Cards Flush: gepufferte Cards werden nach Board-Events eingefügt. |
+| 3.65 | 04.02.2026 | ✅ AI Populate Owner-Card Publish: Batch-Flow publiziert Cards auch als Owner. |
+| 3.64 | 04.02.2026 | 🧭 AI Populate Publish-Order Fix: Cards nach Column-Patch Batch publiziert. |
+| 3.63 | 04.02.2026 | 📦 AI Populate Column-Patch Batch: Create/Delete/Order als Sammel-Event. |
+| 3.62 | 04.02.2026 | 🗑️ Column-Delete Patch Sync: Maintainer-Löschungen werden verteilt (del-Tags). |
+| 3.61 | 04.02.2026 | 🧭 Column-Order Patch Pufferung: Order wird nach Column-Create angewendet. |
+| 3.60 | 04.02.2026 | 🧱 Card-Events Queue: Cards werden nach Column-Patch nachgezogen (Race Condition Fix). |
 | 3.59 | 04.02.2026 | 🧩 Column-Patch Sync: Maintainer-Column-Erstellung wird über Patch + Order verteilt. |
 | 3.58 | 03.02.2026 | 👤 Avatar: Profilbild wird in Header/Sidebar angezeigt. |
 | 3.57 | 03.02.2026 | ✨ Mobile Header: Logo kleiner, Unterzeile ausgeblendet. |

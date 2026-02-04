@@ -1,4 +1,147 @@
 ﻿# Changelog
+## Version 4.7.79 - Shared Board 30301 Guard 🔒
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Collab:** Shared Boards akzeptieren nur Owner‑signierte 30301 Events; Maintainer bleiben bei 8571/30302.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/nostr/handlers/board.ts | Owner‑Guard für 30301 |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Shared‑Board Guard Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.67 ergänzt |
+
+---
+## Version 4.7.78 - Pending Cards nach Board-Event flush ✅
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** gepufferte Cards werden nach Board-Events in bestehende Spalten eingefügt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Flush pending cards nach Board-Update |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.66 ergänzt |
+
+---
+## Version 4.7.77 - AI Populate Owner-Card Publish ✅
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert Cards auch als Owner (Batch-Flow), Reihenfolge ist jetzt deterministisch.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Owner-Publish in Batch-Pfad |
+| src/lib/agent/tools/toolExecutor.ts | Batch-Publish await |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.65 ergänzt |
+
+---
+## Version 4.7.76 - AI Populate Publish-Order Fix 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board veröffentlicht Cards erst nach Column-Patch Batch, um falsche Spalten zu vermeiden.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | createCard publish:false + publishCardsBatch |
+| src/lib/agent/tools/toolExecutor.ts | Batch-Card-Publish nach Column-Patch |
+| src/routes/cardsboard/AIPanel.svelte | createCard options + Batch-Publish |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Batch-Publish Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.64 ergänzt |
+
+---
+## Version 4.7.75 - AI Populate Column-Patch Batch 📦
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board sendet einen Batch-Column-Patch (Create/Delete/Order) für Maintainer.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Batch Column-Patch nach populate_board |
+| src/routes/cardsboard/AIPanel.svelte | Batch-Patch API im ExecutionContext |
+| src/lib/stores/kanbanStore.svelte.ts | publishColumnPatchBatch API |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | AI Populate Batch Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.63 ergänzt |
+
+---
+## Version 4.7.74 - Column-Delete Patch Sync 🗑️
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Spalten-Löschungen von Maintainern werden per Column-Patch (del-Tags) verteilt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/utils/nostrEvents.ts | del-Tags für Column-Patches |
+| src/lib/stores/boardstore/nostr/handlers/columnOrderPatch.ts | del-Tags verarbeiten |
+| src/lib/stores/boardstore/nostr.ts | deletedColumnIds an Patch weiterreichen |
+| src/lib/stores/kanbanStore.svelte.ts | Delete-Patch publish + Apply deletions |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Delete-Patch Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.62 ergänzt |
+
+---
+## Version 4.7.73 - Column-Order Patch Pufferung 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Column-Order Patches werden gepuffert, wenn Spalten noch fehlen, und später korrekt angewendet.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Pending Column-Order Patch + Apply nach Column-Create |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.61 ergänzt |
+
+---
+## Version 4.7.72 - Card-Events Queue bei fehlender Spalte 🧱
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Card-Events werden gequeued, wenn die Zielspalte noch nicht existiert (werden nach Column-Patch eingefügt).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Pending-Card Queue + Flush nach Column-Patch |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Dokumentation |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.60 ergänzt |
+
+---
 ## Version 4.7.71 - Column-Patch Sync für Maintainer 🧩
 
 **Datum:** 04. Februar 2026  \

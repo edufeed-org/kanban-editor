@@ -52,6 +52,17 @@ export async function handleBoardEvent(
 			return;
 		}
 
+		// 🔒 Shared-Board Guard: Nur Owner-signed 30301 akzeptieren
+		// verhindert Fork-Boards durch Editor/Viewer Publishes
+		if (
+			boardProps.id === currentBoard.id &&
+			currentBoard.author &&
+			boardEvent.pubkey &&
+			boardEvent.pubkey !== currentBoard.author
+		) {
+			return;
+		}
+
 		// ⚡ v2.0: Timestamp-Based Conflict Resolution
 		// Prüfe ob Board später gelöscht wurde
 		const deleteTime = ctx.boardDeletionTimestamps.get(boardProps.id);

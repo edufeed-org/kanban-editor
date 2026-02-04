@@ -414,6 +414,63 @@ public createColumn(name: string, color?: string): string {
 ```
 
 **Hinweis:** Column-Order Patches **löschen** keine Spalten (defensive Merge). Löschen ist für Nicht-Owner nur lokal.
+**Update:** Maintainer-Deletes werden jetzt als `del`-Tags im Column-Patch gesendet und entfernen Spalten kollaborativ.
+
+### Shared Boards: Owner-only 30301
+
+Für geteilte Boards akzeptieren wir **nur Owner‑signierte** Board‑Events (30301).
+Maintainern bleiben Column‑Patches (8571) und Card‑Events (30302).
+
+### Card-Events vor Column-Events (Race Condition)
+
+Card-Events können **vor** dem Column-Patch eintreffen. Falls die Zielspalte fehlt, werden die Cards **gequeued** und
+nach dem Column-Patch automatisch eingefügt (publish: false).
+
+```typescript
+public upsertCardFromNostr(cardProps: CardProps): void {
+    const columnId = (cardProps as any).columnId;
+    if (columnId && !this.board.findColumn(columnId)) {
+        this.queuePendingCard(cardProps);
+        return;
+    }
+
+    BoardOperations.upsertCardFromNostr(this.board, cardProps);
+    this.triggerUpdate({ publish: false });
+}
+```
+
+### Column-Order vor Column-Create (Race Condition)
+
+Column-Order Patches können **vor** den Column-Patches eintreffen. In diesem Fall wird die Order **gepuffert** und
+nach dem Anlegen der fehlenden Spalten angewendet.
+
+```typescript
+private pendingColumnOrderPatch: { columnOrder: string[]; eventTimeMs: number } | null = null;
+
+private tryApplyPendingColumnOrderPatch(): boolean {
+    if (!this.pendingColumnOrderPatch) return false;
+    // apply order once columns exist
+}
+```
+
+### Board-Event nach Card-Events (Race Condition)
+
+Wenn Cards vor einem Board-Event eintreffen, werden sie gepuffert. Beim Board‑Update werden
+alle pending Cards in vorhandene Spalten eingefügt.
+
+### AI Populate: Column-Patch Batch
+
+Für AI‑Bulk‑Operationen (populate_board) wird nach dem Erstellen/Löschen von Spalten ein **Batch‑Patch** gesendet,
+damit Maintainer alle Spalten zuverlässig sehen (ein Event statt viele).
+
+```typescript
+boardStore.publishColumnPatchBatch({
+    columns: createdColumns,
+    deletedColumnIds,
+    columnOrder: board.columns.map(c => c.id),
+    cardIdsToPublish: createdCardIds
+});
+```
 
 ### Karte verschieben (DnD)
 

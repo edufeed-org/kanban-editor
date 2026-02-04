@@ -242,11 +242,17 @@ export interface ExecutionContext {
         createColumn: (name: string, color?: string) => string;
         updateColumn: (columnId: string, updates: any) => void;
         deleteColumn: (columnId: string) => void;
-        createCard: (columnId: string, heading: string, content?: string) => string;
+        createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) => string;
         editCard: (cardId: string, updates: any) => void;
         deleteCard: (cardId: string) => Promise<void>;
         moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => void;
         updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => void;
+        publishColumnPatchBatch?: (args: {
+            columns?: Array<{ id: string; name?: string; color?: string }>;
+            deletedColumnIds?: string[];
+            columnOrder?: string[];
+            cardIdsToPublish?: string[];
+        }) => void;
     };
     triggerUpdate: () => void;
 }
@@ -323,10 +329,10 @@ function resolveCard(board: Board, cardRef: string): { card: Card; column: Colum
 // Tool Execution Functions
 // ============================================================================
 
-function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
+async function executeCreateBoard(args: any, ctx: ExecutionContext): Promise<ToolResult> {
     // create_board ist deprecated - verwende populate_board stattdessen
     console.warn('⚠️ create_board aufgerufen - leite zu populate_board um');
-    return executePopulateBoard(args, ctx);
+    return await executePopulateBoard(args, ctx);
 }
 
 /**
@@ -336,7 +342,7 @@ function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
  * - Fügt Karten mit Inhalt hinzu
  * - Optional: Löscht unpassende Spalten (removeUnusedColumns)
  */
-function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
+async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<ToolResult> {
     const { title, description, removeUnusedColumns } = args;
     
     // columns kann als String (JSON) oder als Array kommen - beide Fälle behandeln
@@ -366,7 +372,9 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
         if (description) ctx.board.description = description;
         
         const createdColumns: string[] = [];
+        const createdColumnMeta: Array<{ id: string; name?: string; color?: string }> = [];
         const createdCards: { column: string; heading: string }[] = [];
+        const createdCardIds: string[] = [];
         const usedColumnNames: string[] = []; // Track welche Spalten genutzt werden
         
         // 2. Spalten und Karten erstellen
@@ -391,7 +399,14 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                         const colId = BoardOperations.createColumn(ctx.board, colDef.name);
                         column = colId ? ctx.board.findColumn(colId) : undefined;
                     }
-                    if (column) createdColumns.push(column.name);
+                    if (column) {
+                        createdColumns.push(column.name);
+                        createdColumnMeta.push({
+                            id: column.id,
+                            name: column.name,
+                            color: column.color
+                        });
+                    }
                 }
                 
                 // Karten zur Spalte hinzufügen
@@ -411,11 +426,13 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                         if (!cardDef.heading) continue;
                         
                         if (ctx.boardStore?.createCard) {
-                            ctx.boardStore.createCard(
-                                column.id, 
-                                cardDef.heading, 
-                                cardDef.content || ''
+                            const cardId = ctx.boardStore.createCard(
+                                column.id,
+                                cardDef.heading,
+                                cardDef.content || '',
+                                { publish: false }
                             );
+                            if (cardId) createdCardIds.push(cardId);
                         } else {
                             BoardOperations.createCard(
                                 ctx.board, 
@@ -432,6 +449,7 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
         
         // 3. Ungenutzte Spalten löschen (wenn angefordert)
         const deletedColumns: string[] = [];
+        const deletedColumnIds: string[] = [];
         if (removeUnusedColumns && usedColumnNames.length > 0) {
             // Sammle Spalten die nicht in usedColumnNames sind
             const columnsToDelete = ctx.board.columns.filter(
@@ -446,7 +464,18 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                     BoardOperations.deleteColumn(ctx.board, col.id);
                 }
                 deletedColumns.push(col.name);
+                deletedColumnIds.push(col.id);
             }
+        }
+
+        // 3b. Batch Column-Patch publish (reduces race/loss for maintainer boards)
+        if (ctx.boardStore?.publishColumnPatchBatch) {
+            await ctx.boardStore.publishColumnPatchBatch({
+                columns: createdColumnMeta,
+                deletedColumnIds,
+                columnOrder: ctx.board.columns.map((c) => c.id),
+                cardIdsToPublish: createdCardIds
+            });
         }
         
         // 4. Board-Metadaten persistieren (inkl. Nostr)
@@ -1245,10 +1274,10 @@ export async function executeToolCall(
     
     switch (toolName) {
         case 'populate_board':
-            result = executePopulateBoard(args, ctx);
+            result = await executePopulateBoard(args, ctx);
             break;
         case 'create_board':
-            result = executeCreateBoard(args, ctx);
+            result = await executeCreateBoard(args, ctx);
             break;
         case 'update_board':
             result = executeUpdateBoard(args, ctx);

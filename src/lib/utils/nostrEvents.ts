@@ -61,6 +61,7 @@ export function createColumnOrderPatchEvent(
       name?: string;
       color?: string;
     }>;
+    deletedColumnIds?: string[];
     updatedAtMs?: number;
   },
   ndk: NDK
@@ -103,6 +104,14 @@ export function createColumnOrderPatchEvent(
     if (name !== '' || color !== '') {
       event.tags.push(['col', id, name, color]);
     }
+  }
+
+  const deletedColumnIds = Array.isArray(args.deletedColumnIds)
+    ? args.deletedColumnIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : [];
+
+  for (const id of deletedColumnIds) {
+    event.tags.push(['del', id]);
   }
 
   // Content intentionally empty; all data lives in tags.

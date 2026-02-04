@@ -1509,7 +1509,7 @@ export class BoardStore {
     // CARD/COLUMN OPERATIONS (delegiert zu BoardOperations)
     // ============================================================================
     
-    public createCard(columnId: string, name: string, description?: string): string {
+    public createCard(columnId: string, name: string, description?: string, options?: { publish?: boolean }): string {
         // Permission Check: Kann Benutzer Karten erstellen?
         const userRole = this.getCurrentUserRole();
         const boardId = this.board.id;
@@ -1533,7 +1533,9 @@ export class BoardStore {
             this.board.updateLastAccessed();
             
             this.triggerUpdate();
-            this.publishCardAsync(cardId);
+            if (options?.publish !== false) {
+                this.publishCardAsync(cardId);
+            }
         }
         
         return cardId || '';
@@ -1704,8 +1706,64 @@ export class BoardStore {
                 this.publishBoardAsync();
             } else {
                 this.triggerUpdate({ publish: false });
+                void this.publishColumnPatchAsync({ deletedColumnIds: [columnId] });
                 void this.publishColumnOrderPatchAsync(this._columnOrder);
             }
+        }
+    }
+
+    /**
+     * Publish batched column changes for non-owners (AI populate / bulk ops).
+     * Owners should publish the Board (30301) instead.
+     */
+    public async publishColumnPatchBatch(args: {
+        columns?: Array<{ id: string; name?: string; color?: string }>;
+        deletedColumnIds?: string[];
+        columnOrder?: string[];
+        cardIdsToPublish?: string[];
+    }): Promise<void> {
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+
+        if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+            if (Array.isArray(args.cardIdsToPublish) && args.cardIdsToPublish.length > 0) {
+                await this.publishCardsBatch(args.cardIdsToPublish);
+            }
+            return;
+        }
+
+        const hasColumns = Array.isArray(args.columns) && args.columns.length > 0;
+        const hasDeletes = Array.isArray(args.deletedColumnIds) && args.deletedColumnIds.length > 0;
+        const order = Array.isArray(args.columnOrder) && args.columnOrder.length > 0
+            ? args.columnOrder
+            : this._columnOrder;
+        const hasOrder = Array.isArray(order) && order.length > 0;
+
+        if (!hasColumns && !hasDeletes && !hasOrder) return;
+
+        this.triggerUpdate({ publish: false });
+
+        if (hasColumns || hasDeletes) {
+            await this.publishColumnPatchAsync({
+                columns: args.columns,
+                deletedColumnIds: args.deletedColumnIds
+            });
+        }
+
+        if (hasOrder) {
+            await this.publishColumnOrderPatchAsync(order);
+        }
+
+        if (Array.isArray(args.cardIdsToPublish) && args.cardIdsToPublish.length > 0) {
+            await this.publishCardsBatch(args.cardIdsToPublish);
+        }
+    }
+
+    public async publishCardsBatch(cardIds: string[]): Promise<void> {
+        if (!Array.isArray(cardIds) || cardIds.length === 0) return;
+
+        for (const cardId of cardIds) {
+            await this.publishCardAsync(cardId);
         }
     }
 
@@ -1763,6 +1821,8 @@ export class BoardStore {
     private lastColumnOrderPatchAtMs = $state(0);
     private syncRetryCount = 0;
     private maxSyncRetries = 3;
+    private pendingCardEventsByColumn = new Map<string, CardProps[]>();
+    private pendingColumnOrderPatch: { columnOrder: string[]; eventTimeMs: number } | null = null;
 
     private async publishColumnOrderPatchAsync(columnIds: string[]): Promise<void> {
         await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
@@ -1771,6 +1831,7 @@ export class BoardStore {
     private async publishColumnPatchAsync(args: {
         columnOrder?: string[];
         columns?: Array<{ id: string; name?: string; color?: string }>;
+        deletedColumnIds?: string[];
     }): Promise<void> {
         await this.nostrIntegration.publishColumnPatch(this.board, args);
     }
@@ -1785,19 +1846,40 @@ export class BoardStore {
             name?: string;
             color?: string;
         }>;
+        deletedColumnIds?: string[];
         eventTimeMs: number;
         publisherPubkey?: string;
     }): boolean {
         const { boardId, columnOrder, eventTimeMs } = args;
         const columnUpdates = Array.isArray(args.columnUpdates) ? args.columnUpdates : [];
+        const deletedColumnIds = Array.isArray(args.deletedColumnIds) ? args.deletedColumnIds : [];
         if (boardId !== this.board.id) return false;
         const hasOrderPatch = Array.isArray(columnOrder) && columnOrder.length > 0;
         const hasMetaPatch = columnUpdates.length > 0;
-        if (!hasOrderPatch && !hasMetaPatch) return false;
+        const hasDeletePatch = deletedColumnIds.length > 0;
+        if (!hasOrderPatch && !hasMetaPatch && !hasDeletePatch) return false;
         if (!(typeof eventTimeMs === 'number' && Number.isFinite(eventTimeMs) && eventTimeMs > 0)) return false;
-        if (eventTimeMs <= this.lastColumnOrderPatchAtMs) return false;
+        if (eventTimeMs < this.lastColumnOrderPatchAtMs) return false;
 
         let didChange = false;
+
+        // 0) Column deletions (explicit)
+        if (hasDeletePatch) {
+            const deleteSet = new Set(deletedColumnIds.filter((id) => typeof id === 'string' && id.length > 0));
+
+            if (deleteSet.size > 0) {
+                for (const id of deleteSet) {
+                    const col = this.board.findColumn(id);
+                    if (col) {
+                        this.board.deleteColumn(id);
+                        didChange = true;
+                    }
+
+                    this._columnOrder = this._columnOrder.filter((cid) => cid !== id);
+                    this.pendingCardEventsByColumn.delete(id);
+                }
+            }
+        }
 
         // 1) Column metadata patches (name/color)
         if (hasMetaPatch) {
@@ -1824,6 +1906,8 @@ export class BoardStore {
                         }
 
                         didChange = true;
+                        didChange = this.flushPendingCardsForColumn(created.id) || didChange;
+                        didChange = this.tryApplyPendingColumnOrderPatch() || didChange;
                     }
                     continue;
                 }
@@ -1845,6 +1929,11 @@ export class BoardStore {
                     col.update(next);
                     didChange = true;
                 }
+
+                if (col) {
+                    didChange = this.flushPendingCardsForColumn(col.id) || didChange;
+                    didChange = this.tryApplyPendingColumnOrderPatch() || didChange;
+                }
             }
         }
 
@@ -1860,6 +1949,15 @@ export class BoardStore {
                 if (seen.has(id)) continue;
                 seen.add(id);
                 if (existingSet.has(id)) dedupedIncoming.push(id);
+            }
+
+            const missingIds = columnOrder.filter((id) => !existingSet.has(id));
+            if (missingIds.length > 0) {
+                if (!this.pendingColumnOrderPatch || eventTimeMs >= this.pendingColumnOrderPatch.eventTimeMs) {
+                    this.pendingColumnOrderPatch = { columnOrder, eventTimeMs };
+                }
+            } else {
+                this.pendingColumnOrderPatch = null;
             }
 
             if (dedupedIncoming.length > 0) {
@@ -1884,7 +1982,7 @@ export class BoardStore {
         }
 
         // Always advance LWW timestamp once we've accepted this event (even if it was a no-op).
-        this.lastColumnOrderPatchAtMs = eventTimeMs;
+        this.lastColumnOrderPatchAtMs = Math.max(this.lastColumnOrderPatchAtMs, eventTimeMs);
 
         if (!didChange) {
             return false;
@@ -1894,6 +1992,71 @@ export class BoardStore {
         this.triggerUpdate({ publish: false });
 
         return true;
+    }
+
+    private tryApplyPendingColumnOrderPatch(): boolean {
+        if (!this.pendingColumnOrderPatch) return false;
+
+        const { columnOrder, eventTimeMs } = this.pendingColumnOrderPatch;
+        const existingColumnIds = this.board.columns.map((c) => c.id);
+        const existingSet = new Set(existingColumnIds);
+
+        const dedupedIncoming: string[] = [];
+        const seen = new Set<string>();
+        for (const id of columnOrder) {
+            if (typeof id !== 'string' || id.length === 0) continue;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            if (existingSet.has(id)) dedupedIncoming.push(id);
+        }
+
+        if (dedupedIncoming.length === 0) return false;
+
+        const mergedOrder = [
+            ...dedupedIncoming,
+            ...existingColumnIds.filter((id) => !seen.has(id)),
+        ];
+
+        const current = this._columnOrder;
+        const sameOrder = current.length === mergedOrder.length && current.every((v, i) => v === mergedOrder[i]);
+        if (!sameOrder) {
+            this._columnOrder = mergedOrder;
+            BoardOperations.reorderColumns(this.board, mergedOrder);
+        }
+
+        this.lastColumnOrderPatchAtMs = Math.max(this.lastColumnOrderPatchAtMs, eventTimeMs);
+        this.pendingColumnOrderPatch = null;
+        return !sameOrder;
+    }
+
+    private queuePendingCard(cardProps: CardProps): void {
+        const columnId = (cardProps as any).columnId as string | undefined;
+        if (!columnId) return;
+
+        const existing = this.pendingCardEventsByColumn.get(columnId) || [];
+        const next = existing.filter(c => c.id !== cardProps.id);
+        next.push(cardProps);
+        this.pendingCardEventsByColumn.set(columnId, next);
+    }
+
+    private flushPendingCardsForColumn(columnId: string): boolean {
+        const pending = this.pendingCardEventsByColumn.get(columnId);
+        if (!pending || pending.length === 0) return false;
+
+        for (const cardProps of pending) {
+            BoardOperations.upsertCardFromNostr(this.board, cardProps);
+        }
+
+        this.pendingCardEventsByColumn.delete(columnId);
+        return true;
+    }
+
+    private flushAllPendingCardsForExistingColumns(): boolean {
+        let didFlush = false;
+        for (const col of this.board.columns) {
+            didFlush = this.flushPendingCardsForColumn(col.id) || didFlush;
+        }
+        return didFlush;
     }
 
     public syncBoardState(uiColumns: UIColumn[]): boolean {
@@ -3153,6 +3316,12 @@ export class BoardStore {
      * KEIN Publish zu Nostr (publish: false)
      */
     public upsertCardFromNostr(cardProps: CardProps): void {
+        const columnId = (cardProps as any).columnId as string | undefined;
+        if (columnId && !this.board.findColumn(columnId)) {
+            this.queuePendingCard(cardProps);
+            return;
+        }
+
         BoardOperations.upsertCardFromNostr(this.board, cardProps);
         this.triggerUpdate({ publish: false });
     }
@@ -3285,12 +3454,19 @@ export class BoardStore {
             // Board-Metadaten + Spalten wurden aktualisiert
             // ⚡ CRITICAL: _columnOrder muss synchronisiert werden!
             this._columnOrder = this.board.columns.map(c => c.id);
+
+            const flushedCards = this.flushAllPendingCardsForExistingColumns();
+            const appliedPendingOrder = this.tryApplyPendingColumnOrderPatch();
             
             // ⚡ v4.1: KEIN saveToStorage bei Updates von Nostr!
             // Grund: Board existiert bereits in localStorage
             // Update wird erst beim nächsten User-Edit gespeichert
             // Das verhindert Race Conditions mit LWW
-            this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+            if (flushedCards || appliedPendingOrder) {
+                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+            } else {
+                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+            }
         } else {
             // ⚡ v4.2: NEUES Board - Erstelle VOLLSTÄNDIGES Board-Objekt!
             // Grund: Board existiert noch nicht in localStorage
