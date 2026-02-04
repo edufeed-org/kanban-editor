@@ -1,7 +1,7 @@
 ﻿# Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.79 (Selected Card Priority Prompt - 04. Februar 2026)  
-**Aktualisiert:** 04. Februar 2026 (Selected Card Priority Prompt).  
+**Version:** 3.80 (Card Description Title Deduper - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (Card Description Title Deduper).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.80 | 04.02.2026 | 🧹 Card Description Title Deduper: Entfernt Titelzeile aus Beschreibung beim Erstellen. |
 | 3.79 | 04.02.2026 | 🧹 Selected Card Priority: Kontext‑Karte hat Standard‑Priorität, andere ignorieren. |
 | 3.78 | 04.02.2026 | 🧹 Preview Marker Deduper: Mehrfache +++ werden entfernt, Position nach Nicht‑Heading‑Absatz. |
 | 3.77 | 04.02.2026 | 🧹 Preview Marker Normalizer: fehlender +++ wird automatisch eingefügt. |

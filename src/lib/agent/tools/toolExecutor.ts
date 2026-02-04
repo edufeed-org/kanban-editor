@@ -275,6 +275,27 @@ function ensurePreviewMarker(content: string): string {
     return `${before}\n\n+++\n\n${after}`;
 }
 
+function stripRedundantTitle(title: string, content: string): string {
+    if (!title || !content) return content;
+    const trimmed = content.trimStart();
+    const [firstLine, ...rest] = trimmed.split(/\r?\n/);
+    const normalizedTitle = title.trim().toLowerCase();
+    const normalizedLine = firstLine.trim().toLowerCase();
+
+    if (normalizedLine === normalizedTitle) {
+        return rest.join('\n').trimStart();
+    }
+
+    if (normalizedLine.startsWith('titel:') || normalizedLine.startsWith('title:')) {
+        const value = normalizedLine.replace(/^(titel|title)\s*:\s*/i, '').trim();
+        if (value === normalizedTitle) {
+            return rest.join('\n').trimStart();
+        }
+    }
+
+    return content;
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -528,7 +549,8 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 if (column && cards && Array.isArray(cards)) {
                     for (const cardDef of cards) {
                         if (!cardDef.heading) continue;
-                        const normalizedContent = ensurePreviewMarker(cardDef.content || '');
+                        const strippedContent = stripRedundantTitle(cardDef.heading, cardDef.content || '');
+                        const normalizedContent = ensurePreviewMarker(strippedContent);
                         
                         if (ctx.boardStore?.createCard) {
                             const cardId = ctx.boardStore.createCard(
@@ -884,7 +906,8 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
         let cardId: string;
         
         // Prefer boardStore API (includes triggerUpdate + Nostr publishing)
-        const normalizedDescription = ensurePreviewMarker(description || '');
+        const strippedDescription = stripRedundantTitle(title, description || '');
+        const normalizedDescription = ensurePreviewMarker(strippedDescription);
 
         if (ctx.boardStore?.createCard) {
             cardId = ctx.boardStore.createCard(column.id, title, normalizedDescription);

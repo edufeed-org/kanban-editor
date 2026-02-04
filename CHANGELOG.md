@@ -1,4 +1,19 @@
 ﻿# Changelog
+## Version 4.7.92 - Card Description Title Deduper 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** Karten‑Beschreibung entfernt doppelte Titelzeile beim Erstellen.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Titel‑Dedup für Content |
+
+---
 ## Version 4.7.91 - Selected Card Priority Prompt 🧹
 
 **Datum:** 04. Februar 2026  \
