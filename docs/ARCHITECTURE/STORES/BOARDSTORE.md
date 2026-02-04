@@ -386,6 +386,35 @@ private updateCard(cardId: string, updates: Partial<CardProps>): void {
 
 **REGEL 10:** UI-API (`editCard`) transformiert zu Model-API (`updateCard`).
 
+### Spalte erstellen (Owner vs. Maintainer)
+
+**Owner:** publiziert das Board (Kind 30301).  
+**Maintainer/Editor:** darf kein 30301 publizieren → stattdessen **Column-Patch** (Kind 8571) + **Column-Order Patch**.
+
+**Konsequenz:** Neue Spalten von Maintainern sind nur sichtbar, wenn der Column-Patch die Spalte **anlegt** und die Order verteilt.
+
+```typescript
+public createColumn(name: string, color?: string): string {
+    const columnId = BoardOperations.createColumn(this.board, name, color);
+    if (!columnId) return '';
+
+    this._columnOrder = [...this._columnOrder, columnId];
+
+    if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+        this.triggerUpdate();
+        this.publishBoardAsync();
+    } else {
+        this.triggerUpdate({ publish: false });
+        this.publishColumnPatchAsync({ columns: [{ id: columnId, name, color }] });
+        this.publishColumnOrderPatchAsync(this._columnOrder);
+    }
+
+    return columnId;
+}
+```
+
+**Hinweis:** Column-Order Patches **löschen** keine Spalten (defensive Merge). Löschen ist für Nicht-Owner nur lokal.
+
 ### Karte verschieben (DnD)
 
 ```typescript

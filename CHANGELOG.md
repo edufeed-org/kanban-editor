@@ -1,4 +1,21 @@
 ﻿# Changelog
+## Version 4.7.71 - Column-Patch Sync für Maintainer 🧩
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Sharing:** Maintainer-Spalten werden per Column-Patch + Order-Patch synchronisiert (Owner bleibt 30301-only).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Column-Patch Publish für create/delete + Patch-Create in Apply | 
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Column-Patch Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.59 ergänzt |
+
+---
 ## Version 4.7.70 - Avatar Profile Picture Fix 👤
 
 **Datum:** 03. Februar 2026  \

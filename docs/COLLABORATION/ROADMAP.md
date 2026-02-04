@@ -1,7 +1,7 @@
 ﻿# ðŸ—ºï¸ Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.58 (Avatar Profile Picture Fix - 03. Februar 2026)  
-**Aktualisiert:** 03. Februar 2026 (Avatar Profile Picture Fix).  
+**Version:** 3.59 (Column-Patch Sync für Maintainer - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (Column-Patch Sync für Maintainer).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.59 | 04.02.2026 | 🧩 Column-Patch Sync: Maintainer-Column-Erstellung wird über Patch + Order verteilt. |
 | 3.58 | 03.02.2026 | 👤 Avatar: Profilbild wird in Header/Sidebar angezeigt. |
 | 3.57 | 03.02.2026 | ✨ Mobile Header: Logo kleiner, Unterzeile ausgeblendet. |
 | 3.56 | 03.02.2026 | 🧭 Header: Navigation bleibt rechts neben dem Branding (Mobile). |

@@ -1637,8 +1637,22 @@ export class BoardStore {
         
         if (columnId) {
             this._columnOrder = [...this._columnOrder, columnId];
-            this.triggerUpdate();
-            this.publishBoardAsync();
+            if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                this.triggerUpdate();
+                this.publishBoardAsync();
+            } else {
+                this.triggerUpdate({ publish: false });
+
+                const createdColumn = this.board.findColumn(columnId);
+                const patchEntry = {
+                    id: columnId,
+                    name: createdColumn?.name || name,
+                    color: createdColumn?.color || color
+                };
+
+                void this.publishColumnPatchAsync({ columns: [patchEntry] });
+                void this.publishColumnOrderPatchAsync(this._columnOrder);
+            }
         }
         
         return columnId || '';
@@ -1685,8 +1699,13 @@ export class BoardStore {
         
         if (BoardOperations.deleteColumn(this.board, columnId)) {
             this._columnOrder = this._columnOrder.filter(id => id !== columnId);
-            this.triggerUpdate();
-            this.publishBoardAsync();
+            if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+                this.triggerUpdate();
+                this.publishBoardAsync();
+            } else {
+                this.triggerUpdate({ publish: false });
+                void this.publishColumnOrderPatchAsync(this._columnOrder);
+            }
         }
     }
 
@@ -1784,20 +1803,38 @@ export class BoardStore {
         if (hasMetaPatch) {
             for (const patch of columnUpdates) {
                 if (!patch?.id) continue;
+                const incomingName = patch.namePresent && typeof patch.name === 'string'
+                    ? patch.name.trim()
+                    : '';
+                const incomingColor = patch.colorPresent && typeof patch.color === 'string'
+                    ? patch.color
+                    : '';
+
                 const col = this.board.findColumn(patch.id);
-                if (!col) continue;
+                if (!col) {
+                    if (incomingName.length > 0) {
+                        const created = this.board.addColumn({
+                            id: patch.id,
+                            name: incomingName,
+                            color: incomingColor || 'slate'
+                        });
+
+                        if (!this._columnOrder.includes(created.id)) {
+                            this._columnOrder = [...this._columnOrder, created.id];
+                        }
+
+                        didChange = true;
+                    }
+                    continue;
+                }
 
                 const next: Partial<ColumnProps> = {};
 
-                if (patch.namePresent && typeof patch.name === 'string') {
-                    const incomingName = patch.name.trim();
-                    if (incomingName.length > 0 && incomingName !== col.name) {
-                        next.name = incomingName;
-                    }
+                if (incomingName.length > 0 && incomingName !== col.name) {
+                    next.name = incomingName;
                 }
 
-                if (patch.colorPresent && typeof patch.color === 'string') {
-                    const incomingColor = patch.color;
+                if (incomingColor.length > 0) {
                     const currentColor = col.color || '';
                     if (incomingColor !== currentColor) {
                         next.color = incomingColor;
