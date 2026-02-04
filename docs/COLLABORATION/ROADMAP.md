@@ -1,7 +1,7 @@
 ﻿# Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.74 (Populate AIPanel Publish Options - 04. Februar 2026)  
-**Aktualisiert:** 04. Februar 2026 (Populate AIPanel Publish Options).  
+**Version:** 3.79 (Selected Card Priority Prompt - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (Selected Card Priority Prompt).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,11 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.79 | 04.02.2026 | 🧹 Selected Card Priority: Kontext‑Karte hat Standard‑Priorität, andere ignorieren. |
+| 3.78 | 04.02.2026 | 🧹 Preview Marker Deduper: Mehrfache +++ werden entfernt, Position nach Nicht‑Heading‑Absatz. |
+| 3.77 | 04.02.2026 | 🧹 Preview Marker Normalizer: fehlender +++ wird automatisch eingefügt. |
+| 3.76 | 04.02.2026 | 🧹 Preview Marker Prompt: `+++` nach Teaser/Absatz für Vorschau‑Trennung. |
+| 3.75 | 04.02.2026 | 🧹 UTF-8 Prompt/Validator Guard: Mojibake wird erkannt und blockiert. |
 | 3.74 | 04.02.2026 | 🧹 Populate AIPanel Publish Options: publish=false wird an create/delete column durchgereicht. |
 | 3.73 | 04.02.2026 | 🧹 Populate Card Publish Guard: createCard publish=false verhindert Zwischen‑30301. |
 | 3.72 | 04.02.2026 | 🧹 Populate Single Final Publish: 30301 nur am Ende, keine Zwischen‑Publishes. |

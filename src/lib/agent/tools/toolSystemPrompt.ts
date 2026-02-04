@@ -69,6 +69,9 @@ Der Nutzer hat folgende Karte ausgewählt/geöffnet:
 - **Inhalt:** ${selectedCard.content || '(leer)'}
 - **Labels:** ${selectedCard.labels?.join(', ') || '(keine)'}
 
+  ✅ **PRIORITÄT:** Beziehe dich STANDARDMÄSSIG NUR auf diese Karte.
+  Ignoriere andere Karten, außer der Nutzer nennt sie explizit.
+
 ⚠️ Wenn der Nutzer sagt "korrigiere", "ändere", "verbessere", "aktualisiere den Inhalt", 
 "füge hinzu", "ergänze" OHNE eine spezifische Karte zu nennen,
 bezieht sich das auf DIESE selektierte Karte (ID: ${selectedCard.cardId})!
@@ -124,6 +127,7 @@ Jede Karte MUSS enthalten:
   - Bei Tests: Die tatsächlichen Testfragen
   - Bei Arbeitsblättern: Die konkreten Aufgaben
   - Zeitangaben, Materialien, Erwartungen
+  - **Vorschau‑Marker:** Füge nach dem ersten Absatz/Teaser eine eigene Zeile +++ ein (steuert die Preview‑Trennung)
 
 Beispiel für einen TEST:
 \`\`\`json
@@ -143,6 +147,7 @@ Wenn der Nutzer sagt: "erstelle ein Board zu...", "mach mir ein Board für...", 
 → \`populate_board\` verwenden!
 → Das aktuelle Board wird mit Titel, Beschreibung, Spalten und Karten befüllt
 → JEDE Karte MUSS ausführlichen \`content\` haben!
+→ **Zeichensatz:** Immer UTF-8 verwenden. Umlaute/ß korrekt ausgeben (z.B. "pädagogik", nicht "pÃ¤dagogik" oder "�").
 
 Beispiel für populate_board:
 \`\`\`json

@@ -212,6 +212,70 @@ function attemptJsonRepair(jsonStr: string): string {
 }
 
 // ============================================================================
+// Encoding Validation (UTF-8 / Mojibake Guard)
+// ============================================================================
+
+function hasReplacementChar(value: string): boolean {
+    return value.includes('\uFFFD') || value.includes('�');
+}
+
+// Common UTF-8 -> Latin-1 mojibake patterns (e.g. "pädagogik" -> "pÃ¤dagogik")
+const MOJIBAKE_PATTERN = /(Ã¤|Ã¶|Ã¼|ÃŸ|Ã„|Ã–|Ãœ|Â|â€™|â€œ|â€|â€“|â€”)/;
+
+function hasMojibake(value: string): boolean {
+    return MOJIBAKE_PATTERN.test(value);
+}
+
+function validateUtf8Text(value: string, label: string): string | null {
+    if (!value) return null;
+    if (hasReplacementChar(value) || hasMojibake(value)) {
+        return `${label} enthält fehlerhafte Zeichenkodierung (UTF-8 bitte, keine "Ã¤"/"�").`;
+    }
+    return null;
+}
+
+function isHeadingBlock(block: string): boolean {
+    const trimmed = block.trim();
+    if (!trimmed) return false;
+    if (trimmed.startsWith('#')) return true;
+    if (/^(titel|gedicht|überschrift|thema)\s*:/i.test(trimmed)) return true;
+    const lines = trimmed.split(/\r?\n/);
+    if (lines.length === 1) {
+        const line = lines[0].trim();
+        const hasSentencePunctuation = /[.!?]/.test(line);
+        if (line.length <= 80 && !hasSentencePunctuation) return true;
+    }
+    return false;
+}
+
+function ensurePreviewMarker(content: string): string {
+    if (!content) return content;
+
+    const cleaned = content
+        .split(/\r?\n/)
+        .filter((line) => line.trim() !== '+++')
+        .join('\n')
+        .trim();
+
+    const blocks = cleaned.split(/\r?\n\r?\n/);
+    if (blocks.length <= 1) {
+        return `${cleaned}\n\n+++`;
+    }
+
+    const firstBlock = blocks[0];
+    const insertIndex = isHeadingBlock(firstBlock) && blocks.length > 1 ? 1 : 0;
+
+    const before = blocks.slice(0, insertIndex + 1).join('\n\n');
+    const after = blocks.slice(insertIndex + 1).join('\n\n');
+
+    if (!after) {
+        return `${before}\n\n+++`;
+    }
+
+    return `${before}\n\n+++\n\n${after}`;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -375,6 +439,38 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
     console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns: effectiveRemoveUnusedColumns });
     
     try {
+        const encodingErrors: string[] = [];
+        const titleError = validateUtf8Text(title || '', 'title');
+        if (titleError) encodingErrors.push(titleError);
+        const descriptionError = validateUtf8Text(description || '', 'description');
+        if (descriptionError) encodingErrors.push(descriptionError);
+
+        if (columns && Array.isArray(columns)) {
+            for (const colDef of columns) {
+                const nameError = validateUtf8Text(colDef?.name || '', 'column.name');
+                if (nameError) encodingErrors.push(nameError);
+
+                const cards = colDef?.cards;
+                if (Array.isArray(cards)) {
+                    for (const cardDef of cards) {
+                        const headingError = validateUtf8Text(cardDef?.heading || '', 'card.heading');
+                        if (headingError) encodingErrors.push(headingError);
+                        const contentError = validateUtf8Text(cardDef?.content || '', 'card.content');
+                        if (contentError) encodingErrors.push(contentError);
+                    }
+                }
+            }
+        }
+
+        if (encodingErrors.length > 0) {
+            return {
+                tool_call_id: '',
+                tool_name: 'populate_board',
+                success: false,
+                error: `Zeichensatz-Fehler erkannt: ${encodingErrors.join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+            };
+        }
+
         // 1. Board-Metadaten aktualisieren
         if (title) ctx.board.name = title;
         if (description) ctx.board.description = description;
@@ -432,12 +528,13 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 if (column && cards && Array.isArray(cards)) {
                     for (const cardDef of cards) {
                         if (!cardDef.heading) continue;
+                        const normalizedContent = ensurePreviewMarker(cardDef.content || '');
                         
                         if (ctx.boardStore?.createCard) {
                             const cardId = ctx.boardStore.createCard(
                                 column.id,
                                 cardDef.heading,
-                                cardDef.content || '',
+                                normalizedContent,
                                 { publish: false }
                             );
                             if (cardId) createdCardIds.push(cardId);
@@ -761,6 +858,17 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
         console.warn('⚠️ add_card ohne description aufgerufen! Args:', JSON.stringify(args));
     }
     
+    const titleError = validateUtf8Text(title || '', 'title');
+    const descriptionError = validateUtf8Text(description || '', 'description');
+    if (titleError || descriptionError) {
+        return {
+            tool_call_id: '',
+            tool_name: 'add_card',
+            success: false,
+            error: `Zeichensatz-Fehler erkannt: ${[titleError, descriptionError].filter(Boolean).join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+        };
+    }
+
     // resolveColumn kann sowohl ID als auch Name auflösen
     const column = resolveColumn(ctx.board, columnIdentifier);
     if (!column) {
@@ -776,14 +884,16 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
         let cardId: string;
         
         // Prefer boardStore API (includes triggerUpdate + Nostr publishing)
+        const normalizedDescription = ensurePreviewMarker(description || '');
+
         if (ctx.boardStore?.createCard) {
-            cardId = ctx.boardStore.createCard(column.id, title, description || '');
+            cardId = ctx.boardStore.createCard(column.id, title, normalizedDescription);
         } else {
             cardId = BoardOperations.createCard(
                 ctx.board,
                 column.id,
                 title,
-                description || '',
+                normalizedDescription,
                 ctx.currentUserPubkey || undefined,
                 ctx.currentUserName || undefined
             ) || '';
@@ -850,6 +960,17 @@ function executeUpdateCard(args: any, ctx: ExecutionContext): ToolResult {
         };
     }
     
+    const titleError = validateUtf8Text(title || '', 'title');
+    const descriptionError = validateUtf8Text(description || '', 'description');
+    if (titleError || descriptionError) {
+        return {
+            tool_call_id: '',
+            tool_name: 'update_card',
+            success: false,
+            error: `Zeichensatz-Fehler erkannt: ${[titleError, descriptionError].filter(Boolean).join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+        };
+    }
+
     const cardResult = resolveCard(ctx.board, cardIdentifier);
     if (!cardResult) {
         return {
@@ -863,7 +984,7 @@ function executeUpdateCard(args: any, ctx: ExecutionContext): ToolResult {
     try {
         const updates: any = {};
         if (title !== undefined) updates.heading = title;
-        if (description !== undefined) updates.content = description;
+        if (description !== undefined) updates.content = ensurePreviewMarker(description);
         if (labels !== undefined) updates.labels = labels;
         if (color !== undefined) updates.color = color;
         

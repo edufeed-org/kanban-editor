@@ -1,4 +1,81 @@
 ﻿# Changelog
+## Version 4.7.91 - Selected Card Priority Prompt 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Context:** Selektierte Karte hat explizite Priorität; andere Karten ignorieren.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolSystemPrompt.ts | Prioritäts-Hinweis ergänzt |
+
+---
+## Version 4.7.90 - Preview Marker Deduper 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** Mehrfache +++ werden entfernt, Marker sitzt nach erstem Nicht‑Heading‑Absatz.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | +++‑Dedup & Heading‑Heuristik |
+
+---
+## Version 4.7.89 - Preview Marker Normalizer 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** `+++` wird automatisch in Card‑Content eingefügt, wenn fehlend (populate/add/update).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Preview‑Marker‑Normalizer |
+
+---
+## Version 4.7.88 - Preview Marker Prompt 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Prompt:** KI soll `+++` nach dem Teaser/ersten Absatz setzen (Preview‑Trennung).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolSystemPrompt.ts | `+++`‑Marker Instruktion ergänzt |
+
+---
+## Version 4.7.87 - UTF-8 Prompt/Validator Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Quality:** Validator blockt Mojibake/Replacement-Char in populate/add/update.
+- **Prompt:** System-Prompt fordert UTF-8 und korrekte Umlaute/ß.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | UTF‑8/Mojibake‑Checks für Tool‑Inputs |
+| src/lib/agent/tools/toolSystemPrompt.ts | UTF‑8 Hinweis ergänzt |
+
+---
 ## Version 4.7.86 - Populate AIPanel Publish Options 🧹
 
 **Datum:** 04. Februar 2026  \
