@@ -1,4 +1,40 @@
 ﻿# Changelog
+## Version 4.7.81 - AI Populate Default Column Cleanup 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board löscht ungenutzte Spalten standardmäßig, wenn columns übergeben werden.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | removeUnusedColumns default=true bei columns |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.69 ergänzt |
+
+---
+## Version 4.7.80 - AI Populate Owner-Board Publish 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert als Owner ein aktualisiertes 30301 mit neuen Spalten.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | publishBoardIfOwner() |
+| src/lib/agent/tools/toolExecutor.ts | Owner-Board-Publish nach Populate |
+| src/routes/cardsboard/AIPanel.svelte | ExecutionContext erweitert |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Populate Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.68 ergänzt |
+
+---
 ## Version 4.7.79 - Shared Board 30301 Guard 🔒
 
 **Datum:** 04. Februar 2026  \

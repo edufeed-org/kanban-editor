@@ -253,6 +253,7 @@ export interface ExecutionContext {
             columnOrder?: string[];
             cardIdsToPublish?: string[];
         }) => void;
+        publishBoardIfOwner?: () => void;
     };
     triggerUpdate: () => void;
 }
@@ -374,7 +375,14 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
         const createdColumns: string[] = [];
         const createdColumnMeta: Array<{ id: string; name?: string; color?: string }> = [];
         const createdCards: { column: string; heading: string }[] = [];
-        const createdCardIds: string[] = [];
+                const effectiveRemoveUnusedColumns =
+                    typeof args.removeUnusedColumns === 'boolean'
+                        ? args.removeUnusedColumns
+                        : Array.isArray(columns) && columns.length > 0
+                            ? true
+                            : false;
+
+                console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns: effectiveRemoveUnusedColumns });
         const usedColumnNames: string[] = []; // Track welche Spalten genutzt werden
         
         // 2. Spalten und Karten erstellen
@@ -460,7 +468,7 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 console.log(`🗑️ Lösche ungenutzte Spalte: ${col.name}`);
                 if (ctx.boardStore?.deleteColumn) {
                     ctx.boardStore.deleteColumn(col.id);
-                } else {
+                    if (effectiveRemoveUnusedColumns && usedColumnNames.length > 0) {
                     BoardOperations.deleteColumn(ctx.board, col.id);
                 }
                 deletedColumns.push(col.name);
@@ -476,6 +484,10 @@ async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<T
                 columnOrder: ctx.board.columns.map((c) => c.id),
                 cardIdsToPublish: createdCardIds
             });
+        }
+
+        if (ctx.boardStore?.publishBoardIfOwner) {
+            ctx.boardStore.publishBoardIfOwner();
         }
         
         // 4. Board-Metadaten persistieren (inkl. Nostr)

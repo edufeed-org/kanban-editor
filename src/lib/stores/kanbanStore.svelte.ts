@@ -1497,6 +1497,13 @@ export class BoardStore {
         return await this.nostrIntegration.publishBoard(this.board);
     }
 
+    public publishBoardIfOwner(): void {
+        const userRole = this.getCurrentUserRole();
+        const boardId = this.board.id;
+        if (!PermissionChecks.canPublishBoard(userRole, boardId)) return;
+        void this.publishBoardAsync();
+    }
+
     private async publishCardAsync(cardId: string): Promise<void> {
         await this.nostrIntegration.publishCard(this.board, cardId);
     }

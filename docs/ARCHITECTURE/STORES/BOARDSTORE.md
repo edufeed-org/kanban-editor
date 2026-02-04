@@ -470,6 +470,12 @@ boardStore.publishColumnPatchBatch({
     columnOrder: board.columns.map(c => c.id),
     cardIdsToPublish: createdCardIds
 });
+
+// Owner: publiziert zusätzlich das Board (30301) mit aktualisierten Spalten
+boardStore.publishBoardIfOwner();
+
+// Standard: wenn columns übergeben werden, werden ungenutzte Spalten automatisch gelöscht
+// (removeUnusedColumns default = true)
 ```
 
 ### Karte verschieben (DnD)

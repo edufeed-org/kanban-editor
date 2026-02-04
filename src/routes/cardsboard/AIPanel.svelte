@@ -310,7 +310,8 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
             moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId),
             updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates),
             publishColumnPatchBatch: (args: { columns?: Array<{ id: string; name?: string; color?: string }>; deletedColumnIds?: string[]; columnOrder?: string[]; cardIdsToPublish?: string[] }) =>
-              boardStore.publishColumnPatchBatch(args)
+              boardStore.publishColumnPatchBatch(args),
+            publishBoardIfOwner: () => boardStore.publishBoardIfOwner()
           },
           triggerUpdate: () => console.warn('[AIPanel] triggerUpdate called - use boardStore API methods instead')
         };

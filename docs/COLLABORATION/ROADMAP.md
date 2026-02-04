@@ -1,7 +1,7 @@
 ﻿# Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.66 (Pending Cards Flush nach Board-Event - 04. Februar 2026)  
-**Aktualisiert:** 04. Februar 2026 (Pending Cards Flush nach Board-Event).  
+**Version:** 3.69 (AI Populate Default Column Cleanup - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (AI Populate Default Column Cleanup).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,9 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.69 | 04.02.2026 | 🧹 AI Populate Default Column Cleanup: removeUnusedColumns default=true bei columns. |
+| 3.68 | 04.02.2026 | 🧭 AI Populate Owner-Board Publish: 30301 mit neuen Spalten publiziert. |
+| 3.67 | 04.02.2026 | 🔒 Shared Board 30301 Guard: Nur Owner-Events akzeptiert, Maintainer via Patch/Card. |
 | 3.66 | 04.02.2026 | ✅ Pending Cards Flush: gepufferte Cards werden nach Board-Events eingefügt. |
 | 3.65 | 04.02.2026 | ✅ AI Populate Owner-Card Publish: Batch-Flow publiziert Cards auch als Owner. |
 | 3.64 | 04.02.2026 | 🧭 AI Populate Publish-Order Fix: Cards nach Column-Patch Batch publiziert. |
