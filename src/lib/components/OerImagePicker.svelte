@@ -20,7 +20,8 @@
 	const availableSources = [
 		{ value: 'arasaac', label: 'ARASAAC' },
 		{ value: 'openverse', label: 'Openverse' },
-		{ value: 'nostr', label: 'Nostr' }
+		{ value: 'nostr-amb-relay', label: 'Nostr AMB' },
+		{ value: 'rpi-virtuell', label: 'RPI Virtuell' },
 	];
 
 	let searchEl: OerSearchElement;
