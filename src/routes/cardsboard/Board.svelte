@@ -393,7 +393,7 @@
 	.add-column-button button {
 		width: 250px;
 		height: 64px;
-		border: 2px dotted var(--accent);
+		/* border: 2px dotted var(--accent); */
 		border-radius: var(--radius-md);
 		background: var(--muted);
 		color: var(--foreground);
@@ -434,7 +434,7 @@
 		width: 56px;
 		height: 56px;
 		border-radius: var(--radius-md);
-		border: 1px solid var(--accent);
+		/* border: 1px solid var(--accent); */
 		background: var(--muted);
 		color: var(--foreground);
 		cursor: pointer;
