@@ -32,8 +32,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build
-        env:
-          BASE_PATH: '/${{ github.event.repository.name }}'
         run: |
           pnpm run build
           echo '${{ secrets.CONFIG_JSON }}' > build/config.json
