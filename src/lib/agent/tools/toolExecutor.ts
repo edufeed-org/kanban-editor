@@ -212,6 +212,91 @@ function attemptJsonRepair(jsonStr: string): string {
 }
 
 // ============================================================================
+// Encoding Validation (UTF-8 / Mojibake Guard)
+// ============================================================================
+
+function hasReplacementChar(value: string): boolean {
+    return value.includes('\uFFFD') || value.includes('�');
+}
+
+// Common UTF-8 -> Latin-1 mojibake patterns (e.g. "pädagogik" -> "pÃ¤dagogik")
+const MOJIBAKE_PATTERN = /(Ã¤|Ã¶|Ã¼|ÃŸ|Ã„|Ã–|Ãœ|Â|â€™|â€œ|â€|â€“|â€”)/;
+
+function hasMojibake(value: string): boolean {
+    return MOJIBAKE_PATTERN.test(value);
+}
+
+function validateUtf8Text(value: string, label: string): string | null {
+    if (!value) return null;
+    if (hasReplacementChar(value) || hasMojibake(value)) {
+        return `${label} enthält fehlerhafte Zeichenkodierung (UTF-8 bitte, keine "Ã¤"/"�").`;
+    }
+    return null;
+}
+
+function isHeadingBlock(block: string): boolean {
+    const trimmed = block.trim();
+    if (!trimmed) return false;
+    if (trimmed.startsWith('#')) return true;
+    if (/^(titel|gedicht|überschrift|thema)\s*:/i.test(trimmed)) return true;
+    const lines = trimmed.split(/\r?\n/);
+    if (lines.length === 1) {
+        const line = lines[0].trim();
+        const hasSentencePunctuation = /[.!?]/.test(line);
+        if (line.length <= 80 && !hasSentencePunctuation) return true;
+    }
+    return false;
+}
+
+function ensurePreviewMarker(content: string): string {
+    if (!content) return content;
+
+    const cleaned = content
+        .split(/\r?\n/)
+        .filter((line) => line.trim() !== '+++')
+        .join('\n')
+        .trim();
+
+    const blocks = cleaned.split(/\r?\n\r?\n/);
+    if (blocks.length <= 1) {
+        return `${cleaned}\n\n+++`;
+    }
+
+    const firstBlock = blocks[0];
+    const insertIndex = isHeadingBlock(firstBlock) && blocks.length > 1 ? 1 : 0;
+
+    const before = blocks.slice(0, insertIndex + 1).join('\n\n');
+    const after = blocks.slice(insertIndex + 1).join('\n\n');
+
+    if (!after) {
+        return `${before}\n\n+++`;
+    }
+
+    return `${before}\n\n+++\n\n${after}`;
+}
+
+function stripRedundantTitle(title: string, content: string): string {
+    if (!title || !content) return content;
+    const trimmed = content.trimStart();
+    const [firstLine, ...rest] = trimmed.split(/\r?\n/);
+    const normalizedTitle = title.trim().toLowerCase();
+    const normalizedLine = firstLine.trim().toLowerCase();
+
+    if (normalizedLine === normalizedTitle) {
+        return rest.join('\n').trimStart();
+    }
+
+    if (normalizedLine.startsWith('titel:') || normalizedLine.startsWith('title:')) {
+        const value = normalizedLine.replace(/^(titel|title)\s*:\s*/i, '').trim();
+        if (value === normalizedTitle) {
+            return rest.join('\n').trimStart();
+        }
+    }
+
+    return content;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -239,14 +324,21 @@ export interface ExecutionContext {
     nostrIntegration?: NostrIntegration;
     // BoardStore reference for direct API calls
     boardStore?: {
-        createColumn: (name: string, color?: string) => string;
+        createColumn: (name: string, color?: string, options?: { publish?: boolean }) => string;
         updateColumn: (columnId: string, updates: any) => void;
-        deleteColumn: (columnId: string) => void;
-        createCard: (columnId: string, heading: string, content?: string) => string;
+        deleteColumn: (columnId: string, options?: { publish?: boolean }) => void;
+        createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) => string;
         editCard: (cardId: string, updates: any) => void;
         deleteCard: (cardId: string) => Promise<void>;
         moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => void;
         updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => void;
+        publishColumnPatchBatch?: (args: {
+            columns?: Array<{ id: string; name?: string; color?: string }>;
+            deletedColumnIds?: string[];
+            columnOrder?: string[];
+            cardIdsToPublish?: string[];
+        }) => void;
+        publishBoardIfOwner?: () => void;
     };
     triggerUpdate: () => void;
 }
@@ -323,10 +415,10 @@ function resolveCard(board: Board, cardRef: string): { card: Card; column: Colum
 // Tool Execution Functions
 // ============================================================================
 
-function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
+async function executeCreateBoard(args: any, ctx: ExecutionContext): Promise<ToolResult> {
     // create_board ist deprecated - verwende populate_board stattdessen
     console.warn('⚠️ create_board aufgerufen - leite zu populate_board um');
-    return executePopulateBoard(args, ctx);
+    return await executePopulateBoard(args, ctx);
 }
 
 /**
@@ -336,8 +428,8 @@ function executeCreateBoard(args: any, ctx: ExecutionContext): ToolResult {
  * - Fügt Karten mit Inhalt hinzu
  * - Optional: Löscht unpassende Spalten (removeUnusedColumns)
  */
-function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
-    const { title, description, removeUnusedColumns } = args;
+async function executePopulateBoard(args: any, ctx: ExecutionContext): Promise<ToolResult> {
+    const { title, description } = args;
     
     // columns kann als String (JSON) oder als Array kommen - beide Fälle behandeln
     let columns = args.columns;
@@ -358,15 +450,56 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
         }
     }
     
-    console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns });
+    const effectiveRemoveUnusedColumns =
+        typeof args.removeUnusedColumns === 'boolean'
+            ? args.removeUnusedColumns
+            : Array.isArray(columns) && columns.length > 0
+                ? true
+                : false;
+
+    console.log('🎨 populate_board:', { title, columnCount: columns?.length, removeUnusedColumns: effectiveRemoveUnusedColumns });
     
     try {
+        const encodingErrors: string[] = [];
+        const titleError = validateUtf8Text(title || '', 'title');
+        if (titleError) encodingErrors.push(titleError);
+        const descriptionError = validateUtf8Text(description || '', 'description');
+        if (descriptionError) encodingErrors.push(descriptionError);
+
+        if (columns && Array.isArray(columns)) {
+            for (const colDef of columns) {
+                const nameError = validateUtf8Text(colDef?.name || '', 'column.name');
+                if (nameError) encodingErrors.push(nameError);
+
+                const cards = colDef?.cards;
+                if (Array.isArray(cards)) {
+                    for (const cardDef of cards) {
+                        const headingError = validateUtf8Text(cardDef?.heading || '', 'card.heading');
+                        if (headingError) encodingErrors.push(headingError);
+                        const contentError = validateUtf8Text(cardDef?.content || '', 'card.content');
+                        if (contentError) encodingErrors.push(contentError);
+                    }
+                }
+            }
+        }
+
+        if (encodingErrors.length > 0) {
+            return {
+                tool_call_id: '',
+                tool_name: 'populate_board',
+                success: false,
+                error: `Zeichensatz-Fehler erkannt: ${encodingErrors.join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+            };
+        }
+
         // 1. Board-Metadaten aktualisieren
         if (title) ctx.board.name = title;
         if (description) ctx.board.description = description;
         
         const createdColumns: string[] = [];
+        const createdColumnMeta: Array<{ id: string; name?: string; color?: string }> = [];
         const createdCards: { column: string; heading: string }[] = [];
+        const createdCardIds: string[] = [];
         const usedColumnNames: string[] = []; // Track welche Spalten genutzt werden
         
         // 2. Spalten und Karten erstellen
@@ -385,13 +518,20 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                 // Spalte erstellen falls nicht vorhanden
                 if (!column) {
                     if (ctx.boardStore?.createColumn) {
-                        const colId = ctx.boardStore.createColumn(colDef.name);
+                        const colId = ctx.boardStore.createColumn(colDef.name, undefined, { publish: false });
                         column = ctx.board.findColumn(colId);
                     } else {
                         const colId = BoardOperations.createColumn(ctx.board, colDef.name);
                         column = colId ? ctx.board.findColumn(colId) : undefined;
                     }
-                    if (column) createdColumns.push(column.name);
+                    if (column) {
+                        createdColumns.push(column.name);
+                        createdColumnMeta.push({
+                            id: column.id,
+                            name: column.name,
+                            color: column.color
+                        });
+                    }
                 }
                 
                 // Karten zur Spalte hinzufügen
@@ -409,13 +549,17 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
                 if (column && cards && Array.isArray(cards)) {
                     for (const cardDef of cards) {
                         if (!cardDef.heading) continue;
+                        const strippedContent = stripRedundantTitle(cardDef.heading, cardDef.content || '');
+                        const normalizedContent = ensurePreviewMarker(strippedContent);
                         
                         if (ctx.boardStore?.createCard) {
-                            ctx.boardStore.createCard(
-                                column.id, 
-                                cardDef.heading, 
-                                cardDef.content || ''
+                            const cardId = ctx.boardStore.createCard(
+                                column.id,
+                                cardDef.heading,
+                                normalizedContent,
+                                { publish: false }
                             );
+                            if (cardId) createdCardIds.push(cardId);
                         } else {
                             BoardOperations.createCard(
                                 ctx.board, 
@@ -432,7 +576,8 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
         
         // 3. Ungenutzte Spalten löschen (wenn angefordert)
         const deletedColumns: string[] = [];
-        if (removeUnusedColumns && usedColumnNames.length > 0) {
+        const deletedColumnIds: string[] = [];
+        if (effectiveRemoveUnusedColumns && usedColumnNames.length > 0) {
             // Sammle Spalten die nicht in usedColumnNames sind
             const columnsToDelete = ctx.board.columns.filter(
                 col => !usedColumnNames.includes(col.name.toLowerCase().trim())
@@ -441,14 +586,25 @@ function executePopulateBoard(args: any, ctx: ExecutionContext): ToolResult {
             for (const col of columnsToDelete) {
                 console.log(`🗑️ Lösche ungenutzte Spalte: ${col.name}`);
                 if (ctx.boardStore?.deleteColumn) {
-                    ctx.boardStore.deleteColumn(col.id);
+                    ctx.boardStore.deleteColumn(col.id, { publish: false });
                 } else {
                     BoardOperations.deleteColumn(ctx.board, col.id);
                 }
                 deletedColumns.push(col.name);
+                deletedColumnIds.push(col.id);
             }
         }
-        
+
+        // 3b. Batch Column-Patch publish (reduces race/loss for maintainer boards)
+        if (ctx.boardStore?.publishColumnPatchBatch) {
+            await ctx.boardStore.publishColumnPatchBatch({
+                columns: createdColumnMeta,
+                deletedColumnIds,
+                columnOrder: ctx.board.columns.map((c) => c.id),
+                cardIdsToPublish: createdCardIds
+            });
+        }
+
         // 4. Board-Metadaten persistieren (inkl. Nostr)
         if ((title || description) && ctx.boardStore?.updateBoardMeta) {
             ctx.boardStore.updateBoardMeta({ 
@@ -724,6 +880,17 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
         console.warn('⚠️ add_card ohne description aufgerufen! Args:', JSON.stringify(args));
     }
     
+    const titleError = validateUtf8Text(title || '', 'title');
+    const descriptionError = validateUtf8Text(description || '', 'description');
+    if (titleError || descriptionError) {
+        return {
+            tool_call_id: '',
+            tool_name: 'add_card',
+            success: false,
+            error: `Zeichensatz-Fehler erkannt: ${[titleError, descriptionError].filter(Boolean).join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+        };
+    }
+
     // resolveColumn kann sowohl ID als auch Name auflösen
     const column = resolveColumn(ctx.board, columnIdentifier);
     if (!column) {
@@ -739,14 +906,17 @@ function executeAddCard(args: any, ctx: ExecutionContext): ToolResult {
         let cardId: string;
         
         // Prefer boardStore API (includes triggerUpdate + Nostr publishing)
+        const strippedDescription = stripRedundantTitle(title, description || '');
+        const normalizedDescription = ensurePreviewMarker(strippedDescription);
+
         if (ctx.boardStore?.createCard) {
-            cardId = ctx.boardStore.createCard(column.id, title, description || '');
+            cardId = ctx.boardStore.createCard(column.id, title, normalizedDescription);
         } else {
             cardId = BoardOperations.createCard(
                 ctx.board,
                 column.id,
                 title,
-                description || '',
+                normalizedDescription,
                 ctx.currentUserPubkey || undefined,
                 ctx.currentUserName || undefined
             ) || '';
@@ -813,6 +983,17 @@ function executeUpdateCard(args: any, ctx: ExecutionContext): ToolResult {
         };
     }
     
+    const titleError = validateUtf8Text(title || '', 'title');
+    const descriptionError = validateUtf8Text(description || '', 'description');
+    if (titleError || descriptionError) {
+        return {
+            tool_call_id: '',
+            tool_name: 'update_card',
+            success: false,
+            error: `Zeichensatz-Fehler erkannt: ${[titleError, descriptionError].filter(Boolean).join(' | ')} Bitte UTF-8 verwenden und erneut senden.`
+        };
+    }
+
     const cardResult = resolveCard(ctx.board, cardIdentifier);
     if (!cardResult) {
         return {
@@ -826,7 +1007,7 @@ function executeUpdateCard(args: any, ctx: ExecutionContext): ToolResult {
     try {
         const updates: any = {};
         if (title !== undefined) updates.heading = title;
-        if (description !== undefined) updates.content = description;
+        if (description !== undefined) updates.content = ensurePreviewMarker(description);
         if (labels !== undefined) updates.labels = labels;
         if (color !== undefined) updates.color = color;
         
@@ -1245,10 +1426,10 @@ export async function executeToolCall(
     
     switch (toolName) {
         case 'populate_board':
-            result = executePopulateBoard(args, ctx);
+            result = await executePopulateBoard(args, ctx);
             break;
         case 'create_board':
-            result = executeCreateBoard(args, ctx);
+            result = await executeCreateBoard(args, ctx);
             break;
         case 'update_board':
             result = executeUpdateBoard(args, ctx);

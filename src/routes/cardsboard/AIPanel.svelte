@@ -300,14 +300,19 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
           currentUserPubkey: null, // TODO: Get from authStore when available
           currentUserName: null,   // TODO: Get from authStore when available
           boardStore: {
-            createColumn: (name: string, color?: string) => boardStore.createColumn(name, color),
+            createColumn: (name: string, color?: string, options?: { publish?: boolean }) =>
+              boardStore.createColumn(name, color, options),
             updateColumn: (columnId: string, updates: any) => boardStore.updateColumn(columnId, updates),
-            deleteColumn: (columnId: string) => boardStore.deleteColumn(columnId),
-            createCard: (columnId: string, heading: string, content?: string) => boardStore.createCard(columnId, heading, content),
+            deleteColumn: (columnId: string, options?: { publish?: boolean }) => boardStore.deleteColumn(columnId, options),
+            createCard: (columnId: string, heading: string, content?: string, options?: { publish?: boolean }) =>
+              boardStore.createCard(columnId, heading, content, options),
             editCard: (cardId: string, updates: any) => boardStore.editCard(cardId, updates),
             deleteCard: (cardId: string) => boardStore.deleteCard(cardId),
             moveCard: (cardId: string, fromColumnId: string, toColumnId: string) => boardStore.handleCardMove(cardId, fromColumnId, toColumnId),
-            updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates)
+            updateBoardMeta: (updates: { name?: string; description?: string; tags?: string[] }) => boardStore.updateCurrentBoardMeta(updates),
+            publishColumnPatchBatch: (args: { columns?: Array<{ id: string; name?: string; color?: string }>; deletedColumnIds?: string[]; columnOrder?: string[]; cardIdsToPublish?: string[] }) =>
+              boardStore.publishColumnPatchBatch(args),
+            publishBoardIfOwner: () => boardStore.publishBoardIfOwner()
           },
           triggerUpdate: () => console.warn('[AIPanel] triggerUpdate called - use boardStore API methods instead')
         };
@@ -326,10 +331,10 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         
         // Step 7: Handle results based on tool type
         // Check for respond/ask_clarification tools - these should show their message directly
-        const responseResults = toolResults.filter(r => 
+        const responseResults = toolResults.filter((r: ToolResult) => 
           r.tool_name === 'respond' || r.tool_name === 'ask_clarification'
         );
-        const actionResults = toolResults.filter(r => 
+        const actionResults = toolResults.filter((r: ToolResult) => 
           r.tool_name !== 'respond' && r.tool_name !== 'ask_clarification'
         );
         
@@ -339,7 +344,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
           console.log('📋 [Tool-Based] Action results:', summary);
           if (summary.trim()) {
             // 📚 Check for OER search results to show interactive buttons
-            const oerSearchResult = actionResults.find(r => r.tool_name === 'search_oer');
+            const oerSearchResult = actionResults.find((r: ToolResult) => r.tool_name === 'search_oer');
             const oerResults = oerSearchResult?.result?.results as OerResultData[] | undefined;
             
             chatStore.addMessage(summary, 'assistant', oerResults);

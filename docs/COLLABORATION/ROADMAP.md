@@ -1,7 +1,7 @@
-﻿# ðŸ—ºï¸ Roadmap: Nostr-basiertes KI-Kanban-Board
+﻿# Roadmap: Nostr-basiertes KI-Kanban-Board
 
-**Version:** 3.58 (Avatar Profile Picture Fix - 03. Februar 2026)  
-**Aktualisiert:** 03. Februar 2026 (Avatar Profile Picture Fix).  
+**Version:** 3.83 (Deleted Card Tombstones - 04. Februar 2026)  
+**Aktualisiert:** 04. Februar 2026 (Deleted Card Tombstones).  
 **Status:** âœ… **PHASE 1: 100% COMPLETE** | ðŸ”„ **PHASE 3: 90%** | ðŸŸ¡ **Phase 2: 15%** | ðŸŸ¡ **Phase 4: 85% Infrastructure**  
 **Projekt-Ziel:** VollstÃ¤ndige Implementierung bis 31.12.2025, Testing ab 01.01.2026
 
@@ -1653,6 +1653,31 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 ## ðŸ“ Versionshistorie
 
 | Version | Datum | Beschreibung |
+| 3.83 | 04.02.2026 | 🧹 Deleted Card Tombstones: gelöschte Cards werden nicht resurrected. |
+| 3.82 | 04.02.2026 | 🧹 Collaborative Card Delete Patch: del-card über 8571 synchronisiert. |
+| 3.81 | 04.02.2026 | 🧹 Card Delete Author Guard: Löschen nur durch Autor (verhindert Desync). |
+| 3.80 | 04.02.2026 | 🧹 Card Description Title Deduper: Entfernt Titelzeile aus Beschreibung beim Erstellen. |
+| 3.79 | 04.02.2026 | 🧹 Selected Card Priority: Kontext‑Karte hat Standard‑Priorität, andere ignorieren. |
+| 3.78 | 04.02.2026 | 🧹 Preview Marker Deduper: Mehrfache +++ werden entfernt, Position nach Nicht‑Heading‑Absatz. |
+| 3.77 | 04.02.2026 | 🧹 Preview Marker Normalizer: fehlender +++ wird automatisch eingefügt. |
+| 3.76 | 04.02.2026 | 🧹 Preview Marker Prompt: `+++` nach Teaser/Absatz für Vorschau‑Trennung. |
+| 3.75 | 04.02.2026 | 🧹 UTF-8 Prompt/Validator Guard: Mojibake wird erkannt und blockiert. |
+| 3.74 | 04.02.2026 | 🧹 Populate AIPanel Publish Options: publish=false wird an create/delete column durchgereicht. |
+| 3.73 | 04.02.2026 | 🧹 Populate Card Publish Guard: createCard publish=false verhindert Zwischen‑30301. |
+| 3.72 | 04.02.2026 | 🧹 Populate Single Final Publish: 30301 nur am Ende, keine Zwischen‑Publishes. |
+| 3.71 | 04.02.2026 | 🧹 Populate Bulk Publish Guard: Zwischen‑Publishes bei Spalten‑Create/Delete unterdrückt. |
+| 3.70 | 04.02.2026 | 🧹 Board-Event Empty Columns Clear: 30301 ohne col-tags leert Spalten. |
+| 3.69 | 04.02.2026 | 🧹 AI Populate Default Column Cleanup: removeUnusedColumns default=true bei columns. |
+| 3.68 | 04.02.2026 | 🧭 AI Populate Owner-Board Publish: 30301 mit neuen Spalten publiziert. |
+| 3.67 | 04.02.2026 | 🔒 Shared Board 30301 Guard: Nur Owner-Events akzeptiert, Maintainer via Patch/Card. |
+| 3.66 | 04.02.2026 | ✅ Pending Cards Flush: gepufferte Cards werden nach Board-Events eingefügt. |
+| 3.65 | 04.02.2026 | ✅ AI Populate Owner-Card Publish: Batch-Flow publiziert Cards auch als Owner. |
+| 3.64 | 04.02.2026 | 🧭 AI Populate Publish-Order Fix: Cards nach Column-Patch Batch publiziert. |
+| 3.63 | 04.02.2026 | 📦 AI Populate Column-Patch Batch: Create/Delete/Order als Sammel-Event. |
+| 3.62 | 04.02.2026 | 🗑️ Column-Delete Patch Sync: Maintainer-Löschungen werden verteilt (del-Tags). |
+| 3.61 | 04.02.2026 | 🧭 Column-Order Patch Pufferung: Order wird nach Column-Create angewendet. |
+| 3.60 | 04.02.2026 | 🧱 Card-Events Queue: Cards werden nach Column-Patch nachgezogen (Race Condition Fix). |
+| 3.59 | 04.02.2026 | 🧩 Column-Patch Sync: Maintainer-Column-Erstellung wird über Patch + Order verteilt. |
 | 3.58 | 03.02.2026 | 👤 Avatar: Profilbild wird in Header/Sidebar angezeigt. |
 | 3.57 | 03.02.2026 | ✨ Mobile Header: Logo kleiner, Unterzeile ausgeblendet. |
 | 3.56 | 03.02.2026 | 🧭 Header: Navigation bleibt rechts neben dem Branding (Mobile). |

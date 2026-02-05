@@ -1,4 +1,438 @@
 ﻿# Changelog
+## Version 4.7.96 - Footer Menu Relocation 🧹
+
+**Datum:** 05. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **UI:** Menueintraege "Applikation" und "Wissenswertes" ins Footer-Dropdown verschoben.
+
+### 📁 Geaenderte Dateien
+| Datei | Aenderung |
+|-------|----------|
+| src/routes/cardsboard/BoardsList.svelte | Menues entfernt |
+| src/routes/cardsboard/LeftSidebarFooter.svelte | Menues und Dialoge hinzugefuegt |
+
+---
+## Version 4.7.95 - Deleted Card Tombstones 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Gelöschte Cards werden tombstoned und nicht durch Nostr‑Reload resurrected.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/deletedCards.ts | Card‑Tombstones |
+| src/lib/stores/boardstore/operations.ts | Tombstone‑Guard bei upsert |
+| src/lib/stores/kanbanStore.svelte.ts | Tombstone setzen bei Delete/Patch |
+
+---
+## Version 4.7.94 - Collaborative Card Delete Patch 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Nicht‑Autoren löschen Cards kollaborativ via Column‑Patch (`del-card`).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/utils/nostrEvents.ts | `del-card` Tags |
+| src/lib/stores/boardstore/nostr.ts | deletedCardIds publish |
+| src/lib/stores/boardstore/nostr/handlers/columnOrderPatch.ts | del-card handling |
+| src/lib/stores/kanbanStore.svelte.ts | Patch‑Delete bei Author‑Mismatch |
+
+---
+## Version 4.7.93 - Card Delete Author Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Karten‑Löschung wird blockiert, wenn der Nutzer nicht Autor ist (verhindert Desync).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Author‑Check vor deleteCard |
+
+---
+## Version 4.7.92 - Card Description Title Deduper 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** Karten‑Beschreibung entfernt doppelte Titelzeile beim Erstellen.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Titel‑Dedup für Content |
+
+---
+## Version 4.7.91 - Selected Card Priority Prompt 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Context:** Selektierte Karte hat explizite Priorität; andere Karten ignorieren.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolSystemPrompt.ts | Prioritäts-Hinweis ergänzt |
+
+---
+## Version 4.7.90 - Preview Marker Deduper 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** Mehrfache +++ werden entfernt, Marker sitzt nach erstem Nicht‑Heading‑Absatz.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | +++‑Dedup & Heading‑Heuristik |
+
+---
+## Version 4.7.89 - Preview Marker Normalizer 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Output:** `+++` wird automatisch in Card‑Content eingefügt, wenn fehlend (populate/add/update).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Preview‑Marker‑Normalizer |
+
+---
+## Version 4.7.88 - Preview Marker Prompt 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Prompt:** KI soll `+++` nach dem Teaser/ersten Absatz setzen (Preview‑Trennung).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolSystemPrompt.ts | `+++`‑Marker Instruktion ergänzt |
+
+---
+## Version 4.7.87 - UTF-8 Prompt/Validator Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Quality:** Validator blockt Mojibake/Replacement-Char in populate/add/update.
+- **Prompt:** System-Prompt fordert UTF-8 und korrekte Umlaute/ß.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | UTF‑8/Mojibake‑Checks für Tool‑Inputs |
+| src/lib/agent/tools/toolSystemPrompt.ts | UTF‑8 Hinweis ergänzt |
+
+---
+## Version 4.7.86 - Populate AIPanel Publish Options 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** AIPanel gibt `publish:false` an `createColumn`/`deleteColumn` durch (keine Zwischen‑30301).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/routes/cardsboard/AIPanel.svelte | publish‑Optionen weitergereicht |
+
+---
+## Version 4.7.85 - Populate Card Publish Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** createCard mit `publish:false` triggert kein Board‑Publish während populate_board.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | triggerUpdate({ publish: false }) bei createCard‑Bulk |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | createCard publish‑Option dokumentiert |
+
+---
+## Version 4.7.84 - Populate Single Final Publish 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert Board nur einmal am Ende (keine Zwischen‑30301 nach erster Spalte).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Early publishBoardIfOwner entfernt |
+
+---
+## Version 4.7.83 - Populate Bulk Publish Guard 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board unterdrückt Zwischen‑Publishes bei Spalten‑Create/Delete und publiziert erst am Ende.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | create/delete column mit publish:false bei populate |
+| src/lib/stores/kanbanStore.svelte.ts | createColumn/deleteColumn publish‑Optionen |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Bulk‑Publish Guard dokumentiert |
+
+---
+## Version 4.7.82 - Board-Event Empty Columns Clear 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Sync:** Owner‑30301 ohne `col`‑Tags leert die Spalten (und Cards) korrekt auf Maintainer‑Boards.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/operations.ts | Leere Columns aus 30301 anwenden |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.70 ergänzt |
+
+---
+## Version 4.7.81 - AI Populate Default Column Cleanup 🧹
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board löscht ungenutzte Spalten standardmäßig, wenn columns übergeben werden.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | removeUnusedColumns default=true bei columns |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.69 ergänzt |
+
+---
+## Version 4.7.80 - AI Populate Owner-Board Publish 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert als Owner ein aktualisiertes 30301 mit neuen Spalten.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | publishBoardIfOwner() |
+| src/lib/agent/tools/toolExecutor.ts | Owner-Board-Publish nach Populate |
+| src/routes/cardsboard/AIPanel.svelte | ExecutionContext erweitert |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Populate Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.68 ergänzt |
+
+---
+## Version 4.7.79 - Shared Board 30301 Guard 🔒
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Collab:** Shared Boards akzeptieren nur Owner‑signierte 30301 Events; Maintainer bleiben bei 8571/30302.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/boardstore/nostr/handlers/board.ts | Owner‑Guard für 30301 |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Shared‑Board Guard Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.67 ergänzt |
+
+---
+## Version 4.7.78 - Pending Cards nach Board-Event flush ✅
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** gepufferte Cards werden nach Board-Events in bestehende Spalten eingefügt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Flush pending cards nach Board-Update |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.66 ergänzt |
+
+---
+## Version 4.7.77 - AI Populate Owner-Card Publish ✅
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board publiziert Cards auch als Owner (Batch-Flow), Reihenfolge ist jetzt deterministisch.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Owner-Publish in Batch-Pfad |
+| src/lib/agent/tools/toolExecutor.ts | Batch-Publish await |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.65 ergänzt |
+
+---
+## Version 4.7.76 - AI Populate Publish-Order Fix 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board veröffentlicht Cards erst nach Column-Patch Batch, um falsche Spalten zu vermeiden.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | createCard publish:false + publishCardsBatch |
+| src/lib/agent/tools/toolExecutor.ts | Batch-Card-Publish nach Column-Patch |
+| src/routes/cardsboard/AIPanel.svelte | createCard options + Batch-Publish |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Batch-Publish Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.64 ergänzt |
+
+---
+## Version 4.7.75 - AI Populate Column-Patch Batch 📦
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **AI Sync:** populate_board sendet einen Batch-Column-Patch (Create/Delete/Order) für Maintainer.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/agent/tools/toolExecutor.ts | Batch Column-Patch nach populate_board |
+| src/routes/cardsboard/AIPanel.svelte | Batch-Patch API im ExecutionContext |
+| src/lib/stores/kanbanStore.svelte.ts | publishColumnPatchBatch API |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | AI Populate Batch Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.63 ergänzt |
+
+---
+## Version 4.7.74 - Column-Delete Patch Sync 🗑️
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Spalten-Löschungen von Maintainern werden per Column-Patch (del-Tags) verteilt.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/utils/nostrEvents.ts | del-Tags für Column-Patches |
+| src/lib/stores/boardstore/nostr/handlers/columnOrderPatch.ts | del-Tags verarbeiten |
+| src/lib/stores/boardstore/nostr.ts | deletedColumnIds an Patch weiterreichen |
+| src/lib/stores/kanbanStore.svelte.ts | Delete-Patch publish + Apply deletions |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Delete-Patch Doku |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.62 ergänzt |
+
+---
+## Version 4.7.73 - Column-Order Patch Pufferung 🧭
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Column-Order Patches werden gepuffert, wenn Spalten noch fehlen, und später korrekt angewendet.
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Pending Column-Order Patch + Apply nach Column-Create |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Doku erweitert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.61 ergänzt |
+
+---
+## Version 4.7.72 - Card-Events Queue bei fehlender Spalte 🧱
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Nostr Sync:** Card-Events werden gequeued, wenn die Zielspalte noch nicht existiert (werden nach Column-Patch eingefügt).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Pending-Card Queue + Flush nach Column-Patch |
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Race-Condition Dokumentation |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.60 ergänzt |
+
+---
+## Version 4.7.71 - Column-Patch Sync für Maintainer 🧩
+
+**Datum:** 04. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### 🐛 Fixes
+- **Board-Sharing:** Maintainer-Spalten werden per Column-Patch + Order-Patch synchronisiert (Owner bleibt 30301-only).
+
+### 📁 Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| src/lib/stores/kanbanStore.svelte.ts | Column-Patch Publish für create/delete + Patch-Create in Apply | 
+| docs/ARCHITECTURE/STORES/BOARDSTORE.md | Column-Patch Verhalten dokumentiert |
+| docs/COLLABORATION/ROADMAP.md | Roadmap-Version 3.59 ergänzt |
+
+---
 ## Version 4.7.70 - Avatar Profile Picture Fix 👤
 
 **Datum:** 03. Februar 2026  \

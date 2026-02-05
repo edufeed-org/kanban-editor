@@ -344,7 +344,7 @@
 	/* Add-Card-Button: Sticky am unteren Rand wenn gescrollt wird */
 	.add-card-button {
 		border-radius: var(--radius-md);
-		border: 2px dotted var(--accent);
+		/* border: 2px dotted var(--accent); */
 		background: var(--muted);
 		color: var(--foreground);
 		transition: all 0.2s ease;

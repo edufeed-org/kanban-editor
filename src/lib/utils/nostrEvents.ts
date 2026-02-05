@@ -50,6 +50,7 @@ export const EVENT_KINDS = {
  * - order: ordered column ids (one tag, variable length) (optional)
  * - col: column metadata patch entries (repeatable): ["col", <colId>, <name>, <color>]
  * - updated_at_ms: millisecond timestamp for LWW
+ * - del-card: card ids to remove (soft delete across collaborators)
  */
 export function createColumnOrderPatchEvent(
   args: {
@@ -61,6 +62,8 @@ export function createColumnOrderPatchEvent(
       name?: string;
       color?: string;
     }>;
+    deletedColumnIds?: string[];
+    deletedCardIds?: string[];
     updatedAtMs?: number;
   },
   ndk: NDK
@@ -103,6 +106,22 @@ export function createColumnOrderPatchEvent(
     if (name !== '' || color !== '') {
       event.tags.push(['col', id, name, color]);
     }
+  }
+
+  const deletedColumnIds = Array.isArray(args.deletedColumnIds)
+    ? args.deletedColumnIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : [];
+
+  for (const id of deletedColumnIds) {
+    event.tags.push(['del', id]);
+  }
+
+  const deletedCardIds = Array.isArray(args.deletedCardIds)
+    ? args.deletedCardIds.filter((id) => typeof id === 'string' && id.length > 0)
+    : [];
+
+  for (const id of deletedCardIds) {
+    event.tags.push(['del-card', id]);
   }
 
   // Content intentionally empty; all data lives in tags.

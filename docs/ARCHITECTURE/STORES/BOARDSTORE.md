@@ -314,7 +314,7 @@ public getAllBoards(): Array<{ id: string; name: string; updatedAt: number }> {
 ### Karte erstellen
 
 ```typescript
-public createCard(columnId: string, name: string, description?: string): string {
+public createCard(columnId: string, name: string, description?: string, options?: { publish?: boolean }): string {
     const author = authStore.getPubkey() || 'anonymous';
     const authorName = authStore.getUserName() || author;
     
@@ -341,6 +341,11 @@ private addCard(columnId: string, props: CardProps) {
     if (!column) throw new Error(`Spalte ${columnId} nicht gefunden.`);
     const card = column.addCard(props);
     
+    if (options?.publish === false) {
+        this.triggerUpdate({ publish: false });
+        return card.id;
+    }
+
     this.triggerUpdate();  // ← ESSENTIAL!
     this.publishCardToNostr(card.id).catch(err => {
         console.error("Fehler beim Publizieren der Karte:", err)
@@ -385,6 +390,122 @@ private updateCard(cardId: string, updates: Partial<CardProps>): void {
 ```
 
 **REGEL 10:** UI-API (`editCard`) transformiert zu Model-API (`updateCard`).
+
+### Spalte erstellen (Owner vs. Maintainer)
+
+**Owner:** publiziert das Board (Kind 30301).  
+**Maintainer/Editor:** darf kein 30301 publizieren → stattdessen **Column-Patch** (Kind 8571) + **Column-Order Patch**.
+
+**Konsequenz:** Neue Spalten von Maintainern sind nur sichtbar, wenn der Column-Patch die Spalte **anlegt** und die Order verteilt.
+
+```typescript
+public createColumn(name: string, color?: string, options?: { publish?: boolean }): string {
+    const columnId = BoardOperations.createColumn(this.board, name, color);
+    if (!columnId) return '';
+
+    this._columnOrder = [...this._columnOrder, columnId];
+
+    // Bulk-Operations (z.B. populate_board): Zwischen-Publishes unterdrücken
+    if (options?.publish === false) {
+        this.triggerUpdate({ publish: false });
+        return columnId;
+    }
+
+    if (PermissionChecks.canPublishBoard(userRole, boardId)) {
+        this.triggerUpdate();
+        this.publishBoardAsync();
+    } else {
+        this.triggerUpdate({ publish: false });
+        this.publishColumnPatchAsync({ columns: [{ id: columnId, name, color }] });
+        this.publishColumnOrderPatchAsync(this._columnOrder);
+    }
+
+    return columnId;
+}
+```
+
+**Hinweis:** Column-Order Patches **löschen** keine Spalten (defensive Merge). Löschen ist für Nicht-Owner nur lokal.
+**Update:** Maintainer-Deletes werden jetzt als `del`-Tags im Column-Patch gesendet und entfernen Spalten kollaborativ.
+
+**Bulk-Hinweis:** `deleteColumn(columnId, { publish: false })` unterdrückt Zwischen‑Publishes in Massenoperationen
+(z.B. populate_board) und wird am Ende durch ein einzelnes 30301 bzw. Batch‑Patch ersetzt.
+
+### Shared Boards: Owner-only 30301
+
+Für geteilte Boards akzeptieren wir **nur Owner‑signierte** Board‑Events (30301).
+Maintainern bleiben Column‑Patches (8571) und Card‑Events (30302).
+
+### Board-Event mit leeren Spalten
+
+Wenn ein Owner‑Board‑Event **keine `col`‑Tags** enthält, wird das Board als **leer** behandelt
+(alle Spalten und Karten werden entfernt).
+
+### populate_board: Single Final Publish
+
+`populate_board` führt alle Spalten‑/Karten‑Änderungen lokal durch und publiziert **genau einmal am Ende**
+(über `updateBoardMeta`). Zwischen‑Publishes würden sonst 30301‑Events mit **Teil‑Spalten** erzeugen.
+
+### Card-Events vor Column-Events (Race Condition)
+
+Card-Events können **vor** dem Column-Patch eintreffen. Falls die Zielspalte fehlt, werden die Cards **gequeued** und
+nach dem Column-Patch automatisch eingefügt (publish: false).
+
+### Card-Events vor Column-Events (Race Condition)
+
+Card-Events können **vor** dem Column-Patch eintreffen. Falls die Zielspalte fehlt, werden die Cards **gequeued** und
+nach dem Column-Patch automatisch eingefügt (publish: false).
+
+```typescript
+public upsertCardFromNostr(cardProps: CardProps): void {
+    const columnId = (cardProps as any).columnId;
+    if (columnId && !this.board.findColumn(columnId)) {
+        this.queuePendingCard(cardProps);
+        return;
+    }
+
+    BoardOperations.upsertCardFromNostr(this.board, cardProps);
+    this.triggerUpdate({ publish: false });
+}
+```
+
+### Column-Order vor Column-Create (Race Condition)
+
+Column-Order Patches können **vor** den Column-Patches eintreffen. In diesem Fall wird die Order **gepuffert** und
+nach dem Anlegen der fehlenden Spalten angewendet.
+
+```typescript
+private pendingColumnOrderPatch: { columnOrder: string[]; eventTimeMs: number } | null = null;
+
+private tryApplyPendingColumnOrderPatch(): boolean {
+    if (!this.pendingColumnOrderPatch) return false;
+    // apply order once columns exist
+}
+```
+
+### Board-Event nach Card-Events (Race Condition)
+
+Wenn Cards vor einem Board-Event eintreffen, werden sie gepuffert. Beim Board‑Update werden
+alle pending Cards in vorhandene Spalten eingefügt.
+
+### AI Populate: Column-Patch Batch
+
+Für AI‑Bulk‑Operationen (populate_board) wird nach dem Erstellen/Löschen von Spalten ein **Batch‑Patch** gesendet,
+damit Maintainer alle Spalten zuverlässig sehen (ein Event statt viele).
+
+```typescript
+boardStore.publishColumnPatchBatch({
+    columns: createdColumns,
+    deletedColumnIds,
+    columnOrder: board.columns.map(c => c.id),
+    cardIdsToPublish: createdCardIds
+});
+
+// Owner: publiziert zusätzlich das Board (30301) mit aktualisierten Spalten
+boardStore.publishBoardIfOwner();
+
+// Standard: wenn columns übergeben werden, werden ungenutzte Spalten automatisch gelöscht
+// (removeUnusedColumns default = true)
+```
 
 ### Karte verschieben (DnD)
 

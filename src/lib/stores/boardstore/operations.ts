@@ -6,6 +6,7 @@ import { generateDTag, generateTimestamp } from '../../utils/idGenerator.js';
 import type { CardItem, UIColumn } from './types.js';
 import type { NostrIntegration } from './nostr.js';
 import { BoardStorage } from './storage.js';
+import { isCardTombstoned } from './deletedCards.js';
 
 export type SyncBoardStateStrategy = 'defensive-merge' | 'hard-fail';
 
@@ -584,6 +585,11 @@ export class BoardOperations {
     ): boolean {
         console.log(`📥 upsertCardFromNostr: ${cardProps.heading || cardProps.id}`);
 
+        if (cardProps?.id && isCardTombstoned(board.id, cardProps.id)) {
+            console.warn(`⛔ Skipping tombstoned card ${cardProps.id}`);
+            return false;
+        }
+
         const toTimestampMs = (value: unknown): number => {
             if (value === null || value === undefined) return 0;
             if (typeof value === 'number' && Number.isFinite(value)) {
@@ -847,7 +853,11 @@ export class BoardOperations {
             }
             
             // 2. ⚡ NEU: Spalten-Synchronisation (Reihenfolge + Metadaten)
-            if (boardProps.columns && boardProps.columns.length > 0) {
+            if (Array.isArray(boardProps.columns) && boardProps.columns.length === 0) {
+                // ⚡ CRITICAL: Empty columns list means delete all columns (and cards)
+                currentBoard.columns = [];
+                console.log('🧹 Synchronized empty columns from Nostr (cleared board columns)');
+            } else if (boardProps.columns && boardProps.columns.length > 0) {
                 // Erstelle Map: columnId → Column-Instanz
                 const existingColumnsMap = new Map(
                     currentBoard.columns.map(c => [c.id, c])
