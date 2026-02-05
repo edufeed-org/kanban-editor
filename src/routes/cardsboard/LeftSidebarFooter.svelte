@@ -6,12 +6,24 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+	import * as Dialog from "$lib/components/ui/dialog/index.js";
+	import { settingsStore } from "$lib/stores/settingsStore.svelte.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import LoginDialog from "./LoginDialog.svelte";
+	import SettingsDialog from "./SettingsDialog.svelte";
+	import SettingsPanel from "$lib/components/settings/SettingsPanel.svelte";
+	import RelayStatusInfo from "./RelayStatusInfo.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlayIcon from "@lucide/svelte/icons/play";
+	import SettingsIcon from "@lucide/svelte/icons/settings";
 	import UserIcon from "@lucide/svelte/icons/user";
+	import PaletteIcon from "@lucide/svelte/icons/palette";
+	import BotIcon from "@lucide/svelte/icons/bot";
+	import WifiIcon from "@lucide/svelte/icons/wifi";
+	import FileTextIcon from "@lucide/svelte/icons/file-text";
+	import BookIcon from "@lucide/svelte/icons/book";
+	import InfoIcon from "@lucide/svelte/icons/info";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -27,6 +39,10 @@
 	let loginDialogOpen = $state(false);
 
 	let showProfileEditor = $state(false);
+	let uiSettingsOpen = $state(false);
+	let llmSettingsOpen = $state(false);
+	let nostrSettingsOpen = $state(false);
+	let defaultsSettingsOpen = $state(false);
 
 	// Demo-Error Message
 	let demoErrorMessage = $state<string | null>(null);
@@ -93,6 +109,63 @@
 							<UserIcon class="h-4 w-4" />
 							<span>Profil bearbeiten</span>
 						</DropdownMenu.Item>
+
+						<DropdownMenu.Separator />
+
+						<DropdownMenu.Sub>
+							<DropdownMenu.SubTrigger class="gap-2 editor-menu-item">
+								<SettingsIcon class="h-4 w-4" />
+								<span>Applikation</span>
+							</DropdownMenu.SubTrigger>
+							<DropdownMenu.SubContent class="w-56">
+								<DropdownMenu.Item onclick={() => uiSettingsOpen = true} class="gap-2 editor-menu-item">
+									<PaletteIcon class="h-4 w-4" />
+									<span>UI & Layout</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => llmSettingsOpen = true} class="gap-2 editor-menu-item">
+									<BotIcon class="h-4 w-4" />
+									<span>KI-Anbindung</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => nostrSettingsOpen = true} class="gap-2 editor-menu-item">
+									<WifiIcon class="h-4 w-4" />
+									<span>Nostr Relays</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => defaultsSettingsOpen = true} class="gap-2 editor-menu-item">
+									<FileTextIcon class="h-4 w-4" />
+									<span>Standard-Werte</span>
+								</DropdownMenu.Item>
+							</DropdownMenu.SubContent>
+						</DropdownMenu.Sub>
+
+						<DropdownMenu.Sub>
+							<DropdownMenu.SubTrigger class="gap-2 editor-menu-item">
+								<FileTextIcon class="h-4 w-4" />
+								<span>Wissenswertes</span>
+							</DropdownMenu.SubTrigger>
+							<DropdownMenu.SubContent class="w-48">
+								<DropdownMenu.Item
+									onclick={() => window.open(settingsStore.settings.sourceCodeUrl, "_blank")}
+									class="gap-2 editor-menu-item"
+								>
+									<FileTextIcon class="h-4 w-4" />
+									<span>Source Code</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item
+									onclick={() => window.open(settingsStore.settings.documentationUrl, "_blank")}
+									class="gap-2 editor-menu-item"
+								>
+									<BookIcon class="h-4 w-4" />
+									<span>Dokumentation</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item
+									onclick={() => window.open(settingsStore.settings.aboutUrl, "_blank")}
+									class="gap-2 editor-menu-item"
+								>
+									<InfoIcon class="h-4 w-4" />
+									<span>Über</span>
+								</DropdownMenu.Item>
+							</DropdownMenu.SubContent>
+						</DropdownMenu.Sub>
 						
 						<DropdownMenu.Separator />
 						
@@ -157,6 +230,33 @@
     open={showProfileEditor}
     onClose={() => showProfileEditor = false}
 />
+
+<!-- UI/UX Settings Dialog -->
+<SettingsDialog bind:open={uiSettingsOpen} title="UI & Layout Einstellungen" icon={PaletteIcon} tab="ui" />
+
+<!-- LLM Settings Dialog -->
+<SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
+
+<!-- Nostr Relay Settings Dialog -->
+<Dialog.Root bind:open={nostrSettingsOpen}>
+	<Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<WifiIcon class="h-5 w-5" />
+				Nostr Relay Einstellungen
+			</Dialog.Title>
+		</Dialog.Header>
+		<div class="py-4 space-y-4">
+			<div class="pb-4 border-b">
+				<RelayStatusInfo />
+			</div>
+			<SettingsPanel defaultTab="nostr" showHeader={false} showTabs={false} />
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- Defaults Settings Dialog -->
+<SettingsDialog bind:open={defaultsSettingsOpen} title="Standard-Werte" icon={FileTextIcon} tab="defaults" />
 
 <style>
 	/* Verhindere Flex-Shrinking für Avatar */

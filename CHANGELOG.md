@@ -1,4 +1,20 @@
 ﻿# Changelog
+## Version 4.7.96 - Footer Menu Relocation 🧹
+
+**Datum:** 05. Februar 2026  \
+**Branch:** main  \
+**Status:** ✅ Implementiert
+
+### ✨ Verbesserungen
+- **UI:** Menueintraege "Applikation" und "Wissenswertes" ins Footer-Dropdown verschoben.
+
+### 📁 Geaenderte Dateien
+| Datei | Aenderung |
+|-------|----------|
+| src/routes/cardsboard/BoardsList.svelte | Menues entfernt |
+| src/routes/cardsboard/LeftSidebarFooter.svelte | Menues und Dialoge hinzugefuegt |
+
+---
 ## Version 4.7.95 - Deleted Card Tombstones 🧹
 
 **Datum:** 04. Februar 2026  \

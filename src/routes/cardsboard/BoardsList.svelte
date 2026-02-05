@@ -8,14 +8,12 @@
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
 
     import MenuItem from './MenuItem.svelte';
     import SubmenuItem from './SubmenuItem.svelte';
-    import SettingsDialog from './SettingsDialog.svelte';
 
     import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
     import TrashIcon from '@lucide/svelte/icons/trash';
@@ -24,21 +22,13 @@
     import SearchIcon from '@lucide/svelte/icons/search';
     import MenuIcon from '@lucide/svelte/icons/menu';
     import Share2Icon from '@lucide/svelte/icons/share-2';
-    import SettingsIcon from '@lucide/svelte/icons/settings';
     import UserIcon from '@lucide/svelte/icons/user';
     import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
-    import PaletteIcon from '@lucide/svelte/icons/palette';
-    import BotIcon from '@lucide/svelte/icons/bot';
-    import WifiIcon from '@lucide/svelte/icons/wifi';
     import FileTextIcon from '@lucide/svelte/icons/file-text';
-    import BookIcon from '@lucide/svelte/icons/book';
-    import InfoIcon from '@lucide/svelte/icons/info';
-    import SettingsPanel from '$lib/components/settings/SettingsPanel.svelte';
-    import RelayStatusInfo from './RelayStatusInfo.svelte';
     import DownloadIcon from '@lucide/svelte/icons/download';
     import UploadIcon from '@lucide/svelte/icons/upload';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
@@ -97,11 +87,6 @@
     // Profile Editor Dialog State
     let profileEditorOpen = $state(false);
     
-    // App Settings Dialog States
-    let uiSettingsOpen = $state(false);
-    let llmSettingsOpen = $state(false);
-    let nostrSettingsOpen = $state(false);
-    let defaultsSettingsOpen = $state(false);
     let sharePopoverOpen = $state(false);
     let shareToCommunitiesOpen = $state(false);
     let shareEditorsOpen = $state(false);
@@ -574,73 +559,10 @@
             />
             
             <!-- Separator 1 -->
-            <div class="border-t"></div>
-            
-            <!-- 5. Applikation Submenu -->
-            <Popover.Root>
-                <Popover.Trigger class="w-full">
-                    <MenuItem 
-                        icon={SettingsIcon} 
-                        label="Applikation" 
-                        onclick={() => {}}
-                        showBorder={false}
-                        showChevron={true}
-                    />
-                </Popover.Trigger>
-                <Popover.Content side="right" align="start" class="w-64 p-0">
-                    <div class="space-y-0">
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={PaletteIcon} 
-                                label="UI & Layout" 
-                                onclick={() => { 
-                                    uiSettingsOpen = true;
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                        
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={BotIcon} 
-                                label="KI-Anbindung" 
-                                onclick={() => { 
-                                    llmSettingsOpen = true;
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                        
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={WifiIcon} 
-                                label="Nostr Relays" 
-                                onclick={() => { 
-                                    nostrSettingsOpen = true;
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                        
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={FileTextIcon} 
-                                label="Standard-Werte" 
-                                onclick={() => { 
-                                    defaultsSettingsOpen = true;
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                    </div>
-                </Popover.Content>
-            </Popover.Root>
-            
-            <!-- Separator 2 -->
-            <div class="border-t"></div>
-            
-            <!-- 6. User Nostr-Profil -->
-            <MenuItem 
+            <!-- <div class="border-t"></div> -->
+
+            <!-- 5. User Nostr-Profil -->
+            <!-- <MenuItem 
                 icon={UserIcon} 
                 label="User Nostr-Profil" 
                 onclick={() => { 
@@ -649,57 +571,7 @@
                 }}
                 disabled={!authStore.isAuthenticated}
                 showBorder={false}
-            />
-            
-            <!-- Separator 3 -->
-            <div class="border-t"></div>
-            
-            <!-- 7. Wissenswertes Submenu -->
-            <Popover.Root>
-                <Popover.Trigger class="w-full">
-                    <MenuItem 
-                        icon={FileTextIcon} 
-                        label="Wissenswertes" 
-                        onclick={() => {}}
-                        showBorder={false}
-                        showChevron={true}
-                    />
-                </Popover.Trigger>
-                <Popover.Content side="right" align="start" class="w-48 p-0">
-                    <div class="space-y-0">
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={FileTextIcon} 
-                                label="Source Code" 
-                                onclick={() => { 
-                                    window.open(settingsStore.settings.sourceCodeUrl, '_blank');
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={BookIcon} 
-                                label="Dokumentation" 
-                                onclick={() => { 
-                                    window.open(settingsStore.settings.documentationUrl, '_blank');
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
-                            <SubmenuItem 
-                                icon={InfoIcon} 
-                                label="Über" 
-                                onclick={() => { 
-                                    window.open(settingsStore.settings.aboutUrl, '_blank');
-                                    hamburgerMenuOpen = false;
-                                }}
-                            />
-                        </div>
-                    </div>
-                </Popover.Content>
-            </Popover.Root>
+            /> -->
         </div>
     {/if}
     
@@ -914,36 +786,6 @@
 
 <!-- Profile Editor Dialog -->
 <ProfileEditor open={profileEditorOpen} onClose={() => profileEditorOpen = false} />
-
-<!-- UI/UX Settings Dialog -->
-<SettingsDialog bind:open={uiSettingsOpen} title="UI & Layout Einstellungen" icon={PaletteIcon} tab="ui" />
-
-<!-- LLM Settings Dialog -->
-<SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
-
-<!-- Nostr Relay Settings Dialog -->
-<Dialog.Root bind:open={nostrSettingsOpen}>
-    <Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <Dialog.Header>
-            <Dialog.Title class="flex items-center gap-2">
-                <WifiIcon class="h-5 w-5" />
-                Nostr Relay Einstellungen
-            </Dialog.Title>
-        </Dialog.Header>
-        <div class="py-4 space-y-4">
-            <!-- Relay Status Component -->
-            <div class="pb-4 border-b">
-                <RelayStatusInfo />
-            </div>
-            
-            <!-- Settings Panel -->
-            <SettingsPanel defaultTab="nostr" showHeader={false} showTabs={false} />
-        </div>
-    </Dialog.Content>
-</Dialog.Root>
-
-<!-- Defaults Settings Dialog -->
-<SettingsDialog bind:open={defaultsSettingsOpen} title="Standard-Werte" icon={FileTextIcon} tab="defaults" />
 
 <!-- Import Dialog -->
 <Dialog.Root bind:open={importDialogOpen}>
