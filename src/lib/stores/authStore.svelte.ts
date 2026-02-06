@@ -40,6 +40,21 @@ export class AuthStore {
   constructor(private ndk: NDK) {
     // ℹ️ restoreSessionOrCreateDemo ist jetzt async
     // Wird von +layout.svelte aufgerufen als await initializeAuth().restoreSession()
+    
+    // 🚨 CRITICAL: Pre-emptively check for invalid nsec/oidc sessions on construction
+    // This catches stale sessions before any rendering happens
+    if (typeof window !== 'undefined') {
+      const storedSession = get(this.sessionStore);
+      if (storedSession && (storedSession.signerType === 'nsec' || storedSession.signerType === 'oidc')) {
+        const savedNsec = sessionStorage.getItem('nostr-nsec-temp');
+        if (!savedNsec) {
+          console.log(`🚨 [Constructor] Found stale ${storedSession.signerType} session without nsec - clearing immediately`);
+          this.sessionStore.set(null);
+          localStorage.removeItem('nostr-user-session');
+          this.currentUser = null;
+        }
+      }
+    }
   }
 
   /**
@@ -354,15 +369,33 @@ export class AuthStore {
           return;
         }
 
-        // � CRITICAL PRE-CHECK: For nsec/oidc logins, verify nsec exists in sessionStorage
+        // CRITICAL PRE-CHECK: For nsec/oidc logins, verify nsec exists in sessionStorage
         // If not found, logout immediately before attempting any restoration
         if (stored.signerType === "nsec" || stored.signerType === "oidc") {
           const savedNsec = sessionStorage.getItem("nostr-nsec-temp");
           if (!savedNsec) {
             const loginType = stored.signerType === "oidc" ? "OIDC" : "nsec";
             console.log(`⚠️ ${loginType} session found but nsec missing in sessionStorage - logging out`);
-            this.sessionStore.set(null);
+            
+            // Clear session completely - both in-memory and persisted storage
             this.currentUser = null;
+            this.ndk.signer = undefined;
+            this.userProfileCache.clear();
+            this.sessionStore.set(null);
+            
+            // Force clear localStorage to ensure persisted store syncs
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('nostr-user-session');
+            }
+            
+            // Clear SyncManager signer
+            try {
+              getSyncManager().updateSigner(undefined);
+            } catch (e) {
+              // SyncManager might not be initialized yet, ignore
+            }
+            
+            console.log('🚪 User logged out - session cleared from all storages');
             return;
           }
         }
