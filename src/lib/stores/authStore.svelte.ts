@@ -286,16 +286,19 @@ export class AuthStore {
 
     this.sessionStore.set(null);
     
-    // � Clear nsec from sessionStorage on logout (security)
+    // 🔑 Clear nsec from sessionStorage on logout (security)
     sessionStorage.removeItem("nostr-nsec-temp");
     
-    // �🔄 Clear SyncManager signer on logout
+    // 🔄 Clear SyncManager signer on logout
     try {
       getSyncManager().updateSigner(undefined);
       console.log('✅ SyncManager signer cleared after logout');
     } catch (error) {
       console.warn('⚠️ SyncManager signer clear warning:', error);
     }
+
+    // 🧹 Clear OIDC UserManager singleton on logout
+    clearOidcUserManager();
 
     // ✅ IMPORTANT: Do NOT call AuthStoreWrapper.reset() here!
     // This would destroy the instance and break reactive $derived values
@@ -1103,17 +1106,48 @@ export function initializeAuth(ndk: NDK): AuthStore {
   return AuthStoreWrapper.initialize(ndk);
 }
 
+// Singleton UserManager instance to prevent multiple instances and token refresh polling
+let oidcUserManagerInstance: UserManager | null = null;
+
+/**
+ * Get or create OIDC UserManager singleton
+ * 
+ * IMPORTANT: automaticSilentRenew is disabled because:
+ * - We store nsec in sessionStorage (cleared on tab close)
+ * - User must re-login after tab close anyway
+ * - No need for background token renewal
+ * - Prevents excessive requests to identity provider
+ */
 export async function initializeOidcUserManager(currentUrl: string): Promise<UserManager> {
+  // Return existing instance if already created
+  if (oidcUserManagerInstance) {
+    return oidcUserManagerInstance;
+  }
+
   const envConfig = await settingsStore.getConfig()
 
-  return new UserManager({
+  oidcUserManagerInstance = new UserManager({
     authority: envConfig.oidc.authority || 'http://localhost:8080/realms/master',
     client_id: envConfig.oidc.client_id || 'kanban-board',
     redirect_uri: currentUrl,
     post_logout_redirect_uri: currentUrl,
     response_type: 'code',
     scope: 'openid profile email',
-    automaticSilentRenew: true,
+    automaticSilentRenew: false, // Disabled - nsec in sessionStorage requires re-login on tab close
     userStore: new WebStorageStateStore({ store: localStorage }),
   });
+
+  return oidcUserManagerInstance;
+}
+
+/**
+ * Clear OIDC UserManager singleton instance
+ * Called on logout to clean up resources
+ */
+export function clearOidcUserManager(): void {
+  if (oidcUserManagerInstance) {
+    // UserManager doesn't have a cleanup method, just clear the reference
+    oidcUserManagerInstance = null;
+    console.log('🧹 OIDC UserManager singleton cleared');
+  }
 }
