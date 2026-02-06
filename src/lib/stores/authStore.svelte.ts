@@ -354,7 +354,20 @@ export class AuthStore {
           return;
         }
 
-        // 🔑 KRITISCH: Signer rekonstruieren basierend auf signerType
+        // � CRITICAL PRE-CHECK: For nsec/oidc logins, verify nsec exists in sessionStorage
+        // If not found, logout immediately before attempting any restoration
+        if (stored.signerType === "nsec" || stored.signerType === "oidc") {
+          const savedNsec = sessionStorage.getItem("nostr-nsec-temp");
+          if (!savedNsec) {
+            const loginType = stored.signerType === "oidc" ? "OIDC" : "nsec";
+            console.log(`⚠️ ${loginType} session found but nsec missing in sessionStorage - logging out`);
+            this.sessionStore.set(null);
+            this.currentUser = null;
+            return;
+          }
+        }
+
+        // �🔑 KRITISCH: Signer rekonstruieren basierend auf signerType
         let signer: any = null;
         
         if (stored.signerType === "nip07") {
