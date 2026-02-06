@@ -1152,11 +1152,8 @@ export function initializeAuth(ndk: NDK): AuthStore {
   return AuthStoreWrapper.initialize(ndk);
 }
 
-// Singleton UserManager instance to prevent multiple instances and token refresh polling
-let oidcUserManagerInstance: UserManager | null = null;
-
 /**
- * Get or create OIDC UserManager singleton
+ * Get or create OIDC UserManager
  * 
  * IMPORTANT: automaticSilentRenew is disabled because:
  * - We store nsec in sessionStorage (cleared on tab close)
@@ -1165,14 +1162,9 @@ let oidcUserManagerInstance: UserManager | null = null;
  * - Prevents excessive requests to identity provider
  */
 export async function initializeOidcUserManager(currentUrl: string): Promise<UserManager> {
-  // Return existing instance if already created
-  if (oidcUserManagerInstance) {
-    return oidcUserManagerInstance;
-  }
-
   const envConfig = await settingsStore.getConfig()
 
-  oidcUserManagerInstance = new UserManager({
+  return new UserManager({
     authority: envConfig.oidc.authority || 'http://localhost:8080/realms/master',
     client_id: envConfig.oidc.client_id || 'kanban-board',
     redirect_uri: currentUrl,
@@ -1182,8 +1174,6 @@ export async function initializeOidcUserManager(currentUrl: string): Promise<Use
     automaticSilentRenew: false, // Disabled - nsec in sessionStorage requires re-login on tab close
     userStore: new WebStorageStateStore({ store: localStorage }),
   });
-
-  return oidcUserManagerInstance;
 }
 
 /**
@@ -1191,9 +1181,6 @@ export async function initializeOidcUserManager(currentUrl: string): Promise<Use
  * Called on logout to clean up resources
  */
 export function clearOidcUserManager(): void {
-  if (oidcUserManagerInstance) {
-    // UserManager doesn't have a cleanup method, just clear the reference
-    oidcUserManagerInstance = null;
-    console.log('🧹 OIDC UserManager singleton cleared');
-  }
+  // No-op now since we're not using singleton pattern
+  // Kept for API compatibility
 }
