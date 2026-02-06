@@ -18,7 +18,7 @@ export interface UserSession {
     nip05?: string;
     lud16?: string;
   };
-  signerType: "nip07" | "nsec" | "nip46" | "demo";
+  signerType: "nip07" | "nsec" | "nip46" | "oidc" | "demo";
   lastLogin: number;
   expires: number;
 }
@@ -214,11 +214,11 @@ export class AuthStore {
 
       this.currentUser = user;
 
-      // 🔑 OIDC FIX: Store nsec in sessionStorage for page refresh restoration
+      // 🔑 OIDC: Store nsec in sessionStorage (cleared when tab closes)
       // This allows the signer to be reconstructed after page reload
       sessionStorage.setItem("nostr-nsec-temp", nsec);
 
-      await this.saveSession(user, "nsec");
+      await this.saveSession(user, "oidc");
       
       // 🔄 Update SyncManager with new signer
       try {
@@ -286,16 +286,19 @@ export class AuthStore {
 
     this.sessionStore.set(null);
     
-    // � Clear nsec from sessionStorage on logout (security)
+    // 🔑 Clear nsec from sessionStorage on logout (security)
     sessionStorage.removeItem("nostr-nsec-temp");
     
-    // �🔄 Clear SyncManager signer on logout
+    // 🔄 Clear SyncManager signer on logout
     try {
       getSyncManager().updateSigner(undefined);
       console.log('✅ SyncManager signer cleared after logout');
     } catch (error) {
       console.warn('⚠️ SyncManager signer clear warning:', error);
     }
+
+    // 🧹 Clear OIDC UserManager singleton on logout
+    clearOidcUserManager();
 
     // ✅ IMPORTANT: Do NOT call AuthStoreWrapper.reset() here!
     // This would destroy the instance and break reactive $derived values
@@ -310,7 +313,7 @@ export class AuthStore {
    */
   private async saveSession(
     user: NDKUser,
-    signerType: "nip07" | "nsec" | "nip46"
+    signerType: "nip07" | "nsec" | "nip46" | "oidc"
   ): Promise<void> {
     const session: UserSession = {
       pubkey: user.pubkey,
@@ -387,10 +390,12 @@ export class AuthStore {
             // Fall back to demo if NIP-07 fails
             signer = null;
           }
-        } else if (stored.signerType === "nsec") {
-          // 🔑 nsec-Restore: Nur wenn es noch im sessionStorage ist (Development only)
-          console.log("🔄 Versuch nsec-Signer nach Page Reload zu rekonstruieren...");
+        } else if (stored.signerType === "nsec" || stored.signerType === "oidc") {
+          // 🔑 nsec/OIDC-Restore: Nur wenn es noch im sessionStorage ist
+          const loginType = stored.signerType === "oidc" ? "OIDC" : "nsec";
+          console.log(`🔄 Versuch ${loginType}-Signer nach Page Reload zu rekonstruieren...`);
           const savedNsec = sessionStorage.getItem("nostr-nsec-temp");
+          
           if (savedNsec) {
             try {
               signer = new NDKPrivateKeySigner(savedNsec);
@@ -398,31 +403,37 @@ export class AuthStore {
               
               const signerUser = await signer.user();
               if (signerUser.pubkey !== stored.pubkey) {
-                throw new Error("nsec pubkey mismatch");
+                throw new Error(`${loginType} nsec pubkey mismatch`);
               }
-              console.log("✅ nsec Signer successfully reconnected!");
+              console.log(`✅ ${loginType} Signer successfully reconnected!`);
               
               // 🔄 Update SyncManager
               try {
                 getSyncManager().updateSigner(signer);
-                console.log('✅ SyncManager signer updated after nsec restore');
+                console.log(`✅ SyncManager signer updated after ${loginType} restore`);
                 
                 // 🔄 Reconnect AUTH_REQUIRED relays
                 const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
                 await reconnectAuthRelays();
               } catch (e) {
-                console.warn('⚠️ SyncManager update on restore:', e);
+                console.warn(`⚠️ SyncManager update on ${loginType} restore:`, e);
               }
 
               // ℹ️ Note: BoardStore will load boards from Nostr when initializeNostr() is called
               // Don't do it here - avoid duplicate loading and race conditions
 
             } catch (error) {
-              console.warn("⚠️ nsec Signer rekonstruktion fehlgeschlagen:", error);
+              console.warn(`⚠️ ${loginType} Signer rekonstruktion fehlgeschlagen:`, error);
               signer = null;
             }
-          } else {
-            console.log("⚠️ nsec not found in sessionStorage - user needs to login again");
+          }
+          
+          // 🚪 CRITICAL: If nsec not found in sessionStorage, logout completely
+          if (!savedNsec) {
+            console.log(`⚠️ ${loginType} nsec not found in sessionStorage - logging out completely`);
+            this.sessionStore.set(null);
+            this.currentUser = null;
+            return;
           }
         }
 
@@ -1095,17 +1106,48 @@ export function initializeAuth(ndk: NDK): AuthStore {
   return AuthStoreWrapper.initialize(ndk);
 }
 
+// Singleton UserManager instance to prevent multiple instances and token refresh polling
+let oidcUserManagerInstance: UserManager | null = null;
+
+/**
+ * Get or create OIDC UserManager singleton
+ * 
+ * IMPORTANT: automaticSilentRenew is disabled because:
+ * - We store nsec in sessionStorage (cleared on tab close)
+ * - User must re-login after tab close anyway
+ * - No need for background token renewal
+ * - Prevents excessive requests to identity provider
+ */
 export async function initializeOidcUserManager(currentUrl: string): Promise<UserManager> {
+  // Return existing instance if already created
+  if (oidcUserManagerInstance) {
+    return oidcUserManagerInstance;
+  }
+
   const envConfig = await settingsStore.getConfig()
 
-  return new UserManager({
+  oidcUserManagerInstance = new UserManager({
     authority: envConfig.oidc.authority || 'http://localhost:8080/realms/master',
     client_id: envConfig.oidc.client_id || 'kanban-board',
     redirect_uri: currentUrl,
     post_logout_redirect_uri: currentUrl,
     response_type: 'code',
     scope: 'openid profile email',
-    automaticSilentRenew: true,
+    automaticSilentRenew: false, // Disabled - nsec in sessionStorage requires re-login on tab close
     userStore: new WebStorageStateStore({ store: localStorage }),
   });
+
+  return oidcUserManagerInstance;
+}
+
+/**
+ * Clear OIDC UserManager singleton instance
+ * Called on logout to clean up resources
+ */
+export function clearOidcUserManager(): void {
+  if (oidcUserManagerInstance) {
+    // UserManager doesn't have a cleanup method, just clear the reference
+    oidcUserManagerInstance = null;
+    console.log('🧹 OIDC UserManager singleton cleared');
+  }
 }
