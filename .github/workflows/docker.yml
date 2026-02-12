@@ -66,4 +66,4 @@ jobs:
 
       - name: Skip build
         if: steps.check-image.outputs.exists == 'true'
-        run: echo "Skipping build: image version ${{ steps.version.outputs.version }} already published"
+        run: echo "Skipping build, image version ${{ steps.version.outputs.version }} already published"
