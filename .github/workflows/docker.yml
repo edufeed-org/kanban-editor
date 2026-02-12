@@ -55,15 +55,15 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfiled
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ steps.version.outputs.image_tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args:
-            - GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip build
         if: steps.check-image.outputs.exists == 'true'
