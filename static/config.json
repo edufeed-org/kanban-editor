@@ -12,8 +12,6 @@
 
   "nostr": {
     "relaysPublic": [
-      "wss://relay-rpi.edufeed.org",
-      "wss://relay.edufeed.org",
       "ws://localhost:7000"
     ],
     "relaysPrivate": [
@@ -31,7 +29,7 @@
 
   "llm": {
     "model": "glm-4.7-flash",
-    "baseUrl": "http://localhost:11434",
+    "baseUrl": "https://kanban.edufeed.org/llm/api",
     "apiKey": "",
     "$comment_apiKey": "⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!",
     "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben."
@@ -58,7 +56,7 @@
   },
 
   "oerFinderPlugin": {
-    "apiUrl": "http://localhost:3001",
+    "apiUrl": "https://kanban.edufeed.org/oer-finder/",
     "language": "de"
   },
   
