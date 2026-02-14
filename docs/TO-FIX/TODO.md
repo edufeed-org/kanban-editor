@@ -1,8 +1,33 @@
 Notwendige Fixes und ToDos für den Kanban Editor
 ===============================================
 
-- [ ] https://github.com/edufeed-org/kanban-editor/issues/10 (Refactoren so, dass alle Stores die geleiche Persistenz-Logik nutzen)
-- [ ] https://github.com/edufeed-org/kanban-editor/issues/9 (Resizebale Sidebars funktionieren nicht mit mobilen Divices)
-- [x] bei neu angelegten Cards wird der Autor /Attendees nicht angezeigt, bzw. erst nach dem neu laden. Reaktivität? (FIXED: Local state pattern für author/authorName/attendees implementiert)
-- [x] das Popover für die Columns Optionen bleibt nach dem klicken auf die drei Punkte (PopoverTrigger) unsichtbar. Wenn ich eine Column verschiebe, wird es nach dem Klicken auf den PopoverTriger sichtbar. Console gibt eine Warnung aus: Fehler beim Verarbeiten des Wertes für 'z-index'.  Deklaration ignoriert. 
-- [x] Beim Aufrufen der Seite wird ein default Board geladen aber nicht gespeichert, wenn keine Boards existieren. Das verhaltend ist irritierend. Besser wäre das ein echtes neues Board angelegt und gespeichert wird. Neue Boards sollten außerdem die Eintellung defaultColumns aus dem Settingsstore berücksichtig. Ausnahme: Das Board kann nicht gespeichert werden, wenn der User nicht angemeldet ist. (FIXED: createDefaultBoard() nutzt jetzt settingsStore.defaultColumns, Board wird nur gespeichert wenn Auth erlaubt)
+## Neuer Task: Sicherheits-Guard fuer Column-Patch-Events (Kind 8571)
+
+- Problem: Column-Patch-Events (Spaltenname/-farbe/-reihenfolge) werden aktuell ohne harten Rollencheck angewendet.
+- Risiko: Fremde Publisher koennen potenziell Spalten-Metadaten beeinflussen, wenn Event-Filter greifen.
+- Ziel: Inbound-Patch nur akzeptieren, wenn `event.pubkey` entweder `board.author` oder in `board.maintainers` enthalten ist.
+- Umsetzung:
+  - Guard im Patch-Handler/Apply-Pfad einbauen (`publisherPubkey` verbindlich validieren).
+  - Ungueltige Events mit Debug/Warn skippen (kein Apply, kein local persist).
+  - Vorhandene Owner-only-Regel fuer 30301 unveraendert lassen.
+- Tests:
+  - `editor`-Patch wird angewendet.
+  - `owner`-Patch wird angewendet.
+  - Fremder Pubkey wird verworfen.
+  - LWW-Verhalten bleibt intakt.
+
+## Neuer Task: Sicherheits-Guard fuer Card-Events (Kind 30302)
+
+- Problem: Card-Events werden aktuell ohne harten Publisher-Rollencheck verarbeitet.
+- Risiko: Fremde Publisher koennen Card-Inhalte, Positionen (rank/column) oder Loeschungen im Client beeinflussen.
+- Ziel: Inbound-Card nur akzeptieren, wenn `event.pubkey` entweder `board.author` oder in `board.maintainers` enthalten ist.
+- Optional: `card.author` nicht als harte Sperre fuer Updates erzwingen, damit Maintainer kollaborativ alle Cards bearbeiten koennen.
+- Umsetzung:
+  - Guard in `handleCardEvent` vor `upsertCardFromNostr()` / `upsertCardToBackgroundBoard()` einbauen.
+  - Ungueltige Events mit Debug/Warn skippen (kein Apply, kein local persist).
+  - Bestehende LWW-/Tie-Break-Logik unveraendert lassen.
+- Tests:
+  - Owner-Card-Update wird angewendet.
+  - Maintainer-Card-Update wird angewendet.
+  - Fremder Pubkey wird verworfen.
+  - Background-Board-Sync respektiert den Guard.
