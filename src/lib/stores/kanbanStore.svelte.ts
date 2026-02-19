@@ -3516,6 +3516,9 @@ export class BoardStore {
             color: c.color
         }));
         
+        // ⚡ FIX v4.3: Maintainers VOR dem Update merken (für Subscription-Restart)
+        const previousMaintainers = [...(this.board.maintainers || [])];
+        
         const isUpdate = BoardOperations.upsertBoardFromNostr(this.board, {
             id: boardProps.id,
             name: boardProps.name,
@@ -3537,14 +3540,38 @@ export class BoardStore {
             const flushedCards = this.flushAllPendingCardsForExistingColumns();
             const appliedPendingOrder = this.tryApplyPendingColumnOrderPatch();
             
-            // ⚡ v4.1: KEIN saveToStorage bei Updates von Nostr!
-            // Grund: Board existiert bereits in localStorage
-            // Update wird erst beim nächsten User-Edit gespeichert
-            // Das verhindert Race Conditions mit LWW
-            if (flushedCards || appliedPendingOrder) {
-                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
-            } else {
-                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+            // ⚡ v4.3 FIX: Board-Metadaten MÜSSEN in localStorage gespeichert werden!
+            // Ohne saveToStorage() gehen Maintainers/Columns/Name nach Reload verloren.
+            // publish: false verhindert Nostr-Publishing (kein Echo-Loop).
+            // Die alte v4.1 Strategie (KEIN save) war zu aggressiv und verursachte
+            // den Collaboration-Bug: Editor konnte Änderungen des Owners nicht sehen.
+            this.triggerUpdate({ publish: false });
+            
+            // ⚡ v4.3 FIX: Subscription bei Maintainer-Änderung neu starten
+            // Damit neue Editoren Card-Events empfangen/senden können
+            const currentMaintainers = this.board.maintainers || [];
+            const maintainersChanged = 
+                previousMaintainers.length !== currentMaintainers.length ||
+                previousMaintainers.some((m, i) => m !== currentMaintainers[i]);
+            
+            if (maintainersChanged) {
+                console.log('[BoardStore] 🔄 Maintainers changed via Nostr - restarting subscription');
+                this.subscribeToNostrUpdates();
+            }
+            
+            // ⚡ v4.3 FIX: Shared-Board-Cache aktualisieren falls Board dort gelistet ist
+            const cachedIndex = this.cachedSharedBoards.findIndex(b => b.id === boardProps.id);
+            if (cachedIndex !== -1) {
+                this.cachedSharedBoards[cachedIndex] = {
+                    ...this.cachedSharedBoards[cachedIndex],
+                    name: this.board.name,
+                    description: this.board.description,
+                    updatedAt: this.board.updatedAt 
+                        ? (typeof this.board.updatedAt === 'string' 
+                            ? new Date(this.board.updatedAt).getTime() 
+                            : this.board.updatedAt)
+                        : undefined
+                };
             }
         } else {
             // ⚡ v4.2: NEUES Board - Erstelle VOLLSTÄNDIGES Board-Objekt!

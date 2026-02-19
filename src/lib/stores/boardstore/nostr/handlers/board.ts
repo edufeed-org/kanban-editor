@@ -82,25 +82,36 @@ export async function handleBoardEvent(
 			const localTime = unknownTimestampToMs(localBoard.updatedAt);
 			const eventTime = unixSecondsToMs(boardEvent.created_at); // Nostr timestamps sind in Sekunden
 
+			// ⚡ v4.4 FIX: Owner-signierte Events für Shared Boards IMMER akzeptieren!
+			// Der Owner ist die kanonische Source-of-Truth für Kind 30301.
+			// Lokale Timestamps können durch Bug (Sub5 updatedAt=NOW) oder Clock-Skew
+			// neuer sein als der Event-Timestamp → Owner-Events dürfen NIE blockiert werden.
+			const isOwnerSigned = boardEvent.pubkey && boardProps.author && boardEvent.pubkey === boardProps.author;
+			const { authStore } = await import('../../../authStore.svelte.js');
+			const currentUser = authStore.getPubkey();
+			const isSharedBoard = currentUser !== boardProps.author;
+
 			if (eventTime <= localTime) {
-				// ⚡ PERMISSION OVERRIDE: Owner-signed event darf Editor-Entzug durchsetzen
-				// auch wenn lokale Daten durch (nicht-publishbare) Viewer-Edits neuer sind.
-				const { authStore } = await import('../../../authStore.svelte.js');
-				const currentUser = authStore.getPubkey();
-				const incomingMaintainers = boardProps.maintainers || [];
-				const isOwnerSigned = boardEvent.pubkey && boardProps.author && boardEvent.pubkey === boardProps.author;
-				const localHadEditor = !!(currentUser && localBoard.maintainers?.includes(currentUser));
-				const incomingRemovedEditor = !!(currentUser && !incomingMaintainers.includes(currentUser));
+				if (isOwnerSigned && isSharedBoard) {
+					// ⚡ v4.4: Owner-Event auf Shared Board → IMMER akzeptieren
+					console.log(`✅ LWW bypass: Owner-signed event on shared board (local ${Math.round(localTime/1000)}s, event ${Math.round(eventTime/1000)}s)`);
+				} else {
+					// ⚡ PERMISSION OVERRIDE: Owner-signed event darf Editor-Entzug durchsetzen
+					// auch wenn lokale Daten durch (nicht-publishbare) Viewer-Edits neuer sind.
+					const incomingMaintainers = boardProps.maintainers || [];
+					const localHadEditor = !!(currentUser && localBoard.maintainers?.includes(currentUser));
+					const incomingRemovedEditor = !!(currentUser && !incomingMaintainers.includes(currentUser));
 
-				if (!(isOwnerSigned && localHadEditor && incomingRemovedEditor)) {
-					// Silent skip - lokale Daten sind neuer oder gleich
-					return;
+					if (!(isOwnerSigned && localHadEditor && incomingRemovedEditor)) {
+						// Silent skip - lokale Daten sind neuer oder gleich
+						return;
+					}
+
+					console.log('🧹 Permission override: Owner removed editor, applying board event');
 				}
-
-				console.log('🧹 Permission override: Owner removed editor, applying board event');
+			} else {
+				console.log(`✅ LWW: Apply newer event (${Math.round((eventTime - localTime) / 1000)}s newer)`);
 			}
-
-			console.log(`✅ LWW: Apply newer event (${Math.round((eventTime - localTime) / 1000)}s newer)`);
 		}
 
 		// ⚡ NEW: Set unseen changes flag if board is NOT currently loaded

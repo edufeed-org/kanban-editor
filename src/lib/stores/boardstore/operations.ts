@@ -915,6 +915,10 @@ export class BoardOperations {
                 publishState: (boardProps.publishState as any) || 'private',
                 tags: boardProps.tags || [],
                 columns: boardProps.columns || [],
+                // ⚡ v4.4 FIX: updatedAt vom Event übernehmen!
+                // VORHER: fehlte → Board constructor default = generateTimestamp() = NOW
+                // → LWW-Check blockierte ALLE zukünftigen Owner-Events permanent!
+                updatedAt: boardProps.updatedAt,
                 // 🔴 FIX: Neues Board von Nostr → KEIN lastAccessedAt!
                 // Grund: Board wurde NICHT vom User angesehen, nur vom Relay empfangen
                 // → Erscheint am ENDE der Liste (bis User es das erste Mal öffnet)
