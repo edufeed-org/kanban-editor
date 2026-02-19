@@ -3053,6 +3053,8 @@ export class BoardStore {
      * Prüft ob der aktuelle Nutzer Editor-Rechte hat
      */
     public canCurrentUserEdit(): boolean {
+        // 🎯 DEMO-BOARD EXCEPTION: Anonyme Benutzer dürfen alles im Demo-Board
+        if (this.board.id === 'demo-board') return true;
         const currentUser = authStore.getPubkey();
         return this.board.canEditBoard(currentUser || undefined);
     }
