@@ -7,10 +7,12 @@
     import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
+    import { goto } from '$app/navigation';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
+    import { createBoardNaddrUrl } from '$lib/utils/nostrEvents.js';
 
     import MenuItem from './MenuItem.svelte';
     import SubmenuItem from './SubmenuItem.svelte';
@@ -181,6 +183,41 @@
         for (const board of sharedBoards) {
             boardMap.set(board.id, board);
         }
+
+        // ✅ Aktives Fremd-Board einfügen wenn es nicht in boardMap ist (z.B. nach Seiten-Reload).
+        // Nach einem Reload ist cachedSharedBoards leer (onAuthChanged clears it) und die Nostr-
+        // Abfrage noch nicht abgeschlossen. Das Board ist aber in localStorage vorhanden und wird
+        // vom Store geladen – es fehlt nur in der Sidebar-Liste.
+        const activeBoardId = boardStore.data?.id;
+        const activeBoard = boardStore.data;
+        if (
+            activeBoardId &&
+            activeBoardId === currentBoardId &&
+            !boardMap.has(activeBoardId) &&
+            activeBoard?.author &&
+            activeBoard.author !== authStore.getPubkey()
+        ) {
+            const lastAccTimestamp = activeBoard.lastAccessedAt
+                ? new Date(activeBoard.lastAccessedAt).getTime()
+                : undefined;
+            const updatedTimestamp = activeBoard.updatedAt
+                ? new Date(activeBoard.updatedAt).getTime()
+                : undefined;
+            const createdTimestamp = activeBoard.createdAt
+                ? new Date(activeBoard.createdAt).getTime()
+                : Date.now();
+            boardMap.set(activeBoardId, {
+                id: activeBoardId,
+                name: activeBoard.name,
+                description: activeBoard.description,
+                createdAt: createdTimestamp,
+                updatedAt: updatedTimestamp,
+                lastAccessed: lastAccTimestamp,
+                isShared: true,
+                userRole: 'viewer',
+                author: activeBoard.author
+            });
+        }
         
         // Konvertiere zu Array und sortiere nach lastAccessed (neueste zuerst)
         const uniqueBoards = Array.from(boardMap.values()).sort((a, b) => {
@@ -192,6 +229,27 @@
         return uniqueBoards;
     });
 
+    /**
+     * Navigiere zur naddr-URL des aktuellen Boards.
+     * Nutzt replaceState damit kein neuer History-Eintrag pro Board-Wechsel entsteht.
+     */
+    function navigateToBoardUrl() {
+        const board = boardStore.data;
+        if (board?.author) {
+            try {
+                const naddrUrl = createBoardNaddrUrl(board.id, board.author);
+                goto(naddrUrl, { replaceState: true });
+            } catch (error) {
+                console.warn('⚠️ Konnte naddr-URL nicht erstellen:', error);
+                // Fallback: Bleibe auf /cardsboard/
+                goto('/cardsboard/', { replaceState: true });
+            }
+        } else {
+            // Kein Author (z.B. lokales Board ohne Nostr-Pubkey) → einfache URL
+            goto('/cardsboard/', { replaceState: true });
+        }
+    }
+
     // Event: Neues Board erstellen
     async function handleCreateBoard() {
         isCreating = true;
@@ -199,6 +257,7 @@
             const newBoardId = boardStore.createBoard('Neues Board');
             boardStore.loadBoard(newBoardId);
             currentBoardId = newBoardId;
+            navigateToBoardUrl();
 
             searchQuery = '';
         } catch (error) {
@@ -220,6 +279,7 @@
             const success = boardStore.loadBoard(boardId);
             if (success) {
                 currentBoardId = boardId;
+                navigateToBoardUrl();
                 console.log('✅ Board geladen:', boardId);
             }
         } catch (error) {
@@ -546,8 +606,10 @@
                             const newBoardId = remaining[0].id;
                             boardStore.loadBoard(newBoardId);
                             currentBoardId = newBoardId;
+                            navigateToBoardUrl();
                         } else {
                             currentBoardId = '';
+                            goto('/cardsboard/', { replaceState: true });
                         }
                     } catch (error) {
                         console.error('❌ Fehler beim Löschen/Verlassen:', error);
@@ -849,6 +911,7 @@
                             importFile = null;
                             if (result.board?.id) {
                                 boardStore.loadBoard(result.board.id);
+                                navigateToBoardUrl();
                             }
                         } else {
                             toast.error(`Import fehlgeschlagen: ${result.error}`);
