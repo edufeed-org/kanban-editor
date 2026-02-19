@@ -220,26 +220,7 @@
      */
     async function loadAndRedirect() {
         try {
-            // 1. Warte auf NDK
-            loadingStep = 'NDK initialisieren...';
-            
-            // Warte bis boardStore.ndkReady true ist
-            let attempts = 0;
-            while (!boardStore.ndkReady && attempts < 50) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!boardStore.ndkReady) {
-                throw new Error('NDK konnte nicht initialisiert werden');
-            }
-
-            const ndk = boardStore.nostrIntegration?.getNDK();
-            if (!ndk) {
-                throw new Error('NDK nicht verfügbar');
-            }
-
-            // 2. Dekodiere naddr
+            // 1. Dekodiere naddr (reine Funktion, braucht kein NDK)
             loadingStep = 'naddr dekodieren...';
             const naddrParam = $page.params.naddr;
             
@@ -264,6 +245,8 @@
                 relays: naddrData.relays
             });
 
+            // 2. Quick-Checks BEVOR NDK gewartet wird (brauchen kein Netzwerk)
+            
             // ✅ Quick-Check: Board ist bereits das aktive Board → sofort fertig
             if (boardStore.data?.id === naddrData.identifier) {
                 console.log('✅ Board ist bereits aktiv, überspringe Laden');
@@ -283,7 +266,59 @@
                 return;
             }
 
-            // 3. Verbinde zu Relay-Hints
+            // ✅ Check: Board bereits lokal im Cache → direkt laden (kein NDK nötig)
+            const boardId = naddrData.identifier;
+            const existingBoard = BoardStorage.loadBoard(boardId);
+            
+            if (existingBoard) {
+                console.log('✅ Board bereits lokal vorhanden, lade direkt');
+                loadingStep = 'Board wird geöffnet...';
+                boardStore.loadBoard(boardId);
+
+                // Viewer-CTA: eingeloggt aber nicht Owner → Follow-Button in Topbar anzeigen
+                const cachedUserPubkey = authStore.getPubkey();
+                if (cachedUserPubkey && naddrData.pubkey && naddrData.pubkey !== cachedUserPubkey) {
+                    const updatedAtMs = existingBoard.updatedAt
+                        ? new Date(existingBoard.updatedAt).getTime()
+                        : undefined;
+                    boardStore.handleSharedBoardEvent({
+                        id: boardId,
+                        name: existingBoard.name,
+                        description: existingBoard.description,
+                        createdAt: new Date(existingBoard.createdAt).getTime(),
+                        updatedAt: updatedAtMs,
+                        isShared: true,
+                        userRole: 'viewer',
+                        author: naddrData.pubkey
+                    });
+                    boardStore.refreshBoardIds();
+                    followBoardState.setPending(boardId, naddrData.pubkey);
+                }
+
+                status = 'success';
+                return;
+            }
+
+            // 3. Ab hier: Board muss von Nostr geladen werden → NDK erforderlich
+            loadingStep = 'NDK initialisieren...';
+            
+            // Warte bis boardStore.ndkReady true ist
+            let attempts = 0;
+            while (!boardStore.ndkReady && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!boardStore.ndkReady) {
+                throw new Error('NDK konnte nicht initialisiert werden');
+            }
+
+            const ndk = boardStore.nostrIntegration?.getNDK();
+            if (!ndk) {
+                throw new Error('NDK nicht verfügbar');
+            }
+
+            // 4. Verbinde zu Relay-Hints
             loadingStep = 'Verbinde zu Relays...';
             await connectToRelayHints(ndk, naddrData.relays);
 
@@ -327,39 +362,6 @@
                 } catch (err) {
                     console.warn('Error while searching AMB for a-tag', aCandidate, err);
                 }
-            }
-
-            // 4. Prüfe ob Board bereits lokal existiert
-            const boardId = naddrData.identifier;
-            const existingBoard = BoardStorage.loadBoard(boardId);
-            
-            if (existingBoard) {
-                console.log('✅ Board bereits lokal vorhanden, lade direkt');
-                loadingStep = 'Board wird geöffnet...';
-                boardStore.loadBoard(boardId);
-
-                // Viewer-CTA: eingeloggt aber nicht Owner → Follow-Button in Topbar anzeigen
-                const cachedUserPubkey = authStore.getPubkey();
-                if (cachedUserPubkey && naddrData.pubkey && naddrData.pubkey !== cachedUserPubkey) {
-                    const updatedAtMs = existingBoard.updatedAt
-                        ? new Date(existingBoard.updatedAt).getTime()
-                        : undefined;
-                    boardStore.handleSharedBoardEvent({
-                        id: boardId,
-                        name: existingBoard.name,
-                        description: existingBoard.description,
-                        createdAt: new Date(existingBoard.createdAt).getTime(),
-                        updatedAt: updatedAtMs,
-                        isShared: true,
-                        userRole: 'viewer',
-                        author: naddrData.pubkey
-                    });
-                    boardStore.refreshBoardIds();
-                    followBoardState.setPending(boardId, naddrData.pubkey);
-                }
-
-                status = 'success';
-                return;
             }
 
             // 5. Lade Board von Nostr
