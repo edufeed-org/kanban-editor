@@ -43,6 +43,7 @@
     let isBoardPublished = $derived(boardStore.data?.publishState === 'published');
     let userRole = $derived(boardStore.getCurrentUserRole());
     let isOwner = $derived(userRole === BoardRole.OWNER);
+    let canEdit = $derived(boardStore.canCurrentUserEdit());
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
@@ -241,7 +242,7 @@
                         class="font-semibold text-lg bg-transparent border-b-2 border-primary outline-none px-1 min-w-[150px] max-w-[400px]"
                         style="width: {Math.max(150, editTitleValue.length * 10)}px"
                     />
-                {:else}
+                {:else if canEdit}
                     <button
                         onclick={startEditingTitle}
                         class="font-semibold text-lg hover:bg-muted px-1 rounded cursor-text transition-colors group flex items-center gap-1"
@@ -250,6 +251,8 @@
                         {currentBoardTitle}
                         <PencilIcon class="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
                     </button>
+                {:else}
+                    <span class="font-semibold text-lg px-1">{currentBoardTitle}</span>
                 {/if}
                 
                 <!-- CC License Badge (superscript style) -->
@@ -305,7 +308,8 @@
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             {/if}
             
-            <!-- Right Sidebar Trigger -->
+            <!-- Right Sidebar Trigger - nur für Nutzer mit Bearbeitungsrecht -->
+            {#if canEdit}
             <Button
                 variant="ghost"
                 size="icon"
@@ -315,6 +319,7 @@
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
+            {/if}
         </div>
     </div>
 </header>

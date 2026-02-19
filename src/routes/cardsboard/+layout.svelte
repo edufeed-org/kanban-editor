@@ -104,6 +104,14 @@ let currentBoardId = $derived(boardStore.getCurrentBoardId());
 // Damit Svelte erkennt, dass sich der Titel geändert hat
 let boardTitle = $derived(boardStore.getCurrentBoardMeta().name);
 
+// Bearbeitungsrecht: false für Viewer, anonyme Besucher und nicht-authentifizierte Nutzer
+let canEdit = $derived(boardStore.canCurrentUserEdit());
+
+// Rechte Sidebar automatisch schließen wenn kein Bearbeitungsrecht mehr
+$effect(() => {
+	if (!canEdit) rightSidebarOpen = false;
+});
+
 // Auto-load comments reactively when board changes
 let lastCommentLoadBoardId = '';
 $effect(() => {
@@ -205,6 +213,7 @@ function toggleRightSidebar() {
 				<Board 
 					columns={columns} 
 					onFinalUpdate={handleBoardUpdated}
+					readOnly={!canEdit}
 				/>
 			</div>
 		</main>
@@ -237,7 +246,8 @@ function toggleRightSidebar() {
 			</Sheet.Content>
 		</Sheet.Root>
 		
-		<!-- Right Sidebar Sheet (Mobile) -->
+<!-- Right Sidebar Sheet (Mobile) - nur für Nutzer mit Bearbeitungsrecht -->
+		{#if canEdit}
 		<Sheet.Root bind:open={rightSidebarOpen}>
 			<Sheet.Content side="right" class="w-[320px] sm:w-[380px] p-0">
 				<Sheet.Header class="p-4 border-b">
@@ -246,6 +256,7 @@ function toggleRightSidebar() {
 				<AIPanel boardId={currentBoardId} />
 			</Sheet.Content>
 		</Sheet.Root>
+		{/if}
 		
 	{:else}
 		<!-- Desktop Layout: Left sidebar fixed, Main+Right resizable -->
@@ -294,16 +305,17 @@ function toggleRightSidebar() {
 							<Board 
 								columns={columns} 
 								onFinalUpdate={handleBoardUpdated}
+								readOnly={!canEdit}
 							/>
 						</div>
 					</main>
 				</Resizable.Pane>
 				
-				{#if rightSidebarOpen}
+				{#if rightSidebarOpen && canEdit}
 					<!-- Handle zwischen Main und rechter Sidebar -->
 					<Resizable.Handle withHandle />
 					
-					<!-- Rechte Sidebar (KI-Agent) - resizable -->
+					<!-- Rechte Sidebar (KI-Agent) - resizable, nur für Nutzer mit Bearbeitungsrecht -->
 					<Resizable.Pane 
 						defaultSize={25} 
 						minSize={15} 
