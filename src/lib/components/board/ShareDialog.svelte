@@ -15,6 +15,7 @@
     import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
     import { toast } from "svelte-sonner";
     import { createBoardNaddr, createBoardNaddrUrl } from "$lib/utils/nostrEvents";
+    import { nip19 } from '@nostr-dev-kit/ndk';
     import QRCode from 'qrcode';
     
     // Props
@@ -358,6 +359,56 @@
             role: info.role
         }))
     );
+    
+    // Pubkey Validierung
+    type PubkeyValidation = { valid: boolean; error: string; normalized: string };
+    
+    function validatePubkey(input: string): PubkeyValidation {
+        const trimmed = input.trim();
+        if (!trimmed) return { valid: false, error: '', normalized: '' };
+        
+        // npub (bech32)
+        if (trimmed.startsWith('npub')) {
+            try {
+                const decoded = nip19.decode(trimmed);
+                if (decoded.type === 'npub' && typeof decoded.data === 'string') {
+                    return { valid: true, error: '', normalized: decoded.data };
+                }
+                return { valid: false, error: 'Ungültiges npub-Format', normalized: '' };
+            } catch {
+                return { valid: false, error: 'Ungültiger npub-Key – Prüfung fehlgeschlagen', normalized: '' };
+            }
+        }
+        
+        // nprofile
+        if (trimmed.startsWith('nprofile')) {
+            try {
+                const decoded = nip19.decode(trimmed);
+                if (decoded.type === 'nprofile' && typeof (decoded.data as any)?.pubkey === 'string') {
+                    return { valid: true, error: '', normalized: (decoded.data as { pubkey: string }).pubkey };
+                }
+                return { valid: false, error: 'Ungültiges nprofile-Format', normalized: '' };
+            } catch {
+                return { valid: false, error: 'Ungültiger nprofile-Key', normalized: '' };
+            }
+        }
+        
+        // Hex pubkey (64 hex chars)
+        if (/^[0-9a-f]{64}$/i.test(trimmed)) {
+            return { valid: true, error: '', normalized: trimmed.toLowerCase() };
+        }
+        
+        // Partial hex – noch am Tippen?
+        if (/^[0-9a-f]+$/i.test(trimmed) && trimmed.length < 64) {
+            return { valid: false, error: `Hex-Key unvollständig (${trimmed.length}/64 Zeichen)`, normalized: '' };
+        }
+        
+        return { valid: false, error: 'Ungültiges Format – npub, nprofile oder 64-Zeichen Hex erwartet', normalized: '' };
+    }
+    
+    let pubkeyValidation = $derived(validatePubkey(newEditorPubkey));
+    let isPubkeyValid = $derived(pubkeyValidation.valid);
+    let pubkeyError = $derived(pubkeyValidation.error);
     
     // Bei Dialog-Öffnung laden
     $effect(() => {
@@ -710,18 +761,24 @@
                         <div class="flex gap-2">
                             <Input 
                                 bind:value={newEditorPubkey}
-                                placeholder="Nostr Public Key (npub oder hex)"
+                                placeholder="npub1... oder 64-Zeichen Hex"
                                 disabled={isLoading}
-                                class="flex-1"
+                                class="flex-1 font-mono text-xs {newEditorPubkey.trim() ? (isPubkeyValid ? 'border-green-500 focus-visible:ring-green-500' : 'border-red-400 focus-visible:ring-red-400') : ''}"
                             />
                             <Button 
                                 onclick={() => handleInviteEditor()}
-                                disabled={isLoading || !newEditorPubkey.trim()}
+                                disabled={isLoading || !isPubkeyValid}
                                 data-testid="add-editor-button"
                             >
                                 Hinzufügen
                             </Button>
                         </div>
+                        
+                        {#if pubkeyError}
+                            <p class="text-xs text-red-600">{pubkeyError}</p>
+                        {:else if isPubkeyValid}
+                            <p class="text-xs text-green-600">✓ Gültiger Public Key</p>
+                        {/if}
                         
                         {#if errorMessage}
                             <p class="text-sm text-destructive text-red-600">{errorMessage}</p>
