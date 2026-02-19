@@ -183,6 +183,41 @@
         for (const board of sharedBoards) {
             boardMap.set(board.id, board);
         }
+
+        // ✅ Aktives Fremd-Board einfügen wenn es nicht in boardMap ist (z.B. nach Seiten-Reload).
+        // Nach einem Reload ist cachedSharedBoards leer (onAuthChanged clears it) und die Nostr-
+        // Abfrage noch nicht abgeschlossen. Das Board ist aber in localStorage vorhanden und wird
+        // vom Store geladen – es fehlt nur in der Sidebar-Liste.
+        const activeBoardId = boardStore.data?.id;
+        const activeBoard = boardStore.data;
+        if (
+            activeBoardId &&
+            activeBoardId === currentBoardId &&
+            !boardMap.has(activeBoardId) &&
+            activeBoard?.author &&
+            activeBoard.author !== authStore.getPubkey()
+        ) {
+            const lastAccTimestamp = activeBoard.lastAccessedAt
+                ? new Date(activeBoard.lastAccessedAt).getTime()
+                : undefined;
+            const updatedTimestamp = activeBoard.updatedAt
+                ? new Date(activeBoard.updatedAt).getTime()
+                : undefined;
+            const createdTimestamp = activeBoard.createdAt
+                ? new Date(activeBoard.createdAt).getTime()
+                : Date.now();
+            boardMap.set(activeBoardId, {
+                id: activeBoardId,
+                name: activeBoard.name,
+                description: activeBoard.description,
+                createdAt: createdTimestamp,
+                updatedAt: updatedTimestamp,
+                lastAccessed: lastAccTimestamp,
+                isShared: true,
+                userRole: 'viewer',
+                author: activeBoard.author
+            });
+        }
         
         // Konvertiere zu Array und sortiere nach lastAccessed (neueste zuerst)
         const uniqueBoards = Array.from(boardMap.values()).sort((a, b) => {

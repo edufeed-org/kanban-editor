@@ -7,9 +7,10 @@
     import BellIcon from "@lucide/svelte/icons/bell";
     import BookmarkPlusIcon from "@lucide/svelte/icons/bookmark-plus";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
-    import { followBoardState } from '$lib/stores/followBoardState.svelte.js';
+    import { authStore } from '$lib/stores/authStore.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
+    import FollowBoardDialog from '$lib/components/board/FollowBoardDialog.svelte';
     import { onMount } from 'svelte';
     import { settingsStore } from '$lib/stores/settingsStore.svelte';
     import { toast } from 'svelte-sonner';
@@ -19,6 +20,9 @@
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
+
+    // State für Follow/Fork-Dialog (Fremdboad beobachten oder kopieren)
+    let showFollowDialog = $state(false);
     let showEditorRequestsDialog = $state(false);
     let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
     let editorRequestsLoadToken = $state(0);
@@ -47,6 +51,16 @@
     let isOwner = $derived(userRole === BoardRole.OWNER);
     let canEdit = $derived(boardStore.canCurrentUserEdit());
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
+
+    // ✅ Zeige "Speichern"-CTA wenn: eingeloggt + Board gehört jemand anderem + noch nicht offiziell gefolgt
+    // Diese Ableitung funktioniert auch nach einem Seiten-Reload zuverlässig,
+    // weil sie nur reaktive Stores nutzt (kein runtime-only followBoardState).
+    let showFollowCTA = $derived(
+        authStore.isAuthenticated &&
+        !!boardStore.data?.author &&
+        boardStore.data.author !== authStore.getPubkey() &&
+        !boardStore.isCurrentBoardFollowedByUser()
+    );
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
     const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
@@ -323,14 +337,14 @@
             </Button>
             {/if}
 
-            <!-- Follow-CTA: sichtbar wenn Fremdbord über naddr geladen wurde -->
-            {#if followBoardState.hasPending}
+            <!-- Follow-CTA: sichtbar wenn Fremdbord eingeloggt angeschaut wird (auch nach Reload!) -->
+            {#if showFollowCTA}
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
                 <Button
                     variant="outline"
                     size="sm"
                     class="h-8 border-amber-400 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950 gap-1.5"
-                    onclick={() => followBoardState.requestOpen()}
+                    onclick={() => { showFollowDialog = true; }}
                     title="Board beobachten oder als eigene Kopie importieren"
                 >
                     <BookmarkPlusIcon class="h-4 w-4" />
@@ -343,6 +357,15 @@
 
 <!-- Edufeed Publish Dialog -->
 <PublishToEdufeedDialog bind:open={showEdufeedDialog} />
+
+<!-- Follow/Fork-Dialog für Fremd-Boards -->
+{#if showFollowCTA || showFollowDialog}
+    <FollowBoardDialog
+        bind:open={showFollowDialog}
+        boardId={boardStore.data?.id ?? ''}
+        boardAuthor={boardStore.data?.author ?? ''}
+    />
+{/if}
 
 <!-- Owner: Editor-Requests Dialog (öffnet ShareDialog im Editor-Tab) -->
 {#if isOwner}

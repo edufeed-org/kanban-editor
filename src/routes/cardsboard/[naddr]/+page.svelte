@@ -24,21 +24,11 @@
     import { NDKEvent, NDKRelay, nip19 } from '@nostr-dev-kit/ndk';
     import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
     import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-    import FollowBoardDialog from '$lib/components/board/FollowBoardDialog.svelte';
 
     // State
     let status = $state<'loading' | 'error' | 'success'>('loading');
     let errorMessage = $state('');
     let loadingStep = $state('naddr dekodieren...');
-    let showFollowDialog = $state(false);
-
-    // Wenn Topbar-Button geklickt wird → Dialog öffnen
-    $effect(() => {
-        if (followBoardState.shouldOpen) {
-            showFollowDialog = true;
-            followBoardState.shouldOpen = false;
-        }
-    });
 
     onDestroy(() => followBoardState.clear());
 
@@ -465,8 +455,4 @@
     </div>
 {/if}
 
-<FollowBoardDialog
-    bind:open={showFollowDialog}
-    boardId={followBoardState.boardId ?? ''}
-    boardAuthor={followBoardState.boardAuthor ?? ''}
-/>
+
