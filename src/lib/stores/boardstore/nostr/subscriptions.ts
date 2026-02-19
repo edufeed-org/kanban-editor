@@ -355,7 +355,12 @@ export function subscribeToUpdates(args: SubscribeToUpdatesArgs): SubscriptionLi
 				author: canonicalOwner,
 				maintainers: pTagsAll.filter((p: string) => p !== canonicalOwner),
 				createdAt: event.created_at ? unixSecondsToMs(event.created_at) : Date.now(),
-				updatedAt: undefined,
+				// ⚡ v4.4 FIX: updatedAt MUSS vom Event-Timestamp kommen!
+				// VORHER: undefined → Board constructor fallback = generateTimestamp() = NOW
+				// → LWW-Check blockierte ALLE zukünftigen Owner-Events permanent!
+				updatedAt: event.created_at
+					? new Date(unixSecondsToMs(event.created_at)).toISOString()
+					: undefined,
 			};
 
 			if (typeof boardStore?.upsertBoardFromNostr === 'function') {
