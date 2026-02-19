@@ -282,7 +282,7 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
     
     await expect(page.getByTestId('share-dialog')).toBeVisible();
 
-    await page.getByPlaceholder('Nostr Public Key (npub oder hex)').fill(targetUserPubkey);
+    await page.getByPlaceholder('npub1... oder 64-Zeichen Hex').fill(targetUserPubkey);
     
     await page.getByTestId("add-editor-button").click();
     
