@@ -875,6 +875,21 @@ export class BoardStore {
                         console.log(`✅ Re-loading current board without lastAccessed update: ${currentId}`);
                         this.loadBoard(currentId, { skipLastAccessed: true });
                     } else {
+                        // ⚡ Guard: Wenn das aktuelle Board in localStorage existiert, wurde es bewusst
+                        // geladen (Viewer-Board via naddr, noch nicht publiziertes eigenes Board, etc.).
+                        // Kein Auto-Switch – der User sieht dieses Board absichtlich.
+                        //
+                        // Tombstoned Boards können hier nicht auftauchen: loadBoard() blockt sie bereits.
+                        // Deleted-via-Nostr-Event Boards werden separat via handleDeletionEvent tombstoned.
+                        //
+                        // Warum NICHT cachedSharedBoards prüfen: onAuthChanged() löscht diesen Cache
+                        // beim App-Start → Race Condition mit dem naddr-Page Load.
+                        if (BoardStorage.loadBoard(currentId)) {
+                            console.log(`✅ loadBoardsFromNostr: Board ${currentId} lokal vorhanden, kein Auto-Switch (Viewer/Foreign Board)`);
+                            this.updateTrigger++;
+                            return;
+                        }
+
                         // Aktuelles Board wurde gelöscht → Lade das neueste Board
                         const allBoards = this.getAllBoards();
                         if (allBoards.length > 0) {
