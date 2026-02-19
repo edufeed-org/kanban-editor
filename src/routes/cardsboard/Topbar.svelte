@@ -15,8 +15,11 @@
     import { settingsStore } from '$lib/stores/settingsStore.svelte';
     import { toast } from 'svelte-sonner';
     import PencilIcon from '@lucide/svelte/icons/pencil';
+    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
     import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import { BoardRole } from '$lib/types/sharing';
+    import { requestEditorDialogStore } from '$lib/stores/requestEditorDialog.svelte';
+    import RequestEditorRoleDialog from '$lib/components/board/RequestEditorRoleDialog.svelte';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
@@ -50,6 +53,11 @@
     let userRole = $derived(boardStore.getCurrentUserRole());
     let isOwner = $derived(userRole === BoardRole.OWNER);
     let canEdit = $derived(boardStore.canCurrentUserEdit());
+    let isViewer = $derived(userRole === BoardRole.VIEWER);
+    let isFollowed = $derived(boardStore.isCurrentBoardFollowedByUser());
+    let showRequestEditorButton = $derived(
+        authStore.isAuthenticated && (isViewer || isFollowed) && !isOwner && !canEdit
+    );
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
 
     // ✅ Zeige "Speichern"-CTA wenn: eingeloggt + Board gehört jemand anderem + noch nicht offiziell gefolgt
@@ -327,6 +335,21 @@
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             {/if}
             
+            <!-- Viewer/Beobachter: Schreibrechte beantragen -->
+            {#if showRequestEditorButton}
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    class="h-8 gap-1.5"
+                    onclick={() => requestEditorDialogStore.openDialog()}
+                    title="Schreibrechte für dieses Board beantragen"
+                >
+                    <UserPlusIcon class="h-4 w-4" />
+                    <span class="hidden sm:inline text-xs">Schreibrechte beantragen</span>
+                </Button>
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+            {/if}
+
             <!-- Right Sidebar Trigger - nur für Nutzer mit Bearbeitungsrecht -->
             {#if canEdit}
             <Button
@@ -377,5 +400,10 @@
         initialTab="editors"
         initialEditorRequests={editorRequestsByPubkey}
     />
+{/if}
+
+<!-- Viewer/Beobachter: Request Editor Role Dialog -->
+{#if showRequestEditorButton}
+    <RequestEditorRoleDialog />
 {/if}
 
