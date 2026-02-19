@@ -5,7 +5,9 @@
     import MenuIcon from "@lucide/svelte/icons/menu";
     import ShareIcon from "@lucide/svelte/icons/share-2";
     import BellIcon from "@lucide/svelte/icons/bell";
+    import BookmarkPlusIcon from "@lucide/svelte/icons/bookmark-plus";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { followBoardState } from '$lib/stores/followBoardState.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import { onMount } from 'svelte';
@@ -319,6 +321,21 @@
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
+            {/if}
+
+            <!-- Follow-CTA: sichtbar wenn Fremdbord über naddr geladen wurde -->
+            {#if followBoardState.hasPending}
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-8 border-amber-400 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950 gap-1.5"
+                    onclick={() => followBoardState.requestOpen()}
+                    title="Board beobachten oder als eigene Kopie importieren"
+                >
+                    <BookmarkPlusIcon class="h-4 w-4" />
+                    <span class="hidden sm:inline text-xs">Speichern</span>
+                </Button>
             {/if}
         </div>
     </div>

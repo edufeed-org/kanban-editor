@@ -14,9 +14,10 @@
      */
     import { page } from '$app/stores';
     import { base } from '$app/paths';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/stores/authStore.svelte.js';
+    import { followBoardState } from '$lib/stores/followBoardState.svelte.js';
     import { Board, Card, Column, type CardProps } from '$lib/classes/BoardModel.js';
     import { BoardStorage } from '$lib/stores/boardstore/storage.js';
     import type NDK from '@nostr-dev-kit/ndk';
@@ -30,8 +31,16 @@
     let errorMessage = $state('');
     let loadingStep = $state('naddr dekodieren...');
     let showFollowDialog = $state(false);
-    let followBoardId = $state('');
-    let followBoardAuthor = $state('');
+
+    // Wenn Topbar-Button geklickt wird → Dialog öffnen
+    $effect(() => {
+        if (followBoardState.shouldOpen) {
+            showFollowDialog = true;
+            followBoardState.shouldOpen = false;
+        }
+    });
+
+    onDestroy(() => followBoardState.clear());
 
     interface NaddrData {
         kind: number;
@@ -288,16 +297,6 @@
             loadingStep = 'Verbinde zu Relays...';
             await connectToRelayHints(ndk, naddrData.relays);
 
-            // ✅ Eingeloggt + Board NICHT lokal: Share-Link bleibt, Dialog steuert Follow/Fork
-            const currentUserPubkey = authStore.getPubkey();
-            if (currentUserPubkey) {
-                followBoardId = naddrData.identifier;
-                followBoardAuthor = naddrData.pubkey;
-                showFollowDialog = true;
-                status = 'success';
-                return;
-            }
-
             // 3b. Versuche zuerst AMB (30142) zu finden, die ['a', <naddr>] oder ['a', address] enthält
             loadingStep = 'Suche AMB Snapshot...';
             const aTagCandidates: string[] = [];
@@ -347,10 +346,28 @@
             if (existingBoard) {
                 console.log('✅ Board bereits lokal vorhanden, lade direkt');
                 loadingStep = 'Board wird geöffnet...';
-                
-                // Lade das Board im Store
                 boardStore.loadBoard(boardId);
-                
+
+                // Viewer-CTA: eingeloggt aber nicht Owner → Follow-Button in Topbar anzeigen
+                const cachedUserPubkey = authStore.getPubkey();
+                if (cachedUserPubkey && naddrData.pubkey && naddrData.pubkey !== cachedUserPubkey) {
+                    const updatedAtMs = existingBoard.updatedAt
+                        ? new Date(existingBoard.updatedAt).getTime()
+                        : undefined;
+                    boardStore.handleSharedBoardEvent({
+                        id: boardId,
+                        name: existingBoard.name,
+                        description: existingBoard.description,
+                        createdAt: new Date(existingBoard.createdAt).getTime(),
+                        updatedAt: updatedAtMs,
+                        isShared: true,
+                        userRole: 'viewer',
+                        author: naddrData.pubkey
+                    });
+                    boardStore.refreshBoardIds();
+                    followBoardState.setPending(boardId, naddrData.pubkey);
+                }
+
                 status = 'success';
                 return;
             }
@@ -392,6 +409,8 @@
                     userRole: 'viewer',
                     author: board.author
                 });
+                // Follow-CTA in Topbar anzeigen statt Dialog sofort aufzwingen
+                followBoardState.setPending(board.id, board.author);
             }
             
             // Board-IDs neu laden damit es in der Liste erscheint
@@ -446,4 +465,8 @@
     </div>
 {/if}
 
-<FollowBoardDialog bind:open={showFollowDialog} boardId={followBoardId} boardAuthor={followBoardAuthor} />
+<FollowBoardDialog
+    bind:open={showFollowDialog}
+    boardId={followBoardState.boardId ?? ''}
+    boardAuthor={followBoardState.boardAuthor ?? ''}
+/>
