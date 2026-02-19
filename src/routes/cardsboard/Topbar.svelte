@@ -116,7 +116,10 @@
     }
 
     onMount(() => {
-        settingsStore.setTheme(settingsStore.settings.theme);
+        // Theme wird bereits von +layout.svelte gehandelt (applyTheme + $effect)
+        // setTheme(currentTheme) war redundant und verursachte Race Condition
+        // (saveToStorage vor config.json merge → config wurde nie angewendet)
+        settingsStore.applyTheme();
     })
 
     async function loadEditorRequests(): Promise<void> {

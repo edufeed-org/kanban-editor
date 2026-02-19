@@ -321,18 +321,20 @@ export class SettingsStore {
    * - Falls localStorage existiert: Nur NEUE Felder aus config.json hinzufügen
    * - Falls forceOverwrite=true: config.json überschreibt ALLE Werte
    */
+  private static readonly CONFIG_MERGED_KEY = 'kanban-config-merged';
+
   private mergeConfigIntoSettings(config: any, forceOverwrite: boolean = false): void {
     if (!config) return;
 
-    // Prüfe ob User bereits Settings gespeichert hat
-    const hasUserSettings = typeof window !== 'undefined' 
-      && localStorage.getItem(SettingsStore.STORAGE_KEY) !== null;
+    // Prüfe ob config.json bereits gemerged wurde (separater Flag!)
+    // NICHT kanban-settings prüfen, da saveToStorage() durch andere Komponenten
+    // (z.B. Topbar onMount) VOR dem Config-Merge aufgerufen werden kann (Race Condition)
+    const configAlreadyMerged = typeof window !== 'undefined'
+      && localStorage.getItem(SettingsStore.CONFIG_MERGED_KEY) !== null;
 
-    if (hasUserSettings && !forceOverwrite) {
-      console.log('✅ User-Settings vorhanden → config.json wird NICHT gemerged (User-Präferenzen haben Vorrang)');
+    if (configAlreadyMerged && !forceOverwrite) {
+      console.log('✅ Config bereits gemerged → config.json wird NICHT erneut angewendet');
       console.log('   💡 Tipp: Verwende initializeConfig(true) zum Force-Overwrite');
-      // Nur neue Felder hinzufügen die User noch nicht hat
-      // (für zukünftige Settings-Erweiterungen)
       return;
     }
 
@@ -523,6 +525,12 @@ export class SettingsStore {
 
     // Speichere die gemergten Settings
     this.saveToStorage();
+
+    // Setze Flag, dass config.json gemerged wurde
+    // (wird bei localStorage.clear() mitgelöscht → ermöglicht erneuten Merge)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SettingsStore.CONFIG_MERGED_KEY, new Date().toISOString());
+    }
     
     // Update Theme im DOM
     this.applyTheme();
@@ -921,8 +929,12 @@ export class SettingsStore {
   public reset(): void {
     this.settings = { ...DEFAULT_SETTINGS };
     this.saveToStorage();
+    // Config-Merge-Flag löschen, damit config.json beim nächsten Laden erneut gemerged wird
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SettingsStore.CONFIG_MERGED_KEY);
+    }
     this.applyTheme();
-    console.log('✅ Settings reset to defaults');
+    console.log('✅ Settings reset to defaults (config merge flag cleared)');
   }
 
   /**
