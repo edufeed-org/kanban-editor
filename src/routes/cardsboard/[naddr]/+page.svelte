@@ -272,10 +272,12 @@
                 return;
             }
 
-            // ✅ Check: Board ist bereits lokal vorhanden → direkt laden
-            const existingLocalBoard = BoardStorage.loadBoard(naddrData.identifier);
-            if (existingLocalBoard) {
-                console.log('✅ Board bereits lokal vorhanden, lade direkt (kein Dialog)');
+            // ✅ Check: Board gehört dem aktuellen User (Owner/Maintainer) → direkt laden (kein Dialog)
+            // WICHTIG: BoardStorage.loadBoard() prüft NUR localStorage - auch fremde Boards können cached sein!
+            // getAllBoards() filtert korrekt auf User-eigene Boards → fremde Boards IMMER über FollowDialog
+            const isUsersOwnBoard = boardStore.getAllBoards().some(b => b.id === naddrData.identifier);
+            if (isUsersOwnBoard) {
+                console.log('✅ Board ist Nutzer-eigenes Board, lade direkt (kein Dialog)');
                 loadingStep = 'Board wird geöffnet...';
                 boardStore.loadBoard(naddrData.identifier);
                 status = 'success';
