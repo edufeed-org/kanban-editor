@@ -265,11 +265,28 @@
                 relays: naddrData.relays
             });
 
+            // ✅ Quick-Check: Board ist bereits das aktive Board → sofort fertig
+            if (boardStore.data?.id === naddrData.identifier) {
+                console.log('✅ Board ist bereits aktiv, überspringe Laden');
+                status = 'success';
+                return;
+            }
+
+            // ✅ Check: Board ist bereits lokal vorhanden → direkt laden
+            const existingLocalBoard = BoardStorage.loadBoard(naddrData.identifier);
+            if (existingLocalBoard) {
+                console.log('✅ Board bereits lokal vorhanden, lade direkt (kein Dialog)');
+                loadingStep = 'Board wird geöffnet...';
+                boardStore.loadBoard(naddrData.identifier);
+                status = 'success';
+                return;
+            }
+
             // 3. Verbinde zu Relay-Hints
             loadingStep = 'Verbinde zu Relays...';
             await connectToRelayHints(ndk, naddrData.relays);
 
-            // ✅ Eingeloggt: Share-Link bleibt, Dialog steuert Follow/Fork
+            // ✅ Eingeloggt + Board NICHT lokal: Share-Link bleibt, Dialog steuert Follow/Fork
             const currentUserPubkey = authStore.getPubkey();
             if (currentUserPubkey) {
                 followBoardId = naddrData.identifier;
