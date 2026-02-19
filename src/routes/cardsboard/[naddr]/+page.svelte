@@ -1,18 +1,18 @@
 <script lang="ts">
     /**
-     * naddr Route: Lade Board aus Nostr und weiterleiten zur normalen Ansicht
+     * naddr Route: Lade Board aus Nostr und zeige es inline
      * 
-     * Diese Route dient nur als Lademechanismus:
+     * Die URL bleibt als permanenter Share-Link erhalten:
      * 1. Dekodiere naddr aus URL
      * 2. Verbinde mit Relay-Hints
      * 3. Lade Board + Cards von Nostr
      * 4. Speichere in BoardStore (localStorage)
-     * 5. Weiterleitung zu /cardsboard/ (normale Ansicht)
+     * 5. Board wird über das gemeinsame +layout.svelte angezeigt (kein Redirect)
      * 
      * Dadurch funktioniert alles normal: Sidebar, Topbar, Bearbeitung (wenn Owner)
+     * Die naddr-URL kann direkt als Share-Link weitergegeben werden.
      */
     import { page } from '$app/stores';
-    import { goto } from '$app/navigation';
     import { base } from '$app/paths';
     import { onMount } from 'svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
@@ -308,7 +308,6 @@
                                     boardStore.refreshBoardIds();
                                     boardStore.loadBoard(snapshotJson.id);
                                     status = 'success';
-                                    await goto(`${base}/cardsboard/`, { replaceState: true });
                                     return;
                                 } catch (err) {
                                     console.warn('Fehler beim Parsen des Snapshot-Inhalts:', err);
@@ -333,9 +332,7 @@
                 // Lade das Board im Store
                 boardStore.loadBoard(boardId);
                 
-                // Weiterleitung
                 status = 'success';
-                await goto(`${base}/cardsboard/`, { replaceState: true });
                 return;
             }
 
@@ -385,11 +382,9 @@
             loadingStep = 'Board wird geöffnet...';
             boardStore.loadBoard(board.id);
 
-            // 9. Weiterleitung zur normalen Ansicht
+            // 9. Board ist geladen — Layout rendert es automatisch
             status = 'success';
-            console.log('✅ Board geladen und gespeichert, leite weiter...');
-            
-            await goto(`${base}/cardsboard/`, { replaceState: true });
+            console.log('✅ Board geladen und gespeichert, URL bleibt als Share-Link');
 
         } catch (error) {
             console.error('❌ Fehler beim Laden:', error);
@@ -403,15 +398,20 @@
     });
 </script>
 
-<div class="min-h-screen bg-background flex items-center justify-center">
-    <div class="text-center p-8 max-w-md">
-        {#if status === 'loading'}
+<!-- Loading/Error Overlay (position: fixed, überlagert das Board aus dem Layout) -->
+{#if status === 'loading'}
+    <div class="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div class="text-center p-8 max-w-md">
             <div class="flex flex-col items-center gap-4">
                 <LoaderCircleIcon class="h-12 w-12 animate-spin text-primary" />
                 <h1 class="text-xl font-semibold">Board wird geladen...</h1>
                 <p class="text-muted-foreground">{loadingStep}</p>
             </div>
-        {:else if status === 'error'}
+        </div>
+    </div>
+{:else if status === 'error'}
+    <div class="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div class="text-center p-8 max-w-md">
             <div class="flex flex-col items-center gap-4">
                 <AlertCircleIcon class="h-12 w-12 text-destructive" />
                 <h1 class="text-xl font-semibold text-destructive">Fehler beim Laden</h1>
@@ -423,26 +423,8 @@
                     Zurück zur Übersicht
                 </a>
             </div>
-        {:else if status === 'success'}
-            <div class="flex flex-col items-center gap-4">
-                <h1 class="text-xl font-semibold">Board-Link geöffnet</h1>
-                <p class="text-muted-foreground">Bitte wähle „Beobachten“ oder „Fork“ im Dialog.</p>
-                <button
-                    type="button"
-                    class="mt-2 text-primary hover:underline"
-                    onclick={() => (showFollowDialog = true)}
-                >
-                    Dialog erneut öffnen
-                </button>
-                <a
-                    href="{base}/cardsboard/"
-                    class="text-muted-foreground hover:underline"
-                >
-                    Zurück zur Übersicht
-                </a>
-            </div>
-        {/if}
+        </div>
     </div>
-</div>
+{/if}
 
 <FollowBoardDialog bind:open={showFollowDialog} boardId={followBoardId} boardAuthor={followBoardAuthor} />
