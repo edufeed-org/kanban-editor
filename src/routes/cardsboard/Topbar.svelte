@@ -61,13 +61,14 @@
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
 
     // ✅ Zeige "Speichern"-CTA wenn: eingeloggt + Board gehört jemand anderem + noch nicht offiziell gefolgt
-    // Diese Ableitung funktioniert auch nach einem Seiten-Reload zuverlässig,
-    // weil sie nur reaktive Stores nutzt (kein runtime-only followBoardState).
+    // + NICHT wenn User bereits Editor/Owner ist (z.B. nach Zuweisung von Schreibrechten)
     let showFollowCTA = $derived(
         authStore.isAuthenticated &&
         !!boardStore.data?.author &&
         boardStore.data.author !== authStore.getPubkey() &&
-        !boardStore.isCurrentBoardFollowedByUser()
+        !boardStore.isCurrentBoardFollowedByUser() &&
+        !canEdit &&
+        !isOwner
     );
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
