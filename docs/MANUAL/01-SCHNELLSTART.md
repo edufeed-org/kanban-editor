@@ -10,9 +10,10 @@
 
 Öffnen Sie die Kanban-Board Anwendung in Ihrem Browser. Sie sehen sofort:
 
+**Rundgang mit [Screenshots](Tango-1.md)**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📋 Kanban Board                         [Einstellungen] 👤 │
+│  📋 Kanban Board                                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  📂 Meine Boards          │    Willkommen!                  │
@@ -21,6 +22,8 @@
 │                           │    erstellen Sie ein neues.     │
 │  🎓 Demo Board            │                                 │
 │                           │                                 │
+│                           │                                 │
+│ 👤[Anmelden]              │                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
