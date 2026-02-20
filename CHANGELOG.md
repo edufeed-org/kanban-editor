@@ -8,6 +8,9 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+### Fixes
+- Paste-System greift nicht mehr, wenn der Cursor in einem Input, Textarea oder TipTap-Editor steht (Board.svelte, PasteContainer.svelte)
+
 ### Geplant / In Arbeit
 - Keine offenen Eintraege.
 
