@@ -481,20 +481,25 @@ export class SettingsStore {
     }
 
     // AMB Vocabulary Configuration
+    // Unterstützt beide Key-Namen: "vocabularies" (config.json) und "vocabularyUrls" (config.live.json)
     if (config.amb) {
       const ambPartial: Partial<SettingsState> = {};
       
-      if (config.amb.vocabularies) {
+      const vocabConfig = config.amb.vocabularies || config.amb.vocabularyUrls;
+      if (vocabConfig) {
         ambPartial.vocabularyUrls = {
-          audience: config.amb.vocabularies.audience ?? null,
-          educationalLevel: config.amb.vocabularies.educationalLevel ?? null,
-          learningResourceType: config.amb.vocabularies.learningResourceType ?? null,
-          about: config.amb.vocabularies.about ?? null,
+          audience: vocabConfig.audience ?? null,
+          educationalLevel: vocabConfig.educationalLevel ?? null,
+          learningResourceType: vocabConfig.learningResourceType ?? null,
+          about: vocabConfig.about ?? null,
         };
       }
       
+      // Unterstützt "cacheTTL" (ms) und "cacheTtlHours" (Stunden → ms Konvertierung)
       if (config.amb.cacheTTL !== undefined) {
         ambPartial.vocabularyCacheTTL = config.amb.cacheTTL;
+      } else if (config.amb.cacheTtlHours !== undefined) {
+        ambPartial.vocabularyCacheTTL = config.amb.cacheTtlHours * 60 * 60 * 1000;
       }
       
       if (Object.keys(ambPartial).length > 0) {
