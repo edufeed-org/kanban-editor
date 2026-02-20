@@ -17,7 +17,7 @@ Notwendige Fixes und ToDos für den Kanban Editor
 - ✅ Tests: `card.authorization.spec.ts` (12 Tests, alle gruen)
 
 
-### Authorization Guards for Inbound Nostr Events (Kind 8571 & 30302)
+### Authorization Guards for Inbound Nostr Events (Kind 8571 & 30302) 
 
 **Problem**
 

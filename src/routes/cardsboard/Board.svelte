@@ -59,7 +59,13 @@
 	function isEditableTarget(target: EventTarget | null): boolean {
 		if (!(target instanceof HTMLElement)) return false;
 		const tag = target.tagName.toLowerCase();
-		return tag === 'input' || tag === 'textarea' || target.isContentEditable;
+		if (tag === 'input' || tag === 'textarea') return true;
+		// Prüfe ob das Element selbst oder ein Eltern-Element contentEditable ist
+		// (TipTap/ProseMirror setzt contentEditable auf einem Container-Div,
+		// aber das Event-Target kann ein Kind-Element wie <p>, <span> etc. sein)
+		if (target.isContentEditable) return true;
+		if (target.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+		return false;
 	}
 
 	async function handleGlobalPaste(event: ClipboardEvent) {

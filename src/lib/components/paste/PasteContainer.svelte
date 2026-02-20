@@ -25,10 +25,23 @@
     } = $props();
     
     /**
+     * Prüft ob das Paste-Target ein editierbares Feld ist (Input, Textarea, TipTap)
+     */
+    function isEditableTarget(target: EventTarget | null): boolean {
+        if (!(target instanceof HTMLElement)) return false;
+        const tag = target.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea') return true;
+        if (target.isContentEditable) return true;
+        if (target.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+        return false;
+    }
+
+    /**
      * Handler für Paste-Event auf Card
      */
     async function handleCardPaste(event: ClipboardEvent) {
         if (!cardId) return;
+        if (isEditableTarget(event.target)) return;
         
         // Verhindere Default (Browser würde Text einfügen)
         event.preventDefault();
@@ -53,6 +66,7 @@
      */
     async function handleColumnPaste(event: ClipboardEvent) {
         if (!columnId) return;
+        if (isEditableTarget(event.target)) return;
         
         // Verhindere Default
         event.preventDefault();
