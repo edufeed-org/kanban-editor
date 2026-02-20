@@ -162,12 +162,17 @@
         const ownBoards = boardStore.filterBoards(searchQuery);
         const sharedBoards = boardStore.filterSharedBoards(searchQuery);
         
-        // Füge isShared: false zu eigenen Boards hinzu
-        const enrichedOwnBoards = ownBoards.map(board => ({
-            ...board,
-            isShared: false,
-            userRole: 'owner'
-        }));
+        // Eigene Boards anreichern: Prüfe ob Board dem aktuellen User gehört
+        // getAllBoards() gibt auch Boards zurück bei denen User Maintainer (Editor) ist!
+        const currentPubkey = authStore.getPubkey();
+        const enrichedOwnBoards = ownBoards.map(board => {
+            const isOwner = !board.author || board.author === currentPubkey;
+            return {
+                ...board,
+                isShared: !isOwner,
+                userRole: isOwner ? 'owner' : 'editor'
+            };
+        });
         
         // Kombiniere beide Listen und entferne Duplikate
         // ⚠️ WICHTIG: Bei Duplikaten (Board ist sowohl own als auch shared) bevorzuge shared-Metadaten
@@ -300,8 +305,11 @@
         
         // Finde das Board in der gefilterten Liste um isShared und userRole zu prüfen
         const targetBoard = filteredBoards.find(b => b.id === boardId);
-        const isShared = targetBoard?.isShared || false;
-        const userRole = targetBoard?.userRole || 'owner';
+        
+        // Fallback: Wenn Board nicht in filteredBoards, prüfe ob es ein Fremd-Board ist
+        const isShared = targetBoard?.isShared ?? (boardStore.data?.id === boardId && boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+        const storeRole = boardId === boardStore.data?.id ? boardStore.getCurrentUserRole() : null;
+        const userRole = targetBoard?.userRole ?? (storeRole === 'owner' ? 'owner' : storeRole === 'editor' ? 'editor' : storeRole === 'viewer' ? 'viewer' : 'owner');
         
         const actionText = isShared 
             ? (userRole === 'owner' ? 'Board löschen' : 'Board verlassen')

@@ -325,7 +325,7 @@ export class BoardStore {
     // MULTI-BOARD MANAGEMENT
     // ============================================================================
     
-    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; author?: string }> {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
@@ -395,7 +395,8 @@ export class BoardStore {
                     lastAccessed: this.board.lastAccessedAt 
                         ? new Date(this.board.lastAccessedAt).getTime() 
                         : new Date(this.board.createdAt).getTime(),
-                    hasUnseenChanges: this.board.hasUnseenChanges
+                    hasUnseenChanges: this.board.hasUnseenChanges,
+                    author: this.board.author
                 };
             } else {
                 // Andere Boards: Lade frisches lastAccessedAt aus Storage
@@ -1132,7 +1133,7 @@ export class BoardStore {
         this.deleteCard(cardId);
     }
 
-    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
+    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; author?: string}> {
         // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
         const userBoards = this.getAllBoards();
         
