@@ -10,7 +10,8 @@
 
 Öffnen Sie die Kanban-Board Anwendung in Ihrem Browser. Sie sehen sofort:
 
-**Rundgang mit [Screenshots](Tango-1.md)**
+**Rundgang mit [Screenshots](Tango-1.md)** oder [Live](https://app.tango.us/app/workflow/Create-a-Religion-Substitution-Lesson-Board-050f3e4b08f7446abe492cdde3bbc092)
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  📋 Kanban Board                                           │
