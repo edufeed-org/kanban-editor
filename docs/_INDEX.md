@@ -244,6 +244,12 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. WÃ�
 - [`README.md`](../README.md) â€” Projekt-Ãœbersicht
 - [`AGENTS.md`](../AGENTS.md) â€” VollstÃ¤ndige technische Spezifikation
 - [`CHANGELOG.md`](../CHANGELOG.md) â€” Versionshistorie
+- [`docs/CHANGELOG/README.md`](./CHANGELOG/README.md) â€” Changelog-Navigation (kompakt + quartalsweise + Legacy)
+- [`docs/CHANGELOG/2026-Q1.md`](./CHANGELOG/2026-Q1.md) â€” Quartalsuebersicht inkl. PR-Links
+- [`docs/CHANGELOG/2025-Q4.md`](./CHANGELOG/2025-Q4.md) â€” Quartalsuebersicht inkl. PR-Links
+- [`docs/CHANGELOG/2024-Q4.md`](./CHANGELOG/2024-Q4.md) â€” Quartalsuebersicht fuer Legacy-Ausreisser
+- [`docs/CHANGELOG/archive-legacy-2026-02-20.md`](./CHANGELOG/archive-legacy-2026-02-20.md) â€” VollstÃ¤ndige Legacy-Changelog-Historie
+- [`docs/CHANGELOG/2026-02-post-4.7.96.md`](./CHANGELOG/2026-02-post-4.7.96.md) â€” AusfÃ¼hrlicher Git/PR-Nachtrag (06.02.-20.02.2026)
 - [`KONZEPT.md`](../KONZEPT.md) â€” Stakeholder-freundliche Produktvision
 
 ### ðŸ›ï¸ docs/ Struktur (Komplette Liste)
