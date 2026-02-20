@@ -206,6 +206,11 @@
             const createdTimestamp = activeBoard.createdAt
                 ? new Date(activeBoard.createdAt).getTime()
                 : Date.now();
+            // Ermittle die echte Rolle aus dem geladenen Board (korrekt für Editor/Viewer)
+            const activeBoardRole = boardStore.getCurrentUserRole();
+            const activeBoardRoleStr = activeBoardRole === 'owner' ? 'owner'
+                : activeBoardRole === 'editor' ? 'editor'
+                : 'viewer';
             boardMap.set(activeBoardId, {
                 id: activeBoardId,
                 name: activeBoard.name,
@@ -214,7 +219,7 @@
                 updatedAt: updatedTimestamp,
                 lastAccessed: lastAccTimestamp,
                 isShared: true,
-                userRole: 'viewer',
+                userRole: activeBoardRoleStr,
                 author: activeBoard.author
             });
         }
@@ -558,10 +563,15 @@
             <!-- 4b. Versionen -->
             <VersionHistory />
             
-            <!-- 5. Board löschen -->
+            <!-- 5. Board löschen / verlassen -->
             <MenuItem 
                 icon={TrashIcon} 
-                label="Board löschen" 
+                label={(() => {
+                    const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
+                    const isShared = targetBoard?.isShared ?? (boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+                    const userRole = targetBoard?.userRole ?? boardStore.getCurrentUserRole() ?? 'owner';
+                    return isShared && userRole !== 'owner' ? 'Board verlassen' : 'Board löschen';
+                })()}
                 variant="danger"
                 onclick={() => {
                     if (!currentBoardId) {
@@ -570,8 +580,10 @@
                     }
                     
                     const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
-                    const isShared = targetBoard?.isShared || false;
-                    const userRole = targetBoard?.userRole || 'owner';
+                    const isShared = targetBoard?.isShared ?? (boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+                    // Fallback: getCurrentUserRole() wenn Board noch nicht in filteredBoards (z.B. direkt nach Reload)
+                    const storeRole = boardStore.getCurrentUserRole();
+                    const userRole = targetBoard?.userRole ?? (storeRole === 'owner' ? 'owner' : storeRole === 'editor' ? 'editor' : 'viewer');
                     
                     const warningText = isShared && userRole !== 'owner'
                         ? '⚠️ Dieses Board wirklich verlassen? Sie verlieren den Zugang!'
@@ -719,8 +731,8 @@
                         </div>
                     </button>
                     
-                    <!-- Delete Button (nur für eigene Boards oder wenn User Owner ist) -->
-                    {#if !board.isShared || board.userRole === 'owner'}
+                    <!-- Delete/Leave Button -->
+                    {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
                         <div
                             class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -728,7 +740,7 @@
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
                                 class="p-1 rounded transition-colors trash"
                                     
-                                title={board.isShared ? 'Board verlassen' : 'Board löschen'}
+                                title={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
                                 <TrashIcon class="h-4 w-4" />

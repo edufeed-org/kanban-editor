@@ -1037,9 +1037,11 @@ export class BoardSharingOperations {
                             .filter(pubkey => pubkey !== sharedBoard.author && pubkey !== currentUserPubkey);
                         
                         // Prüfe ob aktueller User ein Viewer ist
-                        if (followers.includes(currentUserPubkey)) {
+                        if (followers.includes(currentUserPubkey) && sharedBoard.userRole !== 'editor') {
                             sharedBoard.userRole = 'viewer';
                             console.log(`🔍 Board ${sharedBoard.id}: User ist Viewer (via Kind 30000)`);
+                        } else if (followers.includes(currentUserPubkey) && sharedBoard.userRole === 'editor') {
+                            console.log(`🔍 Board ${sharedBoard.id}: User ist Editor (p-tag trumpft Follow-Set)`);
                         }
                     }
                 } catch (error) {
