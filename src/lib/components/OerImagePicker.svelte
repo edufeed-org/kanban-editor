@@ -13,7 +13,8 @@
 		onSelect: (imageUrl: string) => void;
 	}
 
-	const apiUrl = $state(settingsStore.settings.apiUrl)
+	// Currently not used, as client side fetching is activated
+	const _apiUrl = $state(settingsStore.settings.apiUrl)
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
@@ -67,7 +68,8 @@
 <div class="oer-picker-container">
 	<oer-search
 		bind:this={searchEl}
-		api-url={apiUrl}
+		nostr-relay-url="wss://relay.edufeed.org"
+		rpi-virtuell-api-url=""
 		language={language}
 		locked-type="image"
 		show-type-filter={false}
