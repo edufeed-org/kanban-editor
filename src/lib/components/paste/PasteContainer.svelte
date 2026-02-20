@@ -25,14 +25,25 @@
     } = $props();
     
     /**
-     * Prüft ob das Paste-Target ein editierbares Feld ist (Input, Textarea, TipTap)
+     * Prüft ob ein Element ein editierbares Feld ist (Input, Textarea, TipTap)
      */
-    function isEditableTarget(target: EventTarget | null): boolean {
-        if (!(target instanceof HTMLElement)) return false;
-        const tag = target.tagName.toLowerCase();
+    function isEditableElement(el: Element | null): boolean {
+        if (!el) return false;
+        const tag = el.tagName.toLowerCase();
         if (tag === 'input' || tag === 'textarea') return true;
-        if (target.isContentEditable) return true;
-        if (target.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+        if (el instanceof HTMLElement && el.isContentEditable) return true;
+        if (el.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+        return false;
+    }
+
+    /**
+     * Prüft ob das Paste-Event auf ein editierbares Feld zielt
+     * (event.target, document.activeElement, event.defaultPrevented)
+     */
+    function isEditableTarget(event: ClipboardEvent): boolean {
+        if (event.defaultPrevented) return true;
+        if (event.target instanceof Element && isEditableElement(event.target)) return true;
+        if (isEditableElement(document.activeElement)) return true;
         return false;
     }
 
@@ -41,7 +52,7 @@
      */
     async function handleCardPaste(event: ClipboardEvent) {
         if (!cardId) return;
-        if (isEditableTarget(event.target)) return;
+        if (isEditableTarget(event)) return;
         
         // Verhindere Default (Browser würde Text einfügen)
         event.preventDefault();
@@ -66,7 +77,7 @@
      */
     async function handleColumnPaste(event: ClipboardEvent) {
         if (!columnId) return;
-        if (isEditableTarget(event.target)) return;
+        if (isEditableTarget(event)) return;
         
         // Verhindere Default
         event.preventDefault();

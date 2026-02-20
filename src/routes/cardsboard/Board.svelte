@@ -56,21 +56,34 @@
 	let showStickyButton = $state(false);
 	let scrollableButtonElement = $state<HTMLElement | undefined>(undefined);
 
-	function isEditableTarget(target: EventTarget | null): boolean {
-		if (!(target instanceof HTMLElement)) return false;
-		const tag = target.tagName.toLowerCase();
+	function isEditableElement(el: Element | null): boolean {
+		if (!el) return false;
+		const tag = el.tagName.toLowerCase();
 		if (tag === 'input' || tag === 'textarea') return true;
-		// Prüfe ob das Element selbst oder ein Eltern-Element contentEditable ist
-		// (TipTap/ProseMirror setzt contentEditable auf einem Container-Div,
-		// aber das Event-Target kann ein Kind-Element wie <p>, <span> etc. sein)
-		if (target.isContentEditable) return true;
-		if (target.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+		if (el instanceof HTMLElement && el.isContentEditable) return true;
+		if (el.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+		return false;
+	}
+
+	function isEditableTarget(event: ClipboardEvent): boolean {
+		// 1. Wenn ein anderer Handler (z.B. TipTap/ProseMirror) das Event bereits
+		//    verarbeitet hat, nicht nochmal verarbeiten
+		if (event.defaultPrevented) return true;
+
+		// 2. Prüfe event.target (direktes Ziel des Events)
+		if (event.target instanceof Element && isEditableElement(event.target)) return true;
+
+		// 3. Prüfe document.activeElement (zuverlässiger als event.target,
+		//    z.B. wenn Cursor am Anfang einer leeren Zeile in TipTap steht
+		//    und event.target ein Wrapper-Element ist)
+		if (isEditableElement(document.activeElement)) return true;
+
 		return false;
 	}
 
 	async function handleGlobalPaste(event: ClipboardEvent) {
 		if (readOnly) return;
-		if (isEditableTarget(event.target)) return;
+		if (isEditableTarget(event)) return;
 		if (!columns.length) {
 			toast.error('Paste fehlgeschlagen', {
 				description: 'Keine Spalten verfügbar.'
