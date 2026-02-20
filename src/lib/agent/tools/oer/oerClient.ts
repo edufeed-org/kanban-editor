@@ -18,10 +18,9 @@ import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
  * Ermittelt die API-Basis-URL aus Settings oder Fallback
  */
 export function getApiBaseUrl(): string {
-    // 1. Aus settingsStore (User-Konfiguration)
-    // Note: oerFinderApiUrl wird in Phase 2 zu settingsStore hinzugefügt
-    const settings = settingsStore?.settings as any;
-    const settingsUrl = settings?.oerFinderApiUrl;
+    // 1. Aus settingsStore (User-Konfiguration via config.json → mergeConfigIntoSettings)
+    const settings = settingsStore?.settings;
+    const settingsUrl = settings?.apiUrl;
     if (settingsUrl) return settingsUrl;
     
     // 2. Aus Environment Variable
