@@ -217,7 +217,7 @@
 - ⚠️ KI Custom Prompts Settings - Muss erweitert werden
 - ⚠️ Two-Phase System mit Nostr Publishing (funktioniert ohne Nostr Events)
 - ⚠️ KI-Agents an publishState anpassen
-- ⚠️ Error Handling für LLM-Timeouts
+- ~~⚠️ Error Handling für LLM-Timeouts~~ → ✅ Retry-Logik + Budget-Fallback implementiert (21.02.2026)
 - ⚠️ Rate-Limiting für API-Calls
 - ToDo: **nur noch optionale Erweiterungen** (z. B. Multichat, Summary, MCP)
 
@@ -1711,6 +1711,7 @@ Jeder Meilenstein ist **nur dann done**, wenn:
 | 3.24 | 02.02.2026 | 🛎️ **Editor-Request Toast + Dialog:** Viewer sehen Permission-Toast mit „Rechte beantragen“ + Opt-out; Request-Dialog verfügbar; Editor-Request Events (Kind 30000) vorbereitet. |
 | 3.23 | 01.02.2026 | ⚡ **ShareDialog & UI Fixes:** config.json Cache, keine doppelte Share-Link Generierung, parallele Display-Name Loads, BASE_URL robust aufgelöst (inkl. "."), Flip-Animation Guard gegen NaN-Transforms (In der FLIP-Animation (First, Last, Invert, Play) treten NaN-Werte (Not-a-Number) ). |
 | 3.22 | 30.01.2026 | 🔍 **OER-Content Discovery Approved:** Meilenstein 3.2 mit 4-Phasen-Plan aktualisiert. Tools: `search_oer`, `add_cards_from_oer`, `list_oer_sources`, `search_oer_for_card`. API-Integration via fetch (nicht MCP). Spec: `MCP-EDUFEED.md` v1.1. Timeline: 6-8 Tage. |
+| 3.36 | 21.02.2026 | 🔧 **LLM Proxy 400-Fix:** `tool_choice: 'required'` → `'auto'` behebt systematische 400-Fehler bei 16 Tools + Chat-History (0/5 → 5/5 OK). Umlaute in Tool-Definitionen/System-Prompt durch ASCII ersetzt. Synthetischer `respond`-Fallback, Retry-Logik, Budget-Loop. Doku: `docs/ARCHITECTURE/AGENT/LLM-PROXY-INVESTIGATION.md`. |
 | 3.21 | 26.01.2026 | 🔗 **Nostr Paste Enhancement:** njump URL konfigurierbar (`config.json`), ursprünglicher Link als 3. Link, bereinigtes Card-Output, PASTE-SYSTEM.md aktualisiert. |
 | 3.20 | 26.01.2026 | 🔎 **Paste Debug:** Fehlermeldung zeigt Clipboard-Typen/Längen für Diagnose. |
 | 3.19 | 26.01.2026 | 🧩 **Paste Fix:** HTML-only Clipboard wird als Text erkannt (kein "Kein passender Handler"). |

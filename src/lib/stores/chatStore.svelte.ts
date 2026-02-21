@@ -592,7 +592,7 @@ export class ChatStore {
 				temperature: 0.1,
 				max_tokens: 4000,
 				tools,
-				tool_choice: 'required'
+				tool_choice: 'auto'
 			}).length;
 
 			// ── Schritt 1: System-Prompt ggf. kürzen ──────────────────────
@@ -664,7 +664,7 @@ export class ChatStore {
 				temperature: 0.1,
 				max_tokens: 4000,
 				tools,
-				tool_choice: 'required'
+				tool_choice: 'auto'
 			});
 
 			const callHeaders = {
@@ -741,7 +741,25 @@ export class ChatStore {
 				};
 			}
 
-			console.log('💬 LLM returned text response:', content?.substring(0, 100));
+			// tool_choice:'auto' — LLM hat Text statt Tool-Call zurueckgegeben.
+			// Wrap in synthetischen respond-Tool-Call, damit der Aufrufer
+			// einheitlich tool_calls verarbeiten kann.
+			if (content) {
+				console.log('💬 LLM returned text (no tool call) – wrapping in respond tool:', content?.substring(0, 100));
+				return {
+					content,
+					tool_calls: [{
+						id: 'synthetic-respond',
+						type: 'function',
+						function: {
+							name: 'respond',
+							arguments: JSON.stringify({ message: content })
+						}
+					}]
+				};
+			}
+
+			console.log('💬 LLM returned empty response');
 			return { content };
 
 		} catch (error) {

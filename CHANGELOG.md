@@ -9,6 +9,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 ## Unreleased
 
 ### Fixes
+- **LLM Proxy 400-Fehler behoben:** `tool_choice` von `required` auf `auto` umgestellt — eliminiert systematische 400-Fehler bei 16 Tools + Chat-History. Synthetischer `respond`-Fallback fuer reine Text-Antworten. Umlaute in Tool-Definitionen/System-Prompt durch ASCII ersetzt. Retry-Logik und Budget-Fallback-Loop ergaenzt. Siehe `docs/ARCHITECTURE/AGENT/LLM-PROXY-INVESTIGATION.md`.
 - Paste-System greift nicht mehr, wenn der Cursor in einem Input, Textarea oder TipTap-Editor steht (Board.svelte, PasteContainer.svelte)
 
 ### Geplant / In Arbeit
