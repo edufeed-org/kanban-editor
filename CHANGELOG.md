@@ -10,6 +10,12 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 Keine offenen Eintraege.
 
+## Releases 2026 — PRs (kompakt)
+
+| Datum | PR | Was | Details |
+|---|---|---|---|
+| 2026-02-21 | [#123](https://github.com/edufeed-org/kanban-editor/pull/123) | FOERBICO Design System: 4 OKLCH-Themes, Farbschema-Wechsel, A11y Dark-Mode, Lucide Icons | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
+
 ## Direkt Pushes 2026 (kompakt)
 
 | Datum | Was | Details |
@@ -24,6 +30,7 @@ Keine offenen Eintraege.
 
 | Version | Datum | Was ist neu? | Business Impact | Action Required |
 |---|---|---|---|---|
+| Post-4.7.96 (PR #123) | 2026-02-21 | FOERBICO Design System: 4 OKLCH-Themes, Farbschema-Wechsel, A11y Dark-Mode Kontrast, Lucide Icons | Konsistenteres visuelles Erscheinungsbild, bessere Zugaenglichkeit im Dark Mode | Nein |
 | Post-4.7.96 (PR #121) | 2026-02-20 | Security-Guards fuer Column-Patch- und Card-Events (nur Owner/Maintainer autorisiert) | Hoehere Integritaet bei kollaborativen Events | Nein |
 | Post-4.7.96 (PR #120) | 2026-02-20 | OER-Finder auf Local Search umgestellt | Schnellere und robustere OER-Bildsuche | Nein |
 | Post-4.7.96 (PR #119) | 2026-02-19 | Shared-Board-Sync Fixes (owner-signierte Events, updatedAt, Maintainer-Resubscribe) | Deutlich stabilerer Shared-Board-Betrieb | Nein |
