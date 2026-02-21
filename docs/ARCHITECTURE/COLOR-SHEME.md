@@ -76,7 +76,7 @@ FOERBICO Hauptthema mit Terracotta-Primary.
 | `--primary` | `oklch(58% .19 35)` | primary | Terracotta (gleich) |
 | `--secondary` | `oklch(50% .02 250)` | secondary | Mittelgrau |
 | `--muted` | `oklch(30% .01 250)` | neutral | Dunkles Grau |
-| `--muted-foreground` | `oklch(65% .01 250)` | abgeleitet | Mittelgrau |
+| `--muted-foreground` | `oklch(72% .01 250)` | abgeleitet | Mittelgrau (A11y-optimiert) |
 | `--border` | `oklch(35% .01 250)` | abgeleitet | Dunkle Border |
 | `--input` | `oklch(26% .01 250)` | abgeleitet | Dunkler Input |
 
