@@ -373,17 +373,17 @@
     }
 
     .board::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: var(--muted);
         border-radius: 4px;
     }
 
     .board::-webkit-scrollbar-thumb {
-        background: linear-gradient(to bottom, #666, #444);
+        background: var(--muted-foreground);
         border-radius: 4px;
     }
 
     .board::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(to bottom, #333, #000);
+        background: var(--foreground);
     }
 
 	.column {

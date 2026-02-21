@@ -2,48 +2,71 @@
 
 @import "tw-animate-css";
 
+@import "@fontsource-variable/roboto-condensed";
+
 /* @plugin "@iconify/tailwind4" {
   prefixes: ic, mdi, lucide, heroicons;
 }
 
 @custom-variant dark (&:is(.dark *)); */
 
+/* ============================================
+   FOERBICO Design System — Theme: "stil" (Light)
+   Based on FOERBICO project color definitions
+   ============================================ */
 :root {
   --radius: 0.65rem;
-  --background: oklch(0.94 0.004 286.3);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(100% 0.00011 271.152);
-  --card-hover: oklch(97.068% 0.01653 301.033);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.606 0.25 292.717);
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(56.572% 0.01222 316.248);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(77.4% 0.0043 286);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.606 0.25 292.717);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.606 0.25 292.717);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.606 0.25 292.717);
-  --column-border: oklch(82.443% 0.05459 254.539);
-  --button: oklch(67.64% 0.00008 271.152);
+
+  /* Core Colors — FOERBICO "stil" */
+  --background: oklch(100% 0 0);
+  --foreground: oklch(38% .02 250);
+  --card: oklch(97% 0 0);
+  --card-hover: oklch(94% 0 0);
+  --card-foreground: oklch(38% .02 250);
+  --popover: oklch(97% 0 0);
+  --popover-foreground: oklch(38% .02 250);
+  --primary: oklch(58% .19 35);
+  --primary-foreground: oklch(100% 0 0);
+  --secondary: oklch(94% 0 0);
+  --secondary-foreground: oklch(38% .02 250);
+  --muted: oklch(94% 0 0);
+  --muted-foreground: oklch(55% .01 250);
+  --accent: oklch(58% .19 35);
+  --accent-foreground: oklch(100% 0 0);
+  --destructive: oklch(65% .2 25);
+  --destructive-foreground: oklch(100% 0 0);
+  --border: oklch(88% .005 250);
+  --input: oklch(91% 0 0);
+  --ring: oklch(58% .19 35);
+
+  /* Semantic Status Colors */
+  --info: oklch(72% .11 230);
+  --info-foreground: oklch(100% 0 0);
+  --success: oklch(72% .15 150);
+  --success-foreground: oklch(100% 0 0);
+  --warning: oklch(82% .17 85);
+  --warning-foreground: oklch(20% 0 0);
+
+  /* Chart Colors */
+  --chart-1: oklch(58% .19 35);
+  --chart-2: oklch(72% .15 150);
+  --chart-3: oklch(72% .11 230);
+  --chart-4: oklch(82% .17 85);
+  --chart-5: oklch(65% .2 25);
+
+  /* Sidebar */
+  --sidebar: oklch(97% 0 0);
+  --sidebar-foreground: oklch(38% .02 250);
+  --sidebar-primary: oklch(58% .19 35);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --sidebar-accent: oklch(94% 0 0);
+  --sidebar-accent-foreground: oklch(38% .02 250);
+  --sidebar-border: oklch(88% .005 250);
+  --sidebar-ring: oklch(58% .19 35);
+
+  /* Board */
+  --column-border: oklch(85% .01 250);
+  --button: oklch(88% 0 0);
   
   /* Card Colors for Color Picker */
   --color-slate: oklch(88.734% 0.02327 285.861 / 0.945);
@@ -54,42 +77,61 @@
   --color-purple: oklch(0.541 0.281 293.009);
 }
 
+/* ============================================
+   FOERBICO Design System — Theme: "stil-dark" (Dark)
+   ============================================ */
 :root.dark,
 .dark {
-  --background: oklch(25.319% 0.00562 285.924);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(22.385% 0.00773 285.719);
-  --card-hover: oklch(25.319% 0.00562 285.924);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.541 0.281 293.009);
-  --primary-foreground: oklch(0.969 0.016 293.756);
-  --secondary: oklch(36.011% 0.06726 297.06);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(34.532% 0.00348 286.056);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(57.646% 0.26532 315.837);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(51.929% 0.00756 16.972 / 0.781);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.541 0.281 293.009);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(37.335% 0.12432 296.933);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.541 0.281 293.009);
-  --column-border: oklch(39.123% 0.02512 257.554);
-  --button: oklch(59.987% 0.00007 271.152);
+  /* Core Colors — FOERBICO "stil-dark" */
+  --background: oklch(22% .01 250);
+  --foreground: oklch(90% 0 0);
+  --card: oklch(18% .01 250);
+  --card-hover: oklch(22% .01 250);
+  --card-foreground: oklch(90% 0 0);
+  --popover: oklch(18% .01 250);
+  --popover-foreground: oklch(90% 0 0);
+  --primary: oklch(58% .19 35);
+  --primary-foreground: oklch(100% 0 0);
+  --secondary: oklch(50% .02 250);
+  --secondary-foreground: oklch(100% 0 0);
+  --muted: oklch(30% .01 250);
+  --muted-foreground: oklch(65% .01 250);
+  --accent: oklch(58% .19 35);
+  --accent-foreground: oklch(100% 0 0);
+  --destructive: oklch(65% .2 25);
+  --destructive-foreground: oklch(100% 0 0);
+  --border: oklch(35% .01 250);
+  --input: oklch(26% .01 250);
+  --ring: oklch(58% .19 35);
+
+  /* Semantic Status Colors */
+  --info: oklch(72% .11 230);
+  --info-foreground: oklch(15% 0 0);
+  --success: oklch(72% .15 150);
+  --success-foreground: oklch(15% 0 0);
+  --warning: oklch(82% .17 85);
+  --warning-foreground: oklch(15% 0 0);
+
+  /* Chart Colors */
+  --chart-1: oklch(58% .19 35);
+  --chart-2: oklch(72% .15 150);
+  --chart-3: oklch(72% .11 230);
+  --chart-4: oklch(82% .17 85);
+  --chart-5: oklch(65% .2 25);
+
+  /* Sidebar */
+  --sidebar: oklch(18% .01 250);
+  --sidebar-foreground: oklch(90% 0 0);
+  --sidebar-primary: oklch(58% .19 35);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --sidebar-accent: oklch(30% .01 250);
+  --sidebar-accent-foreground: oklch(90% 0 0);
+  --sidebar-border: oklch(35% .01 250);
+  --sidebar-ring: oklch(58% .19 35);
+
+  /* Board */
+  --column-border: oklch(35% .01 250);
+  --button: oklch(40% .01 250);
   
   /* Card Colors for Color Picker - Dark Mode */
   --color-slate: oklch(32.579% 0.00353 286.054 / 0.945);
@@ -100,29 +142,8 @@
   --color-purple: oklch(0.541 0.281 293.009);
 }
 
-/* Define color utilities using CSS variables */
+/* Component-specific utility styles */
 @layer utilities {
-  .bg-destructive {
-    background-color: var(--destructive);
-  } 
-  .bg-popover {
-    background-color: var(--popover);
-  }
-  .text-popover-foreground {
-    color: var(--popover-foreground);
-  }
-  .bg-background {
-    background-color: var(--background);
-  }
-  .text-foreground {
-    color: var(--foreground);
-  }
-  .bg-card {
-    background-color: var(--card);
-  }
-  .text-card-foreground {
-    color: var(--card-foreground);
-  }
   .card svg {
     width: 14px;
     height: 14px;
@@ -140,9 +161,6 @@
     transform: translateY(-2px);
     background: color-mix(in srgb, var(--accent) 6%, transparent);
   }
-  .border-muted{
-    border-color: var(--muted)!important;
-  }
   button[data-slot="button"] {
     background-color: var(--button);
   }
@@ -152,19 +170,12 @@
   }
   button[data-state="unchecked"] span{
     background-color: var(--muted);
-    border: 1px solid black;
+    border: 1px solid var(--border);
   }
   button[data-state="checked"] span{
     background-color: var(--color-green);
-    border: 1px solid black;
+    border: 1px solid var(--border);
   }
-  .text-primary-foreground {
-    color: var(--primary-foreground);
-  }
-  .text-secondary-foreground {
-    color: var(--secondary-foreground);
-  }
-
 }
 
 /* Button Hover Effects - Specific to shadcn-svelte variants */
@@ -307,6 +318,7 @@ button.bg-destructive:hover {
   }
   
   body {
+    font-family: 'Roboto Condensed Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
     background-color: var(--background);
     color: var(--foreground);
   }

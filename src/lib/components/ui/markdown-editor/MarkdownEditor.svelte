@@ -404,7 +404,7 @@
 	}
 	
 	:global(.ProseMirror p.is-editor-empty:first-child::before) {
-		color: #adb5bd;
+		color: var(--muted-foreground);
 		content: attr(data-placeholder);
 		float: left;
 		height: 0;
