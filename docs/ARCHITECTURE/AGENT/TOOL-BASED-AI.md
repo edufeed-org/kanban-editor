@@ -1,7 +1,7 @@
 # 🧠 Tool-Based KI-Integration (MCP-Style)
 
-**Version:** 1.1  
-**Datum:** 21. Januar 2026  
+**Version:** 1.2  
+**Datum:** 21. Februar 2026  
 **Status:** ✅ Active (Einzige KI-Architektur)  
 **Framework:** Svelte 5 Runes  
 **Architektur:** Tool-Based (OpenAI Function Calling)
@@ -703,7 +703,53 @@ Diese Dateien nicht mehr importieren:
 
 ---
 
-## VIII. Referenzen
+## VIII. Automatische Gesprächs-Zusammenfassung
+
+### Motivation
+
+Das LLM-Proxy hat ein Token-Limit (~50.000 Zeichen). Bei längeren Gesprächen wurde die Chat-History bisher hart auf die letzten 3 Nachrichten gekürzt — älterer Kontext ging komplett verloren. Das führte zu Wiederholungen und Kontextverlust.
+
+### Lösung: Summarization Pipeline
+
+```
+Nachricht 1-6 (unsummarized)
+    ↓ Schwelle erreicht (SUMMARIZE_THRESHOLD = 6)
+    ↓
+maybeSummarize() → createSummary() via LLM
+    ↓
+[Zusammenfassung] wird gespeichert (ConversationSummary)
+    ↓
+buildHistoryWithSummary():
+  → [Zusammenfassung des bisherigen Gesprächs] (system-ähnlich)
+  → + aktuelle unsummarized Nachrichten
+  → = kompakter, kontextreicher Prompt
+```
+
+### Implementierung
+
+| Methode | Datei | Beschreibung |
+|---------|-------|--------------|
+| `maybeSummarize()` | `chatStore.svelte.ts` | Prüft ob Schwelle erreicht, triggert Zusammenfassung |
+| `createSummary()` | `chatStore.svelte.ts` | LLM-basierte Zusammenfassung (~200 Wörter), lokaler Fallback |
+| `buildHistoryWithSummary()` | `chatStore.svelte.ts` | Baut History als [Summary] + [Recent Messages] |
+
+- **Trigger:** Automatisch nach jeder AI-Antwort (`AIPanel.svelte`, finally-Block)
+- **Schwelle:** 6 unsummarized Nachrichten (3 User + 3 AI Runden)
+- **Fallback:** Bei LLM-Fehler wird lokal zusammengefasst (erste 80 Zeichen pro Nachricht)
+- **Inkrementell:** Neue Zusammenfassungen bauen auf vorherigen auf
+- **Datenmodell:** Nutzt `ConversationSummary` Klasse aus `ChatModel.ts` (existierte bereits, war ungenutzt)
+
+### Konfiguration
+
+```typescript
+static readonly SUMMARIZE_THRESHOLD = 6;  // Nachrichten bis zur Zusammenfassung
+static readonly PROXY_LIMIT = 50000;       // Max. Zeichen an Proxy
+static readonly MAX_MSG_CHARS = 400;       // Max. Zeichen pro Nachricht
+```
+
+---
+
+## IX. Referenzen
 
 - **OpenAI Function Calling:** https://platform.openai.com/docs/guides/function-calling
 - **Model Context Protocol:** https://modelcontextprotocol.io/
@@ -712,6 +758,6 @@ Diese Dateien nicht mehr importieren:
 
 ---
 
-**Letztes Update:** 21. Januar 2026  
-**Status:** Ready for Implementation  
-**Geschätzter Aufwand:** ~70 Minuten
+**Letztes Update:** 21. Februar 2026  
+**Status:** ✅ Active  
+**Letzte Änderung:** Automatische Gesprächs-Zusammenfassung (Section VIII)

@@ -394,6 +394,10 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         'assistant'
       );
     } finally {
+      // Prüfe ob Konversation zusammengefasst werden sollte (im Hintergrund)
+      chatStore.maybeSummarize().catch(err => 
+        console.warn('⚠️ Auto-Zusammenfassung fehlgeschlagen:', err)
+      );
       isProcessing = false;
     }
   }

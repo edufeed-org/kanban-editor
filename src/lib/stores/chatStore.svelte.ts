@@ -511,6 +511,182 @@ export class ChatStore {
 	}
 
 	// ============================================================================
+	// Conversation Summarization
+	// ============================================================================
+
+	/** Ab dieser Anzahl Messages wird automatisch zusammengefasst */
+	private static readonly SUMMARIZE_THRESHOLD = 6;
+
+	/**
+	 * Prüft, ob eine Zusammenfassung nötig ist, und erstellt sie ggf.
+	 * Wird nach jeder AI-Antwort aufgerufen.
+	 * 
+	 * Strategie: Wenn > SUMMARIZE_THRESHOLD unsummarisierte Messages vorliegen,
+	 * fasse alle außer den letzten 2 (letzte AI-Antwort + letzte User-Frage)
+	 * in einer Summary zusammen.
+	 */
+	public async maybeSummarize(): Promise<void> {
+		if (!this.session) return;
+
+		// Berechne: Wie viele Messages seit der letzten Summary?
+		const lastSummary = this.session.summaries.length > 0
+			? this.session.summaries[this.session.summaries.length - 1]
+			: null;
+		const summarizedUpTo = lastSummary ? lastSummary.messageRange[1] + 1 : 0;
+		const unsummarizedCount = this.session.messages.length - summarizedUpTo;
+
+		if (unsummarizedCount < ChatStore.SUMMARIZE_THRESHOLD) {
+			return; // Noch nicht genug Messages
+		}
+
+		console.log(`📝 ${unsummarizedCount} unsummarisierte Nachrichten – starte Zusammenfassung...`);
+
+		// Messages die zusammengefasst werden sollen (alle außer die letzten 2)
+		const endIdx = this.session.messages.length - 3; // Letztes Paar behalten
+		if (endIdx <= summarizedUpTo) return;
+
+		const toSummarize = this.session.messages.slice(summarizedUpTo, endIdx + 1);
+		const previousSummary = lastSummary?.summary || '';
+
+		// Zusammenfassung erstellen (via LLM oder lokal als Fallback)
+		const summaryText = await this.createSummary(toSummarize, previousSummary);
+		if (!summaryText) return;
+
+		this.session.addSummary({
+			messageRange: [summarizedUpTo, endIdx],
+			summary: summaryText,
+			tokensSaved: toSummarize.reduce((acc, m) => acc + m.content.length, 0)
+		});
+
+		this.triggerUpdate();
+		console.log(`✅ Zusammenfassung erstellt (${toSummarize.length} Messages → ${summaryText.length} Zeichen)`);
+	}
+
+	/**
+	 * Erstellt eine Zusammenfassung der gegebenen Messages.
+	 * Versucht zuerst via LLM, fällt auf lokale Extraktion zurück.
+	 */
+	private async createSummary(
+		messages: import('../classes/ChatModel.js').Message[],
+		previousSummary: string
+	): Promise<string | null> {
+		const settings = settingsStore.settings;
+
+		// Konversation als Text aufbereiten
+		const conversationText = messages
+			.map((m) => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content.slice(0, 300)}`)
+			.join('\n');
+
+		// Falls LLM konfiguriert: LLM-basierte Zusammenfassung
+		if (settings.llmModel && settings.llmBaseUrl) {
+			try {
+				const summaryPrompt = previousSummary
+					? `Bisherige Zusammenfassung:\n${previousSummary}\n\nNeue Nachrichten:\n${conversationText}\n\nErstelle eine aktualisierte, kompakte Zusammenfassung des gesamten Gespraechs (max. 200 Woerter). Fokus auf: Was wurde besprochen, welche Aktionen wurden ausgefuehrt, welche Entscheidungen getroffen. Antworte NUR mit der Zusammenfassung, ohne Einleitung.`
+					: `Fasse dieses Gespraech kompakt zusammen (max. 200 Woerter). Fokus auf: Was wurde besprochen, welche Aktionen wurden ausgefuehrt, welche Entscheidungen getroffen.\n\n${conversationText}\n\nAntworte NUR mit der Zusammenfassung, ohne Einleitung.`;
+
+				const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+				const apiUrl = isOpenRouter
+					? `${settings.llmBaseUrl}/chat/completions`
+					: `${settings.llmBaseUrl}/v1/chat/completions`;
+
+				const response = await fetch(apiUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						...(settings.llmApiKey
+							? { Authorization: `Bearer ${settings.llmApiKey}` }
+							: {})
+					},
+					body: JSON.stringify({
+						model: settings.llmModel,
+						messages: [
+							{ role: 'system', content: 'Du bist ein praeziser Zusammenfasser. Antworte nur mit der Zusammenfassung.' },
+							{ role: 'user', content: summaryPrompt }
+						],
+						temperature: 0.3,
+						max_tokens: 500
+					})
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					const summary = data.choices?.[0]?.message?.content?.trim();
+					if (summary) {
+						console.log('✅ LLM-Zusammenfassung erhalten');
+						return summary;
+					}
+				}
+				console.warn('⚠️ LLM-Zusammenfassung fehlgeschlagen, nutze Fallback');
+			} catch (err) {
+				console.warn('⚠️ LLM-Zusammenfassung Fehler, nutze Fallback:', err);
+			}
+		}
+
+		// Fallback: Lokale Zusammenfassung (erste 100 Zeichen jeder Nachricht)
+		const localSummary = messages
+			.map((m) => {
+				const prefix = m.role === 'user' ? 'User fragte' : 'AI antwortete';
+				return `- ${prefix}: ${m.content.slice(0, 80).replace(/\n/g, ' ')}`;
+			})
+			.join('\n');
+
+		return previousSummary
+			? `${previousSummary}\n\nWeiterer Verlauf:\n${localSummary}`
+			: `Bisheriger Verlauf:\n${localSummary}`;
+	}
+
+	/**
+	 * Baut die History-Messages für den LLM-Request auf.
+	 * 
+	 * Strategie: Wenn eine Zusammenfassung existiert, wird sie als
+	 * kompakter Kontext eingefügt statt vieler alter Einzelnachrichten.
+	 * 
+	 * Ergebnis: [Summary-Msg?] + [letzte N unsummarisierte Messages]
+	 * → Mehr Kontext bei weniger Tokens.
+	 */
+	private buildHistoryWithSummary(maxUnsummarized: number, maxChars: number): Array<{ role: string; content: string }> {
+		if (!this.session) return [];
+
+		const msgs = this.session.messages;
+		const summaries = this.session.summaries;
+		const history: Array<{ role: string; content: string }> = [];
+
+		// 1. Letzte Zusammenfassung als Kontext einfügen (falls vorhanden)
+		if (summaries.length > 0) {
+			const latestSummary = summaries[summaries.length - 1];
+			history.push({
+				role: 'user',
+				content: `[Zusammenfassung des bisherigen Gespraechs]\n${latestSummary.summary}`
+			});
+			// Nur unsummarisierte Messages anhängen
+			const startFrom = latestSummary.messageRange[1] + 1;
+			const remaining = msgs.slice(startFrom);
+			const trimmed = remaining.slice(-maxUnsummarized);
+			for (const m of trimmed) {
+				history.push({
+					role: m.role === 'user' ? 'user' : 'assistant',
+					content: m.content.length > maxChars
+						? m.content.slice(0, maxChars) + '…'
+						: m.content
+				});
+			}
+		} else {
+			// Keine Summary → wie bisher die letzten N Nachrichten nehmen
+			const trimmed = msgs.slice(-maxUnsummarized);
+			for (const m of trimmed) {
+				history.push({
+					role: m.role === 'user' ? 'user' : 'assistant',
+					content: m.content.length > maxChars
+						? m.content.slice(0, maxChars) + '…'
+						: m.content
+				});
+			}
+		}
+
+		return history;
+	}
+
+	// ============================================================================
 	// Tool-Based LLM Integration (OpenAI Function Calling)
 	// ============================================================================
 
@@ -599,18 +775,12 @@ export class ChatStore {
 			let activeSystemPrompt = systemPrompt;
 			const systemSize = (p: string) => JSON.stringify(p).length;
 
-			// ── Schritt 2: History aufbauen – immer max. 3 Nachrichten,
-			//    lange Antworten auf MAX_MSG_CHARS kürzen ──────────────────
+			// ── Schritt 2: History aufbauen ──────────────────────────────
+			//    Nutzt Zusammenfassungen falls vorhanden:
+			//    [Summary] + [letzte unsummarisierte Messages]
+			//    → Mehr Kontext bei weniger Tokens als hartes Kappen.
 			const buildHistory = (maxMsgs: number) =>
-				this.messages
-					.slice(-maxMsgs)
-					.map((msg) => ({
-						role: msg.role === 'user' ? 'user' : 'assistant',
-						content:
-							msg.content.length > MAX_MSG_CHARS
-								? msg.content.slice(0, MAX_MSG_CHARS) + '…'
-								: msg.content
-					}));
+				this.buildHistoryWithSummary(maxMsgs, MAX_MSG_CHARS);
 
 			// ── Schritt 3: Budget-Regelschleife ───────────────────────────
 			//    Reduziere schrittweise bis der Body passt:

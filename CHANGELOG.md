@@ -8,6 +8,9 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+### Features
+- **Automatische Gespraechs-Zusammenfassung:** Chat-History wird nach 6 Nachrichten (3 Runden) automatisch per LLM zusammengefasst. Statt harter 3-Nachrichten-Grenze erhaelt das LLM nun [Zusammenfassung] + aktuelle Nachrichten — besserer Kontext bei gleichem Token-Budget. Lokaler Fallback bei LLM-Fehler. Nutzt bestehende `ConversationSummary`-Infrastruktur aus ChatModel.ts.
+
 ### Fixes
 - **LLM Proxy 400-Fehler behoben:** `tool_choice` von `required` auf `auto` umgestellt — eliminiert systematische 400-Fehler bei 16 Tools + Chat-History. Synthetischer `respond`-Fallback fuer reine Text-Antworten. Umlaute in Tool-Definitionen/System-Prompt durch ASCII ersetzt. Retry-Logik und Budget-Fallback-Loop ergaenzt. Siehe `docs/ARCHITECTURE/AGENT/LLM-PROXY-INVESTIGATION.md`.
 - Paste-System greift nicht mehr, wenn der Cursor in einem Input, Textarea oder TipTap-Editor steht (Board.svelte, PasteContainer.svelte)
