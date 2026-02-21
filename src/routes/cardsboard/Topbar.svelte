@@ -267,7 +267,7 @@
                         bind:value={editTitleValue}
                         onblur={saveTitle}
                         onkeydown={handleTitleKeydown}
-                        class="font-semibold text-lg bg-transparent border-b-2 border-primary outline-none px-1 min-w-[150px] max-w-[400px]"
+                        class="font-semibold text-lg bg-transparent rounded outline-none px-1 min-w-[150px] max-w-[400px]"
                         style="width: {Math.max(150, editTitleValue.length * 10)}px"
                     />
                 {:else if canEdit}

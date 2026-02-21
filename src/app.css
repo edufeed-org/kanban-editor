@@ -97,7 +97,7 @@
   --secondary: oklch(50% .02 250);
   --secondary-foreground: oklch(100% 0 0);
   --muted: oklch(30% .01 250);
-  --muted-foreground: oklch(72% .01 250);
+  --muted-foreground: oklch(65% .01 250);
   --accent: oklch(58% .19 35);
   --accent-foreground: oklch(100% 0 0);
   --destructive: oklch(65% .2 25);
@@ -229,7 +229,7 @@
   --secondary: oklch(50% .02 264);
   --secondary-foreground: oklch(100% 0 0);
   --muted: oklch(30% .01 264);
-  --muted-foreground: oklch(72% .01 264);
+  --muted-foreground: oklch(65% .01 264);
   --accent: oklch(79% .17 70);
   --accent-foreground: oklch(15% 0 0);
   --destructive: oklch(65% .2 25);
@@ -306,7 +306,7 @@
     transform: translateY(-2px);
     background: color-mix(in srgb, var(--accent) 6%, transparent);
   }
-  button[data-slot="button"] {
+  button[data-slot="button"]:not([class*="bg-primary"]):not([class*="bg-destructive"]):not([class*="bg-secondary"]):not([class*="bg-background"]):not(:hover) {
     background-color: var(--button);
   }
   button[data-slot="switch"] {
@@ -322,102 +322,7 @@
     border: 1px solid var(--border);
   }
 }
-
-/* Button Hover Effects - Specific to shadcn-svelte variants */
-button:hover {
-  transition: background-color 0.2s ease, color 0.2s ease; 
-}
-.add-board-button {
-      background-color: var(--muted);
-      border: 2px dotted var(--border);
-      color: var(--muted-foreground);
-  }
-
-
-.menu-item:hover{
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border-color: var(--accent) !important;
-}
-.menu-item-danger:hover{
-  background-color: var(--destructive) !important;
-  color: var(--destructive-foreground) !important;
-  border-color: var(--destructive) !important;
-}
-.editor-menu button.menu-item{
-  background-color: transparent;
-}
-.editor-menu button.menu-item:hover{
-  border-radius: 0!important;
-}
-button.btn:hover{
-  border: 2px solid var(--border);
-  border-color: var(--accent);
-}
-.editor-menu-item{
-  background-color: transparent;
-}
-
-/* hover:bg-primary hover:text-primary-foreground */
-.editor-menu-item:hover, .editor-menu-item:active{
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-}
-.hamburger-menu-button:hover, .hamburger-menu-button:active{
-  background-color: var(--primary) !important;
-  color: var(--foreground) !important;
-}
-
-button.trash{
-  /* background-color: var(--destructive)!important; */
-  color: var(--destructive)!important;
-  
-}
-
-button.btn:focus-visible,
-.menu-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
-/* Primary Button Hover */
-button.bg-primary:hover {
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-}
-
-/* Secondary Button Hover */
-button.bg-secondary:hover {
-  background-color: var(--secondary) !important;
-  color: var(--secondary-foreground) !important;
-}
-
-/* Outline Button Hover */
-button.border-border:hover {
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
-  border-color: var(--accent) !important;
-}
-
-/* Ghost Button Hover */
-button.bg-transparent:hover:not(.bg-primary):not(.bg-secondary) {
-  background-color: var(--accent) !important;
-  color: var(--accent-foreground) !important;
-}
-
-/* Destructive Button Hover */
-button.bg-destructive:hover {
-  background-color: var(--destructive) !important;
-  color: var(--destructive-foreground) !important;
-}
-
-.text-destructive {
-  color: var(--destructive)!important;
-}
-
-.card-content button {
-  background-color: var(--primary);
-}
+/* ------------------------------------------- */
 .active-board .active-board-indicator {
   color: var(--accent);
 }
@@ -556,7 +461,7 @@ button.bg-destructive:hover {
   outline: none;
 }
 
-*:focus-visible {
+*:focus-visible:not([data-slot="input"]):not([data-slot="textarea"]) {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);

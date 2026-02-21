@@ -825,7 +825,7 @@
 						>
 							Abbrechen
 						</Button>
-						<Button
+						<Button variant="default"
 							size="sm"
 							onclick={handleSaveDescription}
 						>
