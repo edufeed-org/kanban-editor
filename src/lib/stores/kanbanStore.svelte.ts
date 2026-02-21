@@ -2549,6 +2549,58 @@ export class BoardStore {
         return result;
     }
 
+    /**
+     * Publiziert einen Shortlink (Kind 30491) für das aktuelle Board.
+     * Der Slug wird als d-Tag gespeichert und mappt auf den vollen naddr.
+     *
+     * @param slug - Das gewünschte Kürzel (z.B. "projekt-x")
+     * @returns true wenn erfolgreich publiziert
+     */
+    public async publishShortlink(slug: string): Promise<boolean> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('[BoardStore] ❌ NDK nicht verfügbar für Shortlink-Publish');
+            return false;
+        }
+
+        const board = this.board;
+        if (!board.author) {
+            console.error('[BoardStore] ❌ Board hat keinen Author — Shortlink kann nicht erstellt werden');
+            return false;
+        }
+
+        try {
+            const { createShortlinkEvent, createBoardNaddr } = await import('$lib/utils/nostrEvents.js');
+            const { settingsStore } = await import('$lib/stores/settingsStore.svelte.js');
+
+            const relayHints: string[] = settingsStore.settings.relaysPublic || [];
+            const naddr = createBoardNaddr(board.id, board.author, relayHints);
+
+            const event = createShortlinkEvent(
+                slug,
+                naddr,
+                board.id,
+                board.author,
+                board.name,
+                ndk
+            );
+
+            // Auf öffentlichen Relays publizieren (Shortlinks müssen auffindbar sein)
+            const relays = await event.publish();
+
+            if (relays.size === 0) {
+                console.error('[BoardStore] ❌ Shortlink konnte auf keinem Relay publiziert werden');
+                return false;
+            }
+
+            console.log(`[BoardStore] ✅ Shortlink "${slug}" publiziert auf ${relays.size} Relay(s)`);
+            return true;
+        } catch (error) {
+            console.error('[BoardStore] ❌ Fehler beim Publizieren des Shortlinks:', error);
+            return false;
+        }
+    }
+
     public parseShareToken(token: string): any {
         return ExportImport.parseShareToken(token);
     }

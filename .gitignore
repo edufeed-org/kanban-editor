@@ -55,3 +55,4 @@ tailwind.log
 tailwindcss-*.log
 static/config.live.json
 scripts/probe*
+.vscode/settings.json
