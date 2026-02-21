@@ -15,6 +15,7 @@
  */
 
 export type Theme = 'dark' | 'light' | 'system';
+export type ColorScheme = 'stil' | 'rpi';
 export type PublishState = 'published' | 'private';
 export type PrivatePublishingMode = 'private-relays' | 'local-only' | 'public-relays';
 
@@ -27,6 +28,7 @@ export interface SettingsState {
   alignColumnsToMaxHeight: boolean; // Alle Karten auf maximale Höhe ausrichten, Default: true
   columnWidth: number; // Breite der Spalten in Pixeln, Default: 350
   theme: Theme;
+  colorScheme: ColorScheme; // 'stil' (Terracotta) | 'rpi' (Blau/Gold)
 
   // Nostr Relays
   relaysPublic: string[]; // Öffentliche Relays für Publishing
@@ -83,6 +85,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   alignColumnsToMaxHeight: true,
   columnWidth: 350,
   theme: 'system', // 'system' = folgt Browser-Präferenz (prefers-color-scheme)
+  colorScheme: 'stil', // 'stil' = FOERBICO Terracotta, 'rpi' = Blau/Gold
 
   // Nostr Relays
   relaysPublic: [
@@ -582,6 +585,12 @@ export class SettingsStore {
     this.saveToStorage();
   }
 
+  public setColorScheme(colorScheme: ColorScheme) {
+    this.settings = { ...this.settings, colorScheme };
+    this.applyTheme();
+    this.saveToStorage();
+  }
+
   /**
    * Ermittelt das effektive Theme basierend auf Setting und Browser-Präferenz
    */
@@ -603,10 +612,19 @@ export class SettingsStore {
     if (typeof document === 'undefined') return;
 
     const effectiveTheme = this.getEffectiveTheme();
+    const colorScheme = this.settings.colorScheme || 'stil';
     const root = document.documentElement;
 
-    root.classList.remove('dark', 'light');
+    // Remove all theme-related classes
+    root.classList.remove('dark', 'light', 'rpi');
+    
+    // Apply dark/light (needed for Tailwind dark: variant)
     root.classList.add(effectiveTheme);
+    
+    // Apply color scheme class (rpi overrides CSS variables)
+    if (colorScheme === 'rpi') {
+      root.classList.add('rpi');
+    }
 
     // Bei 'system' auf Änderungen der Browser-Präferenz reagieren
     if (this.settings.theme === 'system' && typeof window !== 'undefined') {
@@ -630,8 +648,10 @@ export class SettingsStore {
     this.systemThemeListener = (e: MediaQueryListEvent) => {
       if (this.settings.theme === 'system') {
         const newTheme = e.matches ? 'dark' : 'light';
-        document.documentElement.classList.remove('dark', 'light');
-        document.documentElement.classList.add(newTheme);
+        const root = document.documentElement;
+        root.classList.remove('dark', 'light');
+        root.classList.add(newTheme);
+        // rpi class bleibt erhalten (wird nicht entfernt)
         console.log(`🌓 System theme changed to: ${newTheme}`);
       }
     };
