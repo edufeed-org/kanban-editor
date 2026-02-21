@@ -2570,8 +2570,20 @@ export class BoardStore {
         }
 
         try {
-            const { createShortlinkEvent, createBoardNaddr } = await import('$lib/utils/nostrEvents.js');
+            const { createShortlinkEvent, createBoardNaddr, checkSlugCollision } = await import('$lib/utils/nostrEvents.js');
             const { settingsStore } = await import('$lib/stores/settingsStore.svelte.js');
+
+            // Guard: Prüfen ob der Slug bereits von einem anderen Board belegt ist.
+            // NIP-33 würde das bestehende Event still überschreiben — das wäre ein
+            // Datenverlust für das andere Board.
+            const collision = await checkSlugCollision(slug, board.author, board.id, ndk);
+            if (collision) {
+                console.warn(`[BoardStore] ⚠️ Slug "${slug}" bereits vergeben für ${collision}`);
+                const err = new Error(`Slug "${slug}" ist bereits als Kurzlink für ein anderes Board vergeben.`);
+                (err as any).code = 'SLUG_COLLISION';
+                (err as any).collidingBoardRef = collision;
+                throw err;
+            }
 
             const relayHints: string[] = settingsStore.settings.relaysPublic || [];
             const naddr = createBoardNaddr(board.id, board.author, relayHints);
@@ -2596,6 +2608,11 @@ export class BoardStore {
             console.log(`[BoardStore] ✅ Shortlink "${slug}" publiziert auf ${relays.size} Relay(s)`);
             return true;
         } catch (error) {
+            // Kollisionsfehler direkt weiterwerfen — der Caller (ShareDialog)
+            // soll eine spezifische Fehlermeldung anzeigen können.
+            if (error instanceof Error && (error as any).code === 'SLUG_COLLISION') {
+                throw error;
+            }
             console.error('[BoardStore] ❌ Fehler beim Publizieren des Shortlinks:', error);
             return false;
         }

@@ -524,6 +524,25 @@
                 return false;
             }
         } catch (error) {
+            // Slug-Kollision: Ein anderes Board des gleichen Autors nutzt diesen Slug bereits.
+            // Da NIP-33 Addressable Events bei gleichem (kind, author, d-tag) ersetzt werden,
+            // würde ein Überschreiben des bestehenden Events stillschweigend den
+            // Shortlink des anderen Boards zerstören.
+            if (error instanceof Error && (error as any).code === 'SLUG_COLLISION') {
+                // Vorschlag: aktueller Slug + letzte 4 Zeichen der Board-ID als Suffix.
+                // Das ist deterministisch (immer derselbe Vorschlag für dasselbe Board)
+                // und minimal invasiv (nur ein kurzer, eindeutiger Zusatz).
+                const boardId = boardStore.data?.id ?? '';
+                const suffix = boardId.slice(-4);
+                const suggestedSlug = suffix ? `${shortlinkSlug}-${suffix}` : shortlinkSlug;
+                shortlinkSlug = suggestedSlug;
+                shortlinkSlugEdited = true;   // Verhindert Auto-Überschreiben durch $effect
+                shortlinkQrDataUrl = '';       // QR zurücksetzen
+                toast.warning('Slug bereits vergeben', {
+                    description: `Ein anderes Board nutzt „${shortlinkSlug.replace(`-${suffix}`, '')}" bereits. Vorschlag: „${suggestedSlug}" — einfach nochmal klicken.`
+                });
+                return false;
+            }
             console.error('Fehler beim Publizieren des Kurzlinks:', error);
             toast.error('Fehler beim Publizieren', {
                 description: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -989,4 +989,46 @@ export async function resolveShortlinkBySlug(
   return naddr ? { naddr, authorPubkey: latest.pubkey } : null;
 }
 
+/**
+ * Prüft ob ein Slug (d-Tag) bereits von einem anderen Board desselben Authors
+ * als Shortlink belegt ist.
+ *
+ * Da NIP-33 Addressable Events pro (kind, author, d-tag) eindeutig sind,
+ * würde ein erneutes Publizieren mit demselben Slug das bestehende Event
+ * überschreiben — auch wenn es ein komplett anderes Board referenziert.
+ *
+ * @param slug         - Der zu prüfende Slug
+ * @param authorPubkey - Hex-Pubkey des Autors
+ * @param boardId      - d-Tag des Boards, das den Slug beanspruchen möchte
+ * @param ndk          - NDK-Instanz
+ * @returns            - Die `a`-Tag-Referenz des kollidierenden Boards (z.B.
+ *                       `"30301:<pubkey>:<anderesBoardId>"`), oder `null`
+ *                       wenn der Slug frei ist oder bereits diesem Board gehört.
+ */
+export async function checkSlugCollision(
+  slug: string,
+  authorPubkey: string,
+  boardId: string,
+  ndk: NDK
+): Promise<string | null> {
+  const existing = await ndk.fetchEvent({
+    kinds: [EVENT_KINDS.SHORTLINK],
+    authors: [authorPubkey],
+    '#d': [slug],
+  } as any);
+
+  if (!existing) return null; // Slug noch nicht vergeben
+
+  // Der a-Tag enthält "30301:<pubkey>:<boardId>" des Ziel-Boards
+  const aTag = existing.tags.find(t => t[0] === 'a')?.[1];
+  if (!aTag) return null; // Kein a-Tag → Board-ID nicht bestimmbar, vorsichtshalber erlauben
+
+  const parts = aTag.split(':');
+  const existingBoardId = parts[2]; // "30301:pubkey:BOARD_ID"
+
+  if (existingBoardId === boardId) return null; // Gehört bereits diesem Board → kein Problem
+
+  return aTag; // Kollision: Slug gehört einem anderen Board
+}
+
 export type { BoardProps, CardProps, ColumnProps };

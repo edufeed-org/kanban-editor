@@ -180,12 +180,25 @@ Löst einen Slug auf, wenn der Author bekannt ist (schneller, gezielter Filter).
 
 Löst einen Slug auf **ohne** Author-Kenntnis. Sucht über alle Autoren, nimmt das neueste Event (Last-Write-Wins).
 
+### `checkSlugCollision(slug, authorPubkey, boardId, ndk): Promise<string | null>`
+
+Prüft ob ein Slug bereits von einem **anderen** Board desselben Authors belegt ist.
+
+Da NIP-33 Addressable Events pro `(kind, author, d-tag)` eindeutig sind, würde ein erneutes Publizieren mit demselben Slug das bestehende Event still überschreiben — selbst wenn es ein anderes Board referenziert.
+
+- Returns `null` → Slug ist frei, oder gehört bereits diesem Board
+- Returns `string` → `a`-Tag-Referenz des kollidierenden Boards (`"30301:<pubkey>:<anderesBoardId>"`)
+
+Wird intern von `boardStore.publishShortlink()` aufgerufen.
+
 ### `boardStore.publishShortlink(slug): Promise<boolean>`
 
 Publiziert ein Shortlink-Event für das aktuelle Board.
 - Generiert naddr via `nip19.naddrEncode()`
+- **Prüft vor dem Publish auf Slug-Kollision** (Guard via `checkSlugCollision()`)
 - Publiziert auf öffentliche Relays
 - Gibt `true` bei Erfolg zurück
+- Wirft `Error` mit `code: 'SLUG_COLLISION'` wenn der Slug einem anderen Board gehört
 
 ---
 
@@ -237,9 +250,19 @@ Publiziert ein Shortlink-Event für das aktuelle Board.
 - QR-Button klicken → Shortlink wird automatisch publiziert → QR wird erzeugt
 - Wenn Slug geändert wird, muss QR erneut generiert werden
 
-### Slug-Kollision
+### Slug-Kollision (gleicher Author, verschiedene Boards)
 
-Addressable Events (NIP-33) sind pro Author + d-Tag unique. Verschiedene Autoren können denselben Slug haben. `resolveShortlinkBySlug` nimmt das neueste Event (Last-Write-Wins).
+NIP-33 garantiert Eindeutigkeit pro `(kind, author, d-tag)`. Wenn zwei Boards desselben Autors einen identischen Board-Namen haben (und damit denselben Auto-Slug erzeugen), würde das zweite `publishShortlink`-Event das erste **stillschweigend überschreiben** — Board A's Shortlink wäre danach verloren.
+
+**Schutzmaßnahme (implementiert):** `publishShortlink()` ruft vor dem Publish `checkSlugCollision()` auf. Wenn ein bestehendes Kind-30491-Event gefunden wird, dessen `a`-Tag auf eine andere Board-ID zeigt, wird ein Fehler mit `code: 'SLUG_COLLISION'` geworfen. Der ShareDialog generiert dann automatisch einen Alternativ-Slug (aktueller Slug + letzte 4 Zeichen der Board-ID) und schreibt ihn ins Eingabefeld:
+
+> *Warning Toast: „Slug bereits vergeben — Ein anderes Board nutzt „neues-board" bereits. Vorschlag: „neues-board-a3f2" — einfach nochmal klicken."*
+
+Der Nutzer sieht den neuen Slug direkt vorausgefüllt und kann ihn mit einem weiteren Klick publizieren oder weiter anpassen. Der Suffix ist **deterministisch** — für dasselbe Board wird immer derselbe Vorschlag generiert.
+
+### Slug-Kollision (verschiedene Autoren)
+
+Verschiedene Autoren können denselben Slug haben. `resolveShortlinkBySlug` nimmt das neueste Event (Last-Write-Wins). `resolveShortlink(slug, authorPubkey)` ist hingegen eindeutig, da nach Author gefiltert wird.
 
 ---
 
