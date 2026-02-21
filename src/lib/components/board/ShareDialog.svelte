@@ -43,22 +43,17 @@
     let baseUrl = $state(
         typeof window !== 'undefined'
             ? (() => {
-                const envBase = import.meta.env.BASE_URL || '/';
-                let basePath = envBase;
-
-                // Vite kann BASE_URL als "./" setzen (z.B. GitHub Pages). Dann aktuelles Path-Segment verwenden.
+                let basePath = import.meta.env.BASE_URL || '';
                 if (basePath === '.' || basePath === './') {
-                    basePath = window.location.pathname.replace(/[^/]*$/, '');
+                    // Fallback für relative Pfade: entferne /cardsboard und alles danach
+                    basePath = window.location.pathname.replace(/\/cardsboard.*$/, '');
                 }
-
-                // Normalisieren: führenden Slash sicherstellen
-                if (!basePath.startsWith('/')) {
-                    basePath = `/${basePath}`;
+                if (basePath === '/') {
+                    basePath = '';
                 }
-
-                const resolved = new URL(basePath, window.location.origin);
-                const normalizedPath = resolved.pathname.replace(/\/$/, '');
-                return `${resolved.origin}${normalizedPath}`;
+                // Normalisieren: trailing slash entfernen
+                basePath = basePath.replace(/\/$/, '');
+                return `${window.location.origin}${basePath}`;
             })()
             : 'http://localhost:5173'
     );
@@ -101,7 +96,7 @@
     let shareToken = $state('');
     
     // Vollständiger Share-Link (kombiniert baseUrl + Token)
-    let fullShareLink = $derived(shareToken ? `${baseUrl}${import.meta.env.BASE_URL}cardsboard?import=${shareToken}` : '');
+    let fullShareLink = $derived(shareToken ? `${baseUrl}/cardsboard?import=${shareToken}` : '');
     
 
     async function loadShareConfig(): Promise<void> {
