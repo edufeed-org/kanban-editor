@@ -365,6 +365,7 @@
 		height: 100%;
 		width: 100%;
 		position: relative; /* Enables absolute positioning for sticky button */
+		background: var(--board-bg, none); /* Subtle theme gradient (active in rpi) */
 	}
 
     /* Dickes Scrollbar in Chrome/Edge/Safari */

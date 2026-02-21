@@ -200,6 +200,13 @@
   /* Board */
   --column-border: oklch(85% .01 264);
   --button: oklch(88% .005 264);
+
+  /* Board Background — subtle gradient from primary (pre-computed 4% blend) */
+  --board-bg: linear-gradient(
+    to bottom right,
+    oklch(97.4% .006 264) 10%,
+    oklch(100% 0 0) 60%
+  );
 }
 
 /* ============================================
@@ -257,6 +264,13 @@
   /* Board */
   --column-border: oklch(35% .01 264);
   --button: oklch(40% .01 264);
+
+  /* Board Background — subtle gradient from primary (pre-computed 5% blend) */
+  --board-bg: linear-gradient(
+    to bottom right,
+    oklch(23.7% .03 264) 0%,
+    oklch(22% .02 264) 60%
+  );
 
   /* Card Colors for Color Picker - Dark Mode */
   --color-slate: oklch(32.579% 0.00353 286.054 / 0.945);
