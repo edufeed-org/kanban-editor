@@ -1,26 +1,26 @@
-﻿# FOERBICO Design System  Color Scheme & Typography
+﻿# FOERBICO Design System — Color Scheme & Typography
 
 **Stand:** 2026-02-21
 **Basis:** FOERBICO-Projekt Designvorgaben
-**Status:** Phase 1  COMPLETE | Phase 2 PENDING
+**Status:** Phase 1 ✅ COMPLETE | Phase 2 PENDING
 
 ---
 
 ## Überblick
 
-Das Kanban-Board verwendet das **FOERBICO Design System** als Grundlage für Farben und Typografie. Die Implementierung setzt auf die bestehende **shadcn-svelte** Architektur mit OKLCH CSS-Variablen  kein daisyUI.
+Das Kanban-Board verwendet das **FOERBICO Design System** als Grundlage für Farben und Typografie. Die Implementierung setzt auf die bestehende **shadcn-svelte** Architektur mit OKLCH CSS-Variablen — kein daisyUI.
 
 ### Architektur
 
 ```
 FOERBICO Design Tokens
-     (Mapping)
+     ↓ (Mapping)
 CSS Custom Properties (OKLCH)      src/app.css (:root / :root.dark)
-     (Registration)
+     ↓ (Registration)
 tailwind.config.js                 var(--xxx) Referenzen
-     (Consumption)
+     ↓ (Consumption via @config)
 Tailwind Utilities                 bg-primary, text-foreground, etc.
-     (Usage)
+     ↓ (Usage)
 shadcn-svelte Components          Button, Card, Dialog, etc.
 ```
 
@@ -38,7 +38,7 @@ shadcn-svelte Components          Button, Card, Dialog, etc.
 
 ## Implementierte Themes
 
-### Theme: "stil" (Light)  `:root`
+### Theme: "stil" (Light) — `:root`
 
 FOERBICO Hauptthema mit Terracotta-Primary.
 
@@ -65,7 +65,7 @@ FOERBICO Hauptthema mit Terracotta-Primary.
 | `--input` | `oklch(91% 0 0)` | abgeleitet | Input-Hintergrund |
 | `--ring` | `oklch(58% .19 35)` | primary | Terracotta |
 
-### Theme: "stil-dark" (Dark)  `:root.dark`
+### Theme: "stil-dark" (Dark) — `:root.dark`
 
 | CSS-Variable | OKLCH-Wert | FOERBICO-Quelle | Visuell |
 |---|---|---|---|
@@ -122,7 +122,7 @@ bg-info-foreground  text-info-foreground  /* etc. */
 
 ### Nicht verwendet
 
-- **Yanone Kaffeesatz**  bewusst ausgeschlossen (nur Roboto gewünscht)
+- **Yanone Kaffeesatz** — bewusst ausgeschlossen (nur Roboto gewünscht)
 
 ---
 
@@ -165,16 +165,11 @@ Für Multi-Theme-Support wäre nötig:
 
 ---
 
-## Technischer Legacy-Fix: HSLvar()
+## Technische Fixes
 
-### Problem
+### Fix 1: HSL→var() Migration
 
 Die `tailwind.config.js` verwendete `hsl(var(--xxx) / <alpha-value>)` Wrapper um die CSS-Variablen. Da die Variablen aber OKLCH-Werte enthalten, war das technisch falsch. Es funktionierte nur, weil `@layer utilities` Overrides in `app.css` die Tailwind-generierten Styles überschrieben.
-
-### Lösung
-
-1. **tailwind.config.js:** Alle `hsl()` Wrapper entfernt  direkt `var(--xxx)`
-2. **app.css:** Redundante `@layer utilities` Farbüberladungen entfernt (nur komponentenspezifische Styles behalten)
 
 ```javascript
 // Vorher (FALSCH):
@@ -183,15 +178,55 @@ primary: 'hsl(var(--primary) / <alpha-value>)',
 primary: 'var(--primary)',
 ```
 
+### Fix 2: `@config` Direktive (KRITISCH!)
+
+**Problem:** Tailwind CSS v4 mit `@tailwindcss/vite` lädt `tailwind.config.js` **NICHT automatisch**. Ohne explizite `@config`-Direktive werden keine Farb-Utilities aus der Config generiert.
+
+**Symptom:** Dialoge, Popovers und Menüs hatten transparente Hintergründe. Im Build-CSS waren `.bg-popover`, `.bg-background` etc. nicht vorhanden (nur 1 `background-color` Regel in 91KB CSS).
+
+**Fix in `src/app.css`:**
+
+```css
+@import "tailwindcss";
+@config "../tailwind.config.js";  /* ← DIESE ZEILE IST PFLICHT! */
+@import "tw-animate-css";
+```
+
+**Ergebnis:** CSS-Output wuchs von 91KB → 129KB. 196 `background-color` Regeln statt 1.
+
+### Fix 3: `@custom-variant dark`
+
+**Problem:** Die Zeile `@custom-variant dark (&:is(.dark *));` war auskommentiert. 60 Komponenten verwenden den `dark:` Tailwind-Prefix.
+
+**Fix in `src/app.css`:**
+
+```css
+@custom-variant dark (&:is(.dark *));
+```
+
+**Ergebnis:** 79 `dark:` Klassen werden jetzt korrekt im CSS generiert.
+
+### Zusammenfassung: app.css Header-Struktur
+
+```css
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@import "tw-animate-css";
+@import "@fontsource-variable/roboto-condensed";
+@custom-variant dark (&:is(.dark *));
+```
+
+Diese Reihenfolge ist **kritisch** — `@config` muss direkt nach `@import "tailwindcss"` stehen.
+
 ---
 
 ## Kritische Hardcoded-Farben (Phase 1 gefixt)
 
 | Datei | Problem | Fix |
 |---|---|---|
-| `CardSidebar.svelte` | 7 Hex-Farben im Style-Block, Dark Mode komplett broken |  CSS-Variablen |
-| `Board.svelte` | Scrollbar mit Hex-Farben |  `var(--muted)`, `var(--foreground)` |
-| `MarkdownEditor.svelte` | Placeholder `#adb5bd` |  `var(--muted-foreground)` |
+| `CardSidebar.svelte` | 7 Hex-Farben im Style-Block, Dark Mode komplett broken | → CSS-Variablen |
+| `Board.svelte` | Scrollbar mit Hex-Farben | → `var(--muted)`, `var(--foreground)` |
+| `MarkdownEditor.svelte` | Placeholder `#adb5bd` | → `var(--muted-foreground)` |
 
 ---
 
@@ -225,9 +260,9 @@ Tailwind-Literal-Farben in ~15 Komponenten sollen auf die neuen semantischen Tok
 
 ### Avatar-Farbpalette konsolidieren
 
-3x duplizierte Palette  Single Source of Truth in `avatar/index.ts`.
+3x duplizierte Palette → Single Source of Truth in `avatar/index.ts`.
 
-### bg-white  bg-background
+### bg-white → bg-background
 
 Betrifft: `ProfileEditor.svelte`, `ShareDialog.svelte`.
 

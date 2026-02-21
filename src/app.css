@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
+@config "../tailwind.config.js";
+
 @import "tw-animate-css";
 
 @import "@fontsource-variable/roboto-condensed";
 
 /* @plugin "@iconify/tailwind4" {
   prefixes: ic, mdi, lucide, heroicons;
-}
+} */
 
-@custom-variant dark (&:is(.dark *)); */
+@custom-variant dark (&:is(.dark *));
 
 /* ============================================
    FOERBICO Design System — Theme: "stil" (Light)

@@ -14,6 +14,7 @@ Keine offenen Eintraege.
 
 | Datum | Was | Details |
 |---|---|---|
+| 2026-02-21 | FOERBICO Design System: Farbschema (OKLCH), Roboto Condensed Font, Tailwind v4 `@config` Fix, Dark-Mode Fix | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
 | 2026-02-21 | Kurzlink-Feature (PR #122): Dezentraler URL-Shortener via Nostr Kind 30491 (ShareDialog, /b/[slug] Route) | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
 | 2026-02-21 | Automatische Gespraechs-Zusammenfassung (LLM + lokaler Fallback) | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
 | 2026-02-21 | LLM Proxy 400-Fehler behoben (tool_choice, Umlaute, Retry) | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
