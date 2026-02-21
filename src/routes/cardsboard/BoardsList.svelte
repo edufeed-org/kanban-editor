@@ -400,7 +400,7 @@
     
     <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto editor-menu bg-[var(--card)]">
+        <div transition:slide={{ duration: 200 }} class="border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto editor-menu bg-[var(--card)]">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 
