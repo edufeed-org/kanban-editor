@@ -204,9 +204,10 @@
   /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: linear-gradient(
     to bottom right,
-    oklch(89.081% 0.05372 257.11) 0%,
-    oklch(97% .015 200) 45%,
-    oklch(88.846% 0.07804 70.273) 100%
+    oklch(54.98% 0.16067 264.173 / 0.877) 0%,
+    oklch(54.98% 0.16067 264.173 / 0.192) 10%,
+    oklch(89.946% 0.02229 74.012 / 0.884) 90%,
+    oklch(79% .17 70) 98%
   );
 }
 
