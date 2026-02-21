@@ -25,6 +25,7 @@
   import MonitorIcon from '@lucide/svelte/icons/monitor';
   import SunIcon from '@lucide/svelte/icons/sun';
   import MoonIcon from '@lucide/svelte/icons/moon';
+  import PaletteIcon from '@lucide/svelte/icons/palette';
   
   // Props
   let { 
@@ -162,7 +163,7 @@
               <Button 
                 variant={settings.theme === 'system' ? 'default' : 'ghost'}
                 onclick={() => settingsStore.setTheme('system')}
-                class="flex-1 gap-2 {settings.theme === 'system' ? 'ring-2 ring-primary ring-offset-background' : 'opacity-50'}"
+                class="flex-1 gap-2 {settings.theme === 'system' ? 'ring-2 ring-primary ring-offset-background' : 'text-muted-foreground'}"
               >
                 <MonitorIcon class="h-4 w-4" />
                 System
@@ -170,7 +171,7 @@
               <Button 
                 variant={settings.theme === 'light' ? 'default' : 'ghost'}
                 onclick={() => settingsStore.setTheme('light')}
-                class="flex-1 gap-2 {settings.theme === 'light' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-50'}"
+                class="flex-1 gap-2 {settings.theme === 'light' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'text-muted-foreground'}"
               >
                 <SunIcon class="h-4 w-4" />
                 Hell
@@ -178,10 +179,38 @@
               <Button 
                 variant={settings.theme === 'dark' ? 'default' : 'ghost'}
                 onclick={() => settingsStore.setTheme('dark')}
-                class="flex-1 gap-2 {settings.theme === 'dark' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-50'}"
+                class="flex-1 gap-2 {settings.theme === 'dark' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'text-muted-foreground'}"
               >
                 <MoonIcon class="h-4 w-4" />
                 Dunkel
+              </Button>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <!-- Farbschema -->
+          <div class="space-y-2">
+            <Label>Farbschema</Label>
+            <p class="text-sm text-muted-foreground mb-2">
+              Visuelles Erscheinungsbild der Oberfläche
+            </p>
+            <div class="flex items-center gap-1 p-1 bg-muted rounded-lg">
+              <Button 
+                variant={settings.colorScheme === 'stil' ? 'default' : 'ghost'}
+                onclick={() => settingsStore.setColorScheme('stil')}
+                class="flex-1 gap-2 {settings.colorScheme === 'stil' ? 'ring-2 ring-primary ring-offset-background' : 'text-muted-foreground'}"
+              >
+                <span class="inline-block h-4 w-4 rounded-full" style="background: oklch(58% .19 35);"></span>
+                Stil
+              </Button>
+              <Button 
+                variant={settings.colorScheme === 'rpi' ? 'default' : 'ghost'}
+                onclick={() => settingsStore.setColorScheme('rpi')}
+                class="flex-1 gap-2 {settings.colorScheme === 'rpi' ? 'ring-2 ring-primary ring-offset-background' : 'text-muted-foreground'}"
+              >
+                <span class="inline-block h-4 w-4 rounded-full" style="background: oklch(35% .16 264);"></span>
+                RPI
               </Button>
             </div>
           </div>

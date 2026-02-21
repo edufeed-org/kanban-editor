@@ -31,10 +31,10 @@
 	}
 
 	:global([data-slot="tabs-trigger"]:hover) {
-		border-bottom-color: hsl(var(--muted-foreground));
+		border-bottom-color: var(--muted-foreground);
 	}
 
 	:global([data-slot="tabs-trigger"][data-state="active"]) {
-		border-bottom-color: hsl(var(--foreground));
+		border-bottom-color: var(--foreground);
 	}
 </style>

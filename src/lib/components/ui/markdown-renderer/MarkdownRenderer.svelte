@@ -125,13 +125,13 @@
 	}
 	
 	.markdown-rendered :global(blockquote) {
-		border-left: 4px solid hsl(var(--primary));
+		border-left: 4px solid var(--primary);
 		padding-left: 1em;
 		margin-left: 0;
 		margin-top: 0.5em;
 		margin-bottom: 0.5em;
 		font-style: italic;
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		background-color: rgba(0, 0, 0, 0.05);
 	}
 	
@@ -143,7 +143,7 @@
 	/* Code Styles */
 	.markdown-rendered :global(code) {
 		background-color: rgba(0, 0, 0, 0.1);
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		padding: 0.2em 0.4em;
 		border-radius: 3px;
 		font-family: monospace;
@@ -156,7 +156,7 @@
 	
 	.markdown-rendered :global(pre) {
 		background-color: rgba(0, 0, 0, 0.1);
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		padding: 1em;
 		border-radius: 5px;
 		overflow-x: auto;
@@ -176,7 +176,7 @@
 	
 	/* Links */
 	.markdown-rendered :global(a) {
-		color: hsl(var(--primary));
+		color: var(--primary);
 		text-decoration: underline;
 	}
 	
@@ -201,7 +201,7 @@
 	/* Horizontal Rule */
 	.markdown-rendered :global(hr) {
 		border: none;
-		border-top: 1px solid hsl(var(--border));
+		border-top: 1px solid var(--border);
 		margin: 1em 0;
 		height: 0;
 		display: block;
@@ -209,7 +209,7 @@
 	
 	/* Teaser Separator (+++  Marker) */
 	.markdown-rendered :global(hr.teaser-separator) {
-		border-top: 2px dashed hsl(var(--muted-foreground) / 0.4);
+		border-top: 2px dashed color-mix(in oklch, var(--muted-foreground) 40%, transparent);
 		margin: 1.5em 0;
 	}
 	

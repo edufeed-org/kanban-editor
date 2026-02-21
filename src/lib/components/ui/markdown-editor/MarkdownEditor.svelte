@@ -384,7 +384,7 @@
 	{/if}
 	
 	<!-- Editor Content -->
-	<div bind:this={element} class="prose prose-sm max-w-none p-4 {fullHeight ? 'flex-1 min-h-[300px] overflow-y-auto' : 'min-h-[200px] max-h-[400px] overflow-y-hidden'}" aria-label="Beschreibungfocus:outline-none"></div>
+	<div bind:this={element} class="prose prose-sm dark:prose-invert max-w-none p-4 {fullHeight ? 'flex-1 min-h-[300px] overflow-y-auto' : 'min-h-[200px] max-h-[400px] overflow-y-hidden'}" aria-label="Beschreibung" ></div>
 </div>
 
 <style>
@@ -404,7 +404,7 @@
 	}
 	
 	:global(.ProseMirror p.is-editor-empty:first-child::before) {
-		color: #adb5bd;
+		color: var(--muted-foreground);
 		content: attr(data-placeholder);
 		float: left;
 		height: 0;
@@ -445,11 +445,11 @@
 	}
 	
 	:global(.ProseMirror blockquote) {
-		border-left: 4px solid hsl(var(--primary));
+		border-left: 4px solid var(--primary);
 		padding-left: 1em;
 		margin-left: 0;
 		font-style: italic;
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		background-color: rgba(0, 0, 0, 0.05);
 	}
 	
@@ -461,7 +461,7 @@
 	/* Code Styles - deutlich sichtbarer Hintergrund */
 	:global(.ProseMirror code) {
 		background-color: rgba(0, 0, 0, 0.1);
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		padding: 0.2em 0.4em;
 		border-radius: 3px;
 		font-family: monospace;
@@ -475,7 +475,7 @@
 	
 	:global(.ProseMirror pre) {
 		background-color: rgba(0, 0, 0, 0.1);
-		color: hsl(var(--foreground));
+		color: var(--foreground);
 		padding: 1em;
 		border-radius: 5px;
 		overflow-x: auto;

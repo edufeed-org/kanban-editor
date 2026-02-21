@@ -136,7 +136,7 @@
     
     .paste-enabled-card:focus-within,
     .paste-enabled-column:focus-within {
-        outline-color: hsl(var(--primary) / 0.5);
+        outline-color: color-mix(in oklch, var(--primary) 50%, transparent);
     }
     
     .paste-hint {
@@ -144,7 +144,7 @@
         bottom: 4px;
         right: 4px;
         font-size: 0.7rem;
-        color: hsl(var(--muted-foreground));
+        color: var(--muted-foreground);
         opacity: 0;
         transition: opacity 0.2s;
         pointer-events: none;
