@@ -11,12 +11,13 @@
     import TrashIcon from "@lucide/svelte/icons/trash";
     import CopyIcon from "@lucide/svelte/icons/copy";
     import CheckIcon from "@lucide/svelte/icons/check";
-    import LinkIcon from "@lucide/svelte/icons/link";
     import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
     import { toast } from "svelte-sonner";
-    import { createBoardNaddr, createBoardNaddrUrl } from "$lib/utils/nostrEvents";
+    import { createBoardNaddr, createBoardNaddrUrl, slugifyBoardName } from "$lib/utils/nostrEvents";
     import { nip19 } from '@nostr-dev-kit/ndk';
     import QRCode from 'qrcode';
+    import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+    import QrCodeIcon from "@lucide/svelte/icons/qr-code";
     
     // Props
     let {
@@ -34,10 +35,17 @@
     let activeTab = $state('nostr-link'); // 'nostr-link' | 'share-link' | 'editors'
     let linkCopied = $state(false);
     
-    // Nostr naddr Link State
+    // Nostr naddr Link State (intern für Shortlink-Generierung)
     let naddrPath = $state(''); // Relativer Pfad: /cardsboard/naddr...
-    let naddrCopied = $state(false);
-    let qrCodeDataUrl = $state('');
+    
+    // Kurzlink State
+    let shortlinkSlug = $state('');
+    let shortlinkSlugEdited = $state(false); // User hat Slug manuell bearbeitet
+    let isPublishingShortlink = $state(false);
+    let publishedSlug = $state(''); // Zuletzt erfolgreich publizierter Slug
+    let shortlinkPublished = $derived(publishedSlug !== '' && publishedSlug === shortlinkSlug);
+    let shortlinkCopied = $state(false);
+    let shortlinkQrDataUrl = $state('');
     
     // Base-URL für vollständige Links (default: Origin + BASE_URL)
     let baseUrl = $state(
@@ -60,6 +68,9 @@
     
     // Vollständiger naddr-Link (kombiniert baseUrl + naddrPath)
     let naddrLink = $derived(naddrPath ? `${baseUrl}${naddrPath}` : '');
+    
+    // Vollständiger Kurzlink (kombiniert baseUrl + Slug)
+    let shortlinkUrl = $derived(shortlinkSlug ? `${baseUrl}/b/${shortlinkSlug}` : '');
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
@@ -445,17 +456,6 @@
         }
     });
 
-    // QR-Code nur für Nostr-Link neu generieren
-    $effect(() => {
-        if (!open || activeTab !== 'nostr-link' || mode === 'editors') return;
-        const currentBaseUrl = baseUrl;
-        const currentPath = naddrPath;
-        if (currentBaseUrl && currentPath) {
-            void regenerateQrCode();
-        }
-    });
-
-
     $effect(() => {
         if (!open) return;
 
@@ -471,71 +471,102 @@
         }
     });
     
-    // Nostr naddr-Link generieren
+    // Nostr naddr-Link generieren (intern für Shortlink-Erstellung)
     async function generateNaddrLink() {
         const board = boardStore.data;
         if (!board || !board.author) {
             naddrPath = '';
-            qrCodeDataUrl = '';
             return;
         }
         
         try {
-            // Relay-Hints aus den öffentlichen Relays holen
             const relayHints: string[] = settingsStore.settings.relaysPublic || [];
-            // Hinweis: console.log von $state-Proxies vermeiden
-            
             naddrPath = createBoardNaddrUrl(board.id, board.author, relayHints);
-            
-            // QR-Code mit vollständiger URL generieren
-            await regenerateQrCode();
         } catch (error) {
             console.error('Fehler beim Generieren des naddr-Links:', error);
             naddrPath = '';
-            qrCodeDataUrl = '';
         }
     }
     
-    // QR-Code neu generieren (wenn baseUrl oder naddrPath sich ändert)
-    async function regenerateQrCode() {
-        if (!naddrLink) {
-            qrCodeDataUrl = '';
-            return;
+    // ── Kurzlink Logik ──
+    
+    // Auto-Slug generieren wenn Dialog öffnet und Slug nicht manuell bearbeitet
+    $effect(() => {
+        if (open && !shortlinkSlugEdited) {
+            const boardName = boardStore.data?.name;
+            if (boardName) {
+                shortlinkSlug = slugifyBoardName(boardName);
+            }
         }
+    });
+    
+    function handleSlugInput(e: Event) {
+        const input = e.target as HTMLInputElement;
+        // Slug normalisieren: nur Kleinbuchstaben, Zahlen, Bindestriche
+        shortlinkSlug = input.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        shortlinkSlugEdited = true;
+        shortlinkQrDataUrl = ''; // QR zurücksetzen bei Slug-Änderung
+    }
+    
+    async function ensurePublished(): Promise<boolean> {
+        if (shortlinkPublished) return true;
+        if (!shortlinkSlug || isPublishingShortlink) return false;
+        
+        isPublishingShortlink = true;
         
         try {
-            qrCodeDataUrl = await QRCode.toDataURL(naddrLink, {
-                width: 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
-                }
-            });
+            const success = await boardStore.publishShortlink(shortlinkSlug);
+            if (success) {
+                publishedSlug = shortlinkSlug;
+                return true;
+            } else {
+                toast.error('Kurzlink konnte nicht publiziert werden');
+                return false;
+            }
         } catch (error) {
-            console.error('Fehler beim Generieren des QR-Codes:', error);
-            qrCodeDataUrl = '';
+            console.error('Fehler beim Publizieren des Kurzlinks:', error);
+            toast.error('Fehler beim Publizieren', {
+                description: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+            return false;
+        } finally {
+            isPublishingShortlink = false;
         }
     }
     
-    // naddr-Link kopieren
-    async function copyNaddrLink() {
+    async function copyShortlink() {
+        const published = await ensurePublished();
+        if (!published) return;
+        
         try {
-            await navigator.clipboard.writeText(naddrLink);
-            naddrCopied = true;
-            toast.success('Nostr-Link kopiert!', {
-                description: 'Der naddr-Link wurde in die Zwischenablage kopiert'
-            });
-            setTimeout(() => naddrCopied = false, 2000);
+            await navigator.clipboard.writeText(shortlinkUrl);
+            shortlinkCopied = true;
+            toast.success('Kurzlink kopiert!');
+            setTimeout(() => shortlinkCopied = false, 2000);
         } catch {
             toast.error('Fehler beim Kopieren');
         }
     }
     
-    // Im Browser öffnen (neuer Tab)
-    function openNaddrInBrowser() {
-        if (naddrLink) {
-            window.open(naddrLink, '_blank');
+    async function openShortlink() {
+        const published = await ensurePublished();
+        if (!published) return;
+        window.open(shortlinkUrl, '_blank');
+    }
+    
+    async function handleQrCode() {
+        const published = await ensurePublished();
+        if (!published) return;
+        
+        try {
+            shortlinkQrDataUrl = await QRCode.toDataURL(shortlinkUrl, {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            });
+        } catch (error) {
+            console.error('Fehler beim Generieren des QR-Codes:', error);
+            shortlinkQrDataUrl = '';
         }
     }
 </script>
@@ -569,7 +600,7 @@
                 <Tabs.List class="grid w-full {showEditorsTab ? 'grid-cols-3' : 'grid-cols-2'}">
                     {#if showLinkTabs}
                         <Tabs.Trigger value="nostr-link">
-                            Nostr-Link
+                            Kurzlink
                         </Tabs.Trigger>
                         <Tabs.Trigger value="share-link">
                             Share & Fork
@@ -586,74 +617,92 @@
             <!-- Nostr-Link Tab (naddr) - jetzt erster Tab -->
             {#if showLinkTabs}
             <Tabs.Content value="nostr-link" class="mt-4 space-y-4">
-                <div class="space-y-2">
+                <div class="space-y-3">
                     <p class="text-sm text-muted-foreground">
-                        Teile die permanente Nostr-Adresse dieses Boards. Empfänger können das Board 
-                        direkt über Nostr-Relays laden und sehen immer die aktuelle Version.
+                        Teile einen kurzen, lesbaren Link zu deinem Board. Kopieren, Öffnen und QR-Code publizieren den Link automatisch.
                     </p>
                     
-                    <!-- QR Code -->
-                    {#if qrCodeDataUrl}
-                        <div class="flex justify-center py-4">
-                            <div class="p-3 bg-white rounded-lg shadow-sm border">
-                                <img src={qrCodeDataUrl} alt="QR-Code für Nostr-Link" class="w-48 h-48" />
+                    {#if naddrLink}
+                        <!-- Slug-Input + Aktions-Buttons (alles in einer Zeile) -->
+                        <div class="flex gap-2">
+                            <div class="flex-1 flex items-center gap-0 border rounded-md overflow-hidden bg-muted/30">
+                                <span class="px-2 text-xs text-muted-foreground whitespace-nowrap select-none">/b/</span>
+                                <input
+                                    type="text"
+                                    value={shortlinkSlug}
+                                    oninput={handleSlugInput}
+                                    placeholder="mein-board"
+                                    class="flex-1 h-9 bg-transparent px-1 py-1 text-sm font-mono focus:outline-none"
+                                    disabled={isPublishingShortlink}
+                                    data-testid="naddr-link-input"
+                                />
                             </div>
-                        </div>
-                        <p class="text-xs text-center text-muted-foreground">
-                            Scanne diesen QR-Code, um das Board auf einem anderen Gerät zu öffnen
-                        </p>
-                    {/if}
-                    
-                    <div class="flex gap-2">
-                        {#if naddrLink}
-                            <Input 
-                                value={naddrLink}
-                                readonly
-                                class="flex-1 font-mono text-xs opacity-50"
-                                data-testid="naddr-link-input"
-                            />
                             <Button 
-                                onclick={copyNaddrLink}
+                                onclick={copyShortlink}
                                 variant="outline"
-                                class="gap-2"
-                                title="Link kopieren"
+                                title="Kopieren (publiziert automatisch)"
+                                disabled={!shortlinkSlug || isPublishingShortlink}
                             >
-                                {#if naddrCopied}
+                                {#if isPublishingShortlink}
+                                    <LoaderCircleIcon class="h-4 w-4 animate-spin" />
+                                {:else if shortlinkCopied}
                                     <CheckIcon class="h-4 w-4" />
                                 {:else}
                                     <CopyIcon class="h-4 w-4" />
                                 {/if}
                             </Button>
                             <Button 
-                                onclick={openNaddrInBrowser}
+                                onclick={openShortlink}
                                 variant="outline"
-                                title="Im Browser öffnen"
+                                title="Öffnen (publiziert automatisch)"
+                                disabled={!shortlinkSlug || isPublishingShortlink}
                             >
                                 <ExternalLinkIcon class="h-4 w-4" />
                             </Button>
-                        {:else}
-                            <div class="flex-1 p-2 text-sm text-muted-foreground bg-muted rounded-md">
-                                ⚠️ Board muss veröffentlicht sein (nicht Privat) und einen Author haben.
-                            </div>
-                        {/if}
-                    </div>
-                    
-                    <div class="mt-4 p-3 bg-muted rounded-md">
-                        <p class="text-sm font-medium mb-2">ℹ️ Was ist ein Nostr-Link (naddr)?</p>
-                        <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                            <li><strong>Permanente Adresse:</strong> Das Board ist über diese URL immer erreichbar</li>
-                            <li><strong>Immer aktuell:</strong> Empfänger sehen live die neueste Version</li>
-                            <li><strong>Read-only:</strong> Besucher können das Board ansehen, aber nicht bearbeiten</li>
-                            <li><strong>Dezentral:</strong> Funktioniert über jeden öffentlichen Nostr-Client/Relay</li>
-                        </ul>
-                    </div>
-                    
-                    {#if naddrLink}
-                        <div class="mt-3 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md">
-                            <p class="text-xs text-green-700 dark:text-green-300">
-                                <LinkIcon class="h-3 w-3 inline mr-1" />
-                                Dieser Link ist klein (~80 Bytes) und funktioniert in allen Browsern.
+                            <Button
+                                onclick={handleQrCode}
+                                variant="outline"
+                                title="QR-Code generieren (publiziert automatisch)"
+                                disabled={!shortlinkSlug || isPublishingShortlink}
+                            >
+                                <QrCodeIcon class="h-4 w-4" />
+                            </Button>
+                        </div>
+                        
+                        <!-- URL-Vorschau + Publish-Status -->
+                        {#if shortlinkSlug}
+                            <p class="text-xs text-muted-foreground font-mono truncate">
+                                → {shortlinkUrl}
+                                {#if shortlinkPublished}
+                                    <span class="text-green-600 ml-1">✓ publiziert</span>
+                                {/if}
                             </p>
+                        {/if}
+                        
+                        <!-- QR Code (nur nach expliziter Generierung via Button) -->
+                        {#if shortlinkQrDataUrl}
+                            <div class="flex justify-center py-3">
+                                <div class="p-3 bg-white rounded-lg shadow-sm border">
+                                    <img src={shortlinkQrDataUrl} alt="QR-Code für Board-Link" class="w-48 h-48" />
+                                </div>
+                            </div>
+                            <p class="text-xs text-center text-muted-foreground">
+                                Scanne diesen QR-Code, um das Board auf einem anderen Gerät zu öffnen
+                            </p>
+                        {/if}
+                        
+                        <div class="p-3 bg-muted rounded-md">
+                            <p class="text-sm font-medium mb-2">ℹ️ Wie funktioniert der Kurzlink?</p>
+                            <ul class="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                                <li><strong>Kurz & lesbar:</strong> Einfach weiterzugeben und zu merken</li>
+                                <li><strong>Immer aktuell:</strong> Empfänger sehen live die neueste Version</li>
+                                <li><strong>Dezentral:</strong> Wird als Nostr-Event gespeichert und über Relays aufgelöst</li>
+                                <li><strong>Automatisch:</strong> Kopieren, Öffnen oder QR-Code publiziert den Link automatisch</li>
+                            </ul>
+                        </div>
+                    {:else}
+                        <div class="flex-1 p-2 text-sm text-muted-foreground bg-muted rounded-md">
+                            ⚠️ Board muss veröffentlicht sein (nicht Privat) und einen Author haben.
                         </div>
                     {/if}
                 </div>
