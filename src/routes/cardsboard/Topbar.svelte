@@ -230,16 +230,16 @@
     }
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto">
+<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto bg-background">
     <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-0.5 sm:gap-2">
             <!-- Left Sidebar Trigger -->
             <Button title="Linke Sidebar ein-/ausblenden"
-                variant="default"
+                variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="h-8 w-8 bg-primary text-primary-foreground"
+                class="h-8 w-8"
             >
                 {#if isMobile}
                     <!-- <MenuIcon class="h-4 w-4" /> -->
@@ -357,7 +357,7 @@
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="  h-8 w-8 bg-primary text-primary-foreground"
+                class="h-8 w-8"
             >
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>

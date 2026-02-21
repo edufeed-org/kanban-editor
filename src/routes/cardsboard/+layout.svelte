@@ -226,7 +226,7 @@ function toggleRightSidebar() {
 					<Button
 						variant="ghost"
 						size="icon"
-						class="h-8 w-8 hamburger-menu-button bg-primary text-primary-foreground"
+						class="h-8 w-8 hamburger-menu-button"
 						title="Board Einstellungen"
 						onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 					>
@@ -270,7 +270,7 @@ function toggleRightSidebar() {
 						<Button
 							variant="ghost"
 							size="icon"
-							class="h-8 w-8 bg-primary text-primary-foreground hamburger-menu-button"
+							class="h-8 w-8 hamburger-menu-button"
 							title="Board Einstellungen"
 							onclick={() => { hamburgerMenuOpen = !hamburgerMenuOpen; }}
 						>
