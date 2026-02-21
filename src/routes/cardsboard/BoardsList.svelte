@@ -39,6 +39,8 @@
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
     import UserPlusIcon from '@lucide/svelte/icons/user-plus';
     import LinkIcon from '@lucide/svelte/icons/link';
+    import PencilIcon from '@lucide/svelte/icons/pencil';
+    import EyeIcon from '@lucide/svelte/icons/eye';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -713,8 +715,12 @@
                             
                             <!-- Shared Board Indicator -->
                             {#if board.isShared}
-                                <span class="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px] flex-shrink-0">
-                                    {board.userRole === 'editor' ? '✏️' : '👁️'}
+                                <span class="inline-flex items-center px-1 py-1 border bg-muted text-muted-foreground rounded flex-shrink-0 transition-colors group-hover:bg-primary/15 group-hover:text-primary">
+                                    {#if board.userRole === 'editor'}
+                                        <PencilIcon class="h-3 w-3" />
+                                    {:else}
+                                        <EyeIcon class="h-3 w-3" />
+                                    {/if}
                                 </span>
                             {/if}
                             
