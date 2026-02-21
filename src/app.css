@@ -201,11 +201,12 @@
   --column-border: oklch(85% .01 264);
   --button: oklch(88% .005 264);
 
-  /* Board Background — subtle gradient from primary (pre-computed 4% blend) */
+  /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: linear-gradient(
     to bottom right,
-    oklch(97.4% .006 264) 10%,
-    oklch(100% 0 0) 60%
+    oklch(89.081% 0.05372 257.11) 0%,
+    oklch(97% .015 200) 45%,
+    oklch(88.846% 0.07804 70.273) 100%
   );
 }
 
@@ -222,7 +223,7 @@
   --card-foreground: oklch(90% 0 0);
   --popover: oklch(18% .02 264);
   --popover-foreground: oklch(90% 0 0);
-  --primary: oklch(55% .16 264);
+  --primary: oklch(54.98% 0.16067 264.173);
   --primary-foreground: oklch(100% 0 0);
   --secondary: oklch(50% .02 264);
   --secondary-foreground: oklch(100% 0 0);
@@ -265,11 +266,13 @@
   --column-border: oklch(35% .01 264);
   --button: oklch(40% .01 264);
 
-  /* Board Background — subtle gradient from primary (pre-computed 5% blend) */
+  /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: linear-gradient(
     to bottom right,
-    oklch(23.7% .03 264) 0%,
-    oklch(22% .02 264) 60%
+    oklch(54.98% 0.16067 264.173) 0%,
+    oklch(99.925% 0.0011 202.86 / 0) 50%,
+    oklch(69.137% 0.09057 73.175 / 0) 85%,
+    oklch(79% .17 70) 98%
   );
 
   /* Card Colors for Color Picker - Dark Mode */
