@@ -583,6 +583,7 @@
         <!-- Scrollbarer Hauptbereich -->
         <div class="flex-1 overflow-y-auto min-h-0 pb-4 pr-3">
         <!-- Base-URL Einstellung (gilt für alle Link-Typen) -->
+         {#if !showEditorsTab}
         <div class="mt-4 space-y-1">
             <label for="base-url-input" class="text-xs font-medium text-muted-foreground">Base-URL (für externe Zugriffe ggf. anpassen)</label>
             <input 
@@ -593,7 +594,7 @@
                 class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-mono text-xs"
             />
         </div>
-        
+        {/if}
         {#if showLinkTabs || showEditorsTab}
         <Tabs.Root bind:value={activeTab} class="mt-4">
             {#if showTabList}

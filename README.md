@@ -38,6 +38,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
 - 🔒 **Typsicher:** Vollständig in TypeScript implementiert
 - 🎨 **Demo-Boards:** Sofortiger Start für anonyme Nutzer mit vorkonfigurierten Boards
+- 🔗 **Kurzlinks:** Dezentraler URL-Shortener via Nostr — merkbare Board-URLs statt langer naddr-Strings
 
 ## 📚 Dokumentation
 

@@ -409,10 +409,11 @@ docs/
 | [`GUIDE.md`](./TESTS/GUIDE.md) | AusfÃ¼hrliches Test-Guide | âœ… |
 | [`STATUS.md`](./TESTS/STATUS.md) | Test Suite Status & Ãœberblick | âœ… |
 
-### FEATURE/ (13 Dateien)
+### FEATURE/ (14 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
+| [`SHORTLINK.md`](./FEATURE/SHORTLINK.md) | 🆕 **NEU (21.02.26)**: Dezentraler URL-Shortener via Nostr Kind 30491 | ✅ Neu (21.02.26) |
 | [`LANDINGPAGE.md`](./FEATURE/LANDINGPAGE.md) | Landingpage für das Kanban-Board (CTA, Links, Lehrkräfte-Fokus) | ✅ Neu (03.02.) |
 | [`TOOL-BASED-AI.md`](./AGENT/TOOL-BASED-AI.md) | ðŸ†• **NEU (21.01.26)**: MCP-Style Tool-Based KI 
 | [`OER-FINDER-CHAT-BOT-INTEGRATION.md`](./AGENT/OER-FINDER-CHAT-BOT-INTEGRATION.md) | OER-Finder Integration fÃ¼r Chatbot fÃ¼gt OER-Content hinzu  âœ… Neu |
