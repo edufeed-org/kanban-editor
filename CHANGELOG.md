@@ -8,15 +8,15 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
-### Features
-- **Automatische Gespraechs-Zusammenfassung:** Chat-History wird nach 6 Nachrichten (3 Runden) automatisch per LLM zusammengefasst. Statt harter 3-Nachrichten-Grenze erhaelt das LLM nun [Zusammenfassung] + aktuelle Nachrichten — besserer Kontext bei gleichem Token-Budget. Lokaler Fallback bei LLM-Fehler. Nutzt bestehende `ConversationSummary`-Infrastruktur aus ChatModel.ts.
+Keine offenen Eintraege.
 
-### Fixes
-- **LLM Proxy 400-Fehler behoben:** `tool_choice` von `required` auf `auto` umgestellt — eliminiert systematische 400-Fehler bei 16 Tools + Chat-History. Synthetischer `respond`-Fallback fuer reine Text-Antworten. Umlaute in Tool-Definitionen/System-Prompt durch ASCII ersetzt. Retry-Logik und Budget-Fallback-Loop ergaenzt. Siehe `docs/ARCHITECTURE/AGENT/LLM-PROXY-INVESTIGATION.md`.
-- Paste-System greift nicht mehr, wenn der Cursor in einem Input, Textarea oder TipTap-Editor steht (Board.svelte, PasteContainer.svelte)
+## Direkt Pushes 2026 (kompakt)
 
-### Geplant / In Arbeit
-- Keine offenen Eintraege.
+| Datum | Was | Details |
+|---|---|---|
+| 2026-02-21 | Automatische Gespraechs-Zusammenfassung (LLM + lokaler Fallback) | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
+| 2026-02-21 | LLM Proxy 400-Fehler behoben (tool_choice, Umlaute, Retry) | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
+| 2026-02-20 | Paste-System: Editable-Target Guard | [2026-Q1.md](docs/CHANGELOG/2026-Q1.md) |
 
 ## Releases 2026 (kompakt)
 
@@ -79,5 +79,4 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 - Quartalsuebersicht 2025 Q4: docs/CHANGELOG/2025-Q4.md
 - Quartalsuebersicht 2024 Q4: docs/CHANGELOG/2024-Q4.md
 - Changelog-Navigation: docs/CHANGELOG/README.md
-- Ausfuehrlicher Nachtrag ab 2026-02-06 (Git/PR-basiert): docs/CHANGELOG/2026-02-post-4.7.96.md
 - Technische Deep-Dives bleiben in den jeweiligen Architektur- und Feature-Dokumenten unter docs/.

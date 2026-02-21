@@ -25,11 +25,35 @@
 **Bei jeder Code-Änderung:**
 1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
 2. ✅ TESTSUITE/STATUS.md aktualisieren (wenn Tests betroffen)
-3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar)
+3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar) — **2-Layer-Regel beachten!**
 4. ✅ Feature-Dokumentation aktualisieren (wenn API ändert)
 5. ✅ ARCHITECTURE/ Docs aktualisieren (wenn Pattern ändert)
 6. ✅ _INDEX.md aktualisieren (wenn neue Datei)
 7. ✅ Alte Docs archivieren (mit Migration-Notice)
+
+### CHANGELOG 2-Layer-Architektur (MANDATORY)
+
+```
+CHANGELOG.md (Root)                    docs/CHANGELOG/2026-Q1.md (Detail)
+┌────────────────────────────┐          ┌────────────────────────────────┐
+│ ## Unreleased              │          │ ## Direkte Commits             │
+│   (leer wenn konsolidiert) │  ──────> │  ### 2026-02-21                │
+│                            │  merge   │  - Feature X: Volle            │
+│ ## Direkt Pushes (kompakt) │          │    Beschreibung + Refs         │
+│  | Datum | Was | Details | │          │  - Fix Y: Volle Beschreibung   │
+│  | 02-21 | ... | Q1.md   | │          │                                │
+│                            │          │ ## PR-Detail-Beschreibungen    │
+│ ## Releases (Tabelle)      │          │  ### PR #121 ...               │
+└────────────────────────────┘          └────────────────────────────────┘
+```
+
+**Regeln:**
+1. **Root-CHANGELOG.md bleibt kompakt** — nur Stakeholder-Kurzansicht
+2. **Unreleased-Einträge** werden zeitnah in `docs/CHANGELOG/YYYY-QN.md` überführt
+3. **Direkt Pushes** Tabelle: Nur Datum + Kurzbeschreibung + Link auf Quartals-Datei
+4. **Detail-Datei** (`docs/CHANGELOG/YYYY-QN.md`): Volle Beschreibungen, PR-Details, Commit-Listen, Audit-Daten
+5. **Konsolidierung**: Wenn Einzeldateien (z.B. `2026-02-post-4.7.96.md`) existieren, in Quartals-Datei zusammenführen + Deprecation-Notice setzen
+6. **Keine Duplikation**: Volle Beschreibung nur an EINER Stelle (Quartals-Datei)
 
 **Enforcement:** PR wird REJECTED wenn DoD nicht erfüllt ist!
 
