@@ -266,6 +266,7 @@
   /* Board */
   --column-border: oklch(35% .01 264);
   --button: oklch(40% .01 264);
+  
 
   /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: linear-gradient(
@@ -283,6 +284,7 @@
   --color-orange: oklch(76.57% 0.15684 77.795);
   --color-red: oklch(0.704 0.191 22.216);
   --color-purple: oklch(0.541 0.281 293.009);
+  
 }
 
 /* Component-specific utility styles */
@@ -321,6 +323,7 @@
     background-color: var(--color-green);
     border: 1px solid var(--border);
   }
+  
 }
 /* ------------------------------------------- */
 .active-board .active-board-indicator {
