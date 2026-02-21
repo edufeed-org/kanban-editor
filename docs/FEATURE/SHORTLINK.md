@@ -1,7 +1,7 @@
 # 🔗 Kurzlink-Feature (URL Shortener via Nostr)
 
 **Version:** 1.0  
-**Status:** ✅ COMPLETE (17 Unit-Tests)  
+**Status:** ✅ COMPLETE (26 Unit-Tests)  
 **Datum:** 21. Februar 2026  
 **Branch:** `feature/urlshortener`
 
@@ -207,15 +207,18 @@ Publiziert ein Shortlink-Event für das aktuelle Board.
   - Without title → kein title-Tag
   - Content = naddr
 
-✅ resolveShortlink
-  - Erfolgreiche Auflösung (r-Tag)
-  - Fallback auf Content
+✅ resolveShortlink (4 Tests)
+  - Erfolgreiche Auflösung via r-Tag
+  - Fallback auf Content wenn kein r-Tag
   - Nicht gefunden → null
+  - Leerer Content ohne r-Tag → null
 
-✅ resolveShortlinkBySlug
-  - Erfolgreiche Auflösung ohne Author
-  - Nicht gefunden → null
-  - Last-Write-Wins bei Duplikaten
+✅ resolveShortlinkBySlug (5 Tests)
+  - Erfolgreiche Auflösung ohne Author-Kenntnis
+  - Nicht gefunden (leere Menge) → null
+  - Last-Write-Wins bei 3 konkurrierenden Events
+  - Fallback auf Content ohne r-Tag
+  - fetchEvents → null → null
 ```
 
 ---
