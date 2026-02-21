@@ -271,9 +271,9 @@
   --board-bg: linear-gradient(
     to bottom right,
     oklch(54.98% 0.16067 264.173) 0%,
-    oklch(99.925% 0.0011 202.86 / 0) 50%,
-    oklch(69.137% 0.09057 73.175 / 0) 85%,
-    oklch(79% .17 70) 98%
+    oklch(54.98% 0.16067 264.173 / 0.150) 50%,
+    oklch(69.137% 0.09057 73.175 / 0.108) 85%,
+    oklch(78.807% 0.16987 69.733 / 0.534) 98%
   );
 
   /* Card Colors for Color Picker - Dark Mode */
