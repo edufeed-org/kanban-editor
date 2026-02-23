@@ -3359,6 +3359,9 @@ export class BoardStore {
         // Board aus Event konvertieren
         const boardProps = nostrEventToBoard(boardEvent);
         
+        console.log(`📋 Board hat ${boardProps.columns?.length || 0} Spalten:`, 
+            boardProps.columns?.map(c => `${c.name} (${c.id})`) || []);
+        
         // Board mit neuer Demo-ID erstellen
         // Use a valid dummy pubkey (64 zeros) instead of 'demo' to avoid Nostr validation errors
         const board = new Board({
@@ -3383,19 +3386,34 @@ export class BoardStore {
         console.log(`✅ ${cardEventArray.length} Card Events gefunden`);
         
         // Cards zum Board hinzufügen
+        let cardsAdded = 0;
         for (const cardEvent of cardEventArray) {
             try {
                 const cardProps = nostrEventToCard(cardEvent as any) as any;
-                if (!cardProps.id) continue;
+                if (!cardProps.id) {
+                    console.warn('⚠️ Card ohne ID übersprungen');
+                    continue;
+                }
                 
-                // Finde Spalte
-                const columnName = cardProps.columnName || 'To Do';
-                let column = board.columns.find(c => c.name === columnName);
+                console.log(`🃏 Card: "${cardProps.heading}" → columnId: ${cardProps.columnId}, columnName: ${cardProps.columnName}`);
+                
+                // Finde Spalte (bevorzuge columnId, dann columnName)
+                let column = board.columns.find(c => c.id === cardProps.columnId);
+                
+                if (!column && cardProps.columnName) {
+                    // Fallback: Versuche nach Name zu finden
+                    column = board.columns.find(c => c.name === cardProps.columnName);
+                }
                 
                 if (!column) {
                     // Spalte existiert nicht, erstelle sie
-                    column = board.addColumn({ name: columnName });
-                    console.log(`📁 Spalte erstellt: ${columnName}`);
+                    const columnName = cardProps.columnName || 'To Do';
+                    const columnId = cardProps.columnId || generateDTag();
+                    column = board.addColumn({ 
+                        id: columnId,
+                        name: columnName 
+                    });
+                    console.log(`📁 Spalte erstellt: ${columnName} (ID: ${columnId})`);
                 }
                 
                 // Card mit Demo-Attribution hinzufügen
@@ -3404,10 +3422,13 @@ export class BoardStore {
                     author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
                     authorName: 'Demo User'
                 });
+                cardsAdded++;
             } catch (error) {
-                console.warn('⚠️ Fehler beim Hinzufügen einer Card:', error);
+                console.error('❌ Fehler beim Hinzufügen einer Card:', error);
             }
         }
+        
+        console.log(`✅ ${cardsAdded} von ${cardEventArray.length} Cards erfolgreich hinzugefügt`);
         
         // ⚡ CRITICAL: Sortiere Cards nach rank pro Spalte!
         // ndk.fetchEvents() liefert keine garantierte Reihenfolge.
