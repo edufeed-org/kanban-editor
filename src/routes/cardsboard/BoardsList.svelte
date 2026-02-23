@@ -247,7 +247,16 @@
      */
     function navigateToBoardUrl() {
         const board = boardStore.data;
-        if (board?.author) {
+        
+        // Demo-Board Check: Keine naddr-URL für Demo-Boards erstellen
+        const isDemoBoard = board?.id === 'demo-board' || 
+                           board?.author === 'demo' || 
+                           board?.author === '0000000000000000000000000000000000000000000000000000000000000000';
+        
+        if (isDemoBoard) {
+            // Demo-Board: Bleibe auf /cardsboard/ (keine naddr)
+            goto('/cardsboard/', { replaceState: true });
+        } else if (board?.author) {
             try {
                 const naddrUrl = createBoardNaddrUrl(board.id, board.author);
                 goto(naddrUrl, { replaceState: true });
