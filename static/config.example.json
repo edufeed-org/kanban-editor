@@ -45,6 +45,11 @@
     "boardPublishState": "private"
   },
 
+  "demoBoard": {
+    "sourceAddress": null,
+    "$comment": "⚙️ Optional: Nostr address (naddr) of a board to use as demo template. If null, uses default demo board. Example: 'naddr1...'"
+  },
+
   "sidebar": {
     "showLeft": true,
     "showRight": true

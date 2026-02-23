@@ -52,6 +52,11 @@
     "boardPublishState": "private"
   },
 
+  "demoBoard": {
+    "sourceAddress": "naddr1qvzqqqrkt5pzpt8g7spkqtvt5wqau6xx2g98ptyyydzqetg7h47928hdml6f7stjqprxymmpwfjz6etxvd3rvdtrxcmrwcfkxvensdnxxgckye35vscn2d3j8quxzdpkxu6nxdrzvycxxwfjv56nge35vc6kgepnxvcrwd3hxf3rxepnxu6s7kr5h0",
+    "$comment": "⚙️ Optional: Nostr address (naddr) of a board to use as demo template. If null, uses default demo board. Example: 'naddr1...'"
+  },
+
   "sidebar": {
     "showLeft": true,
     "showRight": true

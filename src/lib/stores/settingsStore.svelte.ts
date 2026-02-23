@@ -48,6 +48,9 @@ export interface SettingsState {
   defaultColumns: string[]; // Default Spalten-Namen, z.B. ["To Do", "In Progress", "Done"]
   defaultBoardPublishState: PublishState; // "published" | "private"
 
+  // Demo Board Configuration
+  demoBoardSourceAddress: string | null; // Nostr address (naddr) of a board to use as demo template
+
   // Sidebar Visibility (für Topbar UI)
   showLeftSidebar: boolean; // Board-Liste sichtbar
   showRightSidebar: boolean; // KI-Agent + Debug Sidebar
@@ -171,6 +174,9 @@ KRITISCH: Bei "leg an" / "erstelle" IMMER JSON! NIEMALS nur Text!`,
   // Board Defaults
   defaultColumns: ['To Do', 'In Progress', 'Done'],
   defaultBoardPublishState: 'private',
+
+  // Demo Board Source
+  demoBoardSourceAddress: null,
 
   // Sidebar
   showLeftSidebar: true,
@@ -320,9 +326,20 @@ export class SettingsStore {
    * - Falls localStorage leer: config.json als Defaults nutzen
    * - Falls localStorage existiert: Nur NEUE Felder aus config.json hinzufügen
    * - Falls forceOverwrite=true: config.json überschreibt ALLE Werte
+   * 
+   * ⚠️ EXCEPTION: demoBoardSourceAddress wird IMMER aus config.json gelesen
+   *    (Admin-Setting, keine User-Präferenz!)
    */
   private mergeConfigIntoSettings(config: any, forceOverwrite: boolean = false): void {
     if (!config) return;
+
+    // ⚠️ DEMO BOARD SOURCE: Immer aus config.json lesen (Admin-Setting!)
+    if (config.demoBoard?.sourceAddress !== undefined) {
+      this.settings = {
+        ...this.settings,
+        demoBoardSourceAddress: config.demoBoard.sourceAddress
+      };
+    }
 
     // Prüfe ob User bereits Settings gespeichert hat
     const hasUserSettings = typeof window !== 'undefined' 
@@ -330,7 +347,8 @@ export class SettingsStore {
 
     if (hasUserSettings && !forceOverwrite) {
       console.log('✅ User-Settings vorhanden → config.json wird NICHT gemerged (User-Präferenzen haben Vorrang)');
-      console.log('   💡 Tipp: Verwende initializeConfig(true) zum Force-Overwrite');
+      console.log('   💡 Demo Board Source wurde bereits geladen (Admin-Setting)');
+      console.log('   💡 Tipp: Verwende initializeConfig(true) zum Force-Overwrite aller Settings');
       // Nur neue Felder hinzufügen die User noch nicht hat
       // (für zukünftige Settings-Erweiterungen)
       return;
