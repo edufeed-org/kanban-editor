@@ -211,8 +211,17 @@
             }
         }
 
-        // Sortiere Cards nach Rank (gespeichert in cardProps während Erstellung)
-        // Hinweis: Card-Instanzen haben kein rank Property, aber die Position ist durch Einfügereihenfolge bestimmt
+        // ⚡ CRITICAL: Sortiere Cards nach Rank pro Spalte!
+        // ndk.fetchEvents() liefert ein Set ohne garantierte Reihenfolge.
+        // Ohne Sortierung hängt die Card-Reihenfolge davon ab, welcher Relay
+        // zuerst antwortet → unterschiedliche Reihenfolge auf verschiedenen Browsern.
+        for (const column of board.columns) {
+            column.cards.sort((a: any, b: any) => {
+                const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
+                const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
+                return rankA - rankB;
+            });
+        }
     }
 
     /**

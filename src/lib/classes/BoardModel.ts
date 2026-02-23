@@ -100,6 +100,7 @@ export class Card {
     public publishState: PublishState = 'private';
     public author?: string; // Nostr Public Key (hex pubkey) - Ersteller der Karte
     public authorName?: string; // ← NEU: Lesbar Display Name für UI
+    public rank?: number; // Position in der Spalte (aus Nostr Event "rank"-Tag, für deterministische Sortierung)
     public createdAt: string;
     public updatedAt: string;
 
@@ -117,6 +118,7 @@ export class Card {
         this.publishState = props.publishState || 'private';
         this.author = props.author;
         this.authorName = props.authorName; // ← NEU: authorName laden
+        this.rank = props.rank; // ⚡ Position in Spalte für deterministische Sortierung nach Nostr-Load
         
         // ⚡ v4.3: Use props.createdAt if available (from Nostr event)
         // Same pattern as Board Constructor - enables LWW and Merge-System

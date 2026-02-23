@@ -969,6 +969,20 @@ export class BoardStore {
             }
         });
 
+        // ⚡ CRITICAL: Finale Sortierung nach rank pro Spalte.
+        // Auch wenn loadCardsForBoard die Cards sortiert liefert, kann die
+        // splice-Logik in upsertCardFromNostr bei Rank-Lücken oder Duplikaten
+        // zu falscher Reihenfolge führen. Daher als Safety-Net nochmal sortieren.
+        if (this.board.id === targetBoardId) {
+            for (const col of this.board.columns) {
+                col.cards.sort((a: any, b: any) => {
+                    const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
+                    const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
+                    return rankA - rankB;
+                });
+            }
+        }
+
         // Nach dem Laden aller Cards: UI aktualisieren (OHNE Nostr-Publishing!)
         // 🔴 Wichtig: Nur wenn wir noch auf dem selben Board sind.
         if (this.board.id === targetBoardId) {
@@ -3393,6 +3407,16 @@ export class BoardStore {
             } catch (error) {
                 console.warn('⚠️ Fehler beim Hinzufügen einer Card:', error);
             }
+        }
+        
+        // ⚡ CRITICAL: Sortiere Cards nach rank pro Spalte!
+        // ndk.fetchEvents() liefert keine garantierte Reihenfolge.
+        for (const col of board.columns) {
+            col.cards.sort((a: any, b: any) => {
+                const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
+                const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
+                return rankA - rankB;
+            });
         }
         
         console.log(`✅ Demo-Board erstellt mit ${board.columns.length} Spalten und ${board.columns.reduce((sum, col) => sum + col.cards.length, 0)} Karten`);

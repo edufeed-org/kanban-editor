@@ -377,12 +377,21 @@ export class NostrIntegration {
             
             const processedCards = await Promise.all(cardProcessingPromises);
             
+            // ⚡ CRITICAL: Sortiere Cards nach rank VOR dem Einfügen!
+            // ndk.fetchEvents() liefert ein Set ohne garantierte Reihenfolge.
+            // Ohne Sortierung hängt die Card-Reihenfolge davon ab, welcher Relay
+            // zuerst antwortet → unterschiedliche Reihenfolge auf verschiedenen Browsern.
+            const validCards = processedCards.filter((c): c is NonNullable<typeof c> => c !== null);
+            validCards.sort((a, b) => {
+                const rankA = (a as any).rank ?? Number.MAX_SAFE_INTEGER;
+                const rankB = (b as any).rank ?? Number.MAX_SAFE_INTEGER;
+                return rankA - rankB;
+            });
+            
             let loadedCount = 0;
-            for (const cardProps of processedCards) {
-                if (cardProps) {
-                    onCardLoaded(cardProps);
-                    loadedCount++;
-                }
+            for (const cardProps of validCards) {
+                onCardLoaded(cardProps);
+                loadedCount++;
             }
 
             console.log('[NostrIntegration] ✅ Finished loading cards for board:', board.name, `(${loadedCount} loaded in parallel)`);
