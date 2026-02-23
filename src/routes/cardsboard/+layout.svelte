@@ -196,6 +196,41 @@ function toggleRightSidebar() {
 		overflow: hidden !important;
 		height: 100vh;
 	}
+
+	.brand-title {
+		background: linear-gradient(
+			to right,
+			var(--foreground)  0%,
+			var(--primary)     25%,
+			var(--primary)     35%,
+			color-mix(in oklch, var(--primary) 30%, var(--primary-foreground)) 50%,
+			var(--primary)     65%,
+			var(--foreground) 75%,
+			var(--primary)    100%
+		);
+		background-size: 400% 100%;
+		font-size: 1.2rem;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		color: transparent;
+		animation: brand-shine 60s ease-in-out infinite;
+	}
+
+	@keyframes brand-shine {
+		/* Ruhezustand: bg-pos 0% zeigt Zone 0–25% = foreground→accent */
+		0%, 65% {
+			background-position: 0% center;
+		}
+		/* Shine-Durchgang: Mitte = helle Accent-Aufhellung */
+		82% {
+			background-position: 50% center;
+		}
+		/* Endstand: bg-pos 100% zeigt Zone 75–100% = foreground→accent */
+		100% {
+			background-position: 100% center;
+		}
+	}
 </style>
 
 <div class="flex h-screen w-full flex-col overflow-hidden">
@@ -233,7 +268,7 @@ function toggleRightSidebar() {
 						<MenuIcon class="h-4 w-4" />
 					</Button>
 					<div class="flex items-center gap-2">
-						<h2 class="font-semibold">Kanban-Editor</h2>
+						<h2 class="font-semibold brand-title">Kanban-Editor</h2>
 					</div>
 				</div>
 				<!-- Content Bereich - flex-1 für den restlichen Platz -->
@@ -277,7 +312,7 @@ function toggleRightSidebar() {
 							<MenuIcon class="h-4 w-4" />
 						</Button>
 						<div class="flex items-center gap-2">
-							<h2 class="font-semibold">Kanban-Editor</h2>
+							<h2 class="font-semibold brand-title">Kanban-Editor</h2>
 						</div>
 					</div>
 					<!-- Content Bereich -->

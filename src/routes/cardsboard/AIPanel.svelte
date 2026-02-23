@@ -457,7 +457,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <BrainIcon class="h-5 w-5 text-primary" />
-        <h2 class="text-sm font-semibold">KI-Agent</h2>
+        <h2 class="text-sm font-semibold text-[1.2rem]">KI-Agent</h2>
       </div>
       <Button
         variant="ghost"
