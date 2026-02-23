@@ -7,10 +7,12 @@
     import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { slide } from 'svelte/transition';
+    import { goto } from '$app/navigation';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/index.js';
     import { BoardRole } from '$lib/types/sharing';
     import { toast } from 'svelte-sonner';
+    import { createBoardNaddrUrl } from '$lib/utils/nostrEvents.js';
 
     import MenuItem from './MenuItem.svelte';
     import SubmenuItem from './SubmenuItem.svelte';
@@ -37,6 +39,8 @@
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
     import UserPlusIcon from '@lucide/svelte/icons/user-plus';
     import LinkIcon from '@lucide/svelte/icons/link';
+    import PencilIcon from '@lucide/svelte/icons/pencil';
+    import EyeIcon from '@lucide/svelte/icons/eye';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -160,12 +164,17 @@
         const ownBoards = boardStore.filterBoards(searchQuery);
         const sharedBoards = boardStore.filterSharedBoards(searchQuery);
         
-        // Füge isShared: false zu eigenen Boards hinzu
-        const enrichedOwnBoards = ownBoards.map(board => ({
-            ...board,
-            isShared: false,
-            userRole: 'owner'
-        }));
+        // Eigene Boards anreichern: Prüfe ob Board dem aktuellen User gehört
+        // getAllBoards() gibt auch Boards zurück bei denen User Maintainer (Editor) ist!
+        const currentPubkey = authStore.getPubkey();
+        const enrichedOwnBoards = ownBoards.map(board => {
+            const isOwner = !board.author || board.author === currentPubkey;
+            return {
+                ...board,
+                isShared: !isOwner,
+                userRole: isOwner ? 'owner' : 'editor'
+            };
+        });
         
         // Kombiniere beide Listen und entferne Duplikate
         // ⚠️ WICHTIG: Bei Duplikaten (Board ist sowohl own als auch shared) bevorzuge shared-Metadaten
@@ -181,6 +190,46 @@
         for (const board of sharedBoards) {
             boardMap.set(board.id, board);
         }
+
+        // ✅ Aktives Fremd-Board einfügen wenn es nicht in boardMap ist (z.B. nach Seiten-Reload).
+        // Nach einem Reload ist cachedSharedBoards leer (onAuthChanged clears it) und die Nostr-
+        // Abfrage noch nicht abgeschlossen. Das Board ist aber in localStorage vorhanden und wird
+        // vom Store geladen – es fehlt nur in der Sidebar-Liste.
+        const activeBoardId = boardStore.data?.id;
+        const activeBoard = boardStore.data;
+        if (
+            activeBoardId &&
+            activeBoardId === currentBoardId &&
+            !boardMap.has(activeBoardId) &&
+            activeBoard?.author &&
+            activeBoard.author !== authStore.getPubkey()
+        ) {
+            const lastAccTimestamp = activeBoard.lastAccessedAt
+                ? new Date(activeBoard.lastAccessedAt).getTime()
+                : undefined;
+            const updatedTimestamp = activeBoard.updatedAt
+                ? new Date(activeBoard.updatedAt).getTime()
+                : undefined;
+            const createdTimestamp = activeBoard.createdAt
+                ? new Date(activeBoard.createdAt).getTime()
+                : Date.now();
+            // Ermittle die echte Rolle aus dem geladenen Board (korrekt für Editor/Viewer)
+            const activeBoardRole = boardStore.getCurrentUserRole();
+            const activeBoardRoleStr = activeBoardRole === 'owner' ? 'owner'
+                : activeBoardRole === 'editor' ? 'editor'
+                : 'viewer';
+            boardMap.set(activeBoardId, {
+                id: activeBoardId,
+                name: activeBoard.name,
+                description: activeBoard.description,
+                createdAt: createdTimestamp,
+                updatedAt: updatedTimestamp,
+                lastAccessed: lastAccTimestamp,
+                isShared: true,
+                userRole: activeBoardRoleStr,
+                author: activeBoard.author
+            });
+        }
         
         // Konvertiere zu Array und sortiere nach lastAccessed (neueste zuerst)
         const uniqueBoards = Array.from(boardMap.values()).sort((a, b) => {
@@ -192,6 +241,27 @@
         return uniqueBoards;
     });
 
+    /**
+     * Navigiere zur naddr-URL des aktuellen Boards.
+     * Nutzt replaceState damit kein neuer History-Eintrag pro Board-Wechsel entsteht.
+     */
+    function navigateToBoardUrl() {
+        const board = boardStore.data;
+        if (board?.author) {
+            try {
+                const naddrUrl = createBoardNaddrUrl(board.id, board.author);
+                goto(naddrUrl, { replaceState: true });
+            } catch (error) {
+                console.warn('⚠️ Konnte naddr-URL nicht erstellen:', error);
+                // Fallback: Bleibe auf /cardsboard/
+                goto('/cardsboard/', { replaceState: true });
+            }
+        } else {
+            // Kein Author (z.B. lokales Board ohne Nostr-Pubkey) → einfache URL
+            goto('/cardsboard/', { replaceState: true });
+        }
+    }
+
     // Event: Neues Board erstellen
     async function handleCreateBoard() {
         isCreating = true;
@@ -199,6 +269,7 @@
             const newBoardId = boardStore.createBoard('Neues Board');
             boardStore.loadBoard(newBoardId);
             currentBoardId = newBoardId;
+            navigateToBoardUrl();
 
             searchQuery = '';
         } catch (error) {
@@ -220,6 +291,7 @@
             const success = boardStore.loadBoard(boardId);
             if (success) {
                 currentBoardId = boardId;
+                navigateToBoardUrl();
                 console.log('✅ Board geladen:', boardId);
             }
         } catch (error) {
@@ -235,8 +307,11 @@
         
         // Finde das Board in der gefilterten Liste um isShared und userRole zu prüfen
         const targetBoard = filteredBoards.find(b => b.id === boardId);
-        const isShared = targetBoard?.isShared || false;
-        const userRole = targetBoard?.userRole || 'owner';
+        
+        // Fallback: Wenn Board nicht in filteredBoards, prüfe ob es ein Fremd-Board ist
+        const isShared = targetBoard?.isShared ?? (boardStore.data?.id === boardId && boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+        const storeRole = boardId === boardStore.data?.id ? boardStore.getCurrentUserRole() : null;
+        const userRole = targetBoard?.userRole ?? (storeRole === 'owner' ? 'owner' : storeRole === 'editor' ? 'editor' : storeRole === 'viewer' ? 'viewer' : 'owner');
         
         const actionText = isShared 
             ? (userRole === 'owner' ? 'Board löschen' : 'Board verlassen')
@@ -325,7 +400,7 @@
     
     <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
-        <div transition:slide={{ duration: 200 }} class="bg-muted/50 border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto editor-menu bg-[var(--card)]">
+        <div transition:slide={{ duration: 200 }} class="border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto bg-[var(--card)]">
             <!-- 1. Eigenschaften (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 
@@ -498,10 +573,15 @@
             <!-- 4b. Versionen -->
             <VersionHistory />
             
-            <!-- 5. Board löschen -->
+            <!-- 5. Board löschen / verlassen -->
             <MenuItem 
                 icon={TrashIcon} 
-                label="Board löschen" 
+                label={(() => {
+                    const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
+                    const isShared = targetBoard?.isShared ?? (boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+                    const userRole = targetBoard?.userRole ?? boardStore.getCurrentUserRole() ?? 'owner';
+                    return isShared && userRole !== 'owner' ? 'Board verlassen' : 'Board löschen';
+                })()}
                 variant="danger"
                 onclick={() => {
                     if (!currentBoardId) {
@@ -510,8 +590,10 @@
                     }
                     
                     const targetBoard = filteredBoards.find(b => b.id === currentBoardId);
-                    const isShared = targetBoard?.isShared || false;
-                    const userRole = targetBoard?.userRole || 'owner';
+                    const isShared = targetBoard?.isShared ?? (boardStore.data?.author !== authStore.getPubkey() && !!boardStore.data?.author);
+                    // Fallback: getCurrentUserRole() wenn Board noch nicht in filteredBoards (z.B. direkt nach Reload)
+                    const storeRole = boardStore.getCurrentUserRole();
+                    const userRole = targetBoard?.userRole ?? (storeRole === 'owner' ? 'owner' : storeRole === 'editor' ? 'editor' : 'viewer');
                     
                     const warningText = isShared && userRole !== 'owner'
                         ? '⚠️ Dieses Board wirklich verlassen? Sie verlieren den Zugang!'
@@ -546,8 +628,10 @@
                             const newBoardId = remaining[0].id;
                             boardStore.loadBoard(newBoardId);
                             currentBoardId = newBoardId;
+                            navigateToBoardUrl();
                         } else {
                             currentBoardId = '';
+                            goto('/cardsboard/', { replaceState: true });
                         }
                     } catch (error) {
                         console.error('❌ Fehler beim Löschen/Verlassen:', error);
@@ -631,8 +715,12 @@
                             
                             <!-- Shared Board Indicator -->
                             {#if board.isShared}
-                                <span class="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px] flex-shrink-0">
-                                    {board.userRole === 'editor' ? '✏️' : '👁️'}
+                                <span class="inline-flex items-center px-1 py-1 border bg-muted text-muted-foreground rounded flex-shrink-0 transition-colors group-hover:bg-primary/15 group-hover:text-primary">
+                                    {#if board.userRole === 'editor'}
+                                        <PencilIcon class="h-3 w-3" />
+                                    {:else}
+                                        <EyeIcon class="h-3 w-3" />
+                                    {/if}
                                 </span>
                             {/if}
                             
@@ -657,8 +745,8 @@
                         </div>
                     </button>
                     
-                    <!-- Delete Button (nur für eigene Boards oder wenn User Owner ist) -->
-                    {#if !board.isShared || board.userRole === 'owner'}
+                    <!-- Delete/Leave Button -->
+                    {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
                         <div
                             class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
@@ -666,7 +754,7 @@
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
                                 class="p-1 rounded transition-colors trash"
                                     
-                                title={board.isShared ? 'Board verlassen' : 'Board löschen'}
+                                title={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
                                 <TrashIcon class="h-4 w-4" />
@@ -682,7 +770,7 @@
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}
         class="w-full gap-2 h-auto py-2 whitespace-normal add-board-button"
-        variant="default"
+        variant="ghost"
         data-testid="create-board-button"
     >
         {#if isCreating}
@@ -849,6 +937,7 @@
                             importFile = null;
                             if (result.board?.id) {
                                 boardStore.loadBoard(result.board.id);
+                                navigateToBoardUrl();
                             }
                         } else {
                             toast.error(`Import fehlgeschlagen: ${result.error}`);

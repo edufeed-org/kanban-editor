@@ -122,20 +122,52 @@ export async function handleCardEvent(
 			return;
 		}
 
+		// 🔒 Authorization Guard: Nur Owner + Maintainers dürfen Card-Events anwenden
+		const eventPubkey = typeof cardEvent.pubkey === 'string' ? cardEvent.pubkey : '';
+
 		// ⚡ v3.0: CRITICAL - Support Background Board Sync
 		// Wenn Card für aktuelles Board → normale Verarbeitung
 		// Wenn Card für Background Board → speichere direkt in localStorage
 		if (targetBoardId === currentBoard.id) {
+			// 🔒 Guard für aktuelles Board
+			if (currentBoard.author && eventPubkey) {
+				const authorized = typeof currentBoard.isMaintainer === 'function'
+					? currentBoard.isMaintainer(eventPubkey)
+					: eventPubkey === currentBoard.author;
+				if (!authorized) {
+					console.debug('[CardEvent] rejected (unauthorized pubkey)', {
+						pubkey: eventPubkey.slice(0, 12) + '...',
+						boardId: currentBoard.id,
+					});
+					return;
+				}
+			}
+
 			console.log(`✅ Card ${cardProps.id} ist für aktuelles Board - normale Verarbeitung`);
 			boardStore.upsertCardFromNostr(cardProps);
 		} else {
-			boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
-
-			// ⚡ NEW: Set unseen changes flag for background board
+			// 🔒 Guard für Background-Board
 			const backgroundBoard = BoardStorage.loadBoard(targetBoardId);
 			if (backgroundBoard) {
+				if (backgroundBoard.author && eventPubkey) {
+					const authorized = typeof backgroundBoard.isMaintainer === 'function'
+						? backgroundBoard.isMaintainer(eventPubkey)
+						: eventPubkey === backgroundBoard.author;
+					if (!authorized) {
+						console.debug('[CardEvent] rejected for background board (unauthorized pubkey)', {
+							pubkey: eventPubkey.slice(0, 12) + '...',
+							boardId: targetBoardId,
+						});
+						return;
+					}
+				}
+
+				boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
 				backgroundBoard.markAsChanged();
 				BoardStorage.saveBoard(backgroundBoard);
+			} else {
+				// Board existiert lokal nicht — kann nicht validieren, trotzdem speichern
+				boardStore.upsertCardToBackgroundBoard(targetBoardId, cardProps);
 			}
 		}
 	} catch (error) {

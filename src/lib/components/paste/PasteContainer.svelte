@@ -25,10 +25,34 @@
     } = $props();
     
     /**
+     * Prüft ob ein Element ein editierbares Feld ist (Input, Textarea, TipTap)
+     */
+    function isEditableElement(el: Element | null): boolean {
+        if (!el) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea') return true;
+        if (el instanceof HTMLElement && el.isContentEditable) return true;
+        if (el.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+        return false;
+    }
+
+    /**
+     * Prüft ob das Paste-Event auf ein editierbares Feld zielt
+     * (event.target, document.activeElement, event.defaultPrevented)
+     */
+    function isEditableTarget(event: ClipboardEvent): boolean {
+        if (event.defaultPrevented) return true;
+        if (event.target instanceof Element && isEditableElement(event.target)) return true;
+        if (isEditableElement(document.activeElement)) return true;
+        return false;
+    }
+
+    /**
      * Handler für Paste-Event auf Card
      */
     async function handleCardPaste(event: ClipboardEvent) {
         if (!cardId) return;
+        if (isEditableTarget(event)) return;
         
         // Verhindere Default (Browser würde Text einfügen)
         event.preventDefault();
@@ -53,6 +77,7 @@
      */
     async function handleColumnPaste(event: ClipboardEvent) {
         if (!columnId) return;
+        if (isEditableTarget(event)) return;
         
         // Verhindere Default
         event.preventDefault();
@@ -111,7 +136,7 @@
     
     .paste-enabled-card:focus-within,
     .paste-enabled-column:focus-within {
-        outline-color: hsl(var(--primary) / 0.5);
+        outline-color: color-mix(in oklch, var(--primary) 50%, transparent);
     }
     
     .paste-hint {
@@ -119,7 +144,7 @@
         bottom: 4px;
         right: 4px;
         font-size: 0.7rem;
-        color: hsl(var(--muted-foreground));
+        color: var(--muted-foreground);
         opacity: 0;
         transition: opacity 0.2s;
         pointer-events: none;

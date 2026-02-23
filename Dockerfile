@@ -66,3 +66,11 @@ ENTRYPOINT ["dumb-init", "--"]
 
 # Serve static files with sirv
 CMD ["pnpm", "exec", "sirv", "build", "--single", "--host", "0.0.0.0", "--port", "5173"]
+
+
+FROM node:22-alpine as development
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /home/node/app
+
+COPY package.json pnpm-lock.yaml ./

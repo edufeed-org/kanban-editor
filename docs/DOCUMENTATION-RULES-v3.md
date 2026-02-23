@@ -93,6 +93,34 @@ DOKUMENTATIONS-UPDATE → Code MUSS aktualisiert werden
       - [ ] Feature-Beschreibung hinzugefügt
       - [ ] Breaking Changes dokumentiert?
       - [ ] Migration-Guide verlinkt (falls nötig)
+      - [ ] **2-Layer-Regel eingehalten?** (siehe unten)
+
+#### 6.1.1 CHANGELOG 2-Layer-Architektur (MANDATORY)
+
+**Das CHANGELOG folgt einer strikten 2-Layer-Trennung:**
+
+| Layer | Datei | Inhalt | Zielgruppe |
+|-------|-------|--------|------------|
+| **1 — Kompakt** | `CHANGELOG.md` (Root) | `## Unreleased` (temporaer), `## Direkt Pushes` (Datum + Einzeiler + Link), `## Releases` (Tabelle) | Stakeholder, Schnellueberblick |
+| **2 — Detail** | `docs/CHANGELOG/YYYY-QN.md` | Volle Beschreibungen, PR-Details, betroffene Bereiche, Commit-Listen, Audit-Daten | Entwickler, Audit, Nachvollziehbarkeit |
+
+**Workflow:**
+```
+1. Neue Aenderung → CHANGELOG.md ## Unreleased (Kurzbeschreibung)
+2. Zeitnah konsolidieren → Volle Beschreibung in docs/CHANGELOG/YYYY-QN.md
+3. Root-CHANGELOG.md bereinigen:
+   - Unreleased leeren
+   - Eintrag in "Direkt Pushes" Tabelle: | Datum | Einzeiler | Link auf QN.md |
+4. Einzeldateien (z.B. 2026-02-post-4.7.96.md) → in Quartals-Datei zusammenfuehren
+   + Deprecation-Notice in der alten Datei setzen
+```
+
+**Regeln:**
+- ✅ Root-CHANGELOG.md NIEMALS laenger als ~80 Zeilen (Stakeholder-Ansicht)
+- ✅ Volle Beschreibung nur an EINER Stelle (Quartals-Datei)
+- ✅ Keine Duplikation zwischen Root und Detail
+- ✅ Quartals-Dateien benennen: `YYYY-QN.md` (z.B. `2026-Q1.md`)
+- ✅ Konsolidierte Einzeldateien bekommen Deprecation-Hinweis am Anfang
       
 - [ ] 4. **Feature-spezifische Docs** aktualisiert?
       - [ ] `docs/FEATURE/[FEATURE].md` existiert?

@@ -536,7 +536,7 @@
 							
 							<Separator />
 							
-							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full btn">
+							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
 								<TrashIcon class="h-4 w-4"  />
 								Spalte löschen
 							</Button>

@@ -51,6 +51,22 @@ export async function handleColumnOrderPatchEvent(
 		return false;
 	}
 
+	// 🔒 Authorization Guard: Nur Owner + Maintainers dürfen Column-Patches anwenden
+	const publisherPubkey = typeof event.pubkey === 'string' ? event.pubkey : '';
+	if (currentBoard.author && publisherPubkey) {
+		const isMaintainer = typeof currentBoard.isMaintainer === 'function'
+			? currentBoard.isMaintainer(publisherPubkey)
+			: publisherPubkey === currentBoard.author;
+		if (!isMaintainer) {
+			console.debug('[ColumnOrderPatch] rejected (unauthorized pubkey)', {
+				id: event.id,
+				pubkey: publisherPubkey.slice(0, 12) + '...',
+				boardId,
+			});
+			return false;
+		}
+	}
+
 	const columnOrder: string[] = Array.isArray(orderTag)
 		? orderTag.slice(1).filter((v) => typeof v === 'string')
 		: [];

@@ -8,7 +8,12 @@ import {
     nostrEventToCard,
     createBoardNaddr,
     createBoardNaddrUrl,
-    decodeBoardNaddr
+    decodeBoardNaddr,
+    slugifyBoardName,
+    createShortlinkEvent,
+    resolveShortlink,
+    resolveShortlinkBySlug,
+    EVENT_KINDS
 } from './nostrEvents.js';
 import { Card } from '../classes/BoardModel.js';
 import type NDK from '@nostr-dev-kit/ndk';
@@ -425,6 +430,304 @@ describe('nostrEvents - naddr Link Generation', () => {
             const decoded = decodeBoardNaddr(naddr);
             
             expect(decoded?.identifier).toBe(specialBoardId);
+        });
+    });
+});
+
+
+describe('nostrEvents - Shortlink', () => {
+    
+    describe('slugifyBoardName', () => {
+        it('should convert simple names to lowercase slug', () => {
+            expect(slugifyBoardName('My Board')).toBe('my-board');
+        });
+
+        it('should handle German umlauts', () => {
+            expect(slugifyBoardName('Über die Brücke')).toBe('ueber-die-bruecke');
+        });
+
+        it('should handle ß', () => {
+            expect(slugifyBoardName('Große Straße')).toBe('grosse-strasse');
+        });
+
+        it('should remove diacritical marks', () => {
+            expect(slugifyBoardName('Café résumé')).toBe('cafe-resume');
+        });
+
+        it('should replace special characters with hyphens', () => {
+            expect(slugifyBoardName('Board: Test (v2) #1')).toBe('board-test-v2-1');
+        });
+
+        it('should collapse multiple hyphens', () => {
+            expect(slugifyBoardName('A --- B')).toBe('a-b');
+        });
+
+        it('should remove leading and trailing hyphens', () => {
+            expect(slugifyBoardName('--hello--')).toBe('hello');
+        });
+
+        it('should truncate to 48 characters', () => {
+            const longName = 'A'.repeat(100);
+            expect(slugifyBoardName(longName).length).toBeLessThanOrEqual(48);
+        });
+
+        it('should handle empty string', () => {
+            expect(slugifyBoardName('')).toBe('');
+        });
+
+        it('should handle numbers', () => {
+            expect(slugifyBoardName('Board 42')).toBe('board-42');
+        });
+    });
+
+    describe('createShortlinkEvent', () => {
+        let mockNdk: NDK;
+
+        beforeEach(() => {
+            mockNdk = {} as NDK;
+        });
+
+        it('should create event with correct kind', () => {
+            const event = createShortlinkEvent(
+                'my-slug',
+                'naddr1abc123',
+                'board-id',
+                'author-pubkey',
+                'My Board',
+                mockNdk
+            );
+
+            expect(event.kind).toBe(EVENT_KINDS.SHORTLINK);
+        });
+
+        it('should set d-tag to slug', () => {
+            const event = createShortlinkEvent(
+                'projekt-x',
+                'naddr1abc123',
+                'board-id',
+                'author-pubkey',
+                'Projekt X',
+                mockNdk
+            );
+
+            const dTag = event.tags.find(t => t[0] === 'd');
+            expect(dTag).toBeDefined();
+            expect(dTag?.[1]).toBe('projekt-x');
+        });
+
+        it('should set r-tag to naddr', () => {
+            const naddr = 'naddr1qqs8vxfmpwqq5x7czsfy8';
+            const event = createShortlinkEvent(
+                'my-slug',
+                naddr,
+                'board-id',
+                'author-pubkey',
+                undefined,
+                mockNdk
+            );
+
+            const rTag = event.tags.find(t => t[0] === 'r');
+            expect(rTag).toBeDefined();
+            expect(rTag?.[1]).toBe(naddr);
+        });
+
+        it('should set a-tag with board address', () => {
+            const event = createShortlinkEvent(
+                'my-slug',
+                'naddr1abc',
+                'board-123',
+                'pubkey-abc',
+                'Title',
+                mockNdk
+            );
+
+            const aTag = event.tags.find(t => t[0] === 'a');
+            expect(aTag).toBeDefined();
+            expect(aTag?.[1]).toBe(`${EVENT_KINDS.BOARD}:pubkey-abc:board-123`);
+        });
+
+        it('should include title tag when provided', () => {
+            const event = createShortlinkEvent(
+                'my-slug',
+                'naddr1abc',
+                'board-id',
+                'author',
+                'Mein Board Titel',
+                mockNdk
+            );
+
+            const titleTag = event.tags.find(t => t[0] === 'title');
+            expect(titleTag).toBeDefined();
+            expect(titleTag?.[1]).toBe('Mein Board Titel');
+        });
+
+        it('should not include title tag when undefined', () => {
+            const event = createShortlinkEvent(
+                'my-slug',
+                'naddr1abc',
+                'board-id',
+                'author',
+                undefined,
+                mockNdk
+            );
+
+            const titleTag = event.tags.find(t => t[0] === 'title');
+            expect(titleTag).toBeUndefined();
+        });
+
+        it('should set content to naddr', () => {
+            const naddr = 'naddr1qqs8vxfmpwqq5x7czsfy8';
+            const event = createShortlinkEvent(
+                'my-slug',
+                naddr,
+                'board-id',
+                'author',
+                undefined,
+                mockNdk
+            );
+
+            expect(event.content).toBe(naddr);
+        });
+    });
+
+    describe('resolveShortlink', () => {
+        let mockNdk: NDK;
+
+        it('should resolve slug via r-tag', async () => {
+            const expectedNaddr = 'naddr1abc123resolved';
+            mockNdk = {
+                fetchEvent: vi.fn().mockResolvedValue({
+                    tags: [['d', 'my-slug'], ['r', expectedNaddr]],
+                    content: 'fallback-content',
+                })
+            } as unknown as NDK;
+
+            const result = await resolveShortlink('my-slug', 'author-pub', mockNdk);
+            expect(result).toBe(expectedNaddr);
+            expect(mockNdk.fetchEvent).toHaveBeenCalledWith({
+                kinds: [EVENT_KINDS.SHORTLINK],
+                authors: ['author-pub'],
+                '#d': ['my-slug']
+            });
+        });
+
+        it('should fallback to content when no r-tag', async () => {
+            mockNdk = {
+                fetchEvent: vi.fn().mockResolvedValue({
+                    tags: [['d', 'my-slug']],
+                    content: 'naddr1fallback',
+                })
+            } as unknown as NDK;
+
+            const result = await resolveShortlink('my-slug', 'author-pub', mockNdk);
+            expect(result).toBe('naddr1fallback');
+        });
+
+        it('should return null when event not found', async () => {
+            mockNdk = {
+                fetchEvent: vi.fn().mockResolvedValue(null)
+            } as unknown as NDK;
+
+            const result = await resolveShortlink('nonexistent', 'author-pub', mockNdk);
+            expect(result).toBeNull();
+        });
+
+        it('should return null when event has no r-tag and empty content', async () => {
+            mockNdk = {
+                fetchEvent: vi.fn().mockResolvedValue({
+                    tags: [['d', 'my-slug']],
+                    content: '',
+                })
+            } as unknown as NDK;
+
+            const result = await resolveShortlink('my-slug', 'author-pub', mockNdk);
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('resolveShortlinkBySlug', () => {
+        let mockNdk: NDK;
+
+        it('should resolve slug without author', async () => {
+            const expectedNaddr = 'naddr1resolved-no-author';
+            const mockEvents = new Set([
+                {
+                    tags: [['d', 'test-slug'], ['r', expectedNaddr]],
+                    content: expectedNaddr,
+                    pubkey: 'pubkey-abc',
+                    created_at: 1000,
+                }
+            ]);
+            mockNdk = {
+                fetchEvents: vi.fn().mockResolvedValue(mockEvents)
+            } as unknown as NDK;
+
+            const result = await resolveShortlinkBySlug('test-slug', mockNdk);
+            expect(result).toEqual({ naddr: expectedNaddr, authorPubkey: 'pubkey-abc' });
+        });
+
+        it('should return null when no events found', async () => {
+            mockNdk = {
+                fetchEvents: vi.fn().mockResolvedValue(new Set())
+            } as unknown as NDK;
+
+            const result = await resolveShortlinkBySlug('nonexistent', mockNdk);
+            expect(result).toBeNull();
+        });
+
+        it('should pick latest event (Last-Write-Wins)', async () => {
+            const mockEvents = new Set([
+                {
+                    tags: [['d', 'slug'], ['r', 'naddr-old']],
+                    content: 'naddr-old',
+                    pubkey: 'pubkey-old',
+                    created_at: 1000,
+                },
+                {
+                    tags: [['d', 'slug'], ['r', 'naddr-newest']],
+                    content: 'naddr-newest',
+                    pubkey: 'pubkey-new',
+                    created_at: 3000,
+                },
+                {
+                    tags: [['d', 'slug'], ['r', 'naddr-mid']],
+                    content: 'naddr-mid',
+                    pubkey: 'pubkey-mid',
+                    created_at: 2000,
+                },
+            ]);
+            mockNdk = {
+                fetchEvents: vi.fn().mockResolvedValue(mockEvents)
+            } as unknown as NDK;
+
+            const result = await resolveShortlinkBySlug('slug', mockNdk);
+            expect(result).toEqual({ naddr: 'naddr-newest', authorPubkey: 'pubkey-new' });
+        });
+
+        it('should fallback to content when no r-tag', async () => {
+            const mockEvents = new Set([
+                {
+                    tags: [['d', 'slug']],
+                    content: 'naddr-from-content',
+                    pubkey: 'pubkey-abc',
+                    created_at: 1000,
+                }
+            ]);
+            mockNdk = {
+                fetchEvents: vi.fn().mockResolvedValue(mockEvents)
+            } as unknown as NDK;
+
+            const result = await resolveShortlinkBySlug('slug', mockNdk);
+            expect(result).toEqual({ naddr: 'naddr-from-content', authorPubkey: 'pubkey-abc' });
+        });
+
+        it('should return null when fetchEvents returns null', async () => {
+            mockNdk = {
+                fetchEvents: vi.fn().mockResolvedValue(null)
+            } as unknown as NDK;
+
+            const result = await resolveShortlinkBySlug('slug', mockNdk);
+            expect(result).toBeNull();
         });
     });
 });

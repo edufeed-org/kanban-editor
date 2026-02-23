@@ -56,15 +56,34 @@
 	let showStickyButton = $state(false);
 	let scrollableButtonElement = $state<HTMLElement | undefined>(undefined);
 
-	function isEditableTarget(target: EventTarget | null): boolean {
-		if (!(target instanceof HTMLElement)) return false;
-		const tag = target.tagName.toLowerCase();
-		return tag === 'input' || tag === 'textarea' || target.isContentEditable;
+	function isEditableElement(el: Element | null): boolean {
+		if (!el) return false;
+		const tag = el.tagName.toLowerCase();
+		if (tag === 'input' || tag === 'textarea') return true;
+		if (el instanceof HTMLElement && el.isContentEditable) return true;
+		if (el.closest('[contenteditable="true"], .ProseMirror, .tiptap')) return true;
+		return false;
+	}
+
+	function isEditableTarget(event: ClipboardEvent): boolean {
+		// 1. Wenn ein anderer Handler (z.B. TipTap/ProseMirror) das Event bereits
+		//    verarbeitet hat, nicht nochmal verarbeiten
+		if (event.defaultPrevented) return true;
+
+		// 2. Prüfe event.target (direktes Ziel des Events)
+		if (event.target instanceof Element && isEditableElement(event.target)) return true;
+
+		// 3. Prüfe document.activeElement (zuverlässiger als event.target,
+		//    z.B. wenn Cursor am Anfang einer leeren Zeile in TipTap steht
+		//    und event.target ein Wrapper-Element ist)
+		if (isEditableElement(document.activeElement)) return true;
+
+		return false;
 	}
 
 	async function handleGlobalPaste(event: ClipboardEvent) {
 		if (readOnly) return;
-		if (isEditableTarget(event.target)) return;
+		if (isEditableTarget(event)) return;
 		if (!columns.length) {
 			toast.error('Paste fehlgeschlagen', {
 				description: 'Keine Spalten verfügbar.'
@@ -346,6 +365,7 @@
 		height: 100%;
 		width: 100%;
 		position: relative; /* Enables absolute positioning for sticky button */
+		background: var(--board-bg, none); /* Subtle theme gradient (active in rpi) */
 	}
 
     /* Dickes Scrollbar in Chrome/Edge/Safari */
@@ -354,17 +374,17 @@
     }
 
     .board::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: var(--muted);
         border-radius: 4px;
     }
 
     .board::-webkit-scrollbar-thumb {
-        background: linear-gradient(to bottom, #666, #444);
+        background: var(--muted-foreground);
         border-radius: 4px;
     }
 
     .board::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(to bottom, #333, #000);
+        background: var(--foreground);
     }
 
 	.column {

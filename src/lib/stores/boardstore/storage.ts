@@ -40,11 +40,13 @@ export class BoardStorage {
                 
                 // Exclude non-board keys
                 if (id === 'config') return false;
+                if (id === 'config-merged') return false;
                 if (id === 'settings') return false;
                 if (id === 'boards-list') return false;
                 // ✅ Anti-Resurrection: Tombstone registry is NOT a board
                 if (id === 'deleted-boards-v1') return false;
                 if (id.startsWith('deleted-boards-')) return false;
+                if (id.startsWith('config-')) return false;
                 if (id.includes('-metadata')) return false;
                 if (id.includes('-backup')) return false;
                 if (id.includes('-migrated')) return false;

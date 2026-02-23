@@ -325,7 +325,7 @@ export class BoardStore {
     // MULTI-BOARD MANAGEMENT
     // ============================================================================
     
-    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
+    public getAllBoards(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; author?: string }> {
         // ⚡ KRITISCH: updateTrigger lesen für Reaktivität!
         this.updateTrigger;
         
@@ -395,7 +395,8 @@ export class BoardStore {
                     lastAccessed: this.board.lastAccessedAt 
                         ? new Date(this.board.lastAccessedAt).getTime() 
                         : new Date(this.board.createdAt).getTime(),
-                    hasUnseenChanges: this.board.hasUnseenChanges
+                    hasUnseenChanges: this.board.hasUnseenChanges,
+                    author: this.board.author
                 };
             } else {
                 // Andere Boards: Lade frisches lastAccessedAt aus Storage
@@ -882,6 +883,21 @@ export class BoardStore {
                         console.log(`✅ Re-loading current board without lastAccessed update: ${currentId}`);
                         this.loadBoard(currentId, { skipLastAccessed: true });
                     } else {
+                        // ⚡ Guard: Wenn das aktuelle Board in localStorage existiert, wurde es bewusst
+                        // geladen (Viewer-Board via naddr, noch nicht publiziertes eigenes Board, etc.).
+                        // Kein Auto-Switch – der User sieht dieses Board absichtlich.
+                        //
+                        // Tombstoned Boards können hier nicht auftauchen: loadBoard() blockt sie bereits.
+                        // Deleted-via-Nostr-Event Boards werden separat via handleDeletionEvent tombstoned.
+                        //
+                        // Warum NICHT cachedSharedBoards prüfen: onAuthChanged() löscht diesen Cache
+                        // beim App-Start → Race Condition mit dem naddr-Page Load.
+                        if (BoardStorage.loadBoard(currentId)) {
+                            console.log(`✅ loadBoardsFromNostr: Board ${currentId} lokal vorhanden, kein Auto-Switch (Viewer/Foreign Board)`);
+                            this.updateTrigger++;
+                            return;
+                        }
+
                         // Aktuelles Board wurde gelöscht → Lade das neueste Board
                         const allBoards = this.getAllBoards();
                         if (allBoards.length > 0) {
@@ -1124,7 +1140,7 @@ export class BoardStore {
         this.deleteCard(cardId);
     }
 
-    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean}> {
+    public filterBoards(query: string): Array<{id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean; author?: string}> {
         // ✅ BENUTZER-BASIERTE FILTERUNG: getAllBoards() liefert bereits gefilterte Boards
         const userBoards = this.getAllBoards();
         
@@ -2541,6 +2557,75 @@ export class BoardStore {
         return result;
     }
 
+    /**
+     * Publiziert einen Shortlink (Kind 30491) für das aktuelle Board.
+     * Der Slug wird als d-Tag gespeichert und mappt auf den vollen naddr.
+     *
+     * @param slug - Das gewünschte Kürzel (z.B. "projekt-x")
+     * @returns true wenn erfolgreich publiziert
+     */
+    public async publishShortlink(slug: string): Promise<boolean> {
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('[BoardStore] ❌ NDK nicht verfügbar für Shortlink-Publish');
+            return false;
+        }
+
+        const board = this.board;
+        if (!board.author) {
+            console.error('[BoardStore] ❌ Board hat keinen Author — Shortlink kann nicht erstellt werden');
+            return false;
+        }
+
+        try {
+            const { createShortlinkEvent, createBoardNaddr, checkSlugCollision } = await import('$lib/utils/nostrEvents.js');
+            const { settingsStore } = await import('$lib/stores/settingsStore.svelte.js');
+
+            // Guard: Prüfen ob der Slug bereits von einem anderen Board belegt ist.
+            // NIP-33 würde das bestehende Event still überschreiben — das wäre ein
+            // Datenverlust für das andere Board.
+            const collision = await checkSlugCollision(slug, board.author, board.id, ndk);
+            if (collision) {
+                console.warn(`[BoardStore] ⚠️ Slug "${slug}" bereits vergeben für ${collision}`);
+                const err = new Error(`Slug "${slug}" ist bereits als Kurzlink für ein anderes Board vergeben.`);
+                (err as any).code = 'SLUG_COLLISION';
+                (err as any).collidingBoardRef = collision;
+                throw err;
+            }
+
+            const relayHints: string[] = settingsStore.settings.relaysPublic || [];
+            const naddr = createBoardNaddr(board.id, board.author, relayHints);
+
+            const event = createShortlinkEvent(
+                slug,
+                naddr,
+                board.id,
+                board.author,
+                board.name,
+                ndk
+            );
+
+            // Auf öffentlichen Relays publizieren (Shortlinks müssen auffindbar sein)
+            const relays = await event.publish();
+
+            if (relays.size === 0) {
+                console.error('[BoardStore] ❌ Shortlink konnte auf keinem Relay publiziert werden');
+                return false;
+            }
+
+            console.log(`[BoardStore] ✅ Shortlink "${slug}" publiziert auf ${relays.size} Relay(s)`);
+            return true;
+        } catch (error) {
+            // Kollisionsfehler direkt weiterwerfen — der Caller (ShareDialog)
+            // soll eine spezifische Fehlermeldung anzeigen können.
+            if (error instanceof Error && (error as any).code === 'SLUG_COLLISION') {
+                throw error;
+            }
+            console.error('[BoardStore] ❌ Fehler beim Publizieren des Shortlinks:', error);
+            return false;
+        }
+    }
+
     public parseShareToken(token: string): any {
         return ExportImport.parseShareToken(token);
     }
@@ -3053,6 +3138,8 @@ export class BoardStore {
      * Prüft ob der aktuelle Nutzer Editor-Rechte hat
      */
     public canCurrentUserEdit(): boolean {
+        // 🎯 DEMO-BOARD EXCEPTION: Anonyme Benutzer dürfen alles im Demo-Board
+        if (this.board.id === 'demo-board') return true;
         const currentUser = authStore.getPubkey();
         return this.board.canEditBoard(currentUser || undefined);
     }
@@ -3724,6 +3811,9 @@ export class BoardStore {
             color: c.color
         }));
         
+        // ⚡ FIX v4.3: Maintainers VOR dem Update merken (für Subscription-Restart)
+        const previousMaintainers = [...(this.board.maintainers || [])];
+        
         const isUpdate = BoardOperations.upsertBoardFromNostr(this.board, {
             id: boardProps.id,
             name: boardProps.name,
@@ -3745,14 +3835,38 @@ export class BoardStore {
             const flushedCards = this.flushAllPendingCardsForExistingColumns();
             const appliedPendingOrder = this.tryApplyPendingColumnOrderPatch();
             
-            // ⚡ v4.1: KEIN saveToStorage bei Updates von Nostr!
-            // Grund: Board existiert bereits in localStorage
-            // Update wird erst beim nächsten User-Edit gespeichert
-            // Das verhindert Race Conditions mit LWW
-            if (flushedCards || appliedPendingOrder) {
-                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
-            } else {
-                this.updateTrigger++;  // ← NUR trigger update, KEIN save!
+            // ⚡ v4.3 FIX: Board-Metadaten MÜSSEN in localStorage gespeichert werden!
+            // Ohne saveToStorage() gehen Maintainers/Columns/Name nach Reload verloren.
+            // publish: false verhindert Nostr-Publishing (kein Echo-Loop).
+            // Die alte v4.1 Strategie (KEIN save) war zu aggressiv und verursachte
+            // den Collaboration-Bug: Editor konnte Änderungen des Owners nicht sehen.
+            this.triggerUpdate({ publish: false });
+            
+            // ⚡ v4.3 FIX: Subscription bei Maintainer-Änderung neu starten
+            // Damit neue Editoren Card-Events empfangen/senden können
+            const currentMaintainers = this.board.maintainers || [];
+            const maintainersChanged = 
+                previousMaintainers.length !== currentMaintainers.length ||
+                previousMaintainers.some((m, i) => m !== currentMaintainers[i]);
+            
+            if (maintainersChanged) {
+                console.log('[BoardStore] 🔄 Maintainers changed via Nostr - restarting subscription');
+                this.subscribeToNostrUpdates();
+            }
+            
+            // ⚡ v4.3 FIX: Shared-Board-Cache aktualisieren falls Board dort gelistet ist
+            const cachedIndex = this.cachedSharedBoards.findIndex(b => b.id === boardProps.id);
+            if (cachedIndex !== -1) {
+                this.cachedSharedBoards[cachedIndex] = {
+                    ...this.cachedSharedBoards[cachedIndex],
+                    name: this.board.name,
+                    description: this.board.description,
+                    updatedAt: this.board.updatedAt 
+                        ? (typeof this.board.updatedAt === 'string' 
+                            ? new Date(this.board.updatedAt).getTime() 
+                            : this.board.updatedAt)
+                        : undefined
+                };
             }
         } else {
             // ⚡ v4.2: NEUES Board - Erstelle VOLLSTÄNDIGES Board-Objekt!

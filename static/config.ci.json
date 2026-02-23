@@ -64,10 +64,10 @@
     "$comment": "AMB (Allgemeines Metadatenprofil für Bildungsressourcen) Konfiguration",
     "$comment_vocabularies": "URLs können angepasst werden für verschiedene Kontexte (Schule, Hochschule, Beruf). Setze auf null für Default-URL.",
     "vocabularies": {
-      "audience": null,
-      "educationalLevel": null,
-      "learningResourceType": null,
-      "about": null
+      "audience": "https://skohub.io/dini-ag-kim/lrmi-audience-role/heads/master/w3id.org/kim/lrmi-audience-role/index.json",
+      "educationalLevel": "https://skohub.io/dini-ag-kim/educationalLevel/heads/main/w3id.org/kim/educationalLevel/index.json",
+      "learningResourceType": "https://vocabs.sodix.de/sodix/educational/learningresourcetype/learningresourcetype.json",
+      "about": "https://skohub.io/dini-ag-kim/schulfaecher/heads/main/w3id.org/kim/schulfaecher/index.json"
     },
     "$comment_example_hochschule": {
       "about": "https://skohub.io/dini-ag-kim/hochschulfaechersystematik/heads/main/w3id.org/kim/hochschulfaechersystematik/index.json",

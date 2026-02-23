@@ -1,25 +1,25 @@
-# Nostr-basiertes KI-Kanban-Board für kollaborative Unterrichtsentwicklung
+﻿# Nostr-basiertes KI-Kanban-Board für kollaborative Unterrichtsentwicklung
 
 Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, gebaut mit **Svelte 5** und **TypeScript**.
 
 ---
 
-## 📊 PROJECT STATUS (31. Januar 2026)
+## 📊 PROJECT STATUS (20. Februar 2026)
 
-**🎉 ALLE PHASEN ABGESCHLOSSEN - PROJEKT PRODUCTION READY!**
+**🎉 AKTIVE WEITERENTWICKLUNG - Status siehe ROADMAP + CHANGELOG**
 
 | Phase | Status | Highlights | Code-Lines | Tests | Docs |
 |-------|--------|-----------|-----------|-------|------|
-| **Phase 1** | ✅ 100% | Author, Publishing, Comments, Merge, Export/Import, Demo Boards | 2500+ | 350+ | ✅ |
-| **Phase 2** | ✅ 100% | UI Components, Settings, Dark Mode, Responsive Design | 1500+ | 100+ | ✅ |
-| **Phase 3** | ✅ 100% | Tool-Based AI, OER Discovery, URL Import, 12 Tools | 3000+ | 700+ | ✅ |
-| **Phase 4** | ✅ 100% | Kollaboration, Soft-Locks, 3-Way Merge, Live-Sync | 1500+ | 150+ | ✅ |
+| **Phase 1** | 100% | Author, Publishing, Comments, Merge, Export/Import, Demo Boards | 2500+ | 350+ | Ja |
+| **Phase 2** | 20% | UI Components vorhanden, Mobile/Performance offen (A11y nicht mehr im Scope) | 1500+ | 100+ | Teilweise |
+| **Phase 3** | 100% | Tool-Based AI, OER Discovery, URL Import im aktuellen Scope abgeschlossen | 3000+ | 700+ | Ja |
+| **Phase 4** | 100% | Kollaboration im aktuellen Scope abgeschlossen (Soft-Lock UI nicht mehr geplant) | 1500+ | 150+ | Ja |
 
-### 🎯 PROJEKT ABGESCHLOSSEN: 31.01.2026
-### ⚡ NEXT: Testphase & Community Feedback (01.02. - 28.02.2026)
+### 🎯 Laufender Betrieb mit fortlaufenden Verbesserungen
+### ⚡ NEXT: Stabilisierung, Security-Hardening, Kollaboration-UX
 
 **READ FIRST:**
-1. **[🗺️ ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** ⭐ **v3.22** - Alle Meilensteine COMPLETE!
+1. **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - Aktueller Projektstatus und Meilensteine
 2. **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (55+ Dateien)
 3. **[🤖 Agent README](./docs/ARCHITECTURE/AGENT/README.md)** ⭐ **NEW** - Tool-Based AI System v3.0
 
@@ -38,6 +38,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - 📱 **Reaktiv:** Svelte 5 Runes für optimale Performance
 - 🔒 **Typsicher:** Vollständig in TypeScript implementiert
 - 🎨 **Demo-Boards:** Sofortiger Start für anonyme Nutzer mit vorkonfigurierten Boards
+- 🔗 **Kurzlinks:** Dezentraler URL-Shortener via Nostr — merkbare Board-URLs statt langer naddr-Strings
 
 ## 📚 Dokumentation
 
@@ -46,7 +47,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 **KRITISCH:** Code ohne Docs-Update → PR wird REJECTED!
 
 - **[📚 DOCUMENTATION-RULES-v3.md](./docs/DOCUMENTATION-RULES-v3.md)** - 🔴 **v3.0 MANDATORY** - DoD Checklist (11 Punkte), Enforcement-Rules
-- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema (52/52 Dateien verlinkt!)
+- **[📚 Dokumentations-Index](./docs/_INDEX.md)** - Navigation nach Rolle & Thema
 - **[📚 Phase 3.0 KI-Developer Path](./docs/_INDEX.md#-kientwickler-learning-path)** - 11 neue KI-Integration Ressourcen
 
 **Bei jeder Code-Änderung:**
@@ -59,23 +60,23 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 7. ✅ Alte Docs archivieren (mit Migration-Notice)
 
 **Siehe:** [`docs/DOCUMENTATION-RULES-v3.md`](./docs/DOCUMENTATION-RULES-v3.md) für vollständige Regeln  
-**Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/archive/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
+**Migration:** [`docs/archive/DOCUMENTATION-RULES-v2.md`](./docs/DOCUMENTATION-RULES-v2.md) (v2.0 deprecated)
 
 ---
 
 ### 📖 Kern-Dokumentation
 
 - **[KONZEPT.md](./KONZEPT.md)** - Produkt-Vision & Use Cases (für Stakeholder)
-- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - 🗺️ Priorisierte Entwicklungs-Roadmap v3.0 (Phase 1-5, Phase 3.0 Complete!)
+- **[ROADMAP.md](./docs/COLLABORATION/ROADMAP.md)** - Aktueller Projektstatus und Meilensteine
 - **[AGENTS.md](./AGENTS.md)** - Vollständige technische Spezifikation
-- **[STORES.md](./docs/ARCHITECTURE/STORES.md)** - Svelte 5 Store-Architektur & Export/Import API
-- **[AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/AUTHOR-FIELD-ATTRIBUTION.md)** - Serialisierung & Persistierung Pattern
-- **[AUTHSTORE-INTEGRATION-GUIDE.md](./docs/GUIDES/AUTHSTORE-INTEGRATION-GUIDE.md)** - AuthStore API Reference
+- **[STORES.md](./docs/ARCHITECTURE/STORES/README.md)** - Svelte 5 Store-Architektur & Export/Import API
+- **[AUTHOR-FIELD-ATTRIBUTION.md](./docs/ARCHITECTURE/STORES/BOARDSTORE.md)** - Serialisierung & Persistierung Pattern
+- **[AUTHSTORE-INTEGRATION-GUIDE.md](./docs/ARCHITECTURE/STORES/AUTHSTORE.md)** - AuthStore API Reference
 - **[NDK.md](./docs/ARCHITECTURE/NDK.md)** - NDK Integration & Nostr-Event Publishing
 - **[Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md)** - Nostr Event Schema (NIP-30301/30302)
-- **[NOSTR-USER.md](./docs/ARCHITECTURE/NOSTR-USER.md)** - Benutzerauthentifizierung (NIP-07)
+- **[NOSTR-USER.md](./docs/ARCHITECTURE/STORES/AUTHSTORE.md)** - Benutzerauthentifizierung (NIP-07)
 - **[UX-RULES.md](./docs/ARCHITECTURE/UX-RULES.md)** - shadcn-svelte UI Guidelines
-- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (✅ Version 5.0 - Alle Phasen Complete!)
+- **[CHANGELOG.md](./CHANGELOG.md)** - Änderungshistorie (✅ Kompakte Historie + Quartalsarchive)
 
 ### 🗺️ Documentation Map (für Entwickler)
 
@@ -124,7 +125,7 @@ Ein intelligentes Kanban-Board mit KI-Unterstützung und Nostr-Integration, geba
 - **Phase 1.0** ✅ (Author Field Attribution) — siehe AUTHOR-FIELD-ATTRIBUTION.md + AUTHSTORE-INTEGRATION-GUIDE.md
 - **Phase 1.1** (Nostr Publishing) — siehe AGENTS.md + STORES.md
 - **Phase 1.2** (Offline-First) — siehe STORES.md (SyncManager)
-- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./docs/ARCHITECTURE/STORES.md) Section III** ✅
+- **Phase 1.5** (Export/Import) — siehe **[STORES.md](./docs/ARCHITECTURE/STORES/README.md) Section III** ✅
 - **Phase 2** (UI Components) — siehe UX-RULES.md + AGENTS.md ✅
 - **Phase 3** (Tool-Based KI) — siehe **[Agent README](./docs/ARCHITECTURE/AGENT/README.md)** ✅
 - **Phase 4** (Kollaboration) — siehe **[BOARD-SHARING.md](./docs/ARCHITECTURE/BOARD-SHARING.md)** ✅
@@ -381,7 +382,7 @@ src/
 }
 ```
 
-Siehe [Kanban-NIP.md](./Kanban-NIP.md) für Details.
+Siehe [Kanban-NIP.md](./docs/GUIDES/Kanban-NIP.md) für Details.
 
 ## 🔌 Offline-First Funktionalität
 
@@ -686,7 +687,7 @@ Siehe [CONTRIBUTING.md](./docs/COLLABORATION/CONTRIBUTING.md) für Richtlinien.
 
 ## 📄 Lizenz
 
-MIT License - siehe [LICENSE](./LICENSE) für Details.
+MIT License - siehe [LICENSE](./README.md) für Details.
 
 ## 🙏 Credits
 
@@ -704,8 +705,10 @@ MIT License - siehe [LICENSE](./LICENSE) für Details.
 ---
 
 **Projekt-Status:** ✅ Phase 1-4 COMPLETE | 🧪 Testphase ab 01.02.2026  
-**Letzte Aktualisierung:** 31. Januar 2026  
+**Letzte Aktualisierung:** 20. Februar 2026  
 **Repository:** [edufeed-org/kanban-editor](https://github.com/edufeed-org/kanban-editor)  
 **Version:** 5.0 (Production Ready)
 
 Für Details siehe [ROADMAP.md](./docs/COLLABORATION/ROADMAP.md) und [CHANGELOG.md](./CHANGELOG.md).
+
+

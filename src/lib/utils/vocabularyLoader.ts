@@ -339,13 +339,14 @@ export async function loadVocabulary(
         }
     }
     
-    // 3. Von URL laden (mit CORS-Proxy für skohub.io)
-    // skohub.io erlaubt keine direkten Browser-Anfragen
-    const fetchUrl = url.includes('skohub.io') 
+    // 3. Von URL laden (mit CORS-Proxy Fallback)
+    // Versuche erst direkt, dann mit CORS-Proxy bei Netzwerk-/CORS-Fehler
+    const needsProxy = url.includes('skohub.io');
+    const fetchUrl = needsProxy 
         ? CORS_PROXY_URL + encodeURIComponent(url)
         : url;
     
-    console.log(`[VocabLoader] Fetching ${type} from ${url}`);
+    console.log(`[VocabLoader] Fetching ${type} from ${url}${needsProxy ? ' (via CORS proxy)' : ''}`);
     
     try {
         const response = await fetch(fetchUrl, {
@@ -381,6 +382,39 @@ export async function loadVocabulary(
         return concepts;
         
     } catch (error) {
+        // Falls kein Proxy benutzt wurde, mit CORS-Proxy erneut versuchen
+        if (!needsProxy) {
+            console.info(`[VocabLoader] Direct fetch failed for ${type}, retrying with CORS proxy...`);
+            try {
+                const proxyUrl = CORS_PROXY_URL + encodeURIComponent(url);
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        'Accept': 'application/json, application/ld+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const concepts = parseSkosJsonLd(data, url);
+                    
+                    if (concepts.length > 0) {
+                        const entry: VocabularyCacheEntry = {
+                            concepts,
+                            fetchedAt: Date.now(),
+                            url
+                        };
+                        memoryCache.set(type, entry);
+                        saveToLocalStorage(type, entry);
+                        console.log(`[VocabLoader] ✅ Loaded ${concepts.length} concepts for ${type} (via CORS proxy)`);
+                        return concepts;
+                    }
+                }
+            } catch (proxyError) {
+                // Proxy hat auch nicht funktioniert → Fallback
+                console.info(`[VocabLoader] CORS proxy also failed for ${type}`);
+            }
+        }
+        
         // Nur als Info loggen, da Fallback funktioniert
         console.info(`[VocabLoader] Network unavailable for ${type}, using built-in vocabulary`);
         return FALLBACK_VOCABULARIES[type];

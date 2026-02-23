@@ -72,7 +72,7 @@
 	.sidebar {
 		width: 300px;
 		height: 100%;
-		background: white;
+		background: var(--background);
 		box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
 		overflow-y: auto;
 	}
@@ -82,12 +82,12 @@
 		justify-content: space-between;
 		align-items: center;
 		padding: 1em 1.5em;
-		border-bottom: 1px solid #e9ecef;
+		border-bottom: 1px solid var(--border);
 	}
 
 	.sidebar-header h4 {
 		margin: 0;
-		color: #212529;
+		color: var(--foreground);
 	}
 
 	.sidebar-content {
@@ -100,7 +100,7 @@
 		padding: 0.75em;
 		margin-bottom: 0.5em;
 		background: none;
-		border: 1px solid #ced4da;
+		border: 1px solid var(--border);
 		border-radius: 4px;
 		cursor: pointer;
 		text-align: left;
@@ -108,12 +108,12 @@
 	}
 
 	.sidebar-action:hover {
-		background-color: #f8f9fa;
-		border-color: #adb5bd;
+		background-color: var(--muted);
+		border-color: var(--muted-foreground);
 	}
 
 	.sidebar-action:focus {
-		outline: 2px solid #007bff;
+		outline: 2px solid var(--ring);
 		outline-offset: 2px;
 	}
 </style>

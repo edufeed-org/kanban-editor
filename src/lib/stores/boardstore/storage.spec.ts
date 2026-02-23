@@ -116,6 +116,22 @@ describe('BoardStorage', () => {
             expect(boardIds).not.toContain('settings'); // ← CRITICAL!
         });
 
+        it('❌ sollte "config-merged" und andere config-* Keys NICHT als Board IDs erkennen', () => {
+            // ARRANGE: Setup localStorage mit config-merged (settingsStore Flag)
+            localStorage.setItem('kanban-config-merged', new Date().toISOString());
+            localStorage.setItem('kanban-config-v2', JSON.stringify({ version: 2 }));
+            localStorage.setItem('kanban-board-valid789012', JSON.stringify({ name: 'Valid Board' }));
+
+            // ACT
+            const boardIds = BoardStorage.loadBoardIds();
+
+            // ASSERT
+            expect(boardIds).toHaveLength(1);
+            expect(boardIds).toContain('board-valid789012');
+            expect(boardIds).not.toContain('config-merged'); // ← BUG FIX!
+            expect(boardIds).not.toContain('config-v2');
+        });
+
         it('❌ sollte "boards-list" Key NICHT als Board ID erkennen', () => {
             // ARRANGE
             localStorage.setItem('kanban-boards-list', JSON.stringify([]));

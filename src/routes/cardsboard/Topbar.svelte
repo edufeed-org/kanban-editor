@@ -5,18 +5,27 @@
     import MenuIcon from "@lucide/svelte/icons/menu";
     import ShareIcon from "@lucide/svelte/icons/share-2";
     import BellIcon from "@lucide/svelte/icons/bell";
+    import BookmarkPlusIcon from "@lucide/svelte/icons/bookmark-plus";
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
+    import { authStore } from '$lib/stores/authStore.svelte.js';
     import { BotIcon } from 'lucide-svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
+    import FollowBoardDialog from '$lib/components/board/FollowBoardDialog.svelte';
     import { onMount } from 'svelte';
     import { settingsStore } from '$lib/stores/settingsStore.svelte';
     import { toast } from 'svelte-sonner';
     import PencilIcon from '@lucide/svelte/icons/pencil';
+    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
     import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import { BoardRole } from '$lib/types/sharing';
+    import { requestEditorDialogStore } from '$lib/stores/requestEditorDialog.svelte';
+    import RequestEditorRoleDialog from '$lib/components/board/RequestEditorRoleDialog.svelte';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
+
+    // State für Follow/Fork-Dialog (Fremdboad beobachten oder kopieren)
+    let showFollowDialog = $state(false);
     let showEditorRequestsDialog = $state(false);
     let editorRequestsByPubkey = $state<Record<string, { eventId: string; createdAt?: number; reason?: string; role?: string }>>({});
     let editorRequestsLoadToken = $state(0);
@@ -43,7 +52,24 @@
     let isBoardPublished = $derived(boardStore.data?.publishState === 'published');
     let userRole = $derived(boardStore.getCurrentUserRole());
     let isOwner = $derived(userRole === BoardRole.OWNER);
+    let canEdit = $derived(boardStore.canCurrentUserEdit());
+    let isViewer = $derived(userRole === BoardRole.VIEWER);
+    let isFollowed = $derived(boardStore.isCurrentBoardFollowedByUser());
+    let showRequestEditorButton = $derived(
+        authStore.isAuthenticated && (isViewer || isFollowed) && !isOwner && !canEdit
+    );
     let editorRequestCount = $derived(Object.keys(editorRequestsByPubkey).length);
+
+    // ✅ Zeige "Speichern"-CTA wenn: eingeloggt + Board gehört jemand anderem + noch nicht offiziell gefolgt
+    // + NICHT wenn User bereits Editor/Owner ist (z.B. nach Zuweisung von Schreibrechten)
+    let showFollowCTA = $derived(
+        authStore.isAuthenticated &&
+        !!boardStore.data?.author &&
+        boardStore.data.author !== authStore.getPubkey() &&
+        !boardStore.isCurrentBoardFollowedByUser() &&
+        !canEdit &&
+        !isOwner
+    );
 
     const greenStyling = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700'
     const yellowStyling = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
@@ -99,7 +125,10 @@
     }
 
     onMount(() => {
-        settingsStore.setTheme(settingsStore.settings.theme);
+        // Theme wird bereits von +layout.svelte gehandelt (applyTheme + $effect)
+        // setTheme(currentTheme) war redundant und verursachte Race Condition
+        // (saveToStorage vor config.json merge → config wurde nie angewendet)
+        settingsStore.applyTheme();
     })
 
     async function loadEditorRequests(): Promise<void> {
@@ -201,16 +230,16 @@
     }
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto">
+<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto bg-background">
     <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-0.5 sm:gap-2">
             <!-- Left Sidebar Trigger -->
             <Button title="Linke Sidebar ein-/ausblenden"
-                variant="default"
+                variant="ghost"
                 size="icon"
                 onclick={onToggleLeftSidebar}
-                class="h-8 w-8 bg-primary text-primary-foreground"
+                class="h-8 w-8"
             >
                 {#if isMobile}
                     <!-- <MenuIcon class="h-4 w-4" /> -->
@@ -238,10 +267,10 @@
                         bind:value={editTitleValue}
                         onblur={saveTitle}
                         onkeydown={handleTitleKeydown}
-                        class="font-semibold text-lg bg-transparent border-b-2 border-primary outline-none px-1 min-w-[150px] max-w-[400px]"
+                        class="font-semibold text-lg bg-transparent rounded outline-none px-1 min-w-[150px] max-w-[400px]"
                         style="width: {Math.max(150, editTitleValue.length * 10)}px"
                     />
-                {:else}
+                {:else if canEdit}
                     <button
                         onclick={startEditingTitle}
                         class="font-semibold text-lg hover:bg-muted px-1 rounded cursor-text transition-colors group flex items-center gap-1"
@@ -250,6 +279,8 @@
                         {currentBoardTitle}
                         <PencilIcon class="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
                     </button>
+                {:else}
+                    <span class="font-semibold text-lg px-1">{currentBoardTitle}</span>
                 {/if}
                 
                 <!-- CC License Badge (superscript style) -->
@@ -305,22 +336,63 @@
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             {/if}
             
-            <!-- Right Sidebar Trigger -->
+            <!-- Viewer/Beobachter: Schreibrechte beantragen -->
+            {#if showRequestEditorButton}
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    class="h-8 gap-1.5"
+                    onclick={() => requestEditorDialogStore.openDialog()}
+                    title="Schreibrechte für dieses Board beantragen"
+                >
+                    <UserPlusIcon class="h-4 w-4" />
+                    <span class="hidden sm:inline text-xs">Schreibrechte beantragen</span>
+                </Button>
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+            {/if}
+
+            <!-- Right Sidebar Trigger - nur für Nutzer mit Bearbeitungsrecht -->
+            {#if canEdit}
             <Button
                 variant="ghost"
                 size="icon"
                 onclick={onToggleRightSidebar}
-                class="  h-8 w-8 bg-primary text-primary-foreground"
+                class="h-8 w-8"
             >
                 <BotIcon class="h-4 w-4"/>
                 <span class="sr-only">Toggle Right Sidebar</span>
             </Button>
+            {/if}
+
+            <!-- Follow-CTA: sichtbar wenn Fremdbord eingeloggt angeschaut wird (auch nach Reload!) -->
+            {#if showFollowCTA}
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-8 border-amber-400 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950 gap-1.5"
+                    onclick={() => { showFollowDialog = true; }}
+                    title="Board beobachten oder als eigene Kopie importieren"
+                >
+                    <BookmarkPlusIcon class="h-4 w-4" />
+                    <span class="hidden sm:inline text-xs">Speichern</span>
+                </Button>
+            {/if}
         </div>
     </div>
 </header>
 
 <!-- Edufeed Publish Dialog -->
 <PublishToEdufeedDialog bind:open={showEdufeedDialog} />
+
+<!-- Follow/Fork-Dialog für Fremd-Boards -->
+{#if showFollowCTA || showFollowDialog}
+    <FollowBoardDialog
+        bind:open={showFollowDialog}
+        boardId={boardStore.data?.id ?? ''}
+        boardAuthor={boardStore.data?.author ?? ''}
+    />
+{/if}
 
 <!-- Owner: Editor-Requests Dialog (öffnet ShareDialog im Editor-Tab) -->
 {#if isOwner}
@@ -329,5 +401,10 @@
         initialTab="editors"
         initialEditorRequests={editorRequestsByPubkey}
     />
+{/if}
+
+<!-- Viewer/Beobachter: Request Editor Role Dialog -->
+{#if showRequestEditorButton}
+    <RequestEditorRoleDialog />
 {/if}
 

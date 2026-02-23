@@ -29,6 +29,7 @@ export const EVENT_KINDS = {
   CARD: 30302, // Card definition (replaceable)
   SNAPSHOT: 30303, // Board snapshot/version (non-replaceable) - Phase 1.5
   COLUMN_ORDER_PATCH: 8571, // Column order patch (regular) - allows editors to sync column order without 30301 forks
+  SHORTLINK: 30491, // URL shortener redirect (addressable) - maps slug → naddr
   COMMENT: 1, // Text note (regular)
   DELETION: 5, // Event deletion (NIP-09)
   SOFT_LOCK: 20001, // "Now editing" soft lock (ephemeral)
@@ -852,6 +853,182 @@ export function createBoardShareUrl(
 ): string {
   const naddrPath = createBoardNaddrUrl(boardId, authorPubkey, relayHints);
   return `${baseUrl.replace(/\/$/, '')}${naddrPath}`;
+}
+
+// ============================================================================
+// SHORTLINK (Kind 30491) — URL-Shortener via Addressable Events
+// ============================================================================
+
+/**
+ * Generiert einen URL-freundlichen Slug aus einem Board-Namen.
+ *
+ * @param boardName - Der Name des Boards
+ * @returns Slug (z.B. "mein-tolles-board")
+ */
+export function slugifyBoardName(boardName: string): string {
+  return boardName
+    .toLowerCase()
+    .replace(/[äÄ]/g, 'ae')
+    .replace(/[öÖ]/g, 'oe')
+    .replace(/[üÜ]/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // Diakritische Zeichen entfernen
+    .replace(/[^a-z0-9]+/g, '-')      // Nicht-alphanumerische Zeichen → Bindestrich
+    .replace(/^-+|-+$/g, '')          // Führende/tailing Bindestriche entfernen
+    .slice(0, 48);                    // Max 48 Zeichen
+}
+
+/**
+ * Erstellt ein Shortlink-Event (Kind 30491, Addressable).
+ *
+ * Das Event mappt einen kurzen Slug (d-Tag) auf den vollen naddr-String.
+ * Relay-Clients können das Event über `["d", slug]` finden.
+ *
+ * Tags:
+ * - d: Der Slug/Kürzel (z.B. "projekt-x")
+ * - r: Der volle naddr-String (für maschinelles Lesen)
+ * - a: Board-Adresse "30301:<pubkey>:<boardId>" (für Querverweise)
+ * - title: Board-Titel (für Discovery)
+ *
+ * @param slug - Das gewünschte Kürzel
+ * @param naddr - Der volle naddr-String des Boards
+ * @param boardId - Die Board-ID (d-tag des Boards)
+ * @param authorPubkey - Pubkey des Board-Autors
+ * @param boardTitle - Optionaler Board-Titel
+ * @param ndk - NDK-Instanz
+ * @returns NDKEvent (noch nicht signiert/publiziert)
+ */
+export function createShortlinkEvent(
+  slug: string,
+  naddr: string,
+  boardId: string,
+  authorPubkey: string,
+  boardTitle: string | undefined,
+  ndk: NDK
+): NDKEvent {
+  const event = new NDKEvent(ndk);
+  event.kind = EVENT_KINDS.SHORTLINK;
+  event.tags = [
+    ['d', slug],
+    ['r', naddr],
+    ['a', `${EVENT_KINDS.BOARD}:${authorPubkey}:${boardId}`],
+  ];
+
+  if (boardTitle) {
+    event.tags.push(['title', boardTitle]);
+  }
+
+  event.content = naddr; // Content = naddr (human-readable fallback)
+
+  return event;
+}
+
+/**
+ * Löst einen Shortlink-Slug auf, indem das Shortlink-Event (Kind 30491) 
+ * von Nostr abgefragt wird.
+ *
+ * @param slug - Das Kürzel (z.B. "projekt-x")
+ * @param authorPubkey - Pubkey des Shortlink-Erstellers
+ * @param ndk - NDK-Instanz
+ * @returns Der naddr-String oder null
+ */
+export async function resolveShortlink(
+  slug: string,
+  authorPubkey: string,
+  ndk: NDK
+): Promise<string | null> {
+  const filter = {
+    kinds: [EVENT_KINDS.SHORTLINK],
+    authors: [authorPubkey],
+    '#d': [slug]
+  };
+
+  const event = await ndk.fetchEvent(filter as any);
+
+  if (!event) return null;
+
+  // Bevorzuge r-Tag, Fallback auf content
+  const rTag = event.tags.find(t => t[0] === 'r')?.[1];
+  return rTag || event.content || null;
+}
+
+/**
+ * Löst einen Shortlink-Slug auf — ohne vorher den Author zu kennen.
+ * Sucht über ALLE Autoren (langsamer, braucht unterstützendes Relay).
+ *
+ * @param slug - Das Kürzel
+ * @param ndk - NDK-Instanz
+ * @returns Der naddr-String oder null
+ */
+export async function resolveShortlinkBySlug(
+  slug: string,
+  ndk: NDK
+): Promise<{ naddr: string; authorPubkey: string } | null> {
+  const filter = {
+    kinds: [EVENT_KINDS.SHORTLINK],
+    '#d': [slug]
+  };
+
+  const events = await ndk.fetchEvents(filter as any);
+  if (!events || events.size === 0) return null;
+
+  // Nimm das neueste Event (Last-Write-Wins)
+  let latest: NDKEvent | null = null;
+  for (const ev of events) {
+    if (!latest || (ev.created_at ?? 0) > (latest.created_at ?? 0)) {
+      latest = ev;
+    }
+  }
+
+  if (!latest) return null;
+
+  const rTag = latest.tags.find(t => t[0] === 'r')?.[1];
+  const naddr = rTag || latest.content || null;
+
+  return naddr ? { naddr, authorPubkey: latest.pubkey } : null;
+}
+
+/**
+ * Prüft ob ein Slug (d-Tag) bereits von einem anderen Board desselben Authors
+ * als Shortlink belegt ist.
+ *
+ * Da NIP-33 Addressable Events pro (kind, author, d-tag) eindeutig sind,
+ * würde ein erneutes Publizieren mit demselben Slug das bestehende Event
+ * überschreiben — auch wenn es ein komplett anderes Board referenziert.
+ *
+ * @param slug         - Der zu prüfende Slug
+ * @param authorPubkey - Hex-Pubkey des Autors
+ * @param boardId      - d-Tag des Boards, das den Slug beanspruchen möchte
+ * @param ndk          - NDK-Instanz
+ * @returns            - Die `a`-Tag-Referenz des kollidierenden Boards (z.B.
+ *                       `"30301:<pubkey>:<anderesBoardId>"`), oder `null`
+ *                       wenn der Slug frei ist oder bereits diesem Board gehört.
+ */
+export async function checkSlugCollision(
+  slug: string,
+  authorPubkey: string,
+  boardId: string,
+  ndk: NDK
+): Promise<string | null> {
+  const existing = await ndk.fetchEvent({
+    kinds: [EVENT_KINDS.SHORTLINK],
+    authors: [authorPubkey],
+    '#d': [slug],
+  } as any);
+
+  if (!existing) return null; // Slug noch nicht vergeben
+
+  // Der a-Tag enthält "30301:<pubkey>:<boardId>" des Ziel-Boards
+  const aTag = existing.tags.find(t => t[0] === 'a')?.[1];
+  if (!aTag) return null; // Kein a-Tag → Board-ID nicht bestimmbar, vorsichtshalber erlauben
+
+  const parts = aTag.split(':');
+  const existingBoardId = parts[2]; // "30301:pubkey:BOARD_ID"
+
+  if (existingBoardId === boardId) return null; // Gehört bereits diesem Board → kein Problem
+
+  return aTag; // Kollision: Slug gehört einem anderen Board
 }
 
 export type { BoardProps, CardProps, ColumnProps };

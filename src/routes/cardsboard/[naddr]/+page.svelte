@@ -1,37 +1,36 @@
 <script lang="ts">
     /**
-     * naddr Route: Lade Board aus Nostr und weiterleiten zur normalen Ansicht
+     * naddr Route: Lade Board aus Nostr und zeige es inline
      * 
-     * Diese Route dient nur als Lademechanismus:
+     * Die URL bleibt als permanenter Share-Link erhalten:
      * 1. Dekodiere naddr aus URL
      * 2. Verbinde mit Relay-Hints
      * 3. Lade Board + Cards von Nostr
      * 4. Speichere in BoardStore (localStorage)
-     * 5. Weiterleitung zu /cardsboard/ (normale Ansicht)
+     * 5. Board wird über das gemeinsame +layout.svelte angezeigt (kein Redirect)
      * 
      * Dadurch funktioniert alles normal: Sidebar, Topbar, Bearbeitung (wenn Owner)
+     * Die naddr-URL kann direkt als Share-Link weitergegeben werden.
      */
     import { page } from '$app/stores';
-    import { goto } from '$app/navigation';
     import { base } from '$app/paths';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
     import { authStore } from '$lib/stores/authStore.svelte.js';
+    import { followBoardState } from '$lib/stores/followBoardState.svelte.js';
     import { Board, Card, Column, type CardProps } from '$lib/classes/BoardModel.js';
     import { BoardStorage } from '$lib/stores/boardstore/storage.js';
     import type NDK from '@nostr-dev-kit/ndk';
     import { NDKEvent, NDKRelay, nip19 } from '@nostr-dev-kit/ndk';
     import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
     import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-    import FollowBoardDialog from '$lib/components/board/FollowBoardDialog.svelte';
 
     // State
     let status = $state<'loading' | 'error' | 'success'>('loading');
     let errorMessage = $state('');
     let loadingStep = $state('naddr dekodieren...');
-    let showFollowDialog = $state(false);
-    let followBoardId = $state('');
-    let followBoardAuthor = $state('');
+
+    onDestroy(() => followBoardState.clear());
 
     interface NaddrData {
         kind: number;
@@ -221,26 +220,7 @@
      */
     async function loadAndRedirect() {
         try {
-            // 1. Warte auf NDK
-            loadingStep = 'NDK initialisieren...';
-            
-            // Warte bis boardStore.ndkReady true ist
-            let attempts = 0;
-            while (!boardStore.ndkReady && attempts < 50) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!boardStore.ndkReady) {
-                throw new Error('NDK konnte nicht initialisiert werden');
-            }
-
-            const ndk = boardStore.nostrIntegration?.getNDK();
-            if (!ndk) {
-                throw new Error('NDK nicht verfügbar');
-            }
-
-            // 2. Dekodiere naddr
+            // 1. Dekodiere naddr (reine Funktion, braucht kein NDK)
             loadingStep = 'naddr dekodieren...';
             const naddrParam = $page.params.naddr;
             
@@ -265,19 +245,82 @@
                 relays: naddrData.relays
             });
 
-            // 3. Verbinde zu Relay-Hints
-            loadingStep = 'Verbinde zu Relays...';
-            await connectToRelayHints(ndk, naddrData.relays);
-
-            // ✅ Eingeloggt: Share-Link bleibt, Dialog steuert Follow/Fork
-            const currentUserPubkey = authStore.getPubkey();
-            if (currentUserPubkey) {
-                followBoardId = naddrData.identifier;
-                followBoardAuthor = naddrData.pubkey;
-                showFollowDialog = true;
+            // 2. Quick-Checks BEVOR NDK gewartet wird (brauchen kein Netzwerk)
+            
+            // ✅ Quick-Check: Board ist bereits das aktive Board → sofort fertig
+            if (boardStore.data?.id === naddrData.identifier) {
+                console.log('✅ Board ist bereits aktiv, überspringe Laden');
                 status = 'success';
                 return;
             }
+
+            // ✅ Check: Board gehört dem aktuellen User (Owner/Maintainer) → direkt laden (kein Dialog)
+            // WICHTIG: BoardStorage.loadBoard() prüft NUR localStorage - auch fremde Boards können cached sein!
+            // getAllBoards() filtert korrekt auf User-eigene Boards → fremde Boards IMMER über FollowDialog
+            const isUsersOwnBoard = boardStore.getAllBoards().some(b => b.id === naddrData.identifier);
+            if (isUsersOwnBoard) {
+                console.log('✅ Board ist Nutzer-eigenes Board, lade direkt (kein Dialog)');
+                loadingStep = 'Board wird geöffnet...';
+                boardStore.loadBoard(naddrData.identifier);
+                status = 'success';
+                return;
+            }
+
+            // ✅ Check: Board bereits lokal im Cache → direkt laden (kein NDK nötig)
+            const boardId = naddrData.identifier;
+            const existingBoard = BoardStorage.loadBoard(boardId);
+            
+            if (existingBoard) {
+                console.log('✅ Board bereits lokal vorhanden, lade direkt');
+                loadingStep = 'Board wird geöffnet...';
+                boardStore.loadBoard(boardId);
+
+                // Viewer-CTA: eingeloggt aber nicht Owner → Follow-Button in Topbar anzeigen
+                const cachedUserPubkey = authStore.getPubkey();
+                if (cachedUserPubkey && naddrData.pubkey && naddrData.pubkey !== cachedUserPubkey) {
+                    const updatedAtMs = existingBoard.updatedAt
+                        ? new Date(existingBoard.updatedAt).getTime()
+                        : undefined;
+                    boardStore.handleSharedBoardEvent({
+                        id: boardId,
+                        name: existingBoard.name,
+                        description: existingBoard.description,
+                        createdAt: new Date(existingBoard.createdAt).getTime(),
+                        updatedAt: updatedAtMs,
+                        isShared: true,
+                        userRole: 'viewer',
+                        author: naddrData.pubkey
+                    });
+                    boardStore.refreshBoardIds();
+                    followBoardState.setPending(boardId, naddrData.pubkey);
+                }
+
+                status = 'success';
+                return;
+            }
+
+            // 3. Ab hier: Board muss von Nostr geladen werden → NDK erforderlich
+            loadingStep = 'NDK initialisieren...';
+            
+            // Warte bis boardStore.ndkReady true ist
+            let attempts = 0;
+            while (!boardStore.ndkReady && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!boardStore.ndkReady) {
+                throw new Error('NDK konnte nicht initialisiert werden');
+            }
+
+            const ndk = boardStore.nostrIntegration?.getNDK();
+            if (!ndk) {
+                throw new Error('NDK nicht verfügbar');
+            }
+
+            // 4. Verbinde zu Relay-Hints
+            loadingStep = 'Verbinde zu Relays...';
+            await connectToRelayHints(ndk, naddrData.relays);
 
             // 3b. Versuche zuerst AMB (30142) zu finden, die ['a', <naddr>] oder ['a', address] enthält
             loadingStep = 'Suche AMB Snapshot...';
@@ -308,7 +351,6 @@
                                     boardStore.refreshBoardIds();
                                     boardStore.loadBoard(snapshotJson.id);
                                     status = 'success';
-                                    await goto(`${base}/cardsboard/`, { replaceState: true });
                                     return;
                                 } catch (err) {
                                     console.warn('Fehler beim Parsen des Snapshot-Inhalts:', err);
@@ -320,23 +362,6 @@
                 } catch (err) {
                     console.warn('Error while searching AMB for a-tag', aCandidate, err);
                 }
-            }
-
-            // 4. Prüfe ob Board bereits lokal existiert
-            const boardId = naddrData.identifier;
-            const existingBoard = BoardStorage.loadBoard(boardId);
-            
-            if (existingBoard) {
-                console.log('✅ Board bereits lokal vorhanden, lade direkt');
-                loadingStep = 'Board wird geöffnet...';
-                
-                // Lade das Board im Store
-                boardStore.loadBoard(boardId);
-                
-                // Weiterleitung
-                status = 'success';
-                await goto(`${base}/cardsboard/`, { replaceState: true });
-                return;
             }
 
             // 5. Lade Board von Nostr
@@ -376,6 +401,8 @@
                     userRole: 'viewer',
                     author: board.author
                 });
+                // Follow-CTA in Topbar anzeigen statt Dialog sofort aufzwingen
+                followBoardState.setPending(board.id, board.author);
             }
             
             // Board-IDs neu laden damit es in der Liste erscheint
@@ -385,11 +412,9 @@
             loadingStep = 'Board wird geöffnet...';
             boardStore.loadBoard(board.id);
 
-            // 9. Weiterleitung zur normalen Ansicht
+            // 9. Board ist geladen — Layout rendert es automatisch
             status = 'success';
-            console.log('✅ Board geladen und gespeichert, leite weiter...');
-            
-            await goto(`${base}/cardsboard/`, { replaceState: true });
+            console.log('✅ Board geladen und gespeichert, URL bleibt als Share-Link');
 
         } catch (error) {
             console.error('❌ Fehler beim Laden:', error);
@@ -403,15 +428,20 @@
     });
 </script>
 
-<div class="min-h-screen bg-background flex items-center justify-center">
-    <div class="text-center p-8 max-w-md">
-        {#if status === 'loading'}
+<!-- Loading/Error Overlay (position: fixed, überlagert das Board aus dem Layout) -->
+{#if status === 'loading'}
+    <div class="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div class="text-center p-8 max-w-md">
             <div class="flex flex-col items-center gap-4">
                 <LoaderCircleIcon class="h-12 w-12 animate-spin text-primary" />
                 <h1 class="text-xl font-semibold">Board wird geladen...</h1>
                 <p class="text-muted-foreground">{loadingStep}</p>
             </div>
-        {:else if status === 'error'}
+        </div>
+    </div>
+{:else if status === 'error'}
+    <div class="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <div class="text-center p-8 max-w-md">
             <div class="flex flex-col items-center gap-4">
                 <AlertCircleIcon class="h-12 w-12 text-destructive" />
                 <h1 class="text-xl font-semibold text-destructive">Fehler beim Laden</h1>
@@ -423,26 +453,8 @@
                     Zurück zur Übersicht
                 </a>
             </div>
-        {:else if status === 'success'}
-            <div class="flex flex-col items-center gap-4">
-                <h1 class="text-xl font-semibold">Board-Link geöffnet</h1>
-                <p class="text-muted-foreground">Bitte wähle „Beobachten“ oder „Fork“ im Dialog.</p>
-                <button
-                    type="button"
-                    class="mt-2 text-primary hover:underline"
-                    onclick={() => (showFollowDialog = true)}
-                >
-                    Dialog erneut öffnen
-                </button>
-                <a
-                    href="{base}/cardsboard/"
-                    class="text-muted-foreground hover:underline"
-                >
-                    Zurück zur Übersicht
-                </a>
-            </div>
-        {/if}
+        </div>
     </div>
-</div>
+{/if}
 
-<FollowBoardDialog bind:open={showFollowDialog} boardId={followBoardId} boardAuthor={followBoardAuthor} />
+

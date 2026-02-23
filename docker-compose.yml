@@ -11,6 +11,8 @@ services:
   #     - .:/home/node/app
   #   ports:
   #     - "5173:5173"
+  #   environment:
+  #     - NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
   nostr-relay:
     image: scsibug/nostr-rs-relay:latest
     ports:

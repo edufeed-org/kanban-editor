@@ -20,11 +20,24 @@
 **Bei jeder Code-Änderung:**
 1. ✅ ROADMAP.md aktualisieren (wenn Feature betroffen)
 2. ✅ TESTSUITE/STATUS.md aktualisieren (wenn Tests betroffen)
-3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar)
+3. ✅ CHANGELOG.md aktualisieren (wenn User-sichtbar) — **2-Layer-Regel beachten!**
 4. ✅ Feature-Dokumentation aktualisieren (wenn API ändert)
 5. ✅ ARCHITECTURE/ Docs aktualisieren (wenn Pattern ändert)
 6. ✅ _INDEX.md aktualisieren (wenn neue Datei)
 7. ✅ Alte Docs archivieren (mit Migration-Notice)
+
+### CHANGELOG 2-Layer-Architektur
+
+| Layer | Datei | Inhalt | Zielgruppe |
+|-------|-------|--------|------------|
+| **1 — Kompakt** | `CHANGELOG.md` (Root) | Unreleased (kurz), Direkt-Pushes-Tabelle (Datum + Einzeiler + Link), Release-Tabelle | Stakeholder, Schnellüberblick |
+| **2 — Detail** | `docs/CHANGELOG/YYYY-QN.md` | Volle Feature-/Fix-Beschreibungen, PR-Details, Commit-Listen, Audit-Daten | Entwickler, Audit |
+
+**Workflow:**
+1. Neue Einträge zuerst in `CHANGELOG.md` unter `## Unreleased`
+2. Zeitnah in Quartals-Datei (`docs/CHANGELOG/YYYY-QN.md`) überführen
+3. In Root-Datei nur kompakten Verweis belassen (Datum + Einzeiler + Link)
+4. Einzeldateien (z.B. `2026-02-post-4.7.96.md`) in Quartals-Datei konsolidieren + Deprecation-Notice
 
 **Enforcement:** PR wird REJECTED wenn DoD nicht erfüllt ist!
 

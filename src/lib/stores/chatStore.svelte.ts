@@ -511,6 +511,182 @@ export class ChatStore {
 	}
 
 	// ============================================================================
+	// Conversation Summarization
+	// ============================================================================
+
+	/** Ab dieser Anzahl Messages wird automatisch zusammengefasst */
+	private static readonly SUMMARIZE_THRESHOLD = 6;
+
+	/**
+	 * Prüft, ob eine Zusammenfassung nötig ist, und erstellt sie ggf.
+	 * Wird nach jeder AI-Antwort aufgerufen.
+	 * 
+	 * Strategie: Wenn > SUMMARIZE_THRESHOLD unsummarisierte Messages vorliegen,
+	 * fasse alle außer den letzten 2 (letzte AI-Antwort + letzte User-Frage)
+	 * in einer Summary zusammen.
+	 */
+	public async maybeSummarize(): Promise<void> {
+		if (!this.session) return;
+
+		// Berechne: Wie viele Messages seit der letzten Summary?
+		const lastSummary = this.session.summaries.length > 0
+			? this.session.summaries[this.session.summaries.length - 1]
+			: null;
+		const summarizedUpTo = lastSummary ? lastSummary.messageRange[1] + 1 : 0;
+		const unsummarizedCount = this.session.messages.length - summarizedUpTo;
+
+		if (unsummarizedCount < ChatStore.SUMMARIZE_THRESHOLD) {
+			return; // Noch nicht genug Messages
+		}
+
+		console.log(`📝 ${unsummarizedCount} unsummarisierte Nachrichten – starte Zusammenfassung...`);
+
+		// Messages die zusammengefasst werden sollen (alle außer die letzten 2)
+		const endIdx = this.session.messages.length - 3; // Letztes Paar behalten
+		if (endIdx <= summarizedUpTo) return;
+
+		const toSummarize = this.session.messages.slice(summarizedUpTo, endIdx + 1);
+		const previousSummary = lastSummary?.summary || '';
+
+		// Zusammenfassung erstellen (via LLM oder lokal als Fallback)
+		const summaryText = await this.createSummary(toSummarize, previousSummary);
+		if (!summaryText) return;
+
+		this.session.addSummary({
+			messageRange: [summarizedUpTo, endIdx],
+			summary: summaryText,
+			tokensSaved: toSummarize.reduce((acc, m) => acc + m.content.length, 0)
+		});
+
+		this.triggerUpdate();
+		console.log(`✅ Zusammenfassung erstellt (${toSummarize.length} Messages → ${summaryText.length} Zeichen)`);
+	}
+
+	/**
+	 * Erstellt eine Zusammenfassung der gegebenen Messages.
+	 * Versucht zuerst via LLM, fällt auf lokale Extraktion zurück.
+	 */
+	private async createSummary(
+		messages: import('../classes/ChatModel.js').Message[],
+		previousSummary: string
+	): Promise<string | null> {
+		const settings = settingsStore.settings;
+
+		// Konversation als Text aufbereiten
+		const conversationText = messages
+			.map((m) => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content.slice(0, 300)}`)
+			.join('\n');
+
+		// Falls LLM konfiguriert: LLM-basierte Zusammenfassung
+		if (settings.llmModel && settings.llmBaseUrl) {
+			try {
+				const summaryPrompt = previousSummary
+					? `Bisherige Zusammenfassung:\n${previousSummary}\n\nNeue Nachrichten:\n${conversationText}\n\nErstelle eine aktualisierte, kompakte Zusammenfassung des gesamten Gespraechs (max. 200 Woerter). Fokus auf: Was wurde besprochen, welche Aktionen wurden ausgefuehrt, welche Entscheidungen getroffen. Antworte NUR mit der Zusammenfassung, ohne Einleitung.`
+					: `Fasse dieses Gespraech kompakt zusammen (max. 200 Woerter). Fokus auf: Was wurde besprochen, welche Aktionen wurden ausgefuehrt, welche Entscheidungen getroffen.\n\n${conversationText}\n\nAntworte NUR mit der Zusammenfassung, ohne Einleitung.`;
+
+				const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
+				const apiUrl = isOpenRouter
+					? `${settings.llmBaseUrl}/chat/completions`
+					: `${settings.llmBaseUrl}/v1/chat/completions`;
+
+				const response = await fetch(apiUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						...(settings.llmApiKey
+							? { Authorization: `Bearer ${settings.llmApiKey}` }
+							: {})
+					},
+					body: JSON.stringify({
+						model: settings.llmModel,
+						messages: [
+							{ role: 'system', content: 'Du bist ein praeziser Zusammenfasser. Antworte nur mit der Zusammenfassung.' },
+							{ role: 'user', content: summaryPrompt }
+						],
+						temperature: 0.3,
+						max_tokens: 500
+					})
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					const summary = data.choices?.[0]?.message?.content?.trim();
+					if (summary) {
+						console.log('✅ LLM-Zusammenfassung erhalten');
+						return summary;
+					}
+				}
+				console.warn('⚠️ LLM-Zusammenfassung fehlgeschlagen, nutze Fallback');
+			} catch (err) {
+				console.warn('⚠️ LLM-Zusammenfassung Fehler, nutze Fallback:', err);
+			}
+		}
+
+		// Fallback: Lokale Zusammenfassung (erste 100 Zeichen jeder Nachricht)
+		const localSummary = messages
+			.map((m) => {
+				const prefix = m.role === 'user' ? 'User fragte' : 'AI antwortete';
+				return `- ${prefix}: ${m.content.slice(0, 80).replace(/\n/g, ' ')}`;
+			})
+			.join('\n');
+
+		return previousSummary
+			? `${previousSummary}\n\nWeiterer Verlauf:\n${localSummary}`
+			: `Bisheriger Verlauf:\n${localSummary}`;
+	}
+
+	/**
+	 * Baut die History-Messages für den LLM-Request auf.
+	 * 
+	 * Strategie: Wenn eine Zusammenfassung existiert, wird sie als
+	 * kompakter Kontext eingefügt statt vieler alter Einzelnachrichten.
+	 * 
+	 * Ergebnis: [Summary-Msg?] + [letzte N unsummarisierte Messages]
+	 * → Mehr Kontext bei weniger Tokens.
+	 */
+	private buildHistoryWithSummary(maxUnsummarized: number, maxChars: number): Array<{ role: string; content: string }> {
+		if (!this.session) return [];
+
+		const msgs = this.session.messages;
+		const summaries = this.session.summaries;
+		const history: Array<{ role: string; content: string }> = [];
+
+		// 1. Letzte Zusammenfassung als Kontext einfügen (falls vorhanden)
+		if (summaries.length > 0) {
+			const latestSummary = summaries[summaries.length - 1];
+			history.push({
+				role: 'user',
+				content: `[Zusammenfassung des bisherigen Gespraechs]\n${latestSummary.summary}`
+			});
+			// Nur unsummarisierte Messages anhängen
+			const startFrom = latestSummary.messageRange[1] + 1;
+			const remaining = msgs.slice(startFrom);
+			const trimmed = remaining.slice(-maxUnsummarized);
+			for (const m of trimmed) {
+				history.push({
+					role: m.role === 'user' ? 'user' : 'assistant',
+					content: m.content.length > maxChars
+						? m.content.slice(0, maxChars) + '…'
+						: m.content
+				});
+			}
+		} else {
+			// Keine Summary → wie bisher die letzten N Nachrichten nehmen
+			const trimmed = msgs.slice(-maxUnsummarized);
+			for (const m of trimmed) {
+				history.push({
+					role: m.role === 'user' ? 'user' : 'assistant',
+					content: m.content.length > maxChars
+						? m.content.slice(0, maxChars) + '…'
+						: m.content
+				});
+			}
+		}
+
+		return history;
+	}
+
+	// ============================================================================
 	// Tool-Based LLM Integration (OpenAI Function Calling)
 	// ============================================================================
 
@@ -557,81 +733,156 @@ export class ChatStore {
 		}
 
 		try {
-			// Prepare messages for OpenAI-compatible API
-			const messages = [
-				{
-					role: 'system',
-					content: systemPrompt
-				},
-				// Add previous messages for context (last 5)
-				...this.messages
-					.slice(-5)
-					.map((msg) => ({
-						role: msg.role === 'user' ? 'user' : 'assistant',
-						content: msg.content
-					})),
-				{
-					role: 'user',
-					content: userMessage
-				}
-			];
+			// ─────────────────────────────────────────────────────────────
+			// Weicher Größen-Schwellwert: Der Proxy hat kein hartes Body-Limit
+			// (Tests zeigten 38 KB+ funktionieren). Die Grenze dient als
+			// Schutz vor sehr langen Gesprächen / riesigen Board-Kontexten.
+			// ─────────────────────────────────────────────────────────────
+			const PROXY_LIMIT = 50000;
 
-			console.log('🔧 Sending to LLM with tools:', settings.llmBaseUrl, settings.llmModel);
-			console.log('📋 Available tools:', tools.map(t => t.function.name).join(', '));
+			// Max. Zeichenlänge pro History-Nachricht (lange KI-Antworten kürzen)
+			const MAX_MSG_CHARS = 400;
 
-			// Detect if using OpenRouter (check base URL)
+			// Detect provider
 			const isOpenRouter = settings.llmBaseUrl.includes('openrouter.ai');
 			const isOllama = settings.llmBaseUrl.includes('localhost') || settings.llmBaseUrl.includes('127.0.0.1');
-			
+
 			// Build API endpoint URL
-			const apiUrl = isOpenRouter 
+			const apiUrl = isOpenRouter
 				? `${settings.llmBaseUrl}/chat/completions`
 				: `${settings.llmBaseUrl}/v1/chat/completions`;
 
-			// Request body mit Tools
-			const requestBody: any = {
-				model: settings.llmModel,
-				messages,
-				temperature: 0.1, // Sehr niedrig für konsistente Tool-Calls
-				max_tokens: 4000
-			};
-
-			// Tool-Support je nach Provider
-			if (isOllama) {
-				// Ollama unterstützt tools ab Version 0.4.0
-				// Verwende 'required' um Tool-Nutzung zu erzwingen
-				requestBody.tools = tools;
-				requestBody.tool_choice = 'required';
-			} else {
-				// OpenAI/OpenRouter - Standard Tool Format
-				requestBody.tools = tools;
-				requestBody.tool_choice = 'required';
+			// Hilfsfunktion: kürzt den Karten-Kontext aus dem System-Prompt heraus
+			function stripCardsSection(prompt: string): string {
+				const marker = '## Alle Karten im Board';
+				const cut = prompt.indexOf(marker);
+				if (cut < 0) return prompt;
+				const next = prompt.indexOf('\n## ', cut + 1);
+				const after = next > 0 ? prompt.slice(next) : '';
+				return prompt.slice(0, cut) + '[Karten-Details ausgelassen]' + after;
 			}
 
-			// Call API
-			const response = await fetch(apiUrl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
-					...(isOpenRouter ? {
-						'HTTP-Referer': 'https://kanban-editor.nostr.tools',
-						'X-Title': 'Nostr Kanban Editor'
-					} : {})
-				},
-				body: JSON.stringify(requestBody)
+			// Basis-Request-Konstanten (ohne messages) als Größenreferenz
+			const baseFields = JSON.stringify({
+				model: settings.llmModel,
+				temperature: 0.1,
+				max_tokens: 4000,
+				tools,
+				tool_choice: 'auto'
+			}).length;
+
+			// ── Schritt 1: System-Prompt ggf. kürzen ──────────────────────
+			let activeSystemPrompt = systemPrompt;
+			const systemSize = (p: string) => JSON.stringify(p).length;
+
+			// ── Schritt 2: History aufbauen ──────────────────────────────
+			//    Nutzt Zusammenfassungen falls vorhanden:
+			//    [Summary] + [letzte unsummarisierte Messages]
+			//    → Mehr Kontext bei weniger Tokens als hartes Kappen.
+			const buildHistory = (maxMsgs: number) =>
+				this.buildHistoryWithSummary(maxMsgs, MAX_MSG_CHARS);
+
+			// ── Schritt 3: Budget-Regelschleife ───────────────────────────
+			//    Reduziere schrittweise bis der Body passt:
+			//    3a → 3 History-Nachrichten
+			//    3b → 1 History-Nachricht
+			//    3c → Karten aus System-Prompt entfernen
+			//    3d → 0 History-Nachrichten
+			let historyMsgs = buildHistory(3);
+
+			const calcSize = (history: typeof historyMsgs, sysPr: string) =>
+				baseFields +
+				JSON.stringify([
+					{ role: 'system', content: sysPr },
+					...history,
+					{ role: 'user', content: userMessage }
+				]).length;
+
+			if (calcSize(historyMsgs, activeSystemPrompt) > PROXY_LIMIT) {
+				historyMsgs = buildHistory(1);
+				console.warn('⚠️ Request zu groß – History auf 1 Nachricht reduziert');
+			}
+			if (calcSize(historyMsgs, activeSystemPrompt) > PROXY_LIMIT) {
+				activeSystemPrompt = stripCardsSection(systemPrompt);
+				console.warn('⚠️ Request zu groß – Karten-Details aus System-Prompt entfernt');
+			}
+			if (calcSize(historyMsgs, activeSystemPrompt) > PROXY_LIMIT) {
+				historyMsgs = [];
+				console.warn('⚠️ Request zu groß – keine History mehr');
+			}
+
+			const finalSize = calcSize(historyMsgs, activeSystemPrompt);
+			console.log(`📏 Request-Größe: ~${finalSize} Zeichen (Limit: ${PROXY_LIMIT})`);
+			if (finalSize > PROXY_LIMIT) {
+				console.error('❌ Request überschreitet Proxy-Limit auch ohne History/Karten. Fortsetzen trotzdem.');
+			}
+
+			// ── Schritt 4: Finales Messages-Array ─────────────────────────
+			const messages = [
+				{ role: 'system', content: activeSystemPrompt },
+				...historyMsgs,
+				{ role: 'user', content: userMessage }
+			];
+
+			console.log('🔧 Sending to LLM with tools:', settings.llmBaseUrl, settings.llmModel);
+			console.log('📋 Available tools:', tools.map((t) => t.function.name).join(', '));
+
+			// ── Schritt 5: Request-Body zusammenbauen ─────────────────────
+			const buildRequestBody = (msgs: typeof messages) => ({
+				model: settings.llmModel,
+				messages: msgs,
+				temperature: 0.1,
+				max_tokens: 4000,
+				tools,
+				tool_choice: 'auto'
 			});
+
+			const callHeaders = {
+				'Content-Type': 'application/json',
+				...(settings.llmApiKey ? { Authorization: `Bearer ${settings.llmApiKey}` } : {}),
+				...(isOpenRouter ? {
+					'HTTP-Referer': 'https://kanban-editor.nostr.tools',
+					'X-Title': 'Nostr Kanban Editor'
+				} : {})
+			};
+
+			// ── Schritt 6: Request senden mit 1 automatischem Retry ───────
+			// Bei sporadischen 400-Fehlern (Proxy-Instabilitaet): einmal mit
+			// reduziertem Kontext (kein History, gekuerzter System-Prompt) neu versuchen.
+			let response = await fetch(apiUrl, {
+				method: 'POST',
+				headers: callHeaders,
+				body: JSON.stringify(buildRequestBody(messages))
+			});
+
+			if (!response.ok && response.status === 400) {
+				const firstError = await response.text();
+				console.warn('⚠️ LLM 400 – einmaliger Retry mit reduziertem Kontext...', firstError.slice(0, 100));
+
+				const fallbackMessages = [
+					{ role: 'system', content: stripCardsSection(activeSystemPrompt) },
+					{ role: 'user', content: userMessage }
+				];
+				response = await fetch(apiUrl, {
+					method: 'POST',
+					headers: callHeaders,
+					body: JSON.stringify(buildRequestBody(fallbackMessages))
+				});
+				if (response.ok) {
+					console.log('✅ Retry erfolgreich');
+				} else {
+					const retryError = await response.text();
+					console.error('❌ Retry fehlgeschlagen:', response.status, retryError.slice(0, 100));
+					return {
+						content: null,
+						error: `❌ LLM API Error: ${response.status} - ${retryError}`
+					};
+				}
+			}
 
 			if (!response.ok) {
 				const errorText = await response.text();
 				console.error('❌ LLM Tool API Error:', response.status, errorText);
-				
-				// Fallback: Wenn Tool-Calling nicht unterstützt, versuche ohne Tools
-				if (response.status === 400 && errorText.includes('tool')) {
-					console.warn('⚠️ Tool-Calling nicht unterstützt, Fallback auf Standard-Modus');
-					// Hier könnte ein Fallback implementiert werden
-				}
-				
 				return {
 					content: null,
 					error: `❌ LLM API Error: ${response.status} - ${errorText}`
@@ -660,7 +911,25 @@ export class ChatStore {
 				};
 			}
 
-			console.log('💬 LLM returned text response:', content?.substring(0, 100));
+			// tool_choice:'auto' — LLM hat Text statt Tool-Call zurueckgegeben.
+			// Wrap in synthetischen respond-Tool-Call, damit der Aufrufer
+			// einheitlich tool_calls verarbeiten kann.
+			if (content) {
+				console.log('💬 LLM returned text (no tool call) – wrapping in respond tool:', content?.substring(0, 100));
+				return {
+					content,
+					tool_calls: [{
+						id: 'synthetic-respond',
+						type: 'function',
+						function: {
+							name: 'respond',
+							arguments: JSON.stringify({ message: content })
+						}
+					}]
+				};
+			}
+
+			console.log('💬 LLM returned empty response');
 			return { content };
 
 		} catch (error) {

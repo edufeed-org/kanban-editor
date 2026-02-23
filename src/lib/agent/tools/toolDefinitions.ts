@@ -1,5 +1,5 @@
-/**
- * Tool Definitions für OpenAI Function Calling
+﻿/**
+ * Tool Definitions fuer OpenAI Function Calling
  * MCP-Style Tool-Based AI Architecture
  * 
  * @see docs/FEATURE/TOOL-BASED-AI.md
@@ -19,7 +19,7 @@ export interface ToolDefinition {
 }
 
 /**
- * Alle verfügbaren Tools für den KI-Assistenten
+ * Alle verfuegbaren Tools fuer den KI-Assistenten
  */
 export const toolDefinitions: ToolDefinition[] = [
     // ═══════════════════════════════════════════════════════════════════
@@ -29,13 +29,13 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'populate_board',
-            description: 'Befüllt das aktuelle Board mit Inhalt zu einem Thema. Setzt Titel, Beschreibung, erstellt passende Spalten und fügt Karten mit ausführlichem Inhalt hinzu. VERWENDEN wenn der Nutzer sagt: "erstelle ein Board zu...", "mach mir ein Board für...", "Board zum Thema...", "Unterrichtseinheit zu..."',
+            description: 'Befuellt das aktuelle Board mit Inhalt zu einem Thema. Setzt Titel, Beschreibung, erstellt passende Spalten und fuegt Karten mit ausfuehrlichem Inhalt hinzu. VERWENDEN wenn der Nutzer sagt: "erstelle ein Board zu...", "mach mir ein Board fuer...", "Board zum Thema...", "Unterrichtseinheit zu..."',
             parameters: {
                 type: 'object',
                 properties: {
                     title: {
                         type: 'string',
-                        description: 'Neuer Titel für das Board'
+                        description: 'Neuer Titel fuer das Board'
                     },
                     description: {
                         type: 'string',
@@ -53,17 +53,17 @@ export const toolDefinitions: ToolDefinition[] = [
                                 },
                                 cards: {
                                     type: 'array',
-                                    description: 'Karten für diese Spalte',
+                                    description: 'Karten fuer diese Spalte',
                                     items: {
                                         type: 'object',
                                         properties: {
                                             heading: { 
                                                 type: 'string',
-                                                description: 'Kurzer Titel der Karte (5-10 Wörter)'
+                                                description: 'Kurzer Titel der Karte (5-10 Woerter)'
                                             },
                                             content: { 
                                                 type: 'string',
-                                                description: 'AUSFÜHRLICHER Inhalt mit Arbeitsanweisungen, Fragen, Materialien. PFLICHTFELD!'
+                                                description: 'AUSFueHRLICHER Inhalt mit Arbeitsanweisungen, Fragen, Materialien. PFLICHTFELD!'
                                             }
                                         },
                                         required: ['heading', 'content']
@@ -75,7 +75,7 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     removeUnusedColumns: {
                         type: 'boolean',
-                        description: 'Wenn true: Löscht alle Spalten die NICHT in columns[] genannt sind (inklusive Standard-Spalten wie "To Do"). Standardmäßig false.'
+                        description: 'Wenn true: Loescht alle Spalten die NICHT in columns[] genannt sind (inklusive Standard-Spalten wie "To Do"). Standardmaessig false.'
                     }
                 },
                 required: ['title', 'columns']
@@ -86,7 +86,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'update_board',
-            description: 'Aktualisiert NUR die Metadaten des aktuellen Boards (Beschreibung, Tags). NICHT verwenden um Inhalt hinzuzufügen - dafür populate_board nutzen!',
+            description: 'Aktualisiert NUR die Metadaten des aktuellen Boards (Beschreibung, Tags). NICHT verwenden um Inhalt hinzuzufuegen - dafuer populate_board nutzen!',
             parameters: {
                 type: 'object',
                 properties: {
@@ -97,7 +97,7 @@ export const toolDefinitions: ToolDefinition[] = [
                     tags: {
                         type: 'array',
                         items: { type: 'string' },
-                        description: 'Tags/Kategorien für das Board'
+                        description: 'Tags/Kategorien fuer das Board'
                     }
                 },
                 required: []
@@ -112,7 +112,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'add_column',
-            description: 'Fügt eine neue Spalte zum aktuellen Board hinzu',
+            description: 'Fuegt eine neue Spalte zum aktuellen Board hinzu',
             parameters: {
                 type: 'object',
                 properties: {
@@ -144,7 +144,7 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     newName: {
                         type: 'string',
-                        description: 'Neuer Name für die Spalte'
+                        description: 'Neuer Name fuer die Spalte'
                     }
                 },
                 required: ['columnName', 'newName']
@@ -155,13 +155,13 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'delete_column',
-            description: 'Löscht eine Spalte inkl. aller enthaltenen Karten. VORSICHT: Alle Karten werden gelöscht!',
+            description: 'Loescht eine Spalte inkl. aller enthaltenen Karten. VORSICHT: Alle Karten werden geloescht!',
             parameters: {
                 type: 'object',
                 properties: {
                     columnName: {
                         type: 'string',
-                        description: 'Name der zu löschenden Spalte'
+                        description: 'Name der zu loeschenden Spalte'
                     }
                 },
                 required: ['columnName']
@@ -176,13 +176,13 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'add_card',
-            description: 'Erstellt eine EINZELNE neue Karte in einer Spalte. IMMER verwenden wenn der Nutzer "eine Karte erstellen" möchte - NIEMALS create_board! WICHTIG: Immer content/description mitliefern!',
+            description: 'Erstellt eine EINZELNE neue Karte in einer Spalte. IMMER verwenden wenn der Nutzer "eine Karte erstellen" moechte - NIEMALS create_board! WICHTIG: Immer content/description mitliefern!',
             parameters: {
                 type: 'object',
                 properties: {
                     heading: {
                         type: 'string',
-                        description: 'Kurzer, prägnanter Titel der Karte (5-8 Wörter)'
+                        description: 'Kurzer, praegnanter Titel der Karte (5-8 Woerter)'
                     },
                     columnName: {
                         type: 'string',
@@ -190,12 +190,12 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     content: {
                         type: 'string',
-                        description: 'PFLICHT! Ausführliche Beschreibung mit konkreten Arbeitsanweisungen, Materialien, Zeitangaben, erwarteten Ergebnissen. Nutze Markdown-Formatierung (**, \\n, Listen).'
+                        description: 'PFLICHT! Ausfuehrliche Beschreibung mit konkreten Arbeitsanweisungen, Materialien, Zeitangaben, erwarteten Ergebnissen. Nutze Markdown-Formatierung (**, \\n, Listen).'
                     },
                     labels: {
                         type: 'array',
                         items: { type: 'string' },
-                        description: 'Optionale Labels/Tags für die Karte'
+                        description: 'Optionale Labels/Tags fuer die Karte'
                     }
                 },
                 required: ['heading', 'columnName', 'content']
@@ -206,7 +206,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'update_card',
-            description: 'Aktualisiert eine bestehende Karte. Kann Titel, Inhalt, Labels, Links oder Bild ändern.',
+            description: 'Aktualisiert eine bestehende Karte. Kann Titel, Inhalt, Labels, Links oder Bild aendern.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -237,11 +237,11 @@ export const toolDefinitions: ToolDefinition[] = [
                             },
                             required: ['url', 'title']
                         },
-                        description: 'Links zur Karte hinzufügen'
+                        description: 'Links zur Karte hinzufuegen'
                     },
                     image: {
                         type: 'string',
-                        description: 'URL eines Bildes für die Karte'
+                        description: 'URL eines Bildes fuer die Karte'
                     }
                 },
                 required: ['cardId']
@@ -277,13 +277,13 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'delete_card',
-            description: 'Löscht eine Karte aus dem Board',
+            description: 'Loescht eine Karte aus dem Board',
             parameters: {
                 type: 'object',
                 properties: {
                     cardId: {
                         type: 'string',
-                        description: 'ID oder Titel der zu löschenden Karte'
+                        description: 'ID oder Titel der zu loeschenden Karte'
                     }
                 },
                 required: ['cardId']
@@ -298,7 +298,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'add_comment',
-            description: 'Fügt einen Kommentar zu einer Karte hinzu',
+            description: 'Fuegt einen Kommentar zu einer Karte hinzu',
             parameters: {
                 type: 'object',
                 properties: {
@@ -323,7 +323,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'respond',
-            description: 'Antwortet dem Nutzer OHNE eine Board-Aktion durchzuführen. Für Fragen, Erklärungen, Gespräche.',
+            description: 'Antwortet dem Nutzer OHNE eine Board-Aktion durchzufuehren. Fuer Fragen, Erklaerungen, Gespraeche.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -346,7 +346,7 @@ export const toolDefinitions: ToolDefinition[] = [
                 properties: {
                     question: {
                         type: 'string',
-                        description: 'Die Rückfrage an den Nutzer'
+                        description: 'Die Rueckfrage an den Nutzer'
                     }
                 },
                 required: ['question']
@@ -361,17 +361,17 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'search_oer',
-            description: 'Sucht nach Open Educational Resources (OER) wie Lernmaterialien, Arbeitsblätter, Videos. Ergebnisse können dann mit add_cards_from_oer als Karten hinzugefügt werden.',
+            description: 'Sucht nach Open Educational Resources (OER) wie Lernmaterialien, Arbeitsblaetter, Videos. Ergebnisse koennen dann mit add_cards_from_oer als Karten hinzugefuegt werden.',
             parameters: {
                 type: 'object',
                 properties: {
                     query: {
                         type: 'string',
-                        description: 'Der Suchbegriff für OER-Materialien (z.B. "Bruchrechnung", "Photosynthese")'
+                        description: 'Der Suchbegriff fuer OER-Materialien (z.B. "Bruchrechnung", "Photosynthese")'
                     },
                     source: {
                         type: 'string',
-                        description: 'Optional: Spezifische OER-Quelle (z.B. "rpi-virtuell", "nostr-amb-relay"). Nutze list_oer_sources für verfügbare Quellen.'
+                        description: 'Optional: Spezifische OER-Quelle (z.B. "rpi-virtuell", "nostr-amb-relay"). Nutze list_oer_sources fuer verfuegbare Quellen.'
                     },
                     sources: {
                         type: 'array',
@@ -395,14 +395,14 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'add_cards_from_oer',
-            description: 'Fügt OER-Materialien aus der letzten Suche als Karten zum Board hinzu. Erfordert vorherige search_oer Ausführung.',
+            description: 'Fuegt OER-Materialien aus der letzten Suche als Karten zum Board hinzu. Erfordert vorherige search_oer Ausfuehrung.',
             parameters: {
                 type: 'object',
                 properties: {
                     resultNumbers: {
                         type: 'array',
                         items: { type: 'number' },
-                        description: 'Nummern der Suchergebnisse die hinzugefügt werden sollen (z.B. [1, 3, 5] für Ergebnis 1, 3 und 5)'
+                        description: 'Nummern der Suchergebnisse die hinzugefuegt werden sollen (z.B. [1, 3, 5] fuer Ergebnis 1, 3 und 5)'
                     },
                     targetColumnId: {
                         type: 'string',
@@ -410,7 +410,7 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     targetColumnName: {
                         type: 'string',
-                        description: 'Optional: Name für neue Spalte falls targetColumnId nicht existiert (default: "OER Materialien")'
+                        description: 'Optional: Name fuer neue Spalte falls targetColumnId nicht existiert (default: "OER Materialien")'
                     }
                 },
                 required: ['resultNumbers']
@@ -421,7 +421,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'list_oer_sources',
-            description: 'Listet alle verfügbaren OER-Quellen auf (z.B. WirLernenOnline, OERSI). Nützlich um zu sehen, welche Quellen für search_oer verfügbar sind.',
+            description: 'Listet alle verfuegbaren OER-Quellen auf (z.B. WirLernenOnline, OERSI). Nuetzlich um zu sehen, welche Quellen fuer search_oer verfuegbar sind.',
             parameters: {
                 type: 'object',
                 properties: {},
@@ -439,11 +439,11 @@ export const toolDefinitions: ToolDefinition[] = [
                 properties: {
                     cardId: {
                         type: 'string',
-                        description: 'ID der Karte, für die OER-Materialien gesucht werden sollen'
+                        description: 'ID der Karte, fuer die OER-Materialien gesucht werden sollen'
                     },
                     additionalTerms: {
                         type: 'string',
-                        description: 'Optional: Zusätzliche Suchbegriffe'
+                        description: 'Optional: Zusaetzliche Suchbegriffe'
                     },
                     maxResults: {
                         type: 'number',
@@ -466,7 +466,7 @@ export const toolDefinitions: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'import_url_content',
-            description: 'Importiert Inhalt von einer URL (Webseite, PDF, YouTube-Video) und erstellt automatisch Karten im Board. Strukturiert den Inhalt basierend auf Überschriften/Kapiteln. Ideal für: Artikel als Lernmaterial aufbereiten, PDFs in Karten umwandeln, YouTube-Transkripte importieren.',
+            description: 'Importiert Inhalt von einer URL (Webseite, PDF, YouTube-Video) und erstellt automatisch Karten im Board. Strukturiert den Inhalt basierend auf ueberschriften/Kapiteln. Ideal fuer: Artikel als Lernmaterial aufbereiten, PDFs in Karten umwandeln, YouTube-Transkripte importieren.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -485,11 +485,11 @@ export const toolDefinitions: ToolDefinition[] = [
                     },
                     columnName: {
                         type: 'string',
-                        description: 'Optional: Name für die neue Spalte (bei single-column). Default: "Import: [Titel]"'
+                        description: 'Optional: Name fuer die neue Spalte (bei single-column). Default: "Import: [Titel]"'
                     },
                     maxCardLength: {
                         type: 'number',
-                        description: 'Maximale Textlänge pro Karte in Zeichen. Längere Abschnitte werden gekürzt. Default: 2000'
+                        description: 'Maximale Textlaenge pro Karte in Zeichen. Laengere Abschnitte werden gekuerzt. Default: 2000'
                     }
                 },
                 required: ['url']
@@ -499,7 +499,7 @@ export const toolDefinitions: ToolDefinition[] = [
 ];
 
 /**
- * Gibt alle Tool-Definitionen zurück (für LLM-Request)
+ * Gibt alle Tool-Definitionen zurueck (fuer LLM-Request)
  */
 export function getToolDefinitions(): ToolDefinition[] {
     return toolDefinitions;

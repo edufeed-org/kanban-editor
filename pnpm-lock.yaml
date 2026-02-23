@@ -7,7 +7,7 @@ settings:
 overrides:
   nostr-tools: ~2.14.2
   '@nostr-dev-kit/ndk': ^2.14.2
-  '@edufeed-org/oer-finder-api-client': ^0.0.6
+  '@edufeed-org/oer-finder-api-client': ^0.0.7
 
 importers:
 
@@ -17,8 +17,11 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1(typescript@5.9.3)(web-streams-polyfill@3.3.3)
       '@edufeed-org/oer-finder-plugin':
-        specifier: ^0.0.8
-        version: 0.0.8
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@fontsource-variable/roboto-condensed':
+        specifier: ^5.1.1
+        version: 5.2.8
       '@nostr-dev-kit/ndk':
         specifier: ^2.14.2
         version: 2.17.4(nostr-tools@2.14.3(typescript@5.9.3))
@@ -301,11 +304,8 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@edufeed-org/oer-finder-api-client@0.0.6':
-    resolution: {integrity: sha512-lBgDydOjqHslNQTjwvfVOPjgrftFT8BwNFJtMjDAycRx/So62ZYclX90ohak18mV2yuNLgDW0G3pC97N44zPBQ==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-api-client/0.0.6/6b1610d073cd104dcb613b1c9d5b2e9162b2060b}
-
-  '@edufeed-org/oer-finder-plugin@0.0.8':
-    resolution: {integrity: sha512-fdn5mRr6arDlQoHpuFeUxX2fujoPnxWR085uggZRxsyYKw5cipGMFTBD+VBLXmA9IvNBN6Xo/URZLuLEzv2Uwg==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-plugin/0.0.8/af7c5c1b63c2803e93b9616a26e5ac86ba236989}
+  '@edufeed-org/oer-finder-plugin@0.1.0':
+    resolution: {integrity: sha512-TDSnGhEiUruEiCis0W30CNufYkERTrjx6G9YDuFF+JNLd8CELw0SjmkeLYJc2iYXftcw9Crg9MJsc1mmirh/OQ==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-plugin/0.1.0/633da90262b91cf8256017b47cd01e1a90d45b60}
 
   '@esbuild/aix-ppc64@0.25.10':
     resolution: {integrity: sha512-0NFWnA+7l41irNuaSVlLfgNT12caWJVLzp5eAVhZ0z1qpxbockccEt3s+149rE64VUI3Ml2zt8Nv5JVc4QXTsw==}
@@ -531,6 +531,9 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@fontsource-variable/roboto-condensed@5.2.8':
+    resolution: {integrity: sha512-aIZ2kYSoJHkTI4z8x/PRgKX6Zb9TTtSE/u+fUYeiwL+5trP9rhYYEEeNjRttaMqRgoDHcSueArdRZ43wf/i2Kw==}
 
   '@gcornut/valibot-json-schema@0.42.0':
     resolution: {integrity: sha512-4Et4AN6wmqeA0PfU5Clkv/IS27wiefsWf6TemAZrb75uzkClYEFavim7SboeKwbll9Nbsn2Iv0LT/HS5H7orZg==}
@@ -2490,12 +2493,6 @@ packages:
   oniguruma-to-es@4.3.3:
     resolution: {integrity: sha512-rPiZhzC3wXwE59YQMRDodUwwT9FZ9nNBwQQfsd1wfdtlKEyCdRV0avrTcSZ5xlIvGRVPd/cx6ZN45ECmS39xvg==}
 
-  openapi-fetch@0.13.8:
-    resolution: {integrity: sha512-yJ4QKRyNxE44baQ9mY5+r/kAzZ8yXMemtNAOFwOzRXJscdjSxxzWSNlyBAr+o5JjkUw9Lc3W7OIoca0cY3PYnQ==}
-
-  openapi-typescript-helpers@0.0.15:
-    resolution: {integrity: sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw==}
-
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
@@ -3558,13 +3555,8 @@ snapshots:
       - typescript
       - web-streams-polyfill
 
-  '@edufeed-org/oer-finder-api-client@0.0.6':
+  '@edufeed-org/oer-finder-plugin@0.1.0':
     dependencies:
-      openapi-fetch: 0.13.8
-
-  '@edufeed-org/oer-finder-plugin@0.0.8':
-    dependencies:
-      '@edufeed-org/oer-finder-api-client': 0.0.6
       lit: 3.3.1
 
   '@esbuild/aix-ppc64@0.25.10':
@@ -3717,6 +3709,8 @@ snapshots:
       '@floating-ui/utils': 0.2.10
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@fontsource-variable/roboto-condensed@5.2.8': {}
 
   '@gcornut/valibot-json-schema@0.42.0(esbuild@0.25.10)(typescript@5.9.3)':
     dependencies:
@@ -5824,12 +5818,6 @@ snapshots:
       oniguruma-parser: 0.12.1
       regex: 6.0.1
       regex-recursion: 6.0.2
-
-  openapi-fetch@0.13.8:
-    dependencies:
-      openapi-typescript-helpers: 0.0.15
-
-  openapi-typescript-helpers@0.0.15: {}
 
   optionator@0.9.4:
     dependencies:
