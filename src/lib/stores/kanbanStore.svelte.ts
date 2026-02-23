@@ -563,15 +563,22 @@ export class BoardStore {
         ChatIntegration.reset();
         console.log(`✅ Board geladen: ${board.name}`);
         
-        // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
-        this.loadCardsFromNostr(board);
+        // Skip Nostr operations for demo boards
+        const isDemoBoard = board.id === 'demo-board' || board.author === 'demo' || board.author === '0000000000000000000000000000000000000000000000000000000000000000';
         
-        // 🔴 KRITISCH: Lade Followers (Viewer) aus NIP-51 Kind 30000 Follow Set Events
-        // Dies ist nötig um Viewer-Rollen korrekt zu rekonstruieren nach Reload
-        this.loadBoardFollowers().catch(err => {
-            console.warn('⚠️ Failed to load board followers:', err);
-            // Non-blocking error - board can still be used without followers loaded
-        });
+        if (!isDemoBoard) {
+            // ⚠️ NEU: Lade alle Cards für dieses Board vom Relay (asynchron)
+            this.loadCardsFromNostr(board);
+            
+            // 🔴 KRITISCH: Lade Followers (Viewer) aus NIP-51 Kind 30000 Follow Set Events
+            // Dies ist nötig um Viewer-Rollen korrekt zu rekonstruieren nach Reload
+            this.loadBoardFollowers().catch(err => {
+                console.warn('⚠️ Failed to load board followers:', err);
+                // Non-blocking error - board can still be used without followers loaded
+            });
+        } else {
+            console.log('🎯 Demo-Board: Überspringe Nostr-Operationen');
+        }
         
         // 🎯 COLLABORATION FIX: Subscription für neues Board neu starten
         // Dies ist wichtig, damit Card-Events für das NEUE Board empfangen werden!
@@ -1873,6 +1880,7 @@ export class BoardStore {
     private maxSyncRetries = 3;
     private pendingCardEventsByColumn = new Map<string, CardProps[]>();
     private pendingColumnOrderPatch: { columnOrder: string[]; eventTimeMs: number } | null = null;
+    private demoBoardLoadInProgress = false; // Non-reactive flag (NOT $state!)
 
     private async publishColumnOrderPatchAsync(columnIds: string[]): Promise<void> {
         await this.nostrIntegration.publishColumnOrderPatch(this.board, columnIds);
@@ -2925,6 +2933,13 @@ export class BoardStore {
         const ndk = this.nostrIntegration?.getNDK();
         if (!ndk || !this.board.author) return;
         
+        // Skip for demo boards with invalid pubkeys
+        const isDemoBoard = this.board.id === 'demo-board' || this.board.author === 'demo' || this.board.author === '0000000000000000000000000000000000000000000000000000000000000000';
+        if (isDemoBoard) {
+            console.log('🎯 Demo-Board: Überspringe loadBoardFollowers');
+            return;
+        }
+        
         const followers = await BoardSharingOperations.loadBoardFollowers(
             this.board,
             ndk
@@ -3146,13 +3161,74 @@ export class BoardStore {
      */
     private getDemoBoardsForAnonymousUser(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
         const demoBoardId = 'demo-board';
+        const sourceAddress = settingsStore.settings.demoBoardSourceAddress;
         let demoBoard = BoardStorage.loadBoard(demoBoardId);
         
-        if (!demoBoard) {
-            // Erstelle Demo-Board mit vorgefertigtem Inhalt
-            demoBoard = this.createDemoBoard();
+        // Check if we need to reload from configured source
+        // WICHTIG: Nur laden wenn NICHT bereits in Progress (verhindert Loop!)
+        const shouldReloadFromSource = sourceAddress && !this.demoBoardLoadInProgress && (
+            !demoBoard || // No cached board
+            demoBoard.name === '🎯 Demo-Board - Testen Sie die App!' || // Default name detected
+            demoBoard.name === '⏳ Demo-Board wird geladen...' // Loading placeholder detected
+        );
+        
+        if (shouldReloadFromSource) {
+            this.demoBoardLoadInProgress = true; // 🚨 Set flag!
+            
+            // Erstelle zunächst ein leeres Platzhalter-Board synchron
+            demoBoard = new Board({
+                id: demoBoardId,
+                name: '⏳ Demo-Board wird geladen...',
+                description: 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.',
+                author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
+                authorName: 'Demo User',
+                publishState: 'private',
+                columns: []
+            });
             BoardStorage.saveBoard(demoBoard);
-            console.log('✅ Demo-Board für anonymen Benutzer erstellt');
+            
+            // Lade Board asynchron im Hintergrund
+            this.loadDemoBoardFromSourceAsync(sourceAddress).then(loadedBoard => {
+                if (loadedBoard) {
+                    BoardStorage.saveBoard(loadedBoard);
+                    
+                    // 🎯 WICHTIG: Board AKTIV laden (nicht nur speichern!)
+                    this.board = loadedBoard;
+                    this._columnOrder = loadedBoard.columns.map(c => c.id);
+                    
+                    this.demoBoardLoadInProgress = false; // 🚨 Clear flag!
+                    this.triggerUpdate();
+                    
+                    // 🔄 Force UI update: If demo-board is currently active, reload it
+                    if (this.board.id === 'demo-board') {
+                        this.updateTrigger++; // Force derived recalculation
+                    }
+                } else {
+                    this.demoBoardLoadInProgress = false;
+                }
+            }).catch(error => {
+                // Bei Fehler: Erstelle Standard-Demo-Board
+                const defaultBoard = this.createDefaultDemoBoard();
+                BoardStorage.saveBoard(defaultBoard);
+                
+                // 🎯 WICHTIG: Fallback-Board AKTIV laden
+                this.board = defaultBoard;
+                this._columnOrder = defaultBoard.columns.map(c => c.id);
+                
+                this.demoBoardLoadInProgress = false; // 🚨 Clear flag!
+                this.triggerUpdate();
+            });
+        } else if (!demoBoard) {
+            // Kein Source-Board konfiguriert und kein cached Board: Erstelle Standard-Demo-Board
+            demoBoard = this.createDefaultDemoBoard();
+            BoardStorage.saveBoard(demoBoard);
+        }
+        
+        // 🎯 WICHTIG: Immer frisch aus storage laden um neueste Version zu haben
+        // (falls async update stattgefunden hat)
+        const freshDemoBoard = BoardStorage.loadBoard(demoBoardId);
+        if (freshDemoBoard) {
+            demoBoard = freshDemoBoard;
         }
         
         return [{
@@ -3171,14 +3247,161 @@ export class BoardStore {
     }
     
     /**
-     * Erstellt ein Demo-Board mit Beispieldaten
+     * Lädt das Demo-Board von der konfigurierten Quelle asynchron
      */
-    private createDemoBoard(): Board {
+    private async loadDemoBoardFromSourceAsync(sourceAddress: string): Promise<Board | null> {
+        try {
+            return await this.loadBoardFromSourceAddress(sourceAddress);
+        } catch (error) {
+            console.error('❌ Fehler beim Laden des Demo-Boards von Quelle:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Lädt ein Board von einer Nostr-Adresse (naddr) und kopiert es als Demo-Board
+     */
+    private async loadBoardFromSourceAddress(naddrOrId: string): Promise<Board | null> {
+        // Import nostr utilities
+        const { nip19 } = await import('nostr-tools');
+        const { nostrEventToBoard, nostrEventToCard } = await import('$lib/utils/nostrEvents.js');
+        
+        let pubkey: string;
+        let identifier: string;
+        let relays: string[] | undefined;
+        
+        // Decode naddr wenn es eine ist
+        if (naddrOrId.startsWith('naddr1')) {
+            try {
+                const decoded = nip19.decode(naddrOrId);
+                if (decoded.type !== 'naddr') {
+                    console.error('❌ Ungültiger naddr:', naddrOrId);
+                    return null;
+                }
+                
+                pubkey = decoded.data.pubkey;
+                identifier = decoded.data.identifier;
+                relays = decoded.data.relays;
+                
+                console.log('📍 naddr dekodiert:', { pubkey: pubkey.slice(0, 8) + '...', identifier, relays });
+            } catch (error) {
+                console.error('❌ Fehler beim Dekodieren der naddr:', error);
+                return null;
+            }
+        } else {
+            console.error('❌ Ungültige Board-Adresse (muss naddr1... sein):', naddrOrId);
+            return null;
+        }
+        
+        // NDK initialisieren falls noch nicht geschehen
+        const ndk = this.nostrIntegration?.getNDK();
+        if (!ndk) {
+            console.error('❌ NDK nicht initialisiert');
+            return null;
+        }
+        
+        // Zu Relays verbinden falls angegeben
+        if (relays && relays.length > 0) {
+            for (const relayUrl of relays) {
+                try {
+                    const relay = ndk.pool.getRelay(relayUrl);
+                    if (relay && !relay.connectivity.status) {
+                        await relay.connect();
+                        console.log(`🔌 Relay verbunden: ${relayUrl}`);
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Konnte nicht zu Relay verbinden: ${relayUrl}`, error);
+                }
+            }
+            
+            // Kurz warten damit Relays verbinden können
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // Board Event laden
+        const filter = {
+            kinds: [30301],
+            authors: [pubkey],
+            '#d': [identifier]
+        };
+        
+        console.log('🔍 Lade Board Event:', filter);
+        const boardEvent = await ndk.fetchEvent(filter);
+        
+        if (!boardEvent) {
+            console.error('❌ Board Event nicht gefunden');
+            return null;
+        }
+        
+        console.log('✅ Board Event gefunden:', boardEvent.id);
+        
+        // Board aus Event konvertieren
+        const boardProps = nostrEventToBoard(boardEvent);
+        
+        // Board mit neuer Demo-ID erstellen
+        // Use a valid dummy pubkey (64 zeros) instead of 'demo' to avoid Nostr validation errors
+        const board = new Board({
+            ...boardProps,
+            id: 'demo-board', // ⚠️ WICHTIG: Neue ID für Demo-Board
+            author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
+            authorName: 'Demo User',
+            publishState: 'private'
+        });
+        
+        // Cards für das Board laden
+        const aTagValue = `30301:${pubkey}:${identifier}`;
+        const cardFilter = {
+            kinds: [30302],
+            '#a': [aTagValue]
+        };
+        
+        console.log('🔍 Lade Card Events für:', aTagValue);
+        const cardEvents = await ndk.fetchEvents(cardFilter);
+        const cardEventArray = Array.from(cardEvents);
+        
+        console.log(`✅ ${cardEventArray.length} Card Events gefunden`);
+        
+        // Cards zum Board hinzufügen
+        for (const cardEvent of cardEventArray) {
+            try {
+                const cardProps = nostrEventToCard(cardEvent as any) as any;
+                if (!cardProps.id) continue;
+                
+                // Finde Spalte
+                const columnName = cardProps.columnName || 'To Do';
+                let column = board.columns.find(c => c.name === columnName);
+                
+                if (!column) {
+                    // Spalte existiert nicht, erstelle sie
+                    column = board.addColumn({ name: columnName });
+                    console.log(`📁 Spalte erstellt: ${columnName}`);
+                }
+                
+                // Card mit Demo-Attribution hinzufügen
+                column.addCard({
+                    ...cardProps,
+                    author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
+                    authorName: 'Demo User'
+                });
+            } catch (error) {
+                console.warn('⚠️ Fehler beim Hinzufügen einer Card:', error);
+            }
+        }
+        
+        console.log(`✅ Demo-Board erstellt mit ${board.columns.length} Spalten und ${board.columns.reduce((sum, col) => sum + col.cards.length, 0)} Karten`);
+        
+        return board;
+    }
+    
+    /**
+     * Erstellt das Standard-Demo-Board mit hardcoded Beispieldaten
+     */
+    private createDefaultDemoBoard(): Board {
         const board = new Board({
             id: 'demo-board',
             name: '🎯 Demo-Board - Testen Sie die App!',
             description: 'Willkommen! Dies ist ein Demo-Board zum Ausprobieren. Erstellen Sie Karten, verschieben Sie sie zwischen Spalten und testen Sie alle Funktionen. Nach der Anmeldung können Sie echte Boards erstellen.',
-            author: 'demo',
+            author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
             authorName: 'Demo User',
             publishState: 'private',
             columns: []
@@ -3189,12 +3412,14 @@ export class BoardStore {
         const progressColumn = board.addColumn({ name: '🔄 In Arbeit', color: 'orange' });
         const doneColumn = board.addColumn({ name: '✅ Erledigt', color: 'green' });
         
-        // Beispiel-Karten hinzufügen
+        // Beispiel-Karten hinzufügen (use valid hex pubkey)
+        const demoAuthor = '0000000000000000000000000000000000000000000000000000000000000000';
+        
         todoColumn.addCard({
             heading: '👋 Willkommen im Demo-Board!',
             content: 'Dies ist eine Beispielkarte. Klicken Sie darauf, um sie zu bearbeiten, oder ziehen Sie sie in eine andere Spalte.',
             labels: ['demo', 'anleitung'],
-            author: 'demo',
+            author: demoAuthor,
             authorName: 'Demo User'
         });
         
@@ -3202,7 +3427,7 @@ export class BoardStore {
             heading: '📝 Neue Karte erstellen',
             content: 'Klicken Sie auf "Neue Karte" in einer Spalte, um eigene Inhalte hinzuzufügen.',
             labels: ['tipp'],
-            author: 'demo',
+            author: demoAuthor,
             authorName: 'Demo User'
         });
         
@@ -3210,7 +3435,7 @@ export class BoardStore {
             heading: '🚀 App erkunden',
             content: 'Probieren Sie alle Funktionen aus: Karten bearbeiten, Kommentare hinzufügen, Labels verwenden.',
             labels: ['in-progress'],
-            author: 'demo',
+            author: demoAuthor,
             authorName: 'Demo User'
         });
         
@@ -3218,7 +3443,7 @@ export class BoardStore {
             heading: '🎉 Demo erfolgreich gestartet',
             content: 'Sie haben das Demo-Board erfolgreich geladen! Melden Sie sich an, um echte Boards zu erstellen.',
             labels: ['erfolg'],
-            author: 'demo',
+            author: demoAuthor,
             authorName: 'Demo User'
         });
         

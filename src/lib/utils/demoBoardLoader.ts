@@ -197,6 +197,22 @@ export function reset_board(): void {
 }
 
 /**
+ * Löscht das Demo-Board aus dem Cache (localStorage)
+ * Nützlich um ein Neu-Laden des Demo-Boards von der konfigurierten Quelle zu erzwingen
+ */
+export function clear_demo_board(): void {
+	console.warn('🗑️ Demo-Board Cache wird gelöscht...');
+	
+	try {
+		localStorage.removeItem('kanban-demo-board');
+		console.log('✅ Demo-Board aus localStorage entfernt');
+		console.log('💡 Laden Sie die Seite neu, um das Demo-Board von der konfigurierten Quelle zu laden');
+	} catch (error) {
+		console.error('❌ Fehler beim Löschen des Demo-Boards:', error);
+	}
+}
+
+/**
  * Zeigt den aktuellen Board-State
  */
 export function show_board(): void {
