@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- **Bugfix: Board-Import in BoardsList fehlgeschlagen** — Importierte Boards wurden nicht in localStorage gespeichert, da `saveImportedBoard()` nicht aufgerufen wurde. Board konnte nach Import nicht angezeigt werden (`❌ Board nicht gefunden`). Fix: `saveImportedBoard()` wird jetzt vor Navigation aufgerufen.
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.
 
 ## Releases 2026 — PRs (kompakt)

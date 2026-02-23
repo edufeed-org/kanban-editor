@@ -930,15 +930,18 @@
                     }
                     try {
                         const jsonString = await importFile.text();
-                        const result = await boardStore.importBoardFromJson(jsonString, importMode);
-                        if (result.success) {
-                            toast.success(`Board erfolgreich importiert: ${result.board?.name}`);
+                        const result = boardStore.importBoardFromJson(jsonString, importMode);
+                        if (result.success && result.board) {
+                            // 🔥 CRITICAL: Board MUSS zuerst gespeichert werden!
+                            // importBoardFromJson() gibt das Board nur im Speicher zurück.
+                            // saveImportedBoard() speichert es in localStorage + setzt es als aktives Board.
+                            const overwrite = importMode === 'overwrite';
+                            boardStore.saveImportedBoard(result.board, overwrite);
+                            
+                            toast.success(`Board erfolgreich importiert: ${result.board.name}`);
                             importDialogOpen = false;
                             importFile = null;
-                            if (result.board?.id) {
-                                boardStore.loadBoard(result.board.id);
-                                navigateToBoardUrl();
-                            }
+                            navigateToBoardUrl();
                         } else {
                             toast.error(`Import fehlgeschlagen: ${result.error}`);
                         }
