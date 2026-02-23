@@ -8,12 +8,42 @@ import {
 	columnToLiaScript,
 	cardToLiaScript,
 	commentsToLiaScript,
-	generateLiaScriptFilename
+	generateLiaScriptFilename,
+	stripTeaserSeparator
 } from './liascriptExport';
 import { Board, Column, Card } from '$lib/classes/BoardModel';
 import type { Comment } from '$lib/classes/BoardModel';
 
 describe('liascriptExport', () => {
+	describe('stripTeaserSeparator', () => {
+		it('sollte Text ohne +++ unverändert zurückgeben', () => {
+			expect(stripTeaserSeparator('Vollständiger Text')).toBe('Vollständiger Text');
+		});
+
+		it('sollte +++ entfernen und beide Teile zusammenführen', () => {
+			const result = stripTeaserSeparator('Teaser-Text\n+++\nVollständiger Rest');
+			expect(result).toContain('Teaser-Text');
+			expect(result).toContain('Vollständiger Rest');
+			expect(result).not.toContain('+++');
+		});
+
+		it('sollte +++ am Anfang entfernen und nur den Rest zurückgeben', () => {
+			const result = stripTeaserSeparator('+++\nNur dieser Teil');
+			expect(result).toBe('Nur dieser Teil');
+			expect(result).not.toContain('+++');
+		});
+
+		it('sollte +++ am Ende entfernen und nur den Anfang zurückgeben', () => {
+			const result = stripTeaserSeparator('Nur dieser Teil\n+++');
+			expect(result).toBe('Nur dieser Teil');
+			expect(result).not.toContain('+++');
+		});
+
+		it('sollte bei leerem String leeren String zurückgeben', () => {
+			expect(stripTeaserSeparator('')).toBe('');
+		});
+	});
+
 	describe('generateLiaScriptFilename', () => {
 		it('sollte Board-Name in lowercase konvertieren und Sonderzeichen ersetzen', () => {
 			const filename = generateLiaScriptFilename('Mein Test Board!');

@@ -82,6 +82,22 @@ export function columnToLiaScript(column: Column): string {
 }
 
 /**
+ * Entfernt das +++ Teaser-Trennzeichen aus dem Inhalt für den Export.
+ * Der vollständige Text (vor und nach +++) wird zusammengeführt.
+ */
+export function stripTeaserSeparator(content: string): string {
+	const separatorIndex = content.indexOf('+++');
+	if (separatorIndex === -1) return content;
+
+	const before = content.substring(0, separatorIndex).trimEnd();
+	const after = content.substring(separatorIndex + 3).trimStart();
+
+	if (!before) return after;
+	if (!after) return before;
+	return `${before}\n\n${after}`;
+}
+
+/**
  * Konvertiert eine Card zu LiaScript Markdown (H3)
  */
 export function cardToLiaScript(card: Card): string {
@@ -90,9 +106,9 @@ export function cardToLiaScript(card: Card): string {
 	// H3: Karten-Überschrift
 	markdown += `### ${card.heading}\n\n`;
 
-	// Karten-Inhalt (falls vorhanden)
+	// Karten-Inhalt (falls vorhanden) — +++ Teaser-Trennzeichen entfernen
 	if (card.content) {
-		markdown += `${card.content}\n\n`;
+		markdown += `${stripTeaserSeparator(card.content)}\n\n`;
 	}
 
 	// Labels (falls vorhanden)
