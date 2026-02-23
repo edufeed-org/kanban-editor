@@ -35,6 +35,10 @@
     let activeTab = $state('nostr-link'); // 'nostr-link' | 'share-link' | 'editors'
     let linkCopied = $state(false);
     
+    // Board-Referenz & Publish-Check
+    let board = $derived(boardStore.data);
+    let isPublished = $derived(board?.publishState === 'published');
+    
     // Nostr naddr Link State (intern für Shortlink-Generierung)
     let naddrPath = $state(''); // Relativer Pfad: /cardsboard/naddr...
     
@@ -131,7 +135,7 @@
 
     async function generateShareLinkAsync(): Promise<void> {
         const boardId = boardStore.data?.id;
-        if (!boardId || isGeneratingLink) return;
+        if (!boardId || isGeneratingLink || !isPublished) return;
 
         if (lastShareBoardId === boardId && shareToken && tokenSize > 0) return;
         
@@ -509,6 +513,12 @@
     }
     
     async function ensurePublished(): Promise<boolean> {
+        if (!isPublished) {
+            toast.error('Board muss zuerst veröffentlicht werden', {
+                description: 'Ändere den Status in den Board-Einstellungen auf „Veröffentlicht".'
+            });
+            return false;
+        }
         if (shortlinkPublished) return true;
         if (!shortlinkSlug || isPublishingShortlink) return false;
         
@@ -639,7 +649,11 @@
             <Tabs.Content value="nostr-link" class="mt-4 space-y-4">
                 <div class="space-y-3">
                     <p class="text-sm text-muted-foreground">
-                        Teile einen kurzen, lesbaren Link zu deinem Board. Kopieren, Öffnen und QR-Code publizieren den Link automatisch.
+                        {#if !isPublished}
+                            <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor es geteilt werden kann.</span><br/>
+                        {:else}
+                            Teile einen kurzen, lesbaren Link zu deinem Board. Kopieren, Öffnen und QR-Code publizieren den Link automatisch.
+                        {/if}
                     </p>
                     
                     {#if naddrLink}
@@ -653,7 +667,7 @@
                                     oninput={handleSlugInput}
                                     placeholder="mein-board"
                                     class="flex-1 h-9 bg-transparent px-1 py-1 text-sm font-mono focus:outline-none"
-                                    disabled={isPublishingShortlink}
+                                    disabled={isPublishingShortlink || !isPublished}
                                     data-testid="naddr-link-input"
                                 />
                             </div>
@@ -661,7 +675,7 @@
                                 onclick={copyShortlink}
                                 variant="outline"
                                 title="Kopieren (publiziert automatisch)"
-                                disabled={!shortlinkSlug || isPublishingShortlink}
+                                disabled={!shortlinkSlug || isPublishingShortlink || !isPublished}
                             >
                                 {#if isPublishingShortlink}
                                     <LoaderCircleIcon class="h-4 w-4 animate-spin" />
@@ -675,7 +689,7 @@
                                 onclick={openShortlink}
                                 variant="outline"
                                 title="Öffnen (publiziert automatisch)"
-                                disabled={!shortlinkSlug || isPublishingShortlink}
+                                disabled={!shortlinkSlug || isPublishingShortlink || !isPublished}
                             >
                                 <ExternalLinkIcon class="h-4 w-4" />
                             </Button>
@@ -683,7 +697,7 @@
                                 onclick={handleQrCode}
                                 variant="outline"
                                 title="QR-Code generieren (publiziert automatisch)"
-                                disabled={!shortlinkSlug || isPublishingShortlink}
+                                disabled={!shortlinkSlug || isPublishingShortlink || !isPublished}
                             >
                                 <QrCodeIcon class="h-4 w-4" />
                             </Button>
@@ -732,12 +746,27 @@
             <Tabs.Content value="share-link" class="mt-4 space-y-4">
                 <div class="space-y-2">
                     <p class="text-sm text-muted-foreground">
-                        Teile diesen Link mit anderen Nutzern. Der Link enthält alle Board-Daten 
-                        - der Empfänger kann das Board forken (eigene Kopie) oder folgen.
+                        {#if !isPublished}
+                            <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor ein Share-Link generiert werden kann.</span>
+                        {:else}
+                            Teile diesen Link mit anderen Nutzern. Der Link enthält alle Board-Daten 
+                            - der Empfänger kann das Board forken (eigene Kopie) oder folgen.
+                        {/if}
                     </p>
                     
                     <div class="flex gap-2">
-                        {#if isGeneratingLink}
+                        {#if !isPublished}
+                            <Input 
+                                value="Board muss zuerst veröffentlicht werden"
+                                readonly
+                                class="flex-1 font-mono text-xs"
+                                disabled
+                            />
+                            <Button variant="outline" disabled class="gap-2">
+                                <CopyIcon class="h-4 w-4" />
+                                Kopieren
+                            </Button>
+                        {:else if isGeneratingLink}
                             <Input 
                                 value="Link wird generiert..."
                                 readonly

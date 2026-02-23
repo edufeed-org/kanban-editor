@@ -13,6 +13,7 @@ import {
     createShortlinkEvent,
     resolveShortlink,
     resolveShortlinkBySlug,
+    clearShortlinkCache,
     EVENT_KINDS
 } from './nostrEvents.js';
 import { Card } from '../classes/BoardModel.js';
@@ -648,6 +649,10 @@ describe('nostrEvents - Shortlink', () => {
     describe('resolveShortlinkBySlug', () => {
         let mockNdk: NDK;
 
+        beforeEach(() => {
+            clearShortlinkCache();
+        });
+
         it('should resolve slug without author', async () => {
             const expectedNaddr = 'naddr1resolved-no-author';
             const mockEvents = new Set([
@@ -671,7 +676,7 @@ describe('nostrEvents - Shortlink', () => {
                 fetchEvents: vi.fn().mockResolvedValue(new Set())
             } as unknown as NDK;
 
-            const result = await resolveShortlinkBySlug('nonexistent', mockNdk);
+            const result = await resolveShortlinkBySlug('nonexistent', mockNdk, 0);
             expect(result).toBeNull();
         });
 
@@ -726,7 +731,7 @@ describe('nostrEvents - Shortlink', () => {
                 fetchEvents: vi.fn().mockResolvedValue(null)
             } as unknown as NDK;
 
-            const result = await resolveShortlinkBySlug('slug', mockNdk);
+            const result = await resolveShortlinkBySlug('slug', mockNdk, 0);
             expect(result).toBeNull();
         });
     });

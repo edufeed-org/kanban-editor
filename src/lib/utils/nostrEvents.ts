@@ -36,6 +36,73 @@ export const EVENT_KINDS = {
 } as const;
 
 // ============================================================================
+// SHORTLINK LOCAL CACHE
+// ============================================================================
+
+const SHORTLINK_CACHE_KEY = 'nostr-shortlink-cache';
+
+export interface ShortlinkCacheEntry {
+  slug: string;
+  naddr: string;
+  authorPubkey: string;
+  createdAt: number; // Unix timestamp ms
+}
+
+/**
+ * Speichert ein Slug→naddr Mapping im lokalen Cache (localStorage).
+ * Wird beim Publizieren eines Shortlinks aufgerufen, damit der gleiche
+ * Browser den Shortlink sofort auflösen kann — auch wenn die Relays das
+ * Event nicht indexieren.
+ */
+export function cacheShortlink(slug: string, naddr: string, authorPubkey: string): void {
+  try {
+    const cache = loadShortlinkCache();
+    cache[slug] = { slug, naddr, authorPubkey, createdAt: Date.now() };
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SHORTLINK_CACHE_KEY, JSON.stringify(cache));
+    }
+    console.log(`[Shortlink-Cache] ✅ Cached: "${slug}" → ${naddr.slice(0, 30)}...`);
+  } catch (error) {
+    console.warn('[Shortlink-Cache] ⚠️ Cache write failed:', error);
+  }
+}
+
+/**
+ * Sucht einen Slug im lokalen Cache.
+ * @returns Das gecachte Mapping oder null
+ */
+export function lookupShortlinkCache(slug: string): ShortlinkCacheEntry | null {
+  try {
+    const cache = loadShortlinkCache();
+    return cache[slug] || null;
+  } catch {
+    return null;
+  }
+}
+
+function loadShortlinkCache(): Record<string, ShortlinkCacheEntry> {
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(SHORTLINK_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Löscht den gesamten lokalen Shortlink-Cache.
+ * Hauptsächlich für Tests nützlich.
+ */
+export function clearShortlinkCache(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(SHORTLINK_CACHE_KEY);
+    }
+  } catch { /* ignore */ }
+}
+
+// ============================================================================
 // COLUMN ORDER PATCH (Kind 8571)
 // ============================================================================
 
@@ -955,38 +1022,75 @@ export async function resolveShortlink(
 
 /**
  * Löst einen Shortlink-Slug auf — ohne vorher den Author zu kennen.
- * Sucht über ALLE Autoren (langsamer, braucht unterstützendes Relay).
+ *
+ * Reihenfolge:
+ * 1. Lokaler Cache (sofort, funktioniert immer im selben Browser)
+ * 2. Nostr-Relays mit Retry-Logik (für Browser-übergreifende Auflösung)
  *
  * @param slug - Das Kürzel
  * @param ndk - NDK-Instanz
+ * @param maxRetries - Maximale Anzahl Relay-Versuche (Default: 2)
  * @returns Der naddr-String oder null
  */
 export async function resolveShortlinkBySlug(
   slug: string,
-  ndk: NDK
+  ndk: NDK,
+  maxRetries: number = 2
 ): Promise<{ naddr: string; authorPubkey: string } | null> {
+  // ── Schritt 1: Lokaler Cache (instant) ──
+  const cached = lookupShortlinkCache(slug);
+  if (cached) {
+    console.log(`[Shortlink] ✅ Slug "${slug}" aus lokalem Cache aufgelöst`);
+    return { naddr: cached.naddr, authorPubkey: cached.authorPubkey };
+  }
+
+  // ── Schritt 2: Nostr-Relays (mit Retry) ──
   const filter = {
     kinds: [EVENT_KINDS.SHORTLINK],
     '#d': [slug]
   };
 
-  const events = await ndk.fetchEvents(filter as any);
-  if (!events || events.size === 0) return null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      // Backoff: 1.5s, 3s
+      const delay = attempt * 1500;
+      console.log(`[Shortlink] 🔄 Relay-Retry ${attempt}/${maxRetries} in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
-  // Nimm das neueste Event (Last-Write-Wins)
-  let latest: NDKEvent | null = null;
-  for (const ev of events) {
-    if (!latest || (ev.created_at ?? 0) > (latest.created_at ?? 0)) {
-      latest = ev;
+    try {
+      const events = await ndk.fetchEvents(filter as any);
+
+      if (events && events.size > 0) {
+        // Nimm das neueste Event (Last-Write-Wins)
+        let latest: NDKEvent | null = null;
+        for (const ev of events) {
+          if (!latest || (ev.created_at ?? 0) > (latest.created_at ?? 0)) {
+            latest = ev;
+          }
+        }
+
+        if (latest) {
+          const rTag = latest.tags.find(t => t[0] === 'r')?.[1];
+          const naddr = rTag || latest.content || null;
+
+          if (naddr) {
+            console.log(`[Shortlink] ✅ Slug "${slug}" via Relay aufgelöst (Versuch ${attempt + 1})`);
+            // Cache für zukünftige Lookups befüllen
+            cacheShortlink(slug, naddr, latest.pubkey);
+            return { naddr, authorPubkey: latest.pubkey };
+          }
+        }
+      }
+
+      console.log(`[Shortlink] ⚠️ Versuch ${attempt + 1}: Keine Events für Slug "${slug}" auf Relays`);
+    } catch (error) {
+      console.warn(`[Shortlink] ⚠️ Versuch ${attempt + 1} fehlgeschlagen:`, error);
     }
   }
 
-  if (!latest) return null;
-
-  const rTag = latest.tags.find(t => t[0] === 'r')?.[1];
-  const naddr = rTag || latest.content || null;
-
-  return naddr ? { naddr, authorPubkey: latest.pubkey } : null;
+  console.log(`[Shortlink] ❌ Slug "${slug}" weder im Cache noch auf Relays gefunden`);
+  return null;
 }
 
 /**

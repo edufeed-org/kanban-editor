@@ -35,9 +35,9 @@
             resolvedSlug = slug;
             loadingStep = 'NDK initialisieren...';
 
-            // Warte auf NDK
+            // Warte auf NDK (max 10s statt 5s — initializeNostr lädt auch Boards)
             let attempts = 0;
-            while (!boardStore.ndkReady && attempts < 50) {
+            while (!boardStore.ndkReady && attempts < 100) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
             }
@@ -51,10 +51,10 @@
                 throw new Error('NDK nicht verfügbar');
             }
 
-            // Shortlink-Event von Nostr laden
+            // Shortlink-Event von Nostr laden (mit Retry-Logik in resolveShortlinkBySlug)
             loadingStep = `Kurzlink "${slug}" auf Nostr suchen...`;
 
-            const result = await resolveShortlinkBySlug(slug, ndk);
+            const result = await resolveShortlinkBySlug(slug, ndk, 3);
 
             if (!result) {
                 status = 'not-found';

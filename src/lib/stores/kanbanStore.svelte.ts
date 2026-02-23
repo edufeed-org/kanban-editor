@@ -2578,7 +2578,7 @@ export class BoardStore {
         }
 
         try {
-            const { createShortlinkEvent, createBoardNaddr, checkSlugCollision } = await import('$lib/utils/nostrEvents.js');
+            const { createShortlinkEvent, createBoardNaddr, checkSlugCollision, cacheShortlink } = await import('$lib/utils/nostrEvents.js');
             const { settingsStore } = await import('$lib/stores/settingsStore.svelte.js');
 
             // Guard: Prüfen ob der Slug bereits von einem anderen Board belegt ist.
@@ -2608,12 +2608,19 @@ export class BoardStore {
             // Auf öffentlichen Relays publizieren (Shortlinks müssen auffindbar sein)
             const relays = await event.publish();
 
+            // ✅ Lokalen Cache IMMER befüllen — auch wenn publish fehlschlägt.
+            // So kann der gleiche Browser den Shortlink sofort auflösen,
+            // unabhängig davon ob die Relays Kind 30491 korrekt indexieren.
+            cacheShortlink(slug, naddr, board.author);
+
             if (relays.size === 0) {
-                console.error('[BoardStore] ❌ Shortlink konnte auf keinem Relay publiziert werden');
-                return false;
+                console.warn('[BoardStore] ⚠️ Shortlink auf keinem Relay publiziert – nur lokal gecacht');
+                // Trotzdem true zurückgeben: Shortlink ist im lokalen Cache verfügbar
+                return true;
             }
 
-            console.log(`[BoardStore] ✅ Shortlink "${slug}" publiziert auf ${relays.size} Relay(s)`);
+            const relayUrls = Array.from(relays).map(r => r.url).join(', ');
+            console.log(`[BoardStore] ✅ Shortlink "${slug}" publiziert auf ${relays.size} Relay(s): ${relayUrls}`);
             return true;
         } catch (error) {
             // Kollisionsfehler direkt weiterwerfen — der Caller (ShareDialog)
