@@ -36,8 +36,11 @@
     let linkCopied = $state(false);
     
     // Board-Referenz & Publish-Check
-    let board = $derived(boardStore.data);
-    let isPublished = $derived(board?.publishState === 'published');
+    // boardMeta statt boardStore.data verwenden: boardMeta erzeugt bei jedem
+    // updateTrigger ein NEUES Objekt, sodass $derived die Änderung erkennt.
+    // boardStore.data gibt dieselbe Proxy-Referenz zurück → downstream-$derived
+    // wird nicht re-evaluiert.
+    let isPublished = $derived(boardStore.boardMeta.publishState === 'published');
     
     // Nostr naddr Link State (intern für Shortlink-Generierung)
     let naddrPath = $state(''); // Relativer Pfad: /cardsboard/naddr...
@@ -78,6 +81,8 @@
     
     let userRole = $state<BoardRole>(BoardRole.VIEWER);
     let canInviteEditors = $derived(userRole === BoardRole.OWNER);
+    let canPublish = $derived(userRole === BoardRole.OWNER);
+    let isPublishingBoard = $state(false);
     let showLinkTabs = $derived(mode !== 'editors');
     let showEditorsTab = $derived(mode !== 'links');
     let showTabList = $derived(
@@ -475,6 +480,24 @@
         }
     });
     
+    async function publishBoard() {
+        if (isPublishingBoard) return;
+        isPublishingBoard = true;
+        try {
+            boardStore.setPublishState('published');
+            toast.success('Board veröffentlicht!', {
+                description: 'Du kannst jetzt Links teilen.'
+            });
+            // naddr-Link neu generieren nach Publish
+            await generateNaddrLink();
+        } catch (error) {
+            console.error('Fehler beim Veröffentlichen:', error);
+            toast.error('Fehler beim Veröffentlichen');
+        } finally {
+            isPublishingBoard = false;
+        }
+    }
+    
     // Nostr naddr-Link generieren (intern für Shortlink-Erstellung)
     async function generateNaddrLink() {
         const board = boardStore.data;
@@ -650,7 +673,23 @@
                 <div class="space-y-3">
                     <p class="text-sm text-muted-foreground">
                         {#if !isPublished}
-                            <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor es geteilt werden kann.</span><br/>
+                            <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor es geteilt werden kann.</span>
+                            {#if canPublish}
+                                <Button
+                                    onclick={publishBoard}
+                                    variant="default"
+                                    size="sm"
+                                    class="mt-2 w-full"
+                                    disabled={isPublishingBoard}
+                                >
+                                    {#if isPublishingBoard}
+                                        <LoaderCircleIcon class="mr-2 h-4 w-4 animate-spin" />
+                                        Wird veröffentlicht…
+                                    {:else}
+                                        Jetzt veröffentlichen
+                                    {/if}
+                                </Button>
+                            {/if}
                         {:else}
                             Teile einen kurzen, lesbaren Link zu deinem Board. Kopieren, Öffnen und QR-Code publizieren den Link automatisch.
                         {/if}
@@ -748,6 +787,22 @@
                     <p class="text-sm text-muted-foreground">
                         {#if !isPublished}
                             <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor ein Share-Link generiert werden kann.</span>
+                            {#if canPublish}
+                                <Button
+                                    onclick={publishBoard}
+                                    variant="default"
+                                    size="sm"
+                                    class="mt-2 w-full"
+                                    disabled={isPublishingBoard}
+                                >
+                                    {#if isPublishingBoard}
+                                        <LoaderCircleIcon class="mr-2 h-4 w-4 animate-spin" />
+                                        Wird veröffentlicht…
+                                    {:else}
+                                        Jetzt veröffentlichen
+                                    {/if}
+                                </Button>
+                            {/if}
                         {:else}
                             Teile diesen Link mit anderen Nutzern. Der Link enthält alle Board-Daten 
                             - der Empfänger kann das Board forken (eigene Kopie) oder folgen.
