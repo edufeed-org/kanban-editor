@@ -69,8 +69,15 @@ export class BoardStore {
     
     private initializeBoard(): void {
         const currentBoardId = this.board.id;
+        
+        // ⚠️ FIX: Don't save placeholder board!
+        if (currentBoardId === 'placeholder-board') {
+            console.log('📝 Placeholder board active - nicht speichern');
+            return;
+        }
+        
         if (!this.boardIds.includes(currentBoardId)) {
-            console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
+            console.log('🔥 Erstes Laden: Füge Board zur Liste hinzu:', currentBoardId);
             this.boardIds = [...this.boardIds, currentBoardId];
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
@@ -254,8 +261,17 @@ export class BoardStore {
         const boardIds = BoardStorage.loadBoardIds();
         
         if (boardIds.length === 0) {
-            console.log('📝 Keine Boards gefunden, erstelle Default-Board');
-            return BoardStorage.createDefaultBoard();
+            // ⚠️ FIX: Don't create default board automatically!
+            // Anonymous users should only see demo board (via getAllBoards() → getDemoBoardsForAnonymousUser())
+            // New authenticated users should start with empty board list (can create boards via UI)
+            console.log('📝 Keine Boards gefunden - erstelle Platzhalter-Board');
+            return new Board({
+                id: 'placeholder-board',
+                name: 'Willkommen',
+                description: 'Erstellen Sie Ihr erstes Board oder laden Sie die Demo',
+                author: 'anonymous',
+                columns: []
+            });
         }
         
         const boards = BoardStorage.getAllBoardsMetadata(boardIds);
@@ -278,11 +294,25 @@ export class BoardStore {
             }
         }
         
-        console.log('⚠️ Keine Boards gefunden, erstelle Default-Board');
-        return BoardStorage.createDefaultBoard();
+        // ⚠️ FIX: This should not happen (boards.length > 0 but couldn't load any)
+        // Return placeholder instead of creating default board
+        console.log('⚠️ Boards in list but couldn\'t load any - erstelle Platzhalter');
+        return new Board({
+            id: 'placeholder-board',
+            name: 'Willkommen',
+            description: 'Erstellen Sie Ihr erstes Board oder laden Sie die Demo',
+            author: 'anonymous',
+            columns: []
+        });
     }
 
     private saveToStorage(): void {
+        // ⚠️ FIX: Don't save placeholder board!
+        if (this.board.id === 'placeholder-board') {
+            console.log('⏭️ Skipping save for placeholder board');
+            return;
+        }
+        
         BoardStorage.saveBoard(this.board);
         console.log(`💾 Saved board "${this.board.name}" with lastAccessedAt:`, this.board.lastAccessedAt);
     }
@@ -338,8 +368,8 @@ export class BoardStore {
             return this.getDemoBoardsForAnonymousUser();
         }
         
-        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board explizit ausschließen
-        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board');
+        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board und Placeholder explizit ausschließen
+        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board' && id !== 'placeholder-board');
         const allBoards = BoardStorage.getAllBoardsMetadata(filteredBoardIds);
         
         // 🔍 DEBUG: Log all boards and their authors
@@ -3214,25 +3244,17 @@ export class BoardStore {
         if (shouldReloadFromSource) {
             this.demoBoardLoadInProgress = true; // 🚨 Set flag!
             
-            // ⚠️ CRITICAL FIX: Don't create empty placeholder board!
-            // If we create new Board with columns: [], users see empty board while loading.
-            // Instead: Keep existing demoBoard (has old content) and trigger async reload.
-            // Users see old content during load, then it gets replaced with fresh content.
-            
-            // If no existing board, create placeholder (only happens on first load)
-            if (!demoBoard) {
-                demoBoard = new Board({
-                    id: demoBoardId,
-                    name: '⏳ Demo-Board wird geladen...',
-                    description: 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.',
-                    author: '0000000000000000000000000000000000000000000000000000000000000000',
-                    authorName: 'Demo User',
-                    publishState: 'private',
-                    columns: []
-                });
-                BoardStorage.saveBoard(demoBoard);
-            }
-            // else: Keep existing demoBoard with its content (columns/cards) while loading
+            // Erstelle zunächst ein leeres Platzhalter-Board synchron
+            demoBoard = new Board({
+                id: demoBoardId,
+                name: '⏳ Demo-Board wird geladen...',
+                description: 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.',
+                author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
+                authorName: 'Demo User',
+                publishState: 'private',
+                columns: []
+            });
+            BoardStorage.saveBoard(demoBoard);
             
             // Lade Board asynchron im Hintergrund
             this.loadDemoBoardFromSourceAsync(sourceAddress).then(loadedBoard => {
