@@ -1,4 +1,4 @@
-import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
+import { Board, Card, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../types/sharing.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
@@ -3385,55 +3385,57 @@ export class BoardStore {
         
         console.log(`✅ ${cardEventArray.length} Card Events gefunden`);
         
-        // Cards zum Board hinzufügen
-        let cardsAdded = 0;
+        if (cardEventArray.length === 0) return board;
+
+        // ⚠️ CRITICAL: Reuse exact logic from working [naddr]/+page.svelte
+        // DON'T use addCard() - it does array reassignment which doesn't work before board is in store!
+        // Instead: Create Card instance and push directly to column.cards array
         for (const cardEvent of cardEventArray) {
             try {
-                const cardProps = nostrEventToCard(cardEvent as any) as any;
-                if (!cardProps.id) {
-                    console.warn('⚠️ Card ohne ID übersprungen');
-                    continue;
-                }
-                
-                console.log(`🃏 Card: "${cardProps.heading}" → columnId: ${cardProps.columnId}, columnName: ${cardProps.columnName}`);
-                
-                // Finde Spalte (bevorzuge columnId, dann columnName)
-                let column = board.columns.find(c => c.id === cardProps.columnId);
-                
-                if (!column && cardProps.columnName) {
-                    // Fallback: Versuche nach Name zu finden
-                    column = board.columns.find(c => c.name === cardProps.columnName);
-                }
+                const cardProps = nostrEventToCard(cardEvent as any) as CardProps & { columnName?: string };
+                if (!cardProps.id) continue;
+
+                // Finde oder erstelle Spalte (columnName kommt via @ts-ignore aus nostrEventToCard)
+                const columnName = cardProps.columnName || 'To Do';
+                let column = board.columns.find(c => c.name === columnName);
                 
                 if (!column) {
-                    // Spalte existiert nicht, erstelle sie
-                    const columnName = cardProps.columnName || 'To Do';
-                    const columnId = cardProps.columnId || generateDTag();
-                    column = board.addColumn({ 
-                        id: columnId,
-                        name: columnName 
-                    });
-                    console.log(`📁 Spalte erstellt: ${columnName} (ID: ${columnId})`);
+                    // Spalte existiert nicht im Board Event, erstelle sie
+                    column = board.addColumn({ name: columnName });
+                    console.log(`📁 Spalte erstellt: ${columnName}`);
                 }
-                
-                // Card mit Demo-Attribution hinzufügen
-                column.addCard({
-                    ...cardProps,
-                    author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
-                    authorName: 'Demo User'
-                });
-                cardsAdded++;
+
+                // Prüfe ob Card bereits existiert
+                const existingCard = column.findCard(cardProps.id);
+                if (existingCard) {
+                    // Update existierende Card (LWW)
+                    const existingTime = existingCard.updatedAt ? new Date(existingCard.updatedAt).getTime() : 0;
+                    const newTime = cardProps.updatedAt ? new Date(cardProps.updatedAt).getTime() : 0;
+                    
+                    if (newTime > existingTime) {
+                        existingCard.update(cardProps);
+                    }
+                } else {
+                    // ⚠️ CRITICAL: Use same pattern as [naddr]/+page.svelte
+                    // Create Card and push to array directly (NOT addCard which does reassignment)
+                    const card = new Card({
+                        ...cardProps,
+                        author: '0000000000000000000000000000000000000000000000000000000000000000',
+                        authorName: 'Demo User'
+                    });
+                    column.cards.push(card);
+                }
             } catch (error) {
-                console.error('❌ Fehler beim Hinzufügen einer Card:', error);
+                console.warn('⚠️ Fehler beim Verarbeiten von Card Event:', error);
             }
         }
-        
-        console.log(`✅ ${cardsAdded} von ${cardEventArray.length} Cards erfolgreich hinzugefügt`);
-        
-        // ⚡ CRITICAL: Sortiere Cards nach rank pro Spalte!
-        // ndk.fetchEvents() liefert keine garantierte Reihenfolge.
-        for (const col of board.columns) {
-            col.cards.sort((a: any, b: any) => {
+
+        // ⚡ CRITICAL: Sortiere Cards nach Rank pro Spalte!
+        // ndk.fetchEvents() liefert ein Set ohne garantierte Reihenfolge.
+        // Ohne Sortierung hängt die Card-Reihenfolge davon ab, welcher Relay
+        // zuerst antwortet → unterschiedliche Reihenfolge auf verschiedenen Browsern.
+        for (const column of board.columns) {
+            column.cards.sort((a: any, b: any) => {
                 const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
                 const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
                 return rankA - rankB;
