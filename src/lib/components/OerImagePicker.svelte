@@ -83,15 +83,12 @@
 <div class="oer-picker-container">
 	<oer-search
 		bind:this={searchEl}
-		language={language}
+	    language={language}
 		locked-type="image"
-		show-type-filter={false}
-		show-source-filter={true}
-		available-sources={availableSources}
 		page-size={12}
 	>
 		<oer-list bind:this={listEl} {language}></oer-list>
-	    <oer-load-more bind:this={loadMoreElement} language="de"></oer-load-more>
+	    <oer-load-more bind:this={loadMoreElement} language={language}></oer-load-more>
 	</oer-search>
 </div>
 
