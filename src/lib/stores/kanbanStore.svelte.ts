@@ -261,22 +261,68 @@ export class BoardStore {
         const boardIds = BoardStorage.loadBoardIds();
         
         if (boardIds.length === 0) {
-            // ⚠️ FIX: Don't create default board automatically!
-            // Anonymous users should only see demo board (via getAllBoards() → getDemoBoardsForAnonymousUser())
-            // New authenticated users should start with empty board list (can create boards via UI)
-            console.log('📝 Keine Boards gefunden - erstelle Platzhalter-Board');
-            const placeholder = new Board({
-                id: 'placeholder-board',
-                name: 'Willkommen',
-                description: 'Erstellen Sie Ihr erstes Board oder laden Sie die Demo',
-                author: 'anonymous',
-                columns: []
-            });
-            // Add default columns for tests compatibility
-            placeholder.addColumn({ name: 'To Do', color: 'blue' });
-            placeholder.addColumn({ name: 'In Progress', color: 'orange' });
-            placeholder.addColumn({ name: 'Done', color: 'green' });
-            return placeholder;
+            // ⚠️ FIX: Anonymous users should load demo board directly!
+            // Authenticated users get placeholder to create their first board
+            const currentUserPubkey = this.getCurrentUserPubkey();
+            const isAnonymous = !currentUserPubkey;
+            
+            if (isAnonymous) {
+                // Anonymous user: Load demo board directly
+                console.log('📝 Keine Boards gefunden - lade Demo-Board für anonymen Benutzer');
+                const demoBoardId = 'demo-board';
+                let demoBoard = BoardStorage.loadBoard(demoBoardId);
+                
+                if (!demoBoard) {
+                    // Demo board doesn't exist yet - create it
+                    demoBoard = this.createDefaultDemoBoard();
+                    BoardStorage.saveBoard(demoBoard);
+                }
+                
+                // Check if we should load from configured source
+                const sourceAddress = settingsStore.settings.demoBoardSourceAddress;
+                if (sourceAddress && (
+                    demoBoard.name === '🎯 Demo-Board - Testen Sie die App!' || 
+                    demoBoard.name === '⏳ Demo-Board wird geladen...'
+                )) {
+                    // Set loading placeholder
+                    demoBoard.name = '⏳ Demo-Board wird geladen...';
+                    demoBoard.description = 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.';
+                    BoardStorage.saveBoard(demoBoard);
+                    
+                    // Load asynchronously in background
+                    this.demoBoardLoadInProgress = true;
+                    this.loadDemoBoardFromSourceAsync(sourceAddress).then(loadedBoard => {
+                        if (loadedBoard) {
+                            BoardStorage.saveBoard(loadedBoard);
+                            this.board = loadedBoard;
+                            this._columnOrder = loadedBoard.columns.map(c => c.id);
+                            this.demoBoardLoadInProgress = false;
+                            this.triggerUpdate();
+                        } else {
+                            this.demoBoardLoadInProgress = false;
+                        }
+                    }).catch(() => {
+                        this.demoBoardLoadInProgress = false;
+                    });
+                }
+                
+                return demoBoard;
+            } else {
+                // Authenticated user: Create placeholder to prompt board creation
+                console.log('📝 Keine Boards gefunden - erstelle Platzhalter-Board für authentifizierten Benutzer');
+                const placeholder = new Board({
+                    id: 'placeholder-board',
+                    name: 'Willkommen',
+                    description: 'Erstellen Sie Ihr erstes Board',
+                    author: currentUserPubkey || 'anonymous',
+                    columns: []
+                });
+                // Add default columns for tests compatibility
+                placeholder.addColumn({ name: 'To Do', color: 'blue' });
+                placeholder.addColumn({ name: 'In Progress', color: 'orange' });
+                placeholder.addColumn({ name: 'Done', color: 'green' });
+                return placeholder;
+            }
         }
         
         const boards = BoardStorage.getAllBoardsMetadata(boardIds);
@@ -319,7 +365,6 @@ export class BoardStore {
         // - Different column structure than default (3 cols: To Do, In Progress, Done)
         // then it's been modified and should be saved
         if (this.board.id === 'placeholder-board' && 
-            this.board.author === 'anonymous' && 
             this.board.name === 'Willkommen' &&
             (!this.board.maintainers || this.board.maintainers.length === 0) &&
             this.board.columns.length === 3 &&
