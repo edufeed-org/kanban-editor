@@ -7,6 +7,7 @@
 	import * as Avatar from "$lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
+	import { goto } from "$app/navigation";
 	import { settingsStore } from "$lib/stores/settingsStore.svelte.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
@@ -53,6 +54,11 @@
 		// Invalidate demo board cache so anonymous users get fresh board from source
 		boardStore.invalidateDemoBoardCache();
 		loginDialogOpen = false;
+		
+		// Redirect to main cardsboard if on naddr path
+		if (typeof window !== 'undefined' && window.location.pathname.includes('/cardsboard/naddr')) {
+			goto('/cardsboard');
+		}
 	}
 
 	async function handleDemoSession() {

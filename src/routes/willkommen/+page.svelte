@@ -41,6 +41,9 @@
 		// Invalidate demo board cache so anonymous users get fresh board from source
 		boardStore.invalidateDemoBoardCache();
 		loginDialogOpen = false;
+		
+		// Redirect to cardsboard after logout
+		goto('/cardsboard');
 	}
 
 	function handleGoToBoards() {
