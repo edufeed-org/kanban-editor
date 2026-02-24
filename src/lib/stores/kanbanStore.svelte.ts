@@ -4,6 +4,7 @@ import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
 import { initializeSyncManager } from './syncManager.svelte.js';
 import { generateDTag } from '../utils/idGenerator.js';
+import { loadBoardFromNostr } from '../utils/boardLoader.js';
 import type NDK from '@nostr-dev-kit/ndk';
 import type { NDKKind } from '@nostr-dev-kit/ndk';
 import {
@@ -3290,10 +3291,21 @@ export class BoardStore {
                         this.updateTrigger++; // Force derived recalculation
                     }
                 } else {
-                    this.demoBoardLoadInProgress = false;
+                    // ❌ Loading failed - create default demo board as fallback
+                    console.warn('⚠️ Loading demo board from source failed, using default');
+                    const defaultBoard = this.createDefaultDemoBoard();
+                    BoardStorage.saveBoard(defaultBoard);
+                    
+                    // 🎯 WICHTIG: Fallback-Board AKTIV laden
+                    this.board = defaultBoard;
+                    this._columnOrder = defaultBoard.columns.map(c => c.id);
+                    
+                    this.demoBoardLoadInProgress = false; // 🚨 Clear flag!
+                    this.triggerUpdate();
                 }
             }).catch(error => {
                 // Bei Fehler: Erstelle Standard-Demo-Board
+                console.error('❌ Error loading demo board:', error);
                 const defaultBoard = this.createDefaultDemoBoard();
                 BoardStorage.saveBoard(defaultBoard);
                 
@@ -3349,17 +3361,19 @@ export class BoardStore {
     
     /**
      * Lädt ein Board von einer Nostr-Adresse (naddr) und kopiert es als Demo-Board
+     * 
+     * Uses the shared boardLoader utility to ensure consistent behavior with viewer mode.
+     * The only difference is that new IDs are generated for board, columns, and cards.
      */
     private async loadBoardFromSourceAddress(naddrOrId: string): Promise<Board | null> {
         // Import nostr utilities
         const { nip19 } = await import('nostr-tools');
-        const { nostrEventToBoard, nostrEventToCard } = await import('$lib/utils/nostrEvents.js');
         
         let pubkey: string;
         let identifier: string;
-        let relays: string[] | undefined;
+        let relays: string[] = [];
         
-        // Decode naddr wenn es eine ist
+        // Decode naddr
         if (naddrOrId.startsWith('naddr1')) {
             try {
                 const decoded = nip19.decode(naddrOrId);
@@ -3370,7 +3384,7 @@ export class BoardStore {
                 
                 pubkey = decoded.data.pubkey;
                 identifier = decoded.data.identifier;
-                relays = decoded.data.relays;
+                relays = decoded.data.relays || [];
                 
                 console.log('📍 naddr dekodiert:', { pubkey: pubkey.slice(0, 8) + '...', identifier, relays });
             } catch (error) {
@@ -3389,125 +3403,24 @@ export class BoardStore {
             return null;
         }
         
-        // Zu Relays verbinden falls angegeben
-        if (relays && relays.length > 0) {
-            for (const relayUrl of relays) {
-                try {
-                    const relay = ndk.pool.getRelay(relayUrl);
-                    if (relay && !relay.connectivity.status) {
-                        await relay.connect();
-                        console.log(`🔌 Relay verbunden: ${relayUrl}`);
-                    }
-                } catch (error) {
-                    console.warn(`⚠️ Konnte nicht zu Relay verbinden: ${relayUrl}`, error);
-                }
+        // Use shared board loading utility with demo board options
+        // This ensures exact same logic as viewing a board, but with new IDs
+        const board = await loadBoardFromNostr(
+            ndk,
+            pubkey,
+            identifier,
+            relays,
+            {
+                generateNewIds: true, // Generate new IDs for demo board copy
+                overrideBoardId: 'demo-board',
+                overrideAuthor: '0000000000000000000000000000000000000000000000000000000000000000',
+                overrideAuthorName: 'Demo User'
             }
-            
-            // Kurz warten damit Relays verbinden können
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        );
         
-        // Board Event laden
-        const filter = {
-            kinds: [30301],
-            authors: [pubkey],
-            '#d': [identifier]
-        };
-        
-        console.log('🔍 Lade Board Event:', filter);
-        const boardEvent = await ndk.fetchEvent(filter);
-        
-        if (!boardEvent) {
-            console.error('❌ Board Event nicht gefunden');
+        if (!board) {
+            console.error('❌ Konnte Demo-Board nicht laden');
             return null;
-        }
-        
-        console.log('✅ Board Event gefunden:', boardEvent.id);
-        
-        // Board aus Event konvertieren
-        const boardProps = nostrEventToBoard(boardEvent);
-        
-        console.log(`📋 Board hat ${boardProps.columns?.length || 0} Spalten:`, 
-            boardProps.columns?.map(c => `${c.name} (${c.id})`) || []);
-        
-        // Board mit neuer Demo-ID erstellen
-        // Use a valid dummy pubkey (64 zeros) instead of 'demo' to avoid Nostr validation errors
-        const board = new Board({
-            ...boardProps,
-            id: 'demo-board', // ⚠️ WICHTIG: Neue ID für Demo-Board
-            author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
-            authorName: 'Demo User',
-            publishState: 'private'
-        });
-        
-        // Cards für das Board laden
-        const aTagValue = `30301:${pubkey}:${identifier}`;
-        const cardFilter = {
-            kinds: [30302],
-            '#a': [aTagValue]
-        };
-        
-        console.log('🔍 Lade Card Events für:', aTagValue);
-        const cardEvents = await ndk.fetchEvents(cardFilter);
-        const cardEventArray = Array.from(cardEvents);
-        
-        console.log(`✅ ${cardEventArray.length} Card Events gefunden`);
-        
-        if (cardEventArray.length === 0) return board;
-
-        // ⚠️ CRITICAL: Reuse exact logic from working [naddr]/+page.svelte
-        // DON'T use addCard() - it does array reassignment which doesn't work before board is in store!
-        // Instead: Create Card instance and push directly to column.cards array
-        for (const cardEvent of cardEventArray) {
-            try {
-                const cardProps = nostrEventToCard(cardEvent as any) as CardProps & { columnName?: string };
-                if (!cardProps.id) continue;
-
-                // Finde oder erstelle Spalte (columnName kommt via @ts-ignore aus nostrEventToCard)
-                const columnName = cardProps.columnName || 'To Do';
-                let column = board.columns.find(c => c.name === columnName);
-                
-                if (!column) {
-                    // Spalte existiert nicht im Board Event, erstelle sie
-                    column = board.addColumn({ name: columnName });
-                    console.log(`📁 Spalte erstellt: ${columnName}`);
-                }
-
-                // Prüfe ob Card bereits existiert
-                const existingCard = column.findCard(cardProps.id);
-                if (existingCard) {
-                    // Update existierende Card (LWW)
-                    const existingTime = existingCard.updatedAt ? new Date(existingCard.updatedAt).getTime() : 0;
-                    const newTime = cardProps.updatedAt ? new Date(cardProps.updatedAt).getTime() : 0;
-                    
-                    if (newTime > existingTime) {
-                        existingCard.update(cardProps);
-                    }
-                } else {
-                    // ⚠️ CRITICAL: Use same pattern as [naddr]/+page.svelte
-                    // Create Card and push to array directly (NOT addCard which does reassignment)
-                    const card = new Card({
-                        ...cardProps,
-                        author: '0000000000000000000000000000000000000000000000000000000000000000',
-                        authorName: 'Demo User'
-                    });
-                    column.cards.push(card);
-                }
-            } catch (error) {
-                console.warn('⚠️ Fehler beim Verarbeiten von Card Event:', error);
-            }
-        }
-
-        // ⚡ CRITICAL: Sortiere Cards nach Rank pro Spalte!
-        // ndk.fetchEvents() liefert ein Set ohne garantierte Reihenfolge.
-        // Ohne Sortierung hängt die Card-Reihenfolge davon ab, welcher Relay
-        // zuerst antwortet → unterschiedliche Reihenfolge auf verschiedenen Browsern.
-        for (const column of board.columns) {
-            column.cards.sort((a: any, b: any) => {
-                const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
-                const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
-                return rankA - rankB;
-            });
         }
         
         console.log(`✅ Demo-Board erstellt mit ${board.columns.length} Spalten und ${board.columns.reduce((sum, col) => sum + col.cards.length, 0)} Karten`);
