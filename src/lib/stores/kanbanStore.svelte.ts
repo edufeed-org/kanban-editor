@@ -3178,6 +3178,24 @@ export class BoardStore {
     // ============================================================================
     
     /**
+     * Invalidiert den Demo-Board Cache und erzwingt Neuladen beim nächsten Zugriff
+     * Wird z.B. beim Logout aufgerufen, um sicherzustellen dass anonyme User
+     * immer ein frisches Demo-Board von der Quelle erhalten
+     */
+    public invalidateDemoBoardCache(): void {
+        const demoBoardId = 'demo-board';
+        // Setze Demo-Board auf Platzhalter-Name, um Reload zu triggern
+        const demoBoard = BoardStorage.loadBoard(demoBoardId);
+        if (demoBoard) {
+            demoBoard.name = '⏳ Demo-Board wird geladen...';
+            BoardStorage.saveBoard(demoBoard);
+            console.log('🔄 Demo-Board Cache invalidiert - wird beim nächsten Zugriff neu geladen');
+        }
+        // Reset load-in-progress flag falls es hängen geblieben ist
+        this.demoBoardLoadInProgress = false;
+    }
+
+    /**
      * Erstellt oder lädt Demo-Board für anonyme Benutzer
      */
     private getDemoBoardsForAnonymousUser(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
@@ -3196,17 +3214,25 @@ export class BoardStore {
         if (shouldReloadFromSource) {
             this.demoBoardLoadInProgress = true; // 🚨 Set flag!
             
-            // Erstelle zunächst ein leeres Platzhalter-Board synchron
-            demoBoard = new Board({
-                id: demoBoardId,
-                name: '⏳ Demo-Board wird geladen...',
-                description: 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.',
-                author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
-                authorName: 'Demo User',
-                publishState: 'private',
-                columns: []
-            });
-            BoardStorage.saveBoard(demoBoard);
+            // ⚠️ CRITICAL FIX: Don't create empty placeholder board!
+            // If we create new Board with columns: [], users see empty board while loading.
+            // Instead: Keep existing demoBoard (has old content) and trigger async reload.
+            // Users see old content during load, then it gets replaced with fresh content.
+            
+            // If no existing board, create placeholder (only happens on first load)
+            if (!demoBoard) {
+                demoBoard = new Board({
+                    id: demoBoardId,
+                    name: '⏳ Demo-Board wird geladen...',
+                    description: 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.',
+                    author: '0000000000000000000000000000000000000000000000000000000000000000',
+                    authorName: 'Demo User',
+                    publishState: 'private',
+                    columns: []
+                });
+                BoardStorage.saveBoard(demoBoard);
+            }
+            // else: Keep existing demoBoard with its content (columns/cards) while loading
             
             // Lade Board asynchron im Hintergrund
             this.loadDemoBoardFromSourceAsync(sourceAddress).then(loadedBoard => {
@@ -3245,12 +3271,15 @@ export class BoardStore {
             BoardStorage.saveBoard(demoBoard);
         }
         
-        // 🎯 WICHTIG: Immer frisch aus storage laden um neueste Version zu haben
-        // (falls async update stattgefunden hat)
-        const freshDemoBoard = BoardStorage.loadBoard(demoBoardId);
-        if (freshDemoBoard) {
-            demoBoard = freshDemoBoard;
+        // 🎯 WICHTIG: Nur frisch aus storage laden wenn NICHT gerade geladen wird
+        // Wenn async loading in progress ist, würden wir sonst das leere Platzhalter-Board zurückgeben!
+        if (!this.demoBoardLoadInProgress) {
+            const freshDemoBoard = BoardStorage.loadBoard(demoBoardId);
+            if (freshDemoBoard) {
+                demoBoard = freshDemoBoard;
+            }
         }
+        // else: Keep existing demoBoard reference while async loading completes
         
         return [{
             id: demoBoard.id,

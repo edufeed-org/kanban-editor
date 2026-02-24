@@ -9,6 +9,7 @@
 	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { settingsStore } from "$lib/stores/settingsStore.svelte.js";
 	import { authStore } from "$lib/stores/authStore.svelte.js";
+	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 	import LoginDialog from "./LoginDialog.svelte";
 	import SettingsDialog from "./SettingsDialog.svelte";
 	import SettingsPanel from "$lib/components/settings/SettingsPanel.svelte";
@@ -49,6 +50,8 @@
 
 	async function handleLogout() {
 		authStore.logout();
+		// Invalidate demo board cache so anonymous users get fresh board from source
+		boardStore.invalidateDemoBoardCache();
 		loginDialogOpen = false;
 	}
 
