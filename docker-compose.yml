@@ -1,18 +1,18 @@
 services:
   # If the app needs to be started via docker compose, uncomment these lines of code and add a Dockerfile 
-  # app:
-  #   tty: true
-  #   stdin_open: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     target: development
-  #   volumes:
-  #     - .:/home/node/app
-  #   ports:
-  #     - "5173:5173"
-  #   environment:
-  #     - NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
+  app:
+    tty: true
+    stdin_open: true
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - .:/home/node/app
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN}
   nostr-relay:
     image: scsibug/nostr-rs-relay:latest
     ports:
