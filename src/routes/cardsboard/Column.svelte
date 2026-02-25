@@ -466,7 +466,6 @@
 			<div 
 				class="flex items-center gap-1" 
 				role="toolbar" 
-				tabindex="0"
 				aria-label="Spalten-Aktionen"
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
@@ -475,11 +474,20 @@
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
 					<Popover.Trigger 
-						title="Spalten-Optionen"
+						title="Spalten-Optionen (Leertaste zum Öffnen)"
 						class="popover-trigger-ignore inline-flex items-center justify-center h-8 w-8 btn transition-all"
 						onclick={(e) => {
 							console.log('🖱️ Popover trigger clicked');
 							e.stopPropagation();
+						}}
+						onkeydown={(e) => {
+							// Toggle popover with space key
+							if (e.key === ' ' || e.key === 'Spacebar') {
+								e.preventDefault();
+								e.stopPropagation();
+								popoverOpen = !popoverOpen;
+								console.log('⌨️  Popover toggled with space key:', popoverOpen);
+							}
 						}}
 					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
