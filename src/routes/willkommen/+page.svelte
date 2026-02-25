@@ -7,6 +7,7 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { Badge } from "$lib/components/ui/badge/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
+	import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
@@ -37,7 +38,12 @@
 
 	async function handleLogout() {
 		authStore.logout();
+		// Invalidate demo board cache so anonymous users get fresh board from source
+		boardStore.invalidateDemoBoardCache();
 		loginDialogOpen = false;
+		
+		// Redirect to cardsboard after logout
+		goto('/cardsboard');
 	}
 
 	function handleGoToBoards() {

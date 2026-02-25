@@ -1,4 +1,4 @@
-import { Board, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
+import { Board, Card, Chat, type CardProps, type ColumnProps, type BoardProps } from '../classes/BoardModel.js';
 import { BoardRole, type BoardShare } from '../types/sharing.js';
 import { authStore } from './authStore.svelte.js';
 import { settingsStore } from './settingsStore.svelte.js';
@@ -69,8 +69,15 @@ export class BoardStore {
     
     private initializeBoard(): void {
         const currentBoardId = this.board.id;
+        
+        // ⚠️ FIX: Don't save placeholder board!
+        if (currentBoardId === 'placeholder-board') {
+            console.log('📝 Placeholder board active - nicht speichern');
+            return;
+        }
+        
         if (!this.boardIds.includes(currentBoardId)) {
-            console.log('🔥 Erstes Laden: Füge Default Board zur Liste hinzu:', currentBoardId);
+            console.log('🔥 Erstes Laden: Füge Board zur Liste hinzu:', currentBoardId);
             this.boardIds = [...this.boardIds, currentBoardId];
             // BoardStorage.saveBoardIds() removed - deprecated, auto-discovered from localStorage
             this.saveToStorage();
@@ -254,8 +261,68 @@ export class BoardStore {
         const boardIds = BoardStorage.loadBoardIds();
         
         if (boardIds.length === 0) {
-            console.log('📝 Keine Boards gefunden, erstelle Default-Board');
-            return BoardStorage.createDefaultBoard();
+            // ⚠️ FIX: Anonymous users should load demo board directly!
+            // Authenticated users get placeholder to create their first board
+            const currentUserPubkey = this.getCurrentUserPubkey();
+            const isAnonymous = !currentUserPubkey;
+            
+            if (isAnonymous) {
+                // Anonymous user: Load demo board directly
+                console.log('📝 Keine Boards gefunden - lade Demo-Board für anonymen Benutzer');
+                const demoBoardId = 'demo-board';
+                let demoBoard = BoardStorage.loadBoard(demoBoardId);
+                
+                if (!demoBoard) {
+                    // Demo board doesn't exist yet - create it
+                    demoBoard = this.createDefaultDemoBoard();
+                    BoardStorage.saveBoard(demoBoard);
+                }
+                
+                // Check if we should load from configured source
+                const sourceAddress = settingsStore.settings.demoBoardSourceAddress;
+                if (sourceAddress && (
+                    demoBoard.name === '🎯 Demo-Board - Testen Sie die App!' || 
+                    demoBoard.name === '⏳ Demo-Board wird geladen...'
+                )) {
+                    // Set loading placeholder
+                    demoBoard.name = '⏳ Demo-Board wird geladen...';
+                    demoBoard.description = 'Das Demo-Board wird von der konfigurierten Quelle geladen. Bitte warten Sie einen Moment.';
+                    BoardStorage.saveBoard(demoBoard);
+                    
+                    // Load asynchronously in background
+                    this.demoBoardLoadInProgress = true;
+                    this.loadDemoBoardFromSourceAsync(sourceAddress).then(loadedBoard => {
+                        if (loadedBoard) {
+                            BoardStorage.saveBoard(loadedBoard);
+                            this.board = loadedBoard;
+                            this._columnOrder = loadedBoard.columns.map(c => c.id);
+                            this.demoBoardLoadInProgress = false;
+                            this.triggerUpdate();
+                        } else {
+                            this.demoBoardLoadInProgress = false;
+                        }
+                    }).catch(() => {
+                        this.demoBoardLoadInProgress = false;
+                    });
+                }
+                
+                return demoBoard;
+            } else {
+                // Authenticated user: Create placeholder to prompt board creation
+                console.log('📝 Keine Boards gefunden - erstelle Platzhalter-Board für authentifizierten Benutzer');
+                const placeholder = new Board({
+                    id: 'placeholder-board',
+                    name: 'Willkommen',
+                    description: 'Erstellen Sie Ihr erstes Board',
+                    author: currentUserPubkey || 'anonymous',
+                    columns: []
+                });
+                // Add default columns for tests compatibility
+                placeholder.addColumn({ name: 'To Do', color: 'blue' });
+                placeholder.addColumn({ name: 'In Progress', color: 'orange' });
+                placeholder.addColumn({ name: 'Done', color: 'green' });
+                return placeholder;
+            }
         }
         
         const boards = BoardStorage.getAllBoardsMetadata(boardIds);
@@ -278,11 +345,36 @@ export class BoardStore {
             }
         }
         
-        console.log('⚠️ Keine Boards gefunden, erstelle Default-Board');
-        return BoardStorage.createDefaultBoard();
+        // ⚠️ FIX: This should not happen (boards.length > 0 but couldn't load any)
+        // Return placeholder instead of creating default board
+        console.log('⚠️ Boards in list but couldn\'t load any - erstelle Platzhalter');
+        return new Board({
+            id: 'placeholder-board',
+            name: 'Willkommen',
+            description: 'Erstellen Sie Ihr erstes Board oder laden Sie die Demo',
+            author: 'anonymous',
+            columns: []
+        });
     }
 
     private saveToStorage(): void {
+        // ⚠️ FIX: Don't save placeholder board UNLESS it has been modified with real data
+        // A pristine placeholder board isn't worth saving, but if it has:
+        // - Different name, OR
+        // - Maintainers, OR  
+        // - Different column structure than default (3 cols: To Do, In Progress, Done)
+        // then it's been modified and should be saved
+        if (this.board.id === 'placeholder-board' && 
+            this.board.name === 'Willkommen' &&
+            (!this.board.maintainers || this.board.maintainers.length === 0) &&
+            this.board.columns.length === 3 &&
+            this.board.columns[0].name === 'To Do' &&
+            this.board.columns[1].name === 'In Progress' &&
+            this.board.columns[2].name === 'Done') {
+            console.log('⏭️ Skipping save for unmodified placeholder board');
+            return;
+        }
+        
         BoardStorage.saveBoard(this.board);
         console.log(`💾 Saved board "${this.board.name}" with lastAccessedAt:`, this.board.lastAccessedAt);
     }
@@ -338,8 +430,8 @@ export class BoardStore {
             return this.getDemoBoardsForAnonymousUser();
         }
         
-        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board explizit ausschließen
-        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board');
+        // ⚡ FIX: Authentifizierte Benutzer - Demo-Board und Placeholder explizit ausschließen
+        const filteredBoardIds = this.boardIds.filter(id => id !== 'demo-board' && id !== 'placeholder-board');
         const allBoards = BoardStorage.getAllBoardsMetadata(filteredBoardIds);
         
         // 🔍 DEBUG: Log all boards and their authors
@@ -3178,6 +3270,24 @@ export class BoardStore {
     // ============================================================================
     
     /**
+     * Invalidiert den Demo-Board Cache und erzwingt Neuladen beim nächsten Zugriff
+     * Wird z.B. beim Logout aufgerufen, um sicherzustellen dass anonyme User
+     * immer ein frisches Demo-Board von der Quelle erhalten
+     */
+    public invalidateDemoBoardCache(): void {
+        const demoBoardId = 'demo-board';
+        // Setze Demo-Board auf Platzhalter-Name, um Reload zu triggern
+        const demoBoard = BoardStorage.loadBoard(demoBoardId);
+        if (demoBoard) {
+            demoBoard.name = '⏳ Demo-Board wird geladen...';
+            BoardStorage.saveBoard(demoBoard);
+            console.log('🔄 Demo-Board Cache invalidiert - wird beim nächsten Zugriff neu geladen');
+        }
+        // Reset load-in-progress flag falls es hängen geblieben ist
+        this.demoBoardLoadInProgress = false;
+    }
+
+    /**
      * Erstellt oder lädt Demo-Board für anonyme Benutzer
      */
     private getDemoBoardsForAnonymousUser(): Array<{ id: string; name: string; description?: string; createdAt: number; updatedAt?: number; lastAccessed?: number; hasUnseenChanges?: boolean }> {
@@ -3245,12 +3355,15 @@ export class BoardStore {
             BoardStorage.saveBoard(demoBoard);
         }
         
-        // 🎯 WICHTIG: Immer frisch aus storage laden um neueste Version zu haben
-        // (falls async update stattgefunden hat)
-        const freshDemoBoard = BoardStorage.loadBoard(demoBoardId);
-        if (freshDemoBoard) {
-            demoBoard = freshDemoBoard;
+        // 🎯 WICHTIG: Nur frisch aus storage laden wenn NICHT gerade geladen wird
+        // Wenn async loading in progress ist, würden wir sonst das leere Platzhalter-Board zurückgeben!
+        if (!this.demoBoardLoadInProgress) {
+            const freshDemoBoard = BoardStorage.loadBoard(demoBoardId);
+            if (freshDemoBoard) {
+                demoBoard = freshDemoBoard;
+            }
         }
+        // else: Keep existing demoBoard reference while async loading completes
         
         return [{
             id: demoBoard.id,
@@ -3359,6 +3472,9 @@ export class BoardStore {
         // Board aus Event konvertieren
         const boardProps = nostrEventToBoard(boardEvent);
         
+        console.log(`📋 Board hat ${boardProps.columns?.length || 0} Spalten:`, 
+            boardProps.columns?.map(c => `${c.name} (${c.id})`) || []);
+        
         // Board mit neuer Demo-ID erstellen
         // Use a valid dummy pubkey (64 zeros) instead of 'demo' to avoid Nostr validation errors
         const board = new Board({
@@ -3382,37 +3498,57 @@ export class BoardStore {
         
         console.log(`✅ ${cardEventArray.length} Card Events gefunden`);
         
-        // Cards zum Board hinzufügen
+        if (cardEventArray.length === 0) return board;
+
+        // ⚠️ CRITICAL: Reuse exact logic from working [naddr]/+page.svelte
+        // DON'T use addCard() - it does array reassignment which doesn't work before board is in store!
+        // Instead: Create Card instance and push directly to column.cards array
         for (const cardEvent of cardEventArray) {
             try {
-                const cardProps = nostrEventToCard(cardEvent as any) as any;
+                const cardProps = nostrEventToCard(cardEvent as any) as CardProps & { columnName?: string };
                 if (!cardProps.id) continue;
-                
-                // Finde Spalte
+
+                // Finde oder erstelle Spalte (columnName kommt via @ts-ignore aus nostrEventToCard)
                 const columnName = cardProps.columnName || 'To Do';
                 let column = board.columns.find(c => c.name === columnName);
                 
                 if (!column) {
-                    // Spalte existiert nicht, erstelle sie
+                    // Spalte existiert nicht im Board Event, erstelle sie
                     column = board.addColumn({ name: columnName });
                     console.log(`📁 Spalte erstellt: ${columnName}`);
                 }
-                
-                // Card mit Demo-Attribution hinzufügen
-                column.addCard({
-                    ...cardProps,
-                    author: '0000000000000000000000000000000000000000000000000000000000000000', // Valid hex pubkey
-                    authorName: 'Demo User'
-                });
+
+                // Prüfe ob Card bereits existiert
+                const existingCard = column.findCard(cardProps.id);
+                if (existingCard) {
+                    // Update existierende Card (LWW)
+                    const existingTime = existingCard.updatedAt ? new Date(existingCard.updatedAt).getTime() : 0;
+                    const newTime = cardProps.updatedAt ? new Date(cardProps.updatedAt).getTime() : 0;
+                    
+                    if (newTime > existingTime) {
+                        existingCard.update(cardProps);
+                    }
+                } else {
+                    // ⚠️ CRITICAL: Use same pattern as [naddr]/+page.svelte
+                    // Create Card and push to array directly (NOT addCard which does reassignment)
+                    const card = new Card({
+                        ...cardProps,
+                        author: '0000000000000000000000000000000000000000000000000000000000000000',
+                        authorName: 'Demo User'
+                    });
+                    column.cards.push(card);
+                }
             } catch (error) {
-                console.warn('⚠️ Fehler beim Hinzufügen einer Card:', error);
+                console.warn('⚠️ Fehler beim Verarbeiten von Card Event:', error);
             }
         }
-        
-        // ⚡ CRITICAL: Sortiere Cards nach rank pro Spalte!
-        // ndk.fetchEvents() liefert keine garantierte Reihenfolge.
-        for (const col of board.columns) {
-            col.cards.sort((a: any, b: any) => {
+
+        // ⚡ CRITICAL: Sortiere Cards nach Rank pro Spalte!
+        // ndk.fetchEvents() liefert ein Set ohne garantierte Reihenfolge.
+        // Ohne Sortierung hängt die Card-Reihenfolge davon ab, welcher Relay
+        // zuerst antwortet → unterschiedliche Reihenfolge auf verschiedenen Browsern.
+        for (const column of board.columns) {
+            column.cards.sort((a: any, b: any) => {
                 const rankA = a.rank ?? Number.MAX_SAFE_INTEGER;
                 const rankB = b.rank ?? Number.MAX_SAFE_INTEGER;
                 return rankA - rankB;
