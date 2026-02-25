@@ -14,7 +14,9 @@
 	import { toast } from "svelte-sonner";
 	import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
 	import TrashIcon from '@lucide/svelte/icons/trash';
-	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';	
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 
  	const flipDurationMs = 150;
 	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
@@ -90,6 +92,7 @@
 	let editName = $state(name);
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
+	let showMoveOptions = $state(false);
 	
 	// State für Inline-Editing des Column-Titels
 	let isEditingTitle = $state(false);
@@ -97,6 +100,35 @@
 	
 	// Global popover state management - ensures only one popover is open at a time
 	const popoverId = `column-popover-${columnId}`;
+
+	// ============================================================================
+	// COLUMN MOVEMENT: Reorder columns in the board
+	// ============================================================================
+	function moveColumnTo(targetIndex: number) {
+		// Get current columns
+		const currentColumns = boardStore.uiData;
+		
+		// Find current column's index
+		const currentIndex = currentColumns.findIndex(col => col.id === columnId);
+		if (currentIndex === -1) return;
+		
+		// Create new array with reordered columns
+		const reorderedColumns = [...currentColumns];
+		const [movedColumn] = reorderedColumns.splice(currentIndex, 1);
+		reorderedColumns.splice(targetIndex, 0, movedColumn);
+		
+		// Sync to store
+		boardStore.syncBoardState(reorderedColumns);
+		
+		// Close popover
+		popoverOpen = false;
+		
+		// Show success feedback
+		const targetPosition = targetIndex === 0 ? 'erste Position' : 
+			targetIndex === currentColumns.length - 1 ? 'letzte Position' : 
+			`Position ${targetIndex + 1}`;
+		toast.success(`Spalte verschoben an ${targetPosition}`);
+	}
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -335,13 +367,21 @@
 		flex: 1 1 auto;
 		overflow-y: auto;
 		overflow-x: hidden;
+		padding-top: 0.5rem;
+		padding-left: 0.5rem;
 		padding-right: 0.5rem;
 		min-height: 50px;
 		border-radius: var(--radius-md);
 		padding-bottom: 10px;
+		display: flex;
+		flex-direction: column;
 	}
 
-	/* Add-Card-Button: Sticky am unteren Rand wenn gescrollt wird */
+	.cards-dnd-area {
+		flex: 0 0 auto;
+	}
+
+	/* Add-Card-Button: Inside scrollable area but outside dndzone */
 	.add-card-button {
 		border-radius: var(--radius-md);
 		/* border: 2px dotted var(--accent); */
@@ -355,11 +395,6 @@
 		flex-shrink: 0;
 		align-items: center;
 		justify-content: center;
-		
-		/* Sticky: Klebt am unteren Rand wenn Container scrollbar ist */
-		position: sticky;
-		bottom: -10px;
-		z-index: 5;
 	}
 
 	.add-card-button:hover {
@@ -466,8 +501,8 @@
 			<div 
 				class="flex items-center gap-1" 
 				role="toolbar" 
-				tabindex="0"
 				aria-label="Spalten-Aktionen"
+				tabindex="-1"
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
 			>
@@ -475,11 +510,20 @@
 				<!-- Spalten-Aktionen Popover -->
 				<Popover.Root bind:open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
 					<Popover.Trigger 
-						title="Spalten-Optionen"
+						title="Spalten-Optionen (Leertaste zum Öffnen)"
 						class="popover-trigger-ignore inline-flex items-center justify-center h-8 w-8 btn transition-all"
 						onclick={(e) => {
 							console.log('🖱️ Popover trigger clicked');
 							e.stopPropagation();
+						}}
+						onkeydown={(e) => {
+							// Toggle popover with space key
+							if (e.key === ' ' || e.key === 'Spacebar') {
+								e.preventDefault();
+								e.stopPropagation();
+								popoverOpen = !popoverOpen;
+								console.log('⌨️  Popover toggled with space key:', popoverOpen);
+							}
 						}}
 					>
 						<EllipsisVerticalIcon class="h-4 w-4 pointer-events-none bg-transparent" />
@@ -529,14 +573,86 @@
 								</div>
 							</div>
 							
-							<Separator />
-							
-							<!-- Link hinzufügen -->
+						<Separator />
+						
+						<!-- Link hinzufügen -->
 							<LinkAddPopover columnId={columnId || ''} />
 							
-							<Separator />
-							
-							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
+						<Separator />
+						
+						<!-- Spalte verschieben (Collapsible) -->
+						<div class="space-y-2">
+							<button
+								type="button"
+								class="flex w-full items-center justify-between py-2 hover:bg-accent hover:text-accent-foreground rounded-sm px-2 transition-colors"
+								onclick={() => showMoveOptions = !showMoveOptions}
+							>
+								<div class="flex items-center gap-2 text-sm font-medium">
+									<ArrowLeftRightIcon class="h-4 w-4" />
+									Spalte verschieben
+								</div>
+							<ChevronDownIcon class="h-4 w-4 transition-transform duration-200 {showMoveOptions ? 'rotate-180' : ''}" />
+						</button>
+						
+						{#if showMoveOptions}
+							<div class="flex flex-col gap-1 pt-2">
+								{#each boardStore.uiData as _, idx}
+									{@const allColumns = boardStore.uiData}
+									{@const currentIndex = allColumns.findIndex(col => col.id === columnId)}
+									
+									{#if idx === 0}
+									<!-- Move to first position -->
+									{#if currentIndex !== 0}
+										<Button
+											variant="ghost"
+											size="sm"
+											class="w-full justify-start text-xs"
+											onclick={() => moveColumnTo(0)}
+										>
+											An erste Position (links von "{allColumns[0].name}")
+										</Button>
+									{/if}
+								{/if}
+										<!-- Move between columns -->
+										{#if idx > 0 && idx <= allColumns.length - 1}
+											{@const leftColumn = allColumns[idx - 1]}
+											{@const rightColumn = allColumns[idx]}
+											{@const isCurrentInBetween = currentIndex === idx - 1 || currentIndex === idx}
+											
+											{#if !isCurrentInBetween}
+												{@const adjustedIdx = idx > currentIndex ? idx - 1 : idx}
+												<Button
+													variant="ghost"
+													size="sm"
+													class="w-full justify-start text-xs"
+													onclick={() => moveColumnTo(adjustedIdx)}
+												>
+													Zwischen "{leftColumn.name}" und "{rightColumn.name}"
+												</Button>
+											{/if}
+										{/if}
+										
+										{#if idx === allColumns.length - 1}
+											<!-- Move to last position -->
+											{#if currentIndex !== allColumns.length - 1}
+												<Button
+													variant="ghost"
+													size="sm"
+													class="w-full justify-start text-xs"
+													onclick={() => moveColumnTo(allColumns.length - 1)}
+												>
+													An letzte Position (rechts von "{allColumns[allColumns.length - 1].name}")
+												</Button>
+											{/if}
+										{/if}
+									{/each}
+								</div>
+							{/if}
+						</div>
+						
+						<Separator />
+						
+						<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
 								<TrashIcon class="h-4 w-4"  />
 								Spalte löschen
 							</Button>
@@ -549,29 +665,37 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div 
-		class="column-content" 
-		use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
-		onconsider={handleDndConsiderCards}
-		onfinalize={handleDndFinalizeCards}
-	>
-		{#each items as item (item.id)}
-			<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper">
-				<Card
-					card={item}
-					{onCardAction}
-					{onSidebarAction}
-					{readOnly}
-				/>
-			</div>
-		{/each}
+	<!-- Scrollable container for cards AND button -->
+	<div class="column-content">
+		<!-- Cards area with dndzone -->
+		<div 
+			class="cards-dnd-area"
+			tabindex="-1"
+			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1}}
+			onconsider={handleDndConsiderCards}
+			onfinalize={handleDndFinalizeCards}
+		>
+			{#each items as item (item.id)}
+				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper" tabindex="-1">
+					<Card
+						card={item}
+						{onCardAction}
+						{onSidebarAction}
+						{readOnly}
+					/>
+				</div>
+			{/each}
+		</div>
 		
-		<!-- Add Card Button: Direkt unter der letzten Karte (oder oben wenn keine Karten) -->
+		<!-- Add Card Button: OUTSIDE dndzone, INSIDE scrollable container -->
 		{#if !readOnly}
 		<button 
 			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
+			type="button"
 			onclick={(e) => {
 				e.stopPropagation();
+				e.preventDefault();
+				console.log('🖱️ Add card button clicked');
 				if (columnId) {
 					const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
 					if (newCardId) {
@@ -585,6 +709,30 @@
 							window.dispatchEvent(event);
 							console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
 						}, 150);
+					}
+				}
+			}}
+			onkeydown={(e) => {
+				console.log('⌨️  Key pressed on add button:', e.key);
+				// Create card with Enter or Space key
+				if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+					e.preventDefault();
+					e.stopPropagation();
+					console.log('⌨️  Creating card via keyboard');
+					if (columnId) {
+						const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
+						if (newCardId) {
+							// ✨ Neue Karte: Dialog öffnen
+							setTimeout(() => {
+								const event = new CustomEvent('openCardDialog', {
+									detail: { cardId: String(newCardId) },
+									bubbles: true,
+									composed: true
+								});
+								window.dispatchEvent(event);
+								console.log('⌨️  Neue Karte per Tastatur erstellt:', newCardId);
+							}, 150);
+						}
 					}
 				}
 			}}

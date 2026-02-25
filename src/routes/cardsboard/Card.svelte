@@ -187,6 +187,126 @@
 	});
 
 	// ============================================================================
+	// KEYBOARD NAVIGATION: Global listener for Enter/Space on focused card
+	// Workaround for dndzone blocking keyboard events
+	// ============================================================================
+	$effect(() => {
+		const handleGlobalKeyDown = (event: KeyboardEvent) => {
+			// Check if this card is currently focused
+			const activeElement = document.activeElement;
+			if (!activeElement) return;
+			
+			const cardElement = activeElement.closest(`[data-card-id="${card.id}"]`);
+			if (!cardElement) return;
+			
+			// Check if we're in an input/textarea
+			const target = event.target as HTMLElement;
+			const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+			if (isInput) return;
+			
+			// Open dialog on Enter or Space
+			if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+				event.preventDefault();
+				event.stopPropagation();
+				console.log('⌨️  Opening card dialog via global keyboard listener:', card.id);
+				isDialogOpen = true;
+				return;
+			}
+			
+			// Arrow key navigation for moving cards
+			if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+				event.preventDefault();
+				event.stopPropagation();
+				
+				// Get all columns and find current card position
+				const columns = boardStore.uiData;
+				let currentColumnIndex = -1;
+				let currentCardIndex = -1;
+				let currentColumn = null;
+				
+				for (let i = 0; i < columns.length; i++) {
+					const col = columns[i];
+					const cardIndex = col.items.findIndex(item => String(item.id) === String(card.id));
+					if (cardIndex !== -1) {
+						currentColumnIndex = i;
+						currentCardIndex = cardIndex;
+						currentColumn = col;
+						break;
+					}
+				}
+				
+				if (currentColumnIndex === -1 || !currentColumn) return;
+				
+				// Helper function to restore focus with multiple attempts
+				const restoreFocus = (cardId: string, maxAttempts = 10) => {
+					let attempts = 0;
+					const tryFocus = () => {
+						const movedCard = document.querySelector(`[data-card-id="${cardId}"]`) as HTMLElement;
+						if (movedCard && movedCard !== document.activeElement) {
+							movedCard.focus();
+							console.log(`⌨️  Card refocused (attempt ${attempts + 1})`);
+						} else if (!movedCard && attempts < maxAttempts) {
+							attempts++;
+							requestAnimationFrame(tryFocus);
+						}
+					};
+					requestAnimationFrame(() => requestAnimationFrame(tryFocus));
+				};
+				
+				// Handle Up/Down - move within same column
+				if (event.key === 'ArrowUp' && currentCardIndex > 0) {
+					// Move card up (swap with previous card)
+					const newItems = [...currentColumn.items];
+					[newItems[currentCardIndex - 1], newItems[currentCardIndex]] = 
+						[newItems[currentCardIndex], newItems[currentCardIndex - 1]];
+					
+					const updatedColumn = { ...currentColumn, items: newItems };
+					const newColumns = [...columns];
+					newColumns[currentColumnIndex] = updatedColumn;
+					
+					boardStore.syncBoardState(newColumns);
+					console.log('⌨️  Card moved up');
+					restoreFocus(String(card.id));
+				} 
+				else if (event.key === 'ArrowDown' && currentCardIndex < currentColumn.items.length - 1) {
+					// Move card down (swap with next card)
+					const newItems = [...currentColumn.items];
+					[newItems[currentCardIndex], newItems[currentCardIndex + 1]] = 
+						[newItems[currentCardIndex + 1], newItems[currentCardIndex]];
+					
+					const updatedColumn = { ...currentColumn, items: newItems };
+					const newColumns = [...columns];
+					newColumns[currentColumnIndex] = updatedColumn;
+					
+					boardStore.syncBoardState(newColumns);
+					console.log('⌨️  Card moved down');
+					restoreFocus(String(card.id));
+				}
+				// Handle Left - move to previous column
+				else if (event.key === 'ArrowLeft' && currentColumnIndex > 0) {
+					const targetColumn = columns[currentColumnIndex - 1];
+					boardStore.moveCard(String(card.id), currentColumn.id, targetColumn.id);
+					console.log('⌨️  Card moved to previous column');
+					restoreFocus(String(card.id));
+				}
+				// Handle Right - move to next column
+				else if (event.key === 'ArrowRight' && currentColumnIndex < columns.length - 1) {
+					const targetColumn = columns[currentColumnIndex + 1];
+					boardStore.moveCard(String(card.id), currentColumn.id, targetColumn.id);
+					console.log('⌨️  Card moved to next column');
+					restoreFocus(String(card.id));
+				}
+			}
+		};
+		
+		window.addEventListener('keydown', handleGlobalKeyDown, true); // Use capture phase
+		
+		return () => {
+			window.removeEventListener('keydown', handleGlobalKeyDown, true);
+		};
+	});
+
+	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
 	// ============================================================================
 	$effect(() => {
@@ -381,6 +501,7 @@
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
+	tabindex={0}
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 	ontouchmove={handleTouchMove}
@@ -410,6 +531,22 @@
 		e.stopPropagation();
 		// Klick auf Card öffnet direkt CardDetailsDialog
 		isDialogOpen = true;
+	}}
+	onkeydown={(e) => {
+		// Open card dialog with Enter or Space key
+		if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+			// Check if we're not in an input/textarea
+			const target = e.target as HTMLElement;
+			const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+			if (isInput) {
+				return;
+			}
+			
+			e.preventDefault();
+			e.stopPropagation();
+			console.log('⌨️  Opening card dialog via keyboard');
+			isDialogOpen = true;
+		}
 	}}
 >
 	<Card.Header class="px-1 py-1">
@@ -480,6 +617,7 @@
 					<Button 
 						variant="link" 
 						size="sm"
+						tabindex={-1}
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -494,7 +632,7 @@
 			</div>
 		{:else if card.link}
 			<!-- Fallback für altes Format (nur card.link) -->
-			<Button variant="outline" onclick={handleLinkClick}>
+			<Button variant="outline" tabindex={-1} onclick={handleLinkClick}>
 				<LinkIcon class="mr-2 h-4 w-4" /> Link öffnen
 			</Button>
 		{/if}
