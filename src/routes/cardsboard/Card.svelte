@@ -617,6 +617,7 @@
 					<Button 
 						variant="link" 
 						size="sm"
+						tabindex={-1}
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -631,7 +632,7 @@
 			</div>
 		{:else if card.link}
 			<!-- Fallback für altes Format (nur card.link) -->
-			<Button variant="outline" onclick={handleLinkClick}>
+			<Button variant="outline" tabindex={-1} onclick={handleLinkClick}>
 				<LinkIcon class="mr-2 h-4 w-4" /> Link öffnen
 			</Button>
 		{/if}

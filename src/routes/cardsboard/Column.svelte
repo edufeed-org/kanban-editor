@@ -468,6 +468,7 @@
 				class="flex items-center gap-1" 
 				role="toolbar" 
 				aria-label="Spalten-Aktionen"
+				tabindex="-1"
 				onpointerdown={(e) => e.stopPropagation()} 
 				onmousedown={(e) => e.stopPropagation()}
 			>
@@ -563,12 +564,13 @@
 		<!-- Cards area with dndzone -->
 		<div 
 			class="cards-dnd-area"
-			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
+			tabindex="-1"
+			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1}}
 			onconsider={handleDndConsiderCards}
 			onfinalize={handleDndFinalizeCards}
 		>
 			{#each items as item (item.id)}
-				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper">
+				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper" tabindex="-1">
 					<Card
 						card={item}
 						{onCardAction}
