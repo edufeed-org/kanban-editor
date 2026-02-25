@@ -339,9 +339,15 @@
 		min-height: 50px;
 		border-radius: var(--radius-md);
 		padding-bottom: 10px;
+		display: flex;
+		flex-direction: column;
 	}
 
-	/* Add-Card-Button: Sticky am unteren Rand wenn gescrollt wird */
+	.cards-dnd-area {
+		flex: 0 0 auto;
+	}
+
+	/* Add-Card-Button: Inside scrollable area but outside dndzone */
 	.add-card-button {
 		border-radius: var(--radius-md);
 		/* border: 2px dotted var(--accent); */
@@ -355,11 +361,6 @@
 		flex-shrink: 0;
 		align-items: center;
 		justify-content: center;
-		
-		/* Sticky: Klebt am unteren Rand wenn Container scrollbar ist */
-		position: sticky;
-		bottom: -10px;
-		z-index: 5;
 	}
 
 	.add-card-button:hover {
@@ -557,29 +558,36 @@
 		<div class="color-bar" style="background-color: {getCardColor(color)}"></div>
 	</div>
 
-	<div 
-		class="column-content" 
-		use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
-		onconsider={handleDndConsiderCards}
-		onfinalize={handleDndFinalizeCards}
-	>
-		{#each items as item (item.id)}
-			<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper">
-				<Card
-					card={item}
-					{onCardAction}
-					{onSidebarAction}
-					{readOnly}
-				/>
-			</div>
-		{/each}
+	<!-- Scrollable container for cards AND button -->
+	<div class="column-content">
+		<!-- Cards area with dndzone -->
+		<div 
+			class="cards-dnd-area"
+			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300}}
+			onconsider={handleDndConsiderCards}
+			onfinalize={handleDndFinalizeCards}
+		>
+			{#each items as item (item.id)}
+				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper">
+					<Card
+						card={item}
+						{onCardAction}
+						{onSidebarAction}
+						{readOnly}
+					/>
+				</div>
+			{/each}
+		</div>
 		
-		<!-- Add Card Button: Direkt unter der letzten Karte (oder oben wenn keine Karten) -->
+		<!-- Add Card Button: OUTSIDE dndzone, INSIDE scrollable container -->
 		{#if !readOnly}
 		<button 
 			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
+			type="button"
 			onclick={(e) => {
 				e.stopPropagation();
+				e.preventDefault();
+				console.log('🖱️ Add card button clicked');
 				if (columnId) {
 					const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
 					if (newCardId) {
@@ -593,6 +601,30 @@
 							window.dispatchEvent(event);
 							console.log('✨ Neue Karte erstellt und Dialog-Event gesendet:', newCardId);
 						}, 150);
+					}
+				}
+			}}
+			onkeydown={(e) => {
+				console.log('⌨️  Key pressed on add button:', e.key);
+				// Create card with Enter or Space key
+				if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+					e.preventDefault();
+					e.stopPropagation();
+					console.log('⌨️  Creating card via keyboard');
+					if (columnId) {
+						const newCardId = boardStore.createCard(columnId, 'Neue Karte', '');
+						if (newCardId) {
+							// ✨ Neue Karte: Dialog öffnen
+							setTimeout(() => {
+								const event = new CustomEvent('openCardDialog', {
+									detail: { cardId: String(newCardId) },
+									bubbles: true,
+									composed: true
+								});
+								window.dispatchEvent(event);
+								console.log('⌨️  Neue Karte per Tastatur erstellt:', newCardId);
+							}, 150);
+						}
 					}
 				}
 			}}
