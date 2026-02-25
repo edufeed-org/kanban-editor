@@ -14,7 +14,9 @@
 	import { toast } from "svelte-sonner";
 	import LinkAddPopover from '$lib/components/LinkAddPopover.svelte';
 	import TrashIcon from '@lucide/svelte/icons/trash';
-	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';	
+	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
+	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 
  	const flipDurationMs = 150;
 	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
@@ -90,6 +92,7 @@
 	let editName = $state(name);
 	let selectedColor = $state(color || 'slate');
 	let popoverOpen = $state(false);
+	let showMoveOptions = $state(false);
 	
 	// State für Inline-Editing des Column-Titels
 	let isEditingTitle = $state(false);
@@ -97,6 +100,35 @@
 	
 	// Global popover state management - ensures only one popover is open at a time
 	const popoverId = `column-popover-${columnId}`;
+
+	// ============================================================================
+	// COLUMN MOVEMENT: Reorder columns in the board
+	// ============================================================================
+	function moveColumnTo(targetIndex: number) {
+		// Get current columns
+		const currentColumns = boardStore.uiData;
+		
+		// Find current column's index
+		const currentIndex = currentColumns.findIndex(col => col.id === columnId);
+		if (currentIndex === -1) return;
+		
+		// Create new array with reordered columns
+		const reorderedColumns = [...currentColumns];
+		const [movedColumn] = reorderedColumns.splice(currentIndex, 1);
+		reorderedColumns.splice(targetIndex, 0, movedColumn);
+		
+		// Sync to store
+		boardStore.syncBoardState(reorderedColumns);
+		
+		// Close popover
+		popoverOpen = false;
+		
+		// Show success feedback
+		const targetPosition = targetIndex === 0 ? 'erste Position' : 
+			targetIndex === currentColumns.length - 1 ? 'letzte Position' : 
+			`Position ${targetIndex + 1}`;
+		toast.success(`Spalte verschoben an ${targetPosition}`);
+	}
 
 	const colorOptions = [
 		{ value: 'slate', label: 'Slate', cssVar: '--color-slate' },
@@ -541,14 +573,86 @@
 								</div>
 							</div>
 							
-							<Separator />
-							
-							<!-- Link hinzufügen -->
+						<Separator />
+						
+						<!-- Link hinzufügen -->
 							<LinkAddPopover columnId={columnId || ''} />
 							
-							<Separator />
-							
-							<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
+						<Separator />
+						
+						<!-- Spalte verschieben (Collapsible) -->
+						<div class="space-y-2">
+							<button
+								type="button"
+								class="flex w-full items-center justify-between py-2 hover:bg-accent hover:text-accent-foreground rounded-sm px-2 transition-colors"
+								onclick={() => showMoveOptions = !showMoveOptions}
+							>
+								<div class="flex items-center gap-2 text-sm font-medium">
+									<ArrowLeftRightIcon class="h-4 w-4" />
+									Spalte verschieben
+								</div>
+							<ChevronDownIcon class="h-4 w-4 transition-transform duration-200 {showMoveOptions ? 'rotate-180' : ''}" />
+						</button>
+						
+						{#if showMoveOptions}
+							<div class="flex flex-col gap-1 pt-2">
+								{#each boardStore.uiData as _, idx}
+									{@const allColumns = boardStore.uiData}
+									{@const currentIndex = allColumns.findIndex(col => col.id === columnId)}
+									
+									{#if idx === 0}
+									<!-- Move to first position -->
+									{#if currentIndex !== 0}
+										<Button
+											variant="ghost"
+											size="sm"
+											class="w-full justify-start text-xs"
+											onclick={() => moveColumnTo(0)}
+										>
+											An erste Position (links von "{allColumns[0].name}")
+										</Button>
+									{/if}
+								{/if}
+										<!-- Move between columns -->
+										{#if idx > 0 && idx <= allColumns.length - 1}
+											{@const leftColumn = allColumns[idx - 1]}
+											{@const rightColumn = allColumns[idx]}
+											{@const isCurrentInBetween = currentIndex === idx - 1 || currentIndex === idx}
+											
+											{#if !isCurrentInBetween}
+												{@const adjustedIdx = idx > currentIndex ? idx - 1 : idx}
+												<Button
+													variant="ghost"
+													size="sm"
+													class="w-full justify-start text-xs"
+													onclick={() => moveColumnTo(adjustedIdx)}
+												>
+													Zwischen "{leftColumn.name}" und "{rightColumn.name}"
+												</Button>
+											{/if}
+										{/if}
+										
+										{#if idx === allColumns.length - 1}
+											<!-- Move to last position -->
+											{#if currentIndex !== allColumns.length - 1}
+												<Button
+													variant="ghost"
+													size="sm"
+													class="w-full justify-start text-xs"
+													onclick={() => moveColumnTo(allColumns.length - 1)}
+												>
+													An letzte Position (rechts von "{allColumns[allColumns.length - 1].name}")
+												</Button>
+											{/if}
+										{/if}
+									{/each}
+								</div>
+							{/if}
+						</div>
+						
+						<Separator />
+						
+						<Button variant="destructive" size="sm" onclick={handleDelete} class="w-full">
 								<TrashIcon class="h-4 w-4"  />
 								Spalte löschen
 							</Button>

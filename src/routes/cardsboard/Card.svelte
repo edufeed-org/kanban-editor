@@ -501,7 +501,7 @@
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
-	tabindex="0"
+	tabindex={0}
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 	ontouchmove={handleTouchMove}
