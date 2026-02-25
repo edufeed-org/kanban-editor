@@ -335,6 +335,8 @@
 		flex: 1 1 auto;
 		overflow-y: auto;
 		overflow-x: hidden;
+		padding-top: 0.5rem;
+		padding-left: 0.5rem;
 		padding-right: 0.5rem;
 		min-height: 50px;
 		border-radius: var(--radius-md);
