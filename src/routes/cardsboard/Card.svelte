@@ -187,6 +187,40 @@
 	});
 
 	// ============================================================================
+	// KEYBOARD NAVIGATION: Global listener for Enter/Space on focused card
+	// Workaround for dndzone blocking keyboard events
+	// ============================================================================
+	$effect(() => {
+		const handleGlobalKeyDown = (event: KeyboardEvent) => {
+			// Check if this card is currently focused
+			const activeElement = document.activeElement;
+			if (!activeElement) return;
+			
+			const cardElement = activeElement.closest(`[data-card-id="${card.id}"]`);
+			if (!cardElement) return;
+			
+			// Check if we're in an input/textarea
+			const target = event.target as HTMLElement;
+			const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+			if (isInput) return;
+			
+			// Open dialog on Enter or Space
+			if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+				event.preventDefault();
+				event.stopPropagation();
+				console.log('⌨️  Opening card dialog via global keyboard listener:', card.id);
+				isDialogOpen = true;
+			}
+		};
+		
+		window.addEventListener('keydown', handleGlobalKeyDown, true); // Use capture phase
+		
+		return () => {
+			window.removeEventListener('keydown', handleGlobalKeyDown, true);
+		};
+	});
+
+	// ============================================================================
 	// PROP-UPDATE-GUIDE.md Schritt 3: $effect für UI-Synchronisation
 	// ============================================================================
 	$effect(() => {
@@ -381,6 +415,7 @@
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
+	tabindex="0"
 	ontouchstart={handleTouchStart}
 	ontouchend={handleTouchEnd}
 	ontouchmove={handleTouchMove}
@@ -410,6 +445,22 @@
 		e.stopPropagation();
 		// Klick auf Card öffnet direkt CardDetailsDialog
 		isDialogOpen = true;
+	}}
+	onkeydown={(e) => {
+		// Open card dialog with Enter or Space key
+		if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+			// Check if we're not in an input/textarea
+			const target = e.target as HTMLElement;
+			const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+			if (isInput) {
+				return;
+			}
+			
+			e.preventDefault();
+			e.stopPropagation();
+			console.log('⌨️  Opening card dialog via keyboard');
+			isDialogOpen = true;
+		}
 	}}
 >
 	<Card.Header class="px-1 py-1">
