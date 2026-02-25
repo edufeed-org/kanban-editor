@@ -195,6 +195,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. WÃ�
 | **Auth UI-Komponenten** | [`ARCHITECTURE/AUTH-UI-COMPONENTS.md`](./ARCHITECTURE/AUTH-UI-COMPONENTS.md) | 30 min |
 | **Einstellungen & Konfiguration** | [`ARCHITECTURE/STORES/SETTINGSSTORE.md`](./ARCHITECTURE/STORES/SETTINGSSTORE.md) | 30 min |
 | **Nostr Events** | [`GUIDES/Kanban-NIP.md`](./GUIDES/Kanban-NIP.md) | 25 min |
+| **Board Builder Spec** | [`GUIDES/BOARDSBUILDER-SPEC.md`](./GUIDES/BOARDSBUILDER-SPEC.md) | 10 min | ✅ Neu (25.02.2026)
 | **ðŸ†• AI Collaborative Generation** | [`ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md`](./ARCHITECTURE/AGENT/AI-COLLABORATIVE-GENERATION.md) | 40 min | âœ… Neu (03.11.) - GitHub Copilot Pattern
 | **UI Design** | [`ARCHITECTURE/UX-RULES.md`](./ARCHITECTURE/UX-RULES.md) | 25 min |
 | **ðŸ†• Store-Patterns Guide** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) | 20 min | âœ… Neu (02.11.) - persisted() vs Manual localStorage
@@ -223,6 +224,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. WÃ�
 | **ðŸ†• Board Structure Analysis (30 min)** | [`FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md`](./FEATURE/INTELLIGENT-STRUCTURE-ANALYSIS.md) |
 | **ðŸ†• Agent Architecture (40 min)** | [`ARCHITECTURE/AGENT/README.md`](./ARCHITECTURE/AGENT/README.md) |
 | **Quick Start (10 min)** | [`GUIDES/QUICK-START.md`](./GUIDES/QUICK-START.md) |
+| **Board Builder Spec (10 min)** | [`GUIDES/BOARDSBUILDER-SPEC.md`](./GUIDES/BOARDSBUILDER-SPEC.md) |
 | **ðŸ†• Store-Patterns Guide (20 min)** | [`GUIDES/STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) |
 | **Prop vs State (5 min Cheat Sheet)** | [`GUIDES/PROP-VS-STATE-CHEATSHEET.md`](./GUIDES/PROP-VS-STATE-CHEATSHEET.md) |
 | **Lokale Secrets (Windows/PowerShell)** | [`GUIDES/LOCAL-ENV-SETUP.md`](./GUIDES/LOCAL-ENV-SETUP.md) |
@@ -380,7 +382,7 @@ docs/
 | [`NOSTR/NEXT-STEPS/MERGE-LWW-INTEGRATION-TODO.md`](./ARCHITECTURE/NOSTR/NEXT-STEPS/MERGE-LWW-INTEGRATION-TODO.md) | ðŸ”® **CONSOLIDATED (10.11.)**: Phase 2.0 Implementation Checklist | âœ… Reorganisiert (10.11.) |
 | [`NOSTR/NEXT-STEPS/INTEGRATION-ANALYSIS-MERGE-vs-LWW.md`](./ARCHITECTURE/NOSTR/NEXT-STEPS/INTEGRATION-ANALYSIS-MERGE-vs-LWW.md) | ðŸ”® **CONSOLIDATED (10.11.)**: Detaillierte Analyse fÃ¼r Phase 2.0 | âœ… Reorganisiert (10.11.) |
 
-### GUIDES/ (6 Dateien)
+### GUIDES/ (7 Dateien)
 
 | Datei | Zweck | Status |
 |-------|-------|--------|
@@ -390,6 +392,7 @@ docs/
 | [`TEST-RUNNER.md`](./GUIDES/TEST-RUNNER.md) | Test Suite Runner Guide | âœ… |
 | [`STORE-PATTERNS.md`](./GUIDES/STORE-PATTERNS.md) | persisted() vs. Manual localStorage | âœ… Neu (02.11.) |
 | [`THEME-BUTTONS.md`](./GUIDES/THEME-BUTTONS.md) | Theme-Buttons fÃ¼r Sidebar | âœ… Neu (30.10.) |
+| [`BOARDSBUILDER-SPEC.md`](./GUIDES/BOARDSBUILDER-SPEC.md) | Board aus Nostr-Events laden, mergen und rendern | ✅ Neu (25.02.2026) |
 
 ### COLLABORATION/ (6 Dateien)
 
@@ -435,13 +438,13 @@ docs/
 ## ðŸ”— Alle Dokumentationen verlinkt?
 
 âœ… **ARCHITECTURE/** â€” 15/15 Dateien verlinkt (4 root + 7 STORES/ + 4 AGENT/)  
-âœ… **GUIDES/** â€” 6/6 Dateien verlinkt  
+âœ… **GUIDES/** — 7/7 Dateien verlinkt  
 âœ… **COLLABORATION/** â€” 6/6 Dateien verlinkt  
 âœ… **TESTS/** â€” 2/2 Dateien verlinkt  
 âœ… **FEATURE/** â€” 13/13 Dateien verlinkt (neue Phase 3.0 Docs!)  
 âœ… **REFERENCE/** â€” 1/1 Dateien verlinkt  
 
-**Total: 55/55 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
+**Total: 56/56 Dateien in /docs verlinkt und dokumentiert** (Phase 3.0 Complete!)
 
 ---
 
@@ -559,6 +562,7 @@ docs/
 - âœ… 0 Breaking Changes
 
 **Status: PHASE 3.0 COMPLETE! ðŸš€**
+
 
 
 
