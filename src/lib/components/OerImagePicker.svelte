@@ -3,8 +3,9 @@
 		OerSearchResultEvent,
 		OerSearchElement,
 		OerListElement,
-		PaginationElement,
-        OerCardClickEvent
+        OerCardClickEvent,
+        SourceConfig,
+        LoadMoreElement
 	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
@@ -18,33 +19,53 @@
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
-	const availableSources = [
-		{ value: 'arasaac', label: 'ARASAAC' },
-		{ value: 'openverse', label: 'Openverse' },
-		{ value: 'nostr-amb-relay', label: 'Nostr AMB' },
-		{ value: 'rpi-virtuell', label: 'RPI Virtuell' },
+	const availableSources: SourceConfig[] = [
+		{ id: 'arasaac', label: 'ARASAAC' },
+		{ id: 'openverse', label: 'Openverse', checked: true },
+		{ id: 'wikimedia', label: 'Wikimedia', checked: true },
+		{ id: 'nostr-amb-relay', label: 'Nostr AMB', checked: true, baseUrl: 'wss://amb-relay.edufeed.org' },
+		{ id: 'rpi-virtuell', label: 'RPI Virtuell' },
 	];
 
 	let searchEl: OerSearchElement;
 	let listEl: OerListElement;
-	let paginationEl: PaginationElement;
+	let loadMoreElement: LoadMoreElement;
 
 	onMount(async () => {
 		// Dynamically import the plugin only on the client side to avoid SSR issues
 		await import('@edufeed-org/oer-finder-plugin');
+
+		// Set sources as a JS property (not HTML attribute)
+		searchEl.sources = availableSources;
+
+		searchEl?.addEventListener('search-loading', () => {
+			listEl.loading = true;
+			loadMoreElement.loading = true;
+		});
 		
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
 			const customEvent = e as CustomEvent<OerSearchResultEvent>;
 			listEl.oers = customEvent.detail.data;
 			listEl.loading = false;
-			paginationEl.metadata = customEvent.detail.meta;
+			loadMoreElement.metadata = customEvent.detail.meta;
+    		loadMoreElement.loading = false;
 		});
 
 		searchEl?.addEventListener('search-error', (e: Event) => {
 			const customEvent = e as CustomEvent<{ error: string }>;
 			listEl.oers = [];
 			listEl.error = customEvent.detail.error;
+			loadMoreElement.metadata = null;
+    		loadMoreElement.loading = false;
+		});
+
+		searchEl?.addEventListener('search-cleared', () => {
+			listEl.oers = [];
+			listEl.loading = false;
+			listEl.error = null;
+			loadMoreElement.metadata = null;
+			loadMoreElement.loading = false;
 		});
 
 		// Handle card selection - extract image URL from new schema structure
@@ -56,29 +77,18 @@
 				onSelect(imageUrl);
 			}
 		});
-
-		// Handle pagination
-		paginationEl?.addEventListener('page-change', (e: Event) => {
-			const customEvent = e as CustomEvent;
-			searchEl.dispatchEvent(new CustomEvent('page-change', { detail: customEvent.detail }));
-		});
 	});
 </script>
 
 <div class="oer-picker-container">
 	<oer-search
 		bind:this={searchEl}
-		nostr-relay-url="wss://relay.edufeed.org"
-		rpi-virtuell-api-url=""
-		language={language}
+	    language={language}
 		locked-type="image"
-		show-type-filter={false}
-		show-source-filter={true}
-		available-sources={JSON.stringify(availableSources)}
 		page-size={12}
 	>
 		<oer-list bind:this={listEl} {language}></oer-list>
-		<oer-pagination bind:this={paginationEl} {language}></oer-pagination>
+	    <oer-load-more bind:this={loadMoreElement} language={language}></oer-load-more>
 	</oer-search>
 </div>
 
