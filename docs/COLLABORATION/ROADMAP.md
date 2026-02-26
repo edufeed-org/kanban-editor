@@ -151,6 +151,7 @@
 - ✅ Topbar.svelte - mit Settings + Share-Link + **Inline-Editing für Board-Titel** 🆕
 - ✅ BoardsList.svelte - Board-Auswahl + **Hamburger-Menü** 🆕
 - ✅ SettingsPanel.svelte - neuer Settings-Component
+- ✅ Nostr Relay Settings CTA aus Publish-Warnung: Toast `Keine privaten Relays konfiguriert` oeffnet direkt den Dialog `Nostr Relay Einstellungen`
 - ✅ UI Components: Progress, Slider, Switch, Spinner (neu!)
 - ✅ ActionConfirmationDialog.svelte (Bestätigung für Aktionen)
 - ✅ **aiContextStore.svelte.ts** - Globaler Store für AI-Kontext-Karten 🆕

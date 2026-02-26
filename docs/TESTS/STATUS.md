@@ -1,14 +1,14 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 02.02.2026 (E2E-Selector-Update: Login-Dialog + Share-Menü-Aufteilung ✅)
-**Status:** 🟢 Vollständig funktional (letzter Stand: 508 Tests: 505 passed | 3 skipped) ✅
+**Letzte Aktualisierung:** 26.02.2026 (E2E-Stabilisierung: Board-Sharing Owner-Editor Flow ohne Relay-Abhaengigkeit)
+**Status:** Vollstaendig funktional (letzter Stand: gezielter Playwright-Lauf + svelte-check gruen)
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
 | **Vitest (Unit+Integration)** | ✅ Aktiv | 508 (505 passed  3 skipped; zuletzt verifiziert) | Vitest |
-| **E2E Tests** | 🟡 Nicht in diesem Lauf verifiziert | 1 (Stand: vorheriger Report) | Playwright |
+| **E2E Tests** | Verifiziert (gezielter Lauf) | 1 (board-sharing Owner/Editor) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
 **Letzter Vitest-Lauf:** `npm run test:unit -- --run` → `Test Files 40 passed (40)`, `Tests 505 passed | 3 skipped (508)`

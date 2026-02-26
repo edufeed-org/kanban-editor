@@ -142,6 +142,10 @@ settingsStore.addRelayPublic('wss://nos.lol');
 
 // Remove relay
 settingsStore.removeRelayPublic('wss://relay.damus.io');
+
+// Nostr Relay Dialog (UI helper, nicht persistent)
+settingsStore.openNostrSettingsDialog();
+settingsStore.closeNostrSettingsDialog();
 ```
 
 **REGEL 2:** Relay-URLs MÜSSEN validiert werden (nur `wss://` oder `ws://` erlaubt).

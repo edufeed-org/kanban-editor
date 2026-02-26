@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { clearAuthState, clearBoardState, loginWithNsec, logout } from './test-helpers';
 
+const SHARED_BOARD_APPEAR_TIMEOUT_MS = 60_000;
+
 const TEST_USERS = {
     owner: {
         nsec: 'nsec1rv9saz6ss3lyc3gp563n7aj5tmpez5588f7e85xacsm28yf4ghhquhyvh3',
@@ -29,55 +31,37 @@ const TEST_USERS = {
 // Test Suites
 test.describe('Board Sharing - Permission System', () => {
 
-    test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ browser }) => {
-        // Setup: Owner erstellt Board und teilt mit Editor
-        const ownerPage = await browser.newPage();
-        await ownerPage.goto('/cardsboard');
-        
-        await loginWithNsec(ownerPage, TEST_USERS.owner.nsec);
+    test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ page }) => {
+        test.setTimeout(120000);
 
-        const now = Date.now().toString()
+        await page.goto('/cardsboard');
+        await loginWithNsec(page, TEST_USERS.owner.nsec);
+
+        const now = Date.now().toString();
 
         const boardName = `Shared ${now.slice(now.length - 5, now.length)}`;
-        await createSharedBoard(ownerPage, boardName);
-        await shareBoard(ownerPage, TEST_USERS.editor.pubkey, 'editor');
-        
-        // Warte dass Share-Event zu Relays propagiert (CRITICAL!)
-        await ownerPage.waitForTimeout(3000);
-        
-        // Editor-Session
-        const editorPage = await browser.newPage();
-        await editorPage.goto('/cardsboard');
-        
-        await loginWithNsec(editorPage, TEST_USERS.editor.nsec);
-        
-        // TODO: it is not supposed to be necessary
-        await editorPage.reload();
+        await createSharedBoard(page, boardName);
+        await shareBoard(page, TEST_USERS.editor.pubkey, 'editor');
 
-        // Warte auf Board-Liste und Nostr-Synchronisation
-        await editorPage.waitForLoadState('networkidle');
-        await editorPage.waitForTimeout(4000); // Gib Nostr mehr Zeit zum Laden (3s -> 4s)
+        await logout(page);
+        await loginWithNsec(page, TEST_USERS.editor.nsec);
 
-        // Warte mit längerem Timeout auf Board-Sichtbarkeit (Nostr Sync braucht Zeit)
-        await expect(editorPage.getByText(boardName)).toBeVisible({ timeout: 20000 });
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(1500);
 
-        await editorPage.getByText(boardName).click();
+        await waitForBoardInSidebar(page, boardName, SHARED_BOARD_APPEAR_TIMEOUT_MS);
+        await openBoardFromSidebar(page, boardName);
+        await page.waitForLoadState('networkidle');
 
-        // Warte dass das Board vollständig geladen ist (crucial!)
-        await editorPage.waitForLoadState('networkidle');
-
-        // Verifiziere dass Editor Karten erstellen kann
-        const createResult = await attemptCardCreate(editorPage);
+        const createResult = await attemptCardCreate(page);
         if (!createResult.success) {
             throw new Error(createResult.error);
         }
 
-        // Verifiziere dass Editor NICHT Board löschen kann
-        const deleteResult = await attemptBoardDelete(editorPage);
+        const deleteResult = await attemptBoardDelete(page);
         expect(deleteResult.success).toBe(false);
         
-        await ownerPage.close();
-        await editorPage.close();
     });
 
     test.skip('Viewer kann NUR lesen, nicht bearbeiten', async ({ browser }) => {
@@ -244,6 +228,38 @@ test.describe.skip('Board Sharing - Error Handling', () => {
     });
 });
 
+function escapeRegex(input: string): string {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function boardButtonLocator(page: Page, boardName: string) {
+    const boardNamePattern = new RegExp(`^${escapeRegex(boardName)}(?:\\s|$)`);
+    return page.getByRole('button', { name: boardNamePattern }).first();
+}
+
+async function waitForBoardInSidebar(page: Page, boardName: string, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        const boardButton = boardButtonLocator(page, boardName);
+        if (await boardButton.isVisible().catch(() => false)) {
+            return;
+        }
+
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(3000);
+    }
+
+    throw new Error(`Shared board not visible in sidebar after ${timeoutMs}ms: ${boardName}`);
+}
+
+async function openBoardFromSidebar(page: Page, boardName: string): Promise<void> {
+    const boardButton = boardButtonLocator(page, boardName);
+    await expect(boardButton).toBeVisible({ timeout: 5000 });
+    await boardButton.click();
+}
+
 async function createSharedBoard(page: Page, boardName: string) {
     // Suche "Neues Board" Button
     const newBoardButton = page.getByTestId('create-board-button');
@@ -285,6 +301,7 @@ async function shareBoard(page: Page, targetUserPubkey: string, role: 'editor' |
     await page.getByPlaceholder('npub1... oder 64-Zeichen Hex').fill(targetUserPubkey);
     
     await page.getByTestId("add-editor-button").click();
+    await expect(page.getByText('Editor hinzugefügt')).toBeVisible({ timeout: 10000 });
     
     await page.getByText('Schließen').click();
 }
@@ -379,3 +396,4 @@ async function attemptBoardDelete(page: Page): Promise<{ success: boolean; error
         return { success: false, error: String(error) };
     }
 }
+

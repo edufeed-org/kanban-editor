@@ -39,8 +39,12 @@ export async function publishBoard(ndk: NDK | undefined, board: Board): Promise<
 			if (mode === 'private-relays') {
 				toast.warning('🔒 Keine privaten Relays konfiguriert', {
 					description:
-						'Board-Änderungen werden nur lokal gespeichert. Gehe zu Einstellungen → Nostr → Private Relays um Synchronisation zu aktivieren.',
-					duration: 6000
+						'Board-Änderungen werden nur lokal gespeichert. Klicke auf dein Profil → Applikation → Nostr Relays und trage deine privates Relay (z.B: wss://relay.edufeed.org) ein.',
+					duration: 6000,
+					action: {
+						label: 'Einstellungen prüfen',
+						onClick: () => settingsStore.openNostrSettingsDialog()
+					}
 				});
 				console.warn(
 					'[NostrIntegration] 🔒 private board cannot be published - no private relays configured'

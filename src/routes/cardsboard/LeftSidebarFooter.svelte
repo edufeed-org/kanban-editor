@@ -43,7 +43,6 @@
 	let showProfileEditor = $state(false);
 	let uiSettingsOpen = $state(false);
 	let llmSettingsOpen = $state(false);
-	let nostrSettingsOpen = $state(false);
 	let defaultsSettingsOpen = $state(false);
 
 	// Demo-Error Message
@@ -135,7 +134,7 @@
 									<BotIcon class="h-4 w-4" />
 									<span>KI-Anbindung</span>
 								</DropdownMenu.Item>
-								<DropdownMenu.Item onclick={() => nostrSettingsOpen = true} class="gap-2 editor-menu-item">
+								<DropdownMenu.Item onclick={() => settingsStore.openNostrSettingsDialog()} class="gap-2 editor-menu-item">
 									<WifiIcon class="h-4 w-4" />
 									<span>Nostr Relays</span>
 								</DropdownMenu.Item>
@@ -247,7 +246,7 @@
 <SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
 
 <!-- Nostr Relay Settings Dialog -->
-<Dialog.Root bind:open={nostrSettingsOpen}>
+<Dialog.Root bind:open={settingsStore.nostrSettingsDialogOpen}>
 	<Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">

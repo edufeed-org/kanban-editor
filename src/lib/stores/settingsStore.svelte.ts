@@ -221,6 +221,8 @@ export class SettingsStore {
 
   // Reaktiver State (Svelte 5 Runes)
   public settings = $state<SettingsState>(this.loadSettings());
+  // UI-only dialog state (nicht persistent)
+  public nostrSettingsDialogOpen = $state(false);
 
   // Derived Values (automatisch berechnet)
   public isDarkMode = $derived(
@@ -1071,6 +1073,14 @@ export class SettingsStore {
     console.log('Stored in localStorage:', localStorage.getItem(SettingsStore.STORAGE_KEY));
     console.log('Cached Config:', localStorage.getItem(SettingsStore.CONFIG_KEY));
     console.groupEnd();
+  }
+
+  public openNostrSettingsDialog(): void {
+    this.nostrSettingsDialogOpen = true;
+  }
+
+  public closeNostrSettingsDialog(): void {
+    this.nostrSettingsDialogOpen = false;
   }
 }
 
