@@ -16,6 +16,7 @@
 	import SettingsPanel from "$lib/components/settings/SettingsPanel.svelte";
 	import RelayStatusInfo from "./RelayStatusInfo.svelte";
 	import FAQDialog from "./FAQDialog.svelte";
+	import PublicBoardsDialog from "./PublicBoardsDialog.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlayIcon from "@lucide/svelte/icons/play";
@@ -28,6 +29,7 @@
 	import BookIcon from "@lucide/svelte/icons/book";
 	import InfoIcon from "@lucide/svelte/icons/info";
 	import HelpCircleIcon from "@lucide/svelte/icons/help-circle";
+	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -46,6 +48,7 @@
 	let uiSettingsOpen = $state(false);
 	let llmSettingsOpen = $state(false);
 	let defaultsSettingsOpen = $state(false);
+	let publicBoardsDialogOpen = $state(false);
 	let faqDialogOpen = $state(false);
 
 	// Demo-Error Message
@@ -155,6 +158,14 @@
 							</DropdownMenu.SubTrigger>
 							<DropdownMenu.SubContent class="w-48">
 								<DropdownMenu.Item
+									onclick={() => publicBoardsDialogOpen = true}
+									class="gap-2 editor-menu-item"
+								>
+									<GlobeIcon class="h-4 w-4" />
+									<span>Öffentliche Boards</span>
+								</DropdownMenu.Item>
+								<DropdownMenu.Separator />
+								<DropdownMenu.Item
 									onclick={() => window.open(settingsStore.settings.sourceCodeUrl, "_blank")}
 									class="gap-2 editor-menu-item"
 								>
@@ -247,6 +258,9 @@
 
 <!-- FAQ Dialog -->
 <FAQDialog bind:open={faqDialogOpen} />
+
+<!-- Public Boards Dialog -->
+<PublicBoardsDialog bind:open={publicBoardsDialogOpen} />
 
 <ProfileEditor
     open={showProfileEditor}
