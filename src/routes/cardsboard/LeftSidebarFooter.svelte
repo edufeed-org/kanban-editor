@@ -15,6 +15,7 @@
 	import SettingsDialog from "./SettingsDialog.svelte";
 	import SettingsPanel from "$lib/components/settings/SettingsPanel.svelte";
 	import RelayStatusInfo from "./RelayStatusInfo.svelte";
+	import FAQDialog from "./FAQDialog.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlayIcon from "@lucide/svelte/icons/play";
@@ -26,6 +27,7 @@
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
 	import BookIcon from "@lucide/svelte/icons/book";
 	import InfoIcon from "@lucide/svelte/icons/info";
+	import HelpCircleIcon from "@lucide/svelte/icons/help-circle";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -44,6 +46,7 @@
 	let uiSettingsOpen = $state(false);
 	let llmSettingsOpen = $state(false);
 	let defaultsSettingsOpen = $state(false);
+	let faqDialogOpen = $state(false);
 
 	// Demo-Error Message
 	let demoErrorMessage = $state<string | null>(null);
@@ -172,6 +175,14 @@
 									<InfoIcon class="h-4 w-4" />
 									<span>Über</span>
 								</DropdownMenu.Item>
+								<DropdownMenu.Separator />
+								<DropdownMenu.Item
+									onclick={() => faqDialogOpen = true}
+									class="gap-2 editor-menu-item"
+								>
+									<HelpCircleIcon class="h-4 w-4" />
+									<span>FAQ</span>
+								</DropdownMenu.Item>
 							</DropdownMenu.SubContent>
 						</DropdownMenu.Sub>
 						
@@ -233,6 +244,9 @@
 
 <!-- Login Dialog -->
 <LoginDialog bind:open={loginDialogOpen} />
+
+<!-- FAQ Dialog -->
+<FAQDialog bind:open={faqDialogOpen} />
 
 <ProfileEditor
     open={showProfileEditor}
