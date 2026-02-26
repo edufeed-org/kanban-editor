@@ -337,8 +337,9 @@
 			{:else}
 				<!-- Boards Grid -->
 				<div class="overflow-y-auto h-[calc(85vh-10rem)]">
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-						{#each displayedBoards as board (`${board.author}-${board.id}`)}
+					<div class="p-4 pb-24">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							{#each displayedBoards as board (`${board.author}-${board.id}`)}
 							<Card.Root class="hover:shadow-lg transition-shadow cursor-pointer group">
 								<Card.Header>
 									<Card.Title class="text-lg group-hover:text-primary transition-colors">
@@ -404,17 +405,18 @@
 								</Card.Footer>
 							</Card.Root>
 						{/each}
-					</div>
-					
-					<!-- Load More Button -->
-					{#if displayedBoards.length < allBoards.length}
-						<div class="p-4 text-center">
-							<Button onclick={loadMore} variant="outline" class="gap-2">
-								<ChevronDownIcon class="h-4 w-4" />
-								Mehr laden ({allBoards.length - displayedBoards.length} weitere)
-							</Button>
 						</div>
-					{/if}
+						
+						<!-- Load More Button -->
+						{#if displayedBoards.length < allBoards.length}
+							<div class="mt-4 text-center">
+								<Button onclick={loadMore} variant="outline" class="gap-2">
+									<ChevronDownIcon class="h-4 w-4" />
+									Mehr laden ({allBoards.length - displayedBoards.length} weitere)
+								</Button>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/if}
 		</div>
