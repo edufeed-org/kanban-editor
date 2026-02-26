@@ -24,8 +24,10 @@
   import XIcon from '@lucide/svelte/icons/x';
   import SquareSigmaIcon from '@lucide/svelte/icons/square-sigma';
   import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
+  import BotIcon from '@lucide/svelte/icons/bot';
   import { onMount, onDestroy } from 'svelte';
   import { toast } from 'svelte-sonner';
+  import SettingsDialog from './SettingsDialog.svelte';
   
   // ?? Tool-Based AI System (MCP-Style)
   import {
@@ -53,6 +55,7 @@
   // Chat State
   let userInput = $state('');
   let isProcessing = $state(false);
+  let llmSettingsOpen = $state(false);
   
   // AI Summary State
   let aiSummary = $state<string | null>(null);
@@ -75,6 +78,23 @@
   
   // Chat Messages (derived from chatStore)
   let messages = $derived(chatStore.messages);
+
+  const LLM_SETTINGS_ERROR_MARKERS = [
+    'fehler beim kontaktieren des llm',
+    'llm api error',
+    'llm nicht konfiguriert',
+    'networkerror',
+    'failed to fetch',
+    'fetch resource',
+    'err_network',
+    'econnrefused'
+  ];
+
+  function shouldShowLlmSettingsCta(content: string | null | undefined): boolean {
+    if (!content) return false;
+    const normalized = content.toLowerCase();
+    return LLM_SETTINGS_ERROR_MARKERS.some((marker) => normalized.includes(marker));
+  }
   
   // Chat Container Referenz für Auto-Scroll
   let chatContainer: HTMLDivElement | null = $state(null);
@@ -97,13 +117,13 @@
     }
   });
   
-  // ?? WICHTIG: Lade Chat-Session wenn boardId sich �ndert
+  // ?? WICHTIG: Lade Chat-Session wenn boardId sich aendert
   // Guard: Verhindere Endlosschleife durch Tracking der letzten geladenen ID
   let lastLoadedBoardId = $state<string | null>(null);
   
   $effect(() => {
     if (boardId !== lastLoadedBoardId) {
-      console.log('?? AIPanel: Lade Chat-Session f�r Board:', boardId);
+      console.log('?? AIPanel: Lade Chat-Session fuer Board:', boardId);
       chatStore.loadSession(boardId);
       lastLoadedBoardId = boardId;
     }
@@ -289,7 +309,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         // Show processing message if multiple tools
         if (result.tool_calls.length > 1) {
           chatStore.addMessage(
-            `?? F�hre ${result.tool_calls.length} Aktionen aus...`,
+            `?? Fuehre ${result.tool_calls.length} Aktionen aus...`,
             'assistant'
           );
         }
@@ -361,7 +381,7 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
               console.log('? [Tool-Based] Showing clarification question');
               let clarificationMsg = r.result.question;
               if (r.result.options && r.result.options.length > 0) {
-                clarificationMsg += '\n\nOptionen:\n' + r.result.options.map((o: string) => `� ${o}`).join('\n');
+                clarificationMsg += '\n\nOptionen:\n' + r.result.options.map((o: string) => `- ${o}`).join('\n');
               }
               chatStore.addMessage(clarificationMsg, 'assistant');
             }
@@ -519,6 +539,18 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
         {#if aiSummaryError}
           <div class="rounded bg-destructive/10 border border-destructive/20 p-2">
             <p class="text-[11px] text-destructive">{aiSummaryError}</p>
+            {#if shouldShowLlmSettingsCta(aiSummaryError)}
+              <div class="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="h-7 text-[11px]"
+                  onclick={() => (llmSettingsOpen = true)}
+                >
+                  Einstellungen pruefen
+                </Button>
+              </div>
+            {/if}
           </div>
         {/if}
         
@@ -612,6 +644,18 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
                 <p class="message-content text-xs whitespace-pre-wrap break-words">
                   {message.content}
                 </p>
+                {#if message.role === 'assistant' && shouldShowLlmSettingsCta(message.content)}
+                  <div class="mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-7 text-[11px]"
+                      onclick={() => (llmSettingsOpen = true)}
+                    >
+                      Einstellungen prüfen
+                    </Button>
+                  </div>
+                {/if}
                 
                 <!-- 📚 OER Results mit interaktiven Buttons -->
                 {#if message.oerResults && message.oerResults.length > 0}
@@ -696,4 +740,6 @@ Antworte NUR mit der Markdown-Zusammenfassung, ohne zusätzliche Erklärungen.`;
   </div>
   
 </div>
+
+<SettingsDialog bind:open={llmSettingsOpen} title="LLM Einstellungen" icon={BotIcon} tab="llm" />
 

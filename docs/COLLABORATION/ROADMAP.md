@@ -179,6 +179,10 @@
   - Conversation Summaries
   - LLM Integration (`sendToLLMWithSystem()`)
   - Tests: `chatStore.svelte.spec.ts` (413 Tests!)
+- ✅ **LLM Error Recovery CTA** (26.02.2026)
+  - AIPanel zeigt bei `Fehler beim Kontaktieren des LLM` einen direkten CTA `Einstellungen pruefen`
+  - CTA oeffnet den Dialog `LLM Einstellungen` auf Tab `llm`
+  - Erkennung erweitert: funktioniert auch bei `LLM API Error`, Netzwerk-/Fetch-Fehlern und `LLM nicht konfiguriert` (inkl. Summary-Fehlerblock)
 
 - ✅ **AIPanel** (`AIPanel.svelte`, 1421 Zeilen!)
   - Two-Phase AI Response System

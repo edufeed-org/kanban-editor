@@ -9,6 +9,8 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 ## Unreleased
 
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.
+- AI Panel: Bei LLM-Kontaktfehlern wird in der Chat-Nachricht ein CTA `Einstellungen pruefen` angezeigt, der direkt den Dialog `LLM Einstellungen` (Tab `llm`) oeffnet.
+- AI Panel: CTA `Einstellungen pruefen` greift jetzt auch bei weiteren LLM-Fehlertypen (`LLM API Error`, Netzwerk-/Fetch-Fehler, `LLM nicht konfiguriert`) und wird zusaetzlich im Summary-Fehlerblock angezeigt.
 
 ## Releases 2026 — PRs (kompakt)
 
