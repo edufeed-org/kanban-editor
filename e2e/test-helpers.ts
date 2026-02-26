@@ -134,7 +134,20 @@ export async function loginWithNsec(page: Page, nsec: string = TEST_NSEC) {
   await page.getByPlaceholder('nsec1...').fill(nsec);
   await page.getByRole('button', { name: 'Mit nsec anmelden' }).click();
 
+  // Wait for auth avatar to become visible
   await expect(page.getByTestId('auth-user-avatar')).toBeVisible({ timeout: 10000 });
+  
+  // CRITICAL: Wait for any dialogs and overlays to fully close
+  // The dialog should auto-close via $effect, but we need to wait for the animation
+  await page.waitForTimeout(1000); // Wait for close animation and any async work
+  
+  // Verify no overlays are blocking the UI
+  const dialogOverlay = page.locator('[data-dialog-overlay][data-state="open"]');
+  const overlayCount = await dialogOverlay.count();
+  if (overlayCount > 0) {
+    console.warn(`Warning: ${overlayCount} dialog overlay(s) still open after login, waiting longer...`);
+    await page.waitForTimeout(2000);
+  }
 }
 
 /**

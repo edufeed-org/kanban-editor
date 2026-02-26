@@ -19,6 +19,32 @@
 	let nsecInput = $state('');
 	let isLoading = $derived(authStore.isLoading);
 	let errorMessage = $derived(authStore.errorMessage);
+	let isAuthenticated = $derived(authStore.isAuthenticated);
+
+	// Track if dialog was open when auth was NOT active, then close after fresh auth			// This prevents premature closing if user was already authenticated
+	let wasUnauthenticatedWhenOpened = $state(false);
+	
+	$effect(() => {
+		if (open && !isAuthenticated) {
+			wasUnauthenticatedWhenOpened = true;
+		} else if (!open) {
+			// Reset when dialog closes
+			wasUnauthenticatedWhenOpened = false;
+		}
+	});
+
+	// Auto-close after successful login (with small delay to avoid race conditions)
+	$effect(() => {
+		if (wasUnauthenticatedWhenOpened && isAuthenticated && open && !isLoading) {
+			// Small delay to ensure all UI updates complete before closing
+			setTimeout(() => {
+				console.log('[LoginDialog] Closing after successful auth');
+				open = false;
+				nsecInput = '';
+				wasUnauthenticatedWhenOpened = false;
+			}, 500);
+		}
+	});
 
 	// Browser detection
 	let browserType = $state<'chrome' | 'firefox' | 'safari' | 'edge' | 'opera' | 'brave' | 'unknown'>('unknown');
