@@ -259,8 +259,10 @@
 <!-- FAQ Dialog -->
 <FAQDialog bind:open={faqDialogOpen} />
 
-<!-- Public Boards Dialog -->
-<PublicBoardsDialog bind:open={publicBoardsDialogOpen} />
+<!-- Public Boards Dialog - only render when opened to avoid interference -->
+{#if publicBoardsDialogOpen}
+	<PublicBoardsDialog bind:open={publicBoardsDialogOpen} />
+{/if}
 
 <ProfileEditor
     open={showProfileEditor}

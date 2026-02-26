@@ -35,10 +35,10 @@
 	const BOARDS_PER_PAGE = 20;
 
 	// Fetch public boards when dialog opens
+	// Use untrack to avoid running on mount
 	$effect(() => {
-		console.log("🔄 PublicBoardsDialog $effect triggered", { open, boardsLength: allBoards.length, isLoading });
-		if (open && allBoards.length === 0 && !isLoading) {
-			console.log("✅ Conditions met, starting fetch...");
+		// Only fetch if explicitly opened by user
+		if (open === true && allBoards.length === 0 && !isLoading) {
 			fetchPublicBoards();
 		}
 	});
