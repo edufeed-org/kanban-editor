@@ -36,11 +36,18 @@
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
     import SendIcon from '@lucide/svelte/icons/send';
+    import FAQDialog from './FAQDialog.svelte';
+    import PublicBoardsDialog from './PublicBoardsDialog.svelte';
+    import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
     import PackageOpenIcon from '@lucide/svelte/icons/package-open';
     import UserPlusIcon from '@lucide/svelte/icons/user-plus';
     import LinkIcon from '@lucide/svelte/icons/link';
     import PencilIcon from '@lucide/svelte/icons/pencil';
     import EyeIcon from '@lucide/svelte/icons/eye';
+    import BookIcon from '@lucide/svelte/icons/book';
+    import InfoIcon from '@lucide/svelte/icons/info';
+    import HelpCircleIcon from '@lucide/svelte/icons/help-circle';
+    import GlobeIcon from '@lucide/svelte/icons/globe';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -101,6 +108,11 @@
     let liaScriptExportDialogOpen = $state(false);
     let publishToEdufeedDialogOpen = $state(false);
     let importDialogOpen = $state(false);
+    
+    // Wissenswertes States
+    let wissenswertesPopoverOpen = $state(false);
+    let faqDialogOpen = $state(false);
+    let publicBoardsDialogOpen = $state(false);
     let importFile = $state<File | null>(null);
     let importMode = $state<'merge' | 'new' | 'overwrite'>('merge');
     
@@ -651,20 +663,79 @@
                 showBorder={false}
             />
             
-            <!-- Separator 1 -->
-            <!-- <div class="border-t"></div> -->
-
-            <!-- 5. User Nostr-Profil -->
-            <!-- <MenuItem 
-                icon={UserIcon} 
-                label="User Nostr-Profil" 
-                onclick={() => { 
-                    profileEditorOpen = true;
-                    hamburgerMenuOpen = false;
-                }}
-                disabled={!authStore.isAuthenticated}
-                showBorder={false}
-            /> -->
+            <!-- 6. Wissenswertes -->
+            <Popover.Root bind:open={wissenswertesPopoverOpen}>
+                <Popover.Trigger class="w-full">
+                    <MenuItem 
+                        icon={FileTextIcon} 
+                        label="Wissenswertes" 
+                        onclick={() => {}}
+                        showBorder={false}
+                        showChevron={true}
+                    />
+                </Popover.Trigger>
+                <Popover.Content side="right" align="start" class="w-56 p-0">
+                    <div class="space-y-0">
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={GlobeIcon}
+                                label="Öffentliche Boards"
+                                onclick={() => {
+                                    publicBoardsDialogOpen = true;
+                                    wissenswertesPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="border-t"></div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={FileTextIcon}
+                                label="Source Code"
+                                onclick={() => {
+                                    window.open(settingsStore.settings.sourceCodeUrl, "_blank");
+                                    wissenswertesPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={BookIcon}
+                                label="Dokumentation"
+                                onclick={() => {
+                                    window.open(settingsStore.settings.documentationUrl, "_blank");
+                                    wissenswertesPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={InfoIcon}
+                                label="Über"
+                                onclick={() => {
+                                    window.open(settingsStore.settings.aboutUrl, "_blank");
+                                    wissenswertesPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                        <div class="border-t"></div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
+                                icon={HelpCircleIcon}
+                                label="FAQ"
+                                onclick={() => {
+                                    faqDialogOpen = true;
+                                    wissenswertesPopoverOpen = false;
+                                    hamburgerMenuOpen = false;
+                                }}
+                            />
+                        </div>
+                    </div>
+                </Popover.Content>
+            </Popover.Root>
         </div>
     {/if}
     
@@ -979,6 +1050,14 @@
             <!-- Share Dialogs (Links / Editoren) -->
             <ShareDialog bind:open={shareLinksOpen} mode="links" initialTab="nostr-link" />
             <ShareDialog bind:open={shareEditorsOpen} mode="editors" initialTab="editors" />
+
+<!-- FAQ Dialog -->
+<FAQDialog bind:open={faqDialogOpen} />
+
+<!-- Public Boards Dialog -->
+{#if publicBoardsDialogOpen}
+    <PublicBoardsDialog bind:open={publicBoardsDialogOpen} />
+{/if}
 
 <style>
     div {

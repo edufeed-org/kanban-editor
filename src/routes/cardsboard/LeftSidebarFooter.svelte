@@ -15,8 +15,6 @@
 	import SettingsDialog from "./SettingsDialog.svelte";
 	import SettingsPanel from "$lib/components/settings/SettingsPanel.svelte";
 	import RelayStatusInfo from "./RelayStatusInfo.svelte";
-	import FAQDialog from "./FAQDialog.svelte";
-	import PublicBoardsDialog from "./PublicBoardsDialog.svelte";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlayIcon from "@lucide/svelte/icons/play";
@@ -26,10 +24,6 @@
 	import BotIcon from "@lucide/svelte/icons/bot";
 	import WifiIcon from "@lucide/svelte/icons/wifi";
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
-	import BookIcon from "@lucide/svelte/icons/book";
-	import InfoIcon from "@lucide/svelte/icons/info";
-	import HelpCircleIcon from "@lucide/svelte/icons/help-circle";
-	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import { ProfileEditor } from '$lib/components/auth/index.js';
 
 
@@ -48,8 +42,6 @@
 	let uiSettingsOpen = $state(false);
 	let llmSettingsOpen = $state(false);
 	let defaultsSettingsOpen = $state(false);
-	let publicBoardsDialogOpen = $state(false);
-	let faqDialogOpen = $state(false);
 
 	// Demo-Error Message
 	let demoErrorMessage = $state<string | null>(null);
@@ -151,53 +143,6 @@
 							</DropdownMenu.SubContent>
 						</DropdownMenu.Sub>
 
-						<DropdownMenu.Sub>
-							<DropdownMenu.SubTrigger class="gap-2 editor-menu-item">
-								<FileTextIcon class="h-4 w-4" />
-								<span>Wissenswertes</span>
-							</DropdownMenu.SubTrigger>
-							<DropdownMenu.SubContent class="w-48">
-								<DropdownMenu.Item
-									onclick={() => publicBoardsDialogOpen = true}
-									class="gap-2 editor-menu-item"
-								>
-									<GlobeIcon class="h-4 w-4" />
-									<span>Öffentliche Boards</span>
-								</DropdownMenu.Item>
-								<DropdownMenu.Separator />
-								<DropdownMenu.Item
-									onclick={() => window.open(settingsStore.settings.sourceCodeUrl, "_blank")}
-									class="gap-2 editor-menu-item"
-								>
-									<FileTextIcon class="h-4 w-4" />
-									<span>Source Code</span>
-								</DropdownMenu.Item>
-								<DropdownMenu.Item
-									onclick={() => window.open(settingsStore.settings.documentationUrl, "_blank")}
-									class="gap-2 editor-menu-item"
-								>
-									<BookIcon class="h-4 w-4" />
-									<span>Dokumentation</span>
-								</DropdownMenu.Item>
-								<DropdownMenu.Item
-									onclick={() => window.open(settingsStore.settings.aboutUrl, "_blank")}
-									class="gap-2 editor-menu-item"
-								>
-									<InfoIcon class="h-4 w-4" />
-									<span>Über</span>
-								</DropdownMenu.Item>
-								<DropdownMenu.Separator />
-								<DropdownMenu.Item
-									onclick={() => faqDialogOpen = true}
-									class="gap-2 editor-menu-item"
-								>
-									<HelpCircleIcon class="h-4 w-4" />
-									<span>FAQ</span>
-								</DropdownMenu.Item>
-							</DropdownMenu.SubContent>
-						</DropdownMenu.Sub>
-						
-						<DropdownMenu.Separator />
 						
 						<!-- Logout -->
 						<DropdownMenu.Item onclick={handleLogout} class="gap-2 destructive menu-item">
@@ -255,14 +200,6 @@
 
 <!-- Login Dialog -->
 <LoginDialog bind:open={loginDialogOpen} />
-
-<!-- FAQ Dialog -->
-<FAQDialog bind:open={faqDialogOpen} />
-
-<!-- Public Boards Dialog - only render when opened to avoid interference -->
-{#if publicBoardsDialogOpen}
-	<PublicBoardsDialog bind:open={publicBoardsDialogOpen} />
-{/if}
 
 <ProfileEditor
     open={showProfileEditor}
