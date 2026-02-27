@@ -61,6 +61,13 @@
 		return startsWithHtml;
 	}
 	
+	// <br>-Tags zu Newlines normalisieren, damit markdown-it keinen HTML-Block-Modus startet
+	// (Problem: <br> am Zeilenanfang → alles danach wird als rohes HTML behandelt,
+	//  ![](url) und [text](url) werden dann nicht mehr als Markdown geparsed)
+	function normalizeBrTags(text: string): string {
+		return text.replace(/<br\s*\/?>/gi, '\n');
+	}
+
 	// URLs in Markdown-Bild/Link-Syntax vor linkify schützen
 	// Verhindert, dass ![alt](url) oder [text](url) URLs doppelt verlinkt werden
 	function protectMarkdownUrls(text: string): { processed: string; urlMap: Map<string, string> } {
@@ -93,8 +100,11 @@
 			return content;
 		}
 		
+		// <br>-Tags normalisieren (können von Turndown/TipTap stammen)
+		const normalized = normalizeBrTags(content);
+		
 		// URLs in Markdown-Bild/Link-Syntax vor linkify schützen
-		const { processed, urlMap } = protectMarkdownUrls(content);
+		const { processed, urlMap } = protectMarkdownUrls(normalized);
 		
 		// Markdown zu HTML konvertieren
 		let html = md.render(processed);

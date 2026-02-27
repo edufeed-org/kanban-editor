@@ -59,8 +59,6 @@
 		codeBlockStyle: 'fenced', // ``` statt Einrückung
 		emDelimiter: '*',         // *italic* statt _italic_
 		strongDelimiter: '**',     // **bold**
-  		br: "<br>",
-		blankReplacement: () => "<br>\n",
 	});
 	
 	// Prüfe ob der Inhalt Markdown ist (nicht bereits HTML)
