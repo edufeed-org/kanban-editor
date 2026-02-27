@@ -61,6 +61,28 @@
 		return startsWithHtml;
 	}
 	
+	// URLs in Markdown-Bild/Link-Syntax vor linkify schützen
+	// Verhindert, dass ![alt](url) oder [text](url) URLs doppelt verlinkt werden
+	function protectMarkdownUrls(text: string): { processed: string; urlMap: Map<string, string> } {
+		const urlMap = new Map<string, string>();
+		let counter = 0;
+
+		const processed = text.replace(
+			/(!?\[[^\]]*\])\(([^)]+)\)/g,
+			(match, prefix: string, url: string) => {
+				// Nur URLs schützen, die linkify erkennen würde
+				if (/https?:\/\/|ftp:\/\/|www\./i.test(url)) {
+					const key = `__MDPROT_${counter++}__`;
+					urlMap.set(key, url);
+					return `${prefix}(${key})`;
+				}
+				return match;
+			}
+		);
+
+		return { processed, urlMap };
+	}
+
 	// Intelligentes Rendering: Markdown konvertieren, HTML durchlassen nur wenn vollständig HTML
 	let renderedHtml = $derived.by(() => {
 		if (!content) return '';
@@ -71,8 +93,18 @@
 			return content;
 		}
 		
-		// Markdown zu HTML konvertieren (auch wenn es gemischtes HTML/Markdown ist)
-		return md.render(content);
+		// URLs in Markdown-Bild/Link-Syntax vor linkify schützen
+		const { processed, urlMap } = protectMarkdownUrls(content);
+		
+		// Markdown zu HTML konvertieren
+		let html = md.render(processed);
+		
+		// Geschützte URLs wiederherstellen
+		for (const [key, url] of urlMap) {
+			html = html.replaceAll(key, url);
+		}
+		
+		return html;
 	});
 </script>
 
