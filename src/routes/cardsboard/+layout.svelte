@@ -16,6 +16,7 @@ import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
 import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
+import { presenceStore } from '$lib/stores/presenceStore.svelte.js';
 import { showEditorPermissionToast } from '$lib/utils/permissionToast';
 import { toast } from "svelte-sonner";
 import MenuIcon from '@lucide/svelte/icons/menu';
@@ -136,6 +137,41 @@ $effect(() => {
 	return () => {
 		unsubscribeAllComments?.();
 		unsubscribeAllComments = null;
+	};
+});
+
+// ============================================================================
+// PRESENCE TRACKING: Start/Stop when board changes
+// ============================================================================
+$effect(() => {
+	const boardId = currentBoardId;
+	const boardData = boardStore.data;
+	
+	if (!boardId || !boardData) {
+		presenceStore.stopTracking();
+		return;
+	}
+	
+	// Initialize presence store with NDK if not already done
+	const ndk = boardStore.nostrIntegration?.getNDK();
+	if (ndk && boardStore.ndkReady) {
+		// Initialize on first use
+		if (!presenceStore['ndk']) {
+			presenceStore.initialize(ndk).catch(err => {
+				console.warn('⚠️ Failed to initialize presence store:', err);
+			});
+		}
+		
+		// Start tracking for current board
+		const boardAuthor = boardData.author || '';
+		if (boardAuthor) {
+			presenceStore.startTracking(boardId, boardAuthor);
+		}
+	}
+	
+	// Cleanup when board changes or component unmounts
+	return () => {
+		presenceStore.stopTracking();
 	};
 });
 

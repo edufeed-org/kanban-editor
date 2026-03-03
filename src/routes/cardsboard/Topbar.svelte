@@ -20,6 +20,7 @@
     import { BoardRole } from '$lib/types/sharing';
     import { requestEditorDialogStore } from '$lib/stores/requestEditorDialog.svelte';
     import RequestEditorRoleDialog from '$lib/components/board/RequestEditorRoleDialog.svelte';
+    import PresenceAvatars from './PresenceAvatars.svelte';
     
     // State für Edufeed-Dialog
     let showEdufeedDialog = $state(false);
@@ -348,6 +349,13 @@
                     <UserPlusIcon class="h-4 w-4" />
                     <span class="hidden sm:inline text-xs">Schreibrechte beantragen</span>
                 </Button>
+                <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
+            {/if}
+
+            <!-- Presence Avatars: Online users for current board -->
+            <PresenceAvatars maxVisible={5} />
+            
+            {#if canEdit || showRequestEditorButton}
                 <Separator orientation="vertical" class="min-w-0.5 sm:min-w-3" />
             {/if}
 

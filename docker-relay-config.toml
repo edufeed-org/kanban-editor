@@ -26,5 +26,6 @@ level = "info"
 # 8571: Column Order Patch (Editor-Safe, keine 30301 Forks)
 # 30023: Long Text
 # 30142: Nostr Learning Resource
-event_kind_allowlist = [0, 1, 5, 8571, 30000, 30301, 30302, 30303, 30023, 20001, 30142]
+# 20000: Ephemeral Events, um online-Users zu zeigen 
+event_kind_allowlist = [0, 1, 5, 8571, 30000, 30301, 30302, 30303, 30023, 20001, 30142, 20000]
 
