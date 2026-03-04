@@ -177,6 +177,13 @@ export class PresenceStore {
     const pubkey = event.pubkey;
     const timestamp = event.created_at ? event.created_at * 1000 : Date.now();
     
+    // SECURITY: Never add current user to online users list
+    // This prevents showing own avatar even if we receive our own heartbeat
+    const currentUserPubkey = authStore.getPubkey();
+    if (currentUserPubkey && pubkey === currentUserPubkey) {
+      return; // Silently ignore own presence events
+    }
+    
     // Update or add user (Svelte 5: Must reassign Map for reactivity)
     const newMap = new Map(this.onlineUsers);
     newMap.set(pubkey, {
@@ -301,13 +308,15 @@ export class PresenceStore {
   private cleanupInactiveUsers(): void {
     const now = Date.now();
     const cutoff = now - this.INACTIVITY_TIMEOUT;
+    const currentUserPubkey = authStore.getPubkey();
     
     // Svelte 5: Must create new Map for reactivity
     const newMap = new Map(this.onlineUsers);
     let removedCount = 0;
     
     for (const [pubkey, user] of this.onlineUsers) {
-      if (user.lastSeen < cutoff) {
+      // Remove if inactive OR if it's the current user (safety check)
+      if (user.lastSeen < cutoff || (currentUserPubkey && pubkey === currentUserPubkey)) {
         newMap.delete(pubkey);
         removedCount++;
       }
@@ -336,9 +345,17 @@ export class PresenceStore {
    */
   private refreshDisplayNames(): void {
     let updated = false;
+    const currentUserPubkey = authStore.getPubkey();
     const newMap = new Map(this.onlineUsers);
     
     for (const [pubkey, user] of this.onlineUsers) {
+      // SAFETY: Remove current user if they somehow ended up in the map
+      if (currentUserPubkey && pubkey === currentUserPubkey) {
+        newMap.delete(pubkey);
+        updated = true;
+        continue;
+      }
+      
       // Get fresh display name from authStore cache
       const displayName = authStore.getDisplayNameForPubkey(pubkey);
       

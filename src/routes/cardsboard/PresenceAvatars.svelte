@@ -7,12 +7,48 @@
 	// Props
 	let { maxVisible = 5 }: { maxVisible?: number } = $props();
 	
-	// Current user pubkey for styling
-	let currentUserPubkey = $derived(authStore.getPubkey());
+	// Current user identification (multiple formats for robustness)
+	let currentUserHexPubkey = $derived(authStore.getPubkey());
+	let currentUserNpub = $derived(authStore.getNpub());
 	
-	// Derived values from presence store - filter out current user
+	/**
+	 * Check if a pubkey belongs to the current authenticated user
+	 * Uses multiple checks for robustness:
+	 * - Direct hex pubkey comparison
+	 * - npub format comparison
+	 * - Handles null/undefined gracefully
+	 */
+	function isCurrentUser(pubkey: string): boolean {
+		if (!pubkey) return false;
+		
+		// 1. Check hex pubkey (primary)
+		if (currentUserHexPubkey && pubkey === currentUserHexPubkey) {
+			return true;
+		}
+		
+		// 2. Check if pubkey in npub format matches current user's npub
+		if (currentUserNpub) {
+			try {
+				const userNpub = nip19.npubEncode(pubkey);
+				if (userNpub === currentUserNpub) {
+					return true;
+				}
+			} catch {
+				// Invalid pubkey format, ignore
+			}
+		}
+		
+		// 3. If authStore has a current user, check via NDK user object
+		if (authStore.currentUser?.pubkey === pubkey) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	// Derived values from presence store - ROBUST filter to exclude current user
 	let onlineUsers = $derived(
-		presenceStore.userList.filter(user => user.pubkey !== currentUserPubkey)
+		presenceStore.userList.filter(user => !isCurrentUser(user.pubkey))
 	);
 	let visibleUsers = $derived(onlineUsers.slice(0, maxVisible));
 	let overflowCount = $derived(Math.max(0, onlineUsers.length - maxVisible));
