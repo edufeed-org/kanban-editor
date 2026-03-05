@@ -31,7 +31,8 @@ const TEST_USERS = {
 // Test Suites
 test.describe('Board Sharing - Permission System', () => {
 
-    test('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ page }) => {
+    // TODO: skipped because it is creating dummy boards at real relays. It should use only localhost:7000.
+    test.skip('Owner kann Editoren einladen und Editor kann Karten erstellen und bearbeiten', async ({ page }) => {
         test.setTimeout(120000);
 
         await page.goto('/cardsboard');
