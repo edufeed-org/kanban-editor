@@ -1,50 +1,15 @@
 <script lang="ts">
+	import type {
+		OerSearchResultEvent,
+		OerSearchElement,
+		OerListElement,
+		OerCardClickEvent,
+		SourceConfig,
+		LoadMoreElement
+	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
-
-	type SourceConfig = {
-		id: string;
-		label: string;
-		checked?: boolean;
-		baseUrl?: string;
-	};
-
-	type OerData = {
-		extensions?: {
-			images?: {
-				high?: string;
-				medium?: string;
-				small?: string;
-			} | null;
-		};
-		amb?: {
-			id?: string;
-		};
-	};
-
-	type OerSearchResultEvent = CustomEvent<{
-		data: OerData[];
-		meta: unknown;
-	}>;
-
-	type OerCardClickEvent = CustomEvent<{
-		oer: OerData;
-	}>;
-
-	type OerSearchElement = HTMLElement & {
-		sources?: SourceConfig[];
-	};
-
-	type OerListElement = HTMLElement & {
-		loading: boolean;
-		oers: unknown[];
-		error?: string | null;
-	};
-
-	type LoadMoreElement = HTMLElement & {
-		loading: boolean;
-		metadata: unknown;
-	};
+	import { registerAllBuiltInAdapters } from '@edufeed-org/oer-finder-plugin/adapters';
 
 	interface Props {
 		onSelect: (imageUrl: string) => void;
@@ -54,6 +19,8 @@
 	const _apiUrl = $state(settingsStore.settings.apiUrl)
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
+
+	registerAllBuiltInAdapters();
 
 	const availableSources: SourceConfig[] = [
 		{ id: 'arasaac', label: 'ARASAAC' },
@@ -68,8 +35,8 @@
 	let loadMoreElement: LoadMoreElement;
 
 	onMount(async () => {
-		const plugin = await import('@edufeed-org/oer-finder-plugin');
-		plugin.registerAllBuiltInAdapters();
+		// Dynamically import the plugin only on the client side to avoid SSR issues
+		await import('@edufeed-org/oer-finder-plugin');
 
 		// Set sources as a JS property (not HTML attribute)
 		searchEl.sources = availableSources;
