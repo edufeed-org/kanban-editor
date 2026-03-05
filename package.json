@@ -93,8 +93,7 @@
     ],
     "overrides": {
       "nostr-tools": "~2.14.2",
-      "@nostr-dev-kit/ndk": "^2.14.2",
-      "@edufeed-org/oer-finder-api-client": "^0.0.8"
+      "@nostr-dev-kit/ndk": "^2.14.2"
     },
     "ignoredBuiltDependencies": [
       "svelte-preprocess"
@@ -103,7 +102,7 @@
   "dependencies": {
     "@edufeed-org/amb-nostr-converter": "^0.0.1",
     "@fontsource-variable/roboto-condensed": "^5.1.1",
-    "@edufeed-org/oer-finder-plugin": "^0.1.1",
+    "@edufeed-org/oer-finder-plugin": "^0.2.2",
     "@nostr-dev-kit/ndk": "2.14.2",
     "@nostr-dev-kit/svelte": "^2.0.8",
     "@tiptap/core": "^3.13.0",
