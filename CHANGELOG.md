@@ -8,6 +8,8 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- AMB Publishing: `a`-Tag im Kind-30142 Event nutzt jetzt das kanonische Address-Format `30301:<pubkey>:<d-tag>` (optional mit Relay-Hint) statt `naddr`, damit Referenzen NIP-konform und robuster aufloesbar sind.
+- AMB Publishing: Optionaler `r`-Tag mit oeffentlicher Board-Web-URL (naddr-Pfad) wird zu Snapshot- und AMB-Events hinzugefuegt; lokale/private Origins (`localhost`, private IP-Ranges) werden dabei automatisch ausgeschlossen.
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.
 - AI Panel: Bei LLM-Kontaktfehlern wird in der Chat-Nachricht ein CTA `Einstellungen pruefen` angezeigt, der direkt den Dialog `LLM Einstellungen` (Tab `llm`) oeffnet.
 - AI Panel: CTA `Einstellungen pruefen` greift jetzt auch bei weiteren LLM-Fehlertypen (`LLM API Error`, Netzwerk-/Fetch-Fehler, `LLM nicht konfiguriert`) und wird zusaetzlich im Summary-Fehlerblock angezeigt.
