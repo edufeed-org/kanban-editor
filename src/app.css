@@ -22,7 +22,7 @@
   /* Core Colors — FOERBICO "stil" */
   --background: oklch(100% 0 0);
   --foreground: oklch(38% .02 250);
-  --card: oklch(97% 0 0);
+  --card: oklch(100% 0 0);
   --card-hover: oklch(94% 0 0);
   --card-foreground: oklch(38% .02 250);
   --popover: oklch(97% 0 0);
@@ -69,6 +69,7 @@
   /* Board */
   --column-border: oklch(85% .01 250);
   --button: oklch(88% 0 0);
+  --board-bg: oklch(97.8% 0.002 250);
   
   /* Card Colors for Color Picker */
   --color-slate: oklch(88.734% 0.02327 285.861 / 0.945);
@@ -153,24 +154,24 @@
   /* Core Colors — FOERBICO "rpi" */
   --background: oklch(100% 0 0);
   --foreground: oklch(25% .02 264);
-  --card: oklch(97% .005 264);
+  --card: oklch(100% 0 0);
   --card-hover: oklch(94% .01 264);
   --card-foreground: oklch(25% .02 264);
   --popover: oklch(97% .005 264);
   --popover-foreground: oklch(25% .02 264);
-  --primary: oklch(35% .16 264);
+  --primary: #203a8f;
   --primary-foreground: oklch(100% 0 0);
   --secondary: oklch(94% .01 264);
   --secondary-foreground: oklch(25% .02 264);
   --muted: oklch(94% .01 264);
   --muted-foreground: oklch(55% .01 264);
-  --accent: oklch(79% .17 70);
+  --accent: #ffa500;
   --accent-foreground: oklch(20% 0 0);
   --destructive: oklch(65% .2 25);
   --destructive-foreground: oklch(100% 0 0);
   --border: oklch(88% .005 264);
   --input: oklch(91% .005 264);
-  --ring: oklch(35% .16 264);
+  --ring: #203a8f;
 
   /* Semantic Status Colors */
   --info: oklch(72% .11 230);
@@ -181,34 +182,29 @@
   --warning-foreground: oklch(20% 0 0);
 
   /* Chart Colors */
-  --chart-1: oklch(35% .16 264);
-  --chart-2: oklch(79% .17 70);
+  --chart-1: #203a8f;
+  --chart-2: #ffa500;
   --chart-3: oklch(72% .11 230);
   --chart-4: oklch(82% .17 85);
   --chart-5: oklch(65% .2 25);
+  --color-slate: var(--card);
 
   /* Sidebar */
   --sidebar: oklch(97% .005 264);
   --sidebar-foreground: oklch(25% .02 264);
-  --sidebar-primary: oklch(35% .16 264);
+  --sidebar-primary: #203a8f;
   --sidebar-primary-foreground: oklch(100% 0 0);
   --sidebar-accent: oklch(94% .01 264);
   --sidebar-accent-foreground: oklch(25% .02 264);
   --sidebar-border: oklch(88% .005 264);
-  --sidebar-ring: oklch(35% .16 264);
+  --sidebar-ring: #203a8f;
 
   /* Board */
   --column-border: oklch(85% .01 264);
   --button: oklch(88% .005 264);
 
   /* Board Background — primary (blue) → accent (gold) diagonal */
-  --board-bg: linear-gradient(
-    to bottom right,
-    oklch(72.577% 0.14152 265.272 / 0.534) 0%,
-    oklch(54.98% 0.16067 264.173 / 0.192) 60%,
-    oklch(89.946% 0.02229 74.012 / 0.562) 85%,
-    oklch(78.807% 0.16987 69.733 / 0.534) 98%
-  );
+  --board-bg: oklch(97.6% 0.004 264);
 }
 
 /* ============================================
@@ -224,19 +220,19 @@
   --card-foreground: oklch(90% 0 0);
   --popover: oklch(18% .02 264);
   --popover-foreground: oklch(90% 0 0);
-  --primary: oklch(54.98% 0.16067 264.173);
+  --primary: #4c68c4;
   --primary-foreground: oklch(100% 0 0);
   --secondary: oklch(50% .02 264);
   --secondary-foreground: oklch(100% 0 0);
   --muted: oklch(30% .01 264);
   --muted-foreground: oklch(65% .01 264);
-  --accent: oklch(79% .17 70);
+  --accent: #ffa500;
   --accent-foreground: oklch(15% 0 0);
   --destructive: oklch(65% .2 25);
   --destructive-foreground: oklch(100% 0 0);
   --border: oklch(35% .01 264);
   --input: oklch(26% .02 264);
-  --ring: oklch(55% .16 264);
+  --ring: #4c68c4;
 
   /* Semantic Status Colors */
   --info: oklch(72% .11 230);
@@ -247,8 +243,8 @@
   --warning-foreground: oklch(15% 0 0);
 
   /* Chart Colors */
-  --chart-1: oklch(55% .16 264);
-  --chart-2: oklch(79% .17 70);
+  --chart-1: #4c68c4;
+  --chart-2: #ffa500;
   --chart-3: oklch(72% .11 230);
   --chart-4: oklch(82% .17 85);
   --chart-5: oklch(65% .2 25);
@@ -256,12 +252,12 @@
   /* Sidebar */
   --sidebar: oklch(18% .02 264);
   --sidebar-foreground: oklch(90% 0 0);
-  --sidebar-primary: oklch(55% .16 264);
+  --sidebar-primary: #4c68c4;
   --sidebar-primary-foreground: oklch(100% 0 0);
   --sidebar-accent: oklch(30% .01 264);
   --sidebar-accent-foreground: oklch(90% 0 0);
   --sidebar-border: oklch(35% .01 264);
-  --sidebar-ring: oklch(55% .16 264);
+  --sidebar-ring: #4c68c4;
 
   /* Board */
   --column-border: oklch(35% .01 264);
@@ -271,14 +267,14 @@
   /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: linear-gradient(
     to bottom right,
-    oklch(54.98% 0.16067 264.173) 0%,
-    oklch(54.98% 0.16067 264.173 / 0.150) 50%,
-    oklch(69.137% 0.09057 73.175 / 0.108) 85%,
-    oklch(78.807% 0.16987 69.733 / 0.534) 98%
+    rgba(76, 104, 196, 0.46) 0%,
+    rgba(76, 104, 196, 0.16) 50%,
+    rgba(255, 165, 0, 0.14) 85%,
+    rgba(255, 165, 0, 0.36) 98%
   );
 
   /* Card Colors for Color Picker - Dark Mode */
-  --color-slate: oklch(32.579% 0.00353 286.054 / 0.945);
+  --color-slate: var(--card);
   --color-blue: oklch(36.012% 0.24863 264.466);
   --color-green: #0ef347;
   --color-orange: oklch(76.57% 0.15684 77.795);
@@ -468,4 +464,9 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.add-board-button:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }

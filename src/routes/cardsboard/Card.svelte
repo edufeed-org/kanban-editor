@@ -497,7 +497,7 @@
 
 <!-- Wichtig: Äußerer Container mit dndzone-kompatiblem Markup -->
 <Card.Root
-	class="card p-1 transition-all duration-200 cursor-pointer border border-border shadow-md hover:shadow-lg {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
+	class="card p-1 transition-all duration-200 cursor-pointer border border-border shadow-[3px_3px_5px_rgba(0,0,0,0.12)] hover:shadow-[3px_3px_7px_rgba(0,0,0,0.24)] {isLongPress ? 'ring-2 ring-primary scale-[1.02]' : ''}"
 	data-card-id={card.id}
 	data-card-root
 	style="border-bottom: 5px solid {getCardColor(localColor)};"
@@ -659,16 +659,16 @@
 
 	
 	<style>
-		/* Layout styling for card header */
-		.card-header-content {
-			display: flex;
-			justify-content: space-between;
-			align-items: flex-start;
-			width: 100%;
-		}
+	/* Layout styling for card header */
+	.card-header-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		width: 100%;
+	}
 
-		.card-image-container {
-			width: 100%;
+	.card-image-container {
+		width: 100%;
 		overflow: hidden;
 		border-radius: 6px;
 	}
@@ -682,7 +682,7 @@
 
 		.card-image:hover {
 			transform: scale(1.02);
-			box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+			box-shadow: 3px 6px 12px rgba(0,0,0,0.22);
 		}
 
 		.card-image:focus {

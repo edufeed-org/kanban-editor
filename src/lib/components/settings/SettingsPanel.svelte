@@ -209,7 +209,7 @@
                 onclick={() => settingsStore.setColorScheme('rpi')}
                 class="flex-1 gap-2 {settings.colorScheme === 'rpi' ? 'ring-2 ring-primary ring-offset-background' : 'text-muted-foreground'}"
               >
-                <span class="inline-block h-4 w-4 rounded-full" style="background: oklch(35% .16 264);"></span>
+                <span class="inline-block h-4 w-4 rounded-full" style="background: #203A8F;"></span>
                 RPI
               </Button>
             </div>

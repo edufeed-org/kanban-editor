@@ -3,9 +3,9 @@
 		OerSearchResultEvent,
 		OerSearchElement,
 		OerListElement,
-        OerCardClickEvent,
-        SourceConfig,
-        LoadMoreElement
+		OerCardClickEvent,
+		SourceConfig,
+		LoadMoreElement
 	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
@@ -20,7 +20,7 @@
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
-    registerAllBuiltInAdapters();
+	registerAllBuiltInAdapters();
 
 	const availableSources: SourceConfig[] = [
 		{ id: 'arasaac', label: 'ARASAAC' },

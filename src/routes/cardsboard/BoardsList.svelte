@@ -766,7 +766,7 @@
                 {@const isActive = currentBoardId === board.id}
                 <div
                     animate:safeFlip={{ duration: 300 }}
-                    class="w-full rounded-md border border-border px-1 py-1 text-sm transition-all group relative bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
+                    class="w-full rounded-md border border-border px-1 py-1 text-sm transition-all relative bg-[var(--board-bg)] dark:bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
                         {isActive
                             ? 'active-board'
                             : ''}"
@@ -774,7 +774,7 @@
                     <button
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
-                        class="w-full text-left pr-10 p-1.5"
+                        class="w-full text-left pr-16 p-1.5"
                         title={`${board.name}${isActive ? ' (✅ Aktives Board)' : ''}`}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
@@ -784,24 +784,6 @@
                                 <!-- <SquareArrowRight class="active-board-indicator"/> -->
                             {/if}
                             {board.name}
-                            
-                            <!-- Shared Board Indicator -->
-                            {#if board.isShared}
-                                <span class="inline-flex items-center px-1 py-1 border bg-muted text-muted-foreground rounded flex-shrink-0 transition-colors group-hover:bg-primary/15 group-hover:text-primary">
-                                    {#if board.userRole === 'editor'}
-                                        <PencilIcon class="h-3 w-3" />
-                                    {:else}
-                                        <EyeIcon class="h-3 w-3" />
-                                    {/if}
-                                </span>
-                            {/if}
-                            
-                            {#if board.hasUnseenChanges && !isActive}
-                                <CircleIcon 
-                                    class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
-                                    
-                                />
-                            {/if}
                         </div>
                         
                         <!-- Description (optional) -->
@@ -816,23 +798,45 @@
                             {formatDate(board.createdAt)}
                         </div>
                     </button>
-                    
-                    <!-- Delete/Leave Button -->
-                    {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
-                        <div
-                            class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+
+                    <!-- Right icon rail: always visible for accessibility -->
+                    <div class="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
+                        {#if board.isShared}
+                            <span
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground"
+                                title={board.userRole === 'editor' ? 'Geteiltes Board (Editor)' : 'Geteiltes Board (Viewer)'}
+                                aria-label={board.userRole === 'editor' ? 'Geteiltes Board, Editor' : 'Geteiltes Board, Viewer'}
+                            >
+                                {#if board.userRole === 'editor'}
+                                    <PencilIcon class="h-3 w-3" />
+                                {:else}
+                                    <EyeIcon class="h-3 w-3" />
+                                {/if}
+                            </span>
+                        {/if}
+
+                        {#if board.hasUnseenChanges && !isActive}
+                            <span
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border bg-accent/10 text-accent"
+                                title="Ungelesene Aenderungen"
+                                aria-label="Ungelesene Aenderungen"
+                            >
+                                <CircleIcon class="h-2.5 w-2.5 fill-accent text-accent animate-pulse" />
+                            </span>
+                        {/if}
+
+                        {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
                             <button
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
-                                class="p-1 rounded transition-colors trash"
-                                    
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:bg-destructive/10 transition-colors trash"
                                 title={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
+                                aria-label={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
-                                <TrashIcon class="h-4 w-4" />
+                                <TrashIcon class="h-3.5 w-3.5" />
                             </button>
-                        </div>
-                    {/if}
+                        {/if}
+                    </div>
                 </div>
             {/each}
         {/if}
