@@ -405,10 +405,10 @@
     <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
         <div transition:slide={{ duration: 200 }} class="border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto bg-[var(--card)]">
-            <!-- 1. Eigenschaften (Board Settings) -->
+            <!-- 1. Einstellungen (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 
-                label="Eigenschaften" 
+                label="Einstellungen"
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
