@@ -13,7 +13,7 @@
 				outline:
 					"bg-background shadow-xs hover:bg-accent hover:text-accent-foreground focus-visible:border-accent focus-visible:ring-accent/50 dark:bg-input/30 dark:border-input dark:hover:bg-accent/50 border",
 				secondary: "bg-secondary focus-visible:border-accent focus-visible:ring-accent/50 text-secondary-foreground shadow-xs hover:bg-secondary/80",
-				ghost: "hover:bg-accent focus-visible:border focus-visible:border-accent focus-visible:ring-accent/50 hover:text-accent-foreground dark:hover:bg-accent/50",
+				ghost: "hover:bg-accent focus-visible:border focus-visible:border-accent focus-visible:ring-accent hover:text-accent-foreground dark:hover:bg-accent",
 				link: "text-primary underline-offset-4 hover:underline focus-visible:border-accent focus-visible:ring-accent/50",
 			},
 			size: {

@@ -841,7 +841,7 @@
     <Button
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}
-        class="w-full gap-2 h-auto py-2 whitespace-normal add-board-button"
+        class="w-full gap-2 h-auto py-2 whitespace-normal"
         variant="ghost"
         data-testid="create-board-button"
     >

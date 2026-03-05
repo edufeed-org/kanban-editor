@@ -1305,7 +1305,7 @@
 							<span>Wird gesendet...</span>
 						{:else}
 							<SendIcon class="h-4 w-4" />
-							<span>Absenden</span>
+							<span>Kommentar absenden</span>
 						{/if}
 					</Button>
 				</div>
