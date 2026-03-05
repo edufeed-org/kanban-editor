@@ -17,37 +17,20 @@
     import MenuItem from './MenuItem.svelte';
     import SubmenuItem from './SubmenuItem.svelte';
 
-    import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
-    import TrashIcon from '@lucide/svelte/icons/trash';
-    import LoaderIcon from '@lucide/svelte/icons/loader';
-    import CircleIcon from '@lucide/svelte/icons/circle';
-    import SearchIcon from '@lucide/svelte/icons/search';
-    import MenuIcon from '@lucide/svelte/icons/menu';
-    import Share2Icon from '@lucide/svelte/icons/share-2';
-    import UserIcon from '@lucide/svelte/icons/user';
-    import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
-    import FileTextIcon from '@lucide/svelte/icons/file-text';
-    import DownloadIcon from '@lucide/svelte/icons/download';
-    import UploadIcon from '@lucide/svelte/icons/upload';
+    import { DownloadIcon, FileTextIcon, UploadIcon, PackageOpenIcon, 
+        UserPlusIcon, LinkIcon, PencilIcon, EyeIcon, BookIcon, InfoIcon,
+        GlobeIcon, SendIcon, SquarePlusIcon, TrashIcon,
+        LoaderIcon, CircleIcon, SearchIcon, Share2Icon, UsersIcon, HouseIcon, 
+        CircleQuestionMarkIcon} from '@lucide/svelte/icons';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
-    import SendIcon from '@lucide/svelte/icons/send';
     import FAQDialog from './FAQDialog.svelte';
     import PublicBoardsDialog from './PublicBoardsDialog.svelte';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
-    import PackageOpenIcon from '@lucide/svelte/icons/package-open';
-    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
-    import LinkIcon from '@lucide/svelte/icons/link';
-    import PencilIcon from '@lucide/svelte/icons/pencil';
-    import EyeIcon from '@lucide/svelte/icons/eye';
-    import BookIcon from '@lucide/svelte/icons/book';
-    import InfoIcon from '@lucide/svelte/icons/info';
-    import HelpCircleIcon from '@lucide/svelte/icons/help-circle';
-    import GlobeIcon from '@lucide/svelte/icons/globe';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -678,6 +661,15 @@
                     <div class="space-y-0">
                         <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
                             <SubmenuItem
+                                icon={HouseIcon}
+                                label="Willkommen"
+                                onclick={() => {
+                                    goto('/willkommen', {});
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
                                 icon={GlobeIcon}
                                 label="Öffentliche Boards"
                                 onclick={() => {
@@ -724,7 +716,7 @@
                         <div class="border-t"></div>
                         <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
                             <SubmenuItem
-                                icon={HelpCircleIcon}
+                                icon={CircleQuestionMarkIcon}
                                 label="FAQ"
                                 onclick={() => {
                                     faqDialogOpen = true;
