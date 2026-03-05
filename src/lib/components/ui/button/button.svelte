@@ -12,7 +12,7 @@
 					"bg-destructive shadow-xs hover:bg-destructive/90 focus-visible:border-accent focus-visible:ring-accent/50 dark:bg-destructive/60 text-white",
 				outline:
 					"bg-background shadow-xs hover:bg-accent hover:text-accent-foreground focus-visible:border-accent focus-visible:ring-accent/50 dark:bg-input/30 dark:border-input dark:hover:bg-accent/50 border",
-				secondary: "bg-secondary focus-visible:border-accent focus-visible:ring-accent/50 text-secondary-foreground shadow-xs hover:bg-secondary/80",
+				secondary: "bg-background border border-primary text-primary focus-visible:border-accent focus-visible:ring-accent/50 shadow-xs hover:bg-muted",
 				ghost: "hover:bg-accent focus-visible:border focus-visible:border-accent focus-visible:ring-accent hover:text-accent-foreground dark:hover:bg-accent",
 				link: "text-primary underline-offset-4 hover:underline focus-visible:border-accent focus-visible:ring-accent/50",
 			},

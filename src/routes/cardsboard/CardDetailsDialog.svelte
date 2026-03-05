@@ -786,7 +786,7 @@
 					<h3 class="text-sm font-semibold text-muted-foreground">Beschreibung</h3>
 					{#if !readOnly && !isEditingDescription}
 						<Button
-							variant="ghost"
+							variant="secondary"
 							size="sm"
 							onclick={() => isEditingDescription = true}
 							class="h-6 px-2 text-xs"
@@ -871,7 +871,7 @@
 			{#if !readOnly}
 			<div bind:this={actionBarRef} class="flex justify-center gap-3 py-2">
 				<Button
-					variant={isEditingImage ? 'default' : 'ghost'}
+					variant={isEditingImage ? 'default' : 'secondary'}
 					size="sm"
 					onclick={() => {
 						isEditingImage = !isEditingImage;
@@ -891,7 +891,7 @@
 					</span>
 				</Button>
 				<Button
-					variant={isAddingLink ? 'default' : 'ghost'}
+					variant={isAddingLink ? 'default' : 'secondary'}
 					size="sm"
 					onclick={() => {
 						isAddingLink = !isAddingLink;
@@ -922,7 +922,6 @@
 				<!-- Mode Toggle -->
 				<div class="flex gap-1">
 					<Button
-						type="button"
 						variant={imageMode === 'url' ? 'default' : 'outline'}
 						size="sm"
 						onclick={() => (imageMode = 'url')}
@@ -930,7 +929,6 @@
 						URL eingeben
 					</Button>
 					<Button
-						type="button"
 						variant={imageMode === 'oer' ? 'default' : 'outline'}
 						size="sm"
 						onclick={() => (imageMode = 'oer')}
@@ -1298,7 +1296,8 @@
 						size="sm"
 						onclick={handleAddComment}
 						disabled={isSubmitting || !commentText.trim()}
-						class="gap-2 bg-primary"
+						class="gap-2"
+						variant="secondary"
 					>
 						{#if isSubmitting}
 							<LoaderIcon class="h-4 w-4 animate-spin" />
