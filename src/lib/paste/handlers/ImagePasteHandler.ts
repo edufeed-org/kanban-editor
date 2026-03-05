@@ -70,7 +70,7 @@ export class ImagePasteHandler implements IPasteHandler {
             return {
                 heading: `Screenshot ${now}`,
                 image: imageDataUrl,
-                content: `![Screenshot vom ${now}](${imageDataUrl})`,
+                // content: `![Screenshot vom ${now}](${imageDataUrl})`,
                 labels: ['screenshot', 'image']
             };
         }
