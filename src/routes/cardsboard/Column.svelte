@@ -381,30 +381,7 @@
 		flex: 0 0 auto;
 	}
 
-	/* Add-Card-Button: Inside scrollable area but outside dndzone */
-	.add-card-button {
-		border-radius: var(--radius-md);
-		/* border: 2px dotted var(--accent); */
-		background: var(--muted);
-		color: var(--foreground);
-		transition: all 0.2s ease;
-		font-size: 0.9rem;
-		cursor: pointer;
-		width: 100%;
-		margin-top: 0.5rem;
-		flex-shrink: 0;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.add-card-button:hover {
-		background: var(--primary);
-		color: var(--primary-foreground);
-	}
-
-	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
-
-	.card-wrapper {
+    .card-wrapper {
 		margin-bottom: 0.75rem;
 	}
 
@@ -689,9 +666,9 @@
 		
 		<!-- Add Card Button: OUTSIDE dndzone, INSIDE scrollable container -->
 		{#if !readOnly}
-		<button 
-			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
-			type="button"
+		<Button 
+			class="flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
+			data-testid="add-card-button"
 			onclick={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -739,7 +716,7 @@
 		>
 			<SquarePlusIcon class="h-4.5 w-4.5" />
 			<span>Karte hinzufügen</span>
-		</button>
+		</Button>
 		{/if}
 	</div>
 </div>
