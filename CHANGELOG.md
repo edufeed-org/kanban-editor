@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- OER-ImagePicker: Plugin-Import bleibt verpflichtend; TypeScript-Kompatibilitaet fuer Web-Component `bind:this` wurde durch angepasste lokale Typen und Modul-Deklaration stabilisiert.
 - Boards-Liste (Light): Board-Kacheln nutzen jetzt denselben sehr hellen Hintergrund wie die Board-Flaeche (`--board-bg`), Dark Mode bleibt bei `--card`.
 - Test-Runner (Windows): `test:e2e` ruft das Shell-Skript jetzt explizit ueber `bash` auf; zusaetzlich wurden Zeilenenden des Skripts auf LF normalisiert.
 - DX/Editor: VS-Code CSS-`unknownAtRules` Warnungen fuer Tailwind-v4 Direktiven (`@config`, `@custom-variant`) im Workspace unterdrueckt.

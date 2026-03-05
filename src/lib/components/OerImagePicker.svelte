@@ -2,8 +2,6 @@
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
-	// Keep these local fallback types so TS stays happy when the optional
-	// private plugin package is not installed in local environments.
 	type SourceConfig = {
 		id: string;
 		label: string;
@@ -17,7 +15,7 @@
 				high?: string;
 				medium?: string;
 				small?: string;
-			};
+			} | null;
 		};
 		amb?: {
 			id?: string;
@@ -34,13 +32,13 @@
 	}>;
 
 	type OerSearchElement = HTMLElement & {
-		sources: SourceConfig[];
+		sources?: SourceConfig[];
 	};
 
 	type OerListElement = HTMLElement & {
 		loading: boolean;
-		oers: OerData[];
-		error: string | null;
+		oers: unknown[];
+		error?: string | null;
 	};
 
 	type LoadMoreElement = HTMLElement & {
@@ -70,28 +68,8 @@
 	let loadMoreElement: LoadMoreElement;
 
 	onMount(async () => {
-		// Dynamically import the plugin only on the client side to avoid SSR issues.
-		// Using an indirection avoids hard TS module resolution in environments
-		// where the private package is not available.
-		const pluginPackage = '@edufeed-org/oer-finder-plugin';
-		const plugin = await import(pluginPackage).catch(() => null);
-		if (!plugin) {
-			console.warn(
-				'[OerImagePicker] Optional package "@edufeed-org/oer-finder-plugin" fehlt lokal. ' +
-				'Bitte NODE_AUTH_TOKEN setzen/erneuern und danach "pnpm install" ausfuehren.'
-			);
-			listEl.loading = false;
-			listEl.error = 'OER plugin fehlt lokal. Bitte NODE_AUTH_TOKEN aktualisieren und pnpm install ausfuehren.';
-			loadMoreElement.loading = false;
-			loadMoreElement.metadata = null;
-			return;
-		}
-
-		const maybeRegisterAdapters = (plugin as { registerAllBuiltInAdapters?: () => void })
-			.registerAllBuiltInAdapters;
-		if (typeof maybeRegisterAdapters === 'function') {
-			maybeRegisterAdapters();
-		}
+		const plugin = await import('@edufeed-org/oer-finder-plugin');
+		plugin.registerAllBuiltInAdapters();
 
 		// Set sources as a JS property (not HTML attribute)
 		searchEl.sources = availableSources;
