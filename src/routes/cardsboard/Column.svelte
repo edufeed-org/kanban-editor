@@ -398,7 +398,7 @@
 	}
 
 	.add-card-button:hover {
-		background: var(--accent);
+		background: var(--primary);
 		color: var(--primary-foreground);
 	}
 

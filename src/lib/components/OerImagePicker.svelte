@@ -1,15 +1,52 @@
 <script lang="ts">
-	import type {
-		OerSearchResultEvent,
-		OerSearchElement,
-		OerListElement,
-        OerCardClickEvent,
-        SourceConfig,
-        LoadMoreElement
-	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
-	import { registerAllBuiltInAdapters } from '@edufeed-org/oer-finder-plugin/adapters';
+
+	// Keep these local fallback types so TS stays happy when the optional
+	// private plugin package is not installed in local environments.
+	type SourceConfig = {
+		id: string;
+		label: string;
+		checked?: boolean;
+		baseUrl?: string;
+	};
+
+	type OerData = {
+		extensions?: {
+			images?: {
+				high?: string;
+				medium?: string;
+				small?: string;
+			};
+		};
+		amb?: {
+			id?: string;
+		};
+	};
+
+	type OerSearchResultEvent = CustomEvent<{
+		data: OerData[];
+		meta: unknown;
+	}>;
+
+	type OerCardClickEvent = CustomEvent<{
+		oer: OerData;
+	}>;
+
+	type OerSearchElement = HTMLElement & {
+		sources: SourceConfig[];
+	};
+
+	type OerListElement = HTMLElement & {
+		loading: boolean;
+		oers: OerData[];
+		error: string | null;
+	};
+
+	type LoadMoreElement = HTMLElement & {
+		loading: boolean;
+		metadata: unknown;
+	};
 
 	interface Props {
 		onSelect: (imageUrl: string) => void;
@@ -19,8 +56,6 @@
 	const _apiUrl = $state(settingsStore.settings.apiUrl)
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
-
-    registerAllBuiltInAdapters();
 
 	const availableSources: SourceConfig[] = [
 		{ id: 'arasaac', label: 'ARASAAC' },
@@ -35,8 +70,28 @@
 	let loadMoreElement: LoadMoreElement;
 
 	onMount(async () => {
-		// Dynamically import the plugin only on the client side to avoid SSR issues
-		await import('@edufeed-org/oer-finder-plugin');
+		// Dynamically import the plugin only on the client side to avoid SSR issues.
+		// Using an indirection avoids hard TS module resolution in environments
+		// where the private package is not available.
+		const pluginPackage = '@edufeed-org/oer-finder-plugin';
+		const plugin = await import(pluginPackage).catch(() => null);
+		if (!plugin) {
+			console.warn(
+				'[OerImagePicker] Optional package "@edufeed-org/oer-finder-plugin" fehlt lokal. ' +
+				'Bitte NODE_AUTH_TOKEN setzen/erneuern und danach "pnpm install" ausfuehren.'
+			);
+			listEl.loading = false;
+			listEl.error = 'OER plugin fehlt lokal. Bitte NODE_AUTH_TOKEN aktualisieren und pnpm install ausfuehren.';
+			loadMoreElement.loading = false;
+			loadMoreElement.metadata = null;
+			return;
+		}
+
+		const maybeRegisterAdapters = (plugin as { registerAllBuiltInAdapters?: () => void })
+			.registerAllBuiltInAdapters;
+		if (typeof maybeRegisterAdapters === 'function') {
+			maybeRegisterAdapters();
+		}
 
 		// Set sources as a JS property (not HTML attribute)
 		searchEl.sources = availableSources;

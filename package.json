@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run && npm run test:e2e",
-    "test:e2e": "./scripts/test-e2e-with-ci-config.sh"
+    "test:e2e": "bash ./scripts/test-e2e-with-ci-config.sh"
   },
   "files": [
     "dist",

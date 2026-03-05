@@ -427,7 +427,7 @@
 	}
 
 	.add-column-button button:hover {
-		background: var(--accent);
+		background: var(--primary);
 		color: var(--primary-foreground);
 		transform: scale(1.05);
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
@@ -466,7 +466,7 @@
 	}
 
 	.sticky-add-column button:hover {
-		background: var(--accent);
+		background: var(--primary);
 		transform: scale(1.1);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 		color: var(--primary-foreground);

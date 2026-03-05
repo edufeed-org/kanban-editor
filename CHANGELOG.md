@@ -8,7 +8,14 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
-- UI & Layout: Farbschema-Default fuer neue Settings und Fallback wurde von `stil` auf `rpi` umgestellt (Option `Stil` bleibt weiterhin manuell waehlbar).
+- Boards-Liste (Light): Board-Kacheln nutzen jetzt denselben sehr hellen Hintergrund wie die Board-Flaeche (`--board-bg`), Dark Mode bleibt bei `--card`.
+- Test-Runner (Windows): `test:e2e` ruft das Shell-Skript jetzt explizit ueber `bash` auf; zusaetzlich wurden Zeilenenden des Skripts auf LF normalisiert.
+- DX/Editor: VS-Code CSS-`unknownAtRules` Warnungen fuer Tailwind-v4 Direktiven (`@config`, `@custom-variant`) im Workspace unterdrueckt.
+- Boards-Liste (A11y): Status-/Aktions-Icons sind jetzt immer sichtbar und als kleine, rechts angepinnte Kreis-Badges umgesetzt; der Inhaltsbereich der Board-Kachel wurde rechts reduziert.
+- UI Light Mode: Cards nutzen jetzt einen weissen Hintergrund, der Board-Hintergrund ist auf ein sehr helles Grau angepasst.
+- UI Karten: Karten-Schatten wurde verstaerkt und auf feste RGBA-Werte umgestellt; Schattenfall ist jetzt konsistent nach rechts/unten (Light und Dark).
+- Navigation: Klick auf das Sidebar-Logo `Kanban-Editor` leitet jetzt auf die Basis-URL der App (`base`) weiter.
+ - UI Tiefenwirkung: Rechte Sidebar (Desktop) erhielt einen rechten Kanten-Schatten, Topbar einen unteren Schatten fuer klarere Layer-Trennung im Board-Layout.
 - AMB Publishing: `a`-Tag im Kind-30142 Event nutzt jetzt das kanonische Address-Format `30301:<pubkey>:<d-tag>` (optional mit Relay-Hint) statt `naddr`, damit Referenzen NIP-konform und robuster aufloesbar sind.
 - AMB Publishing: Optionaler `r`-Tag mit oeffentlicher Board-Web-URL (naddr-Pfad) wird zu Snapshot- und AMB-Events hinzugefuegt; lokale/private Origins (`localhost`, private IP-Ranges) werden dabei automatisch ausgeschlossen.
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.

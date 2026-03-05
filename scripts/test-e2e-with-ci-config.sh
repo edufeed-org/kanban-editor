@@ -20,19 +20,19 @@ BACKUP_FILE="${CONFIG_DIR}/config.json.backup"
 # Function to restore config on exit
 cleanup() {
   local exit_code=$?
-  
+
   if [ -f "$BACKUP_FILE" ]; then
     echo -e "\n${BLUE}🔄 Restoring original config.json...${NC}"
     mv "$BACKUP_FILE" "$CONFIG_FILE"
     echo -e "${GREEN}✅ Original config.json restored${NC}"
   fi
-  
+
   if [ $exit_code -ne 0 ]; then
     echo -e "${RED}❌ Tests failed with exit code: $exit_code${NC}"
   else
     echo -e "${GREEN}✅ Tests completed successfully${NC}"
   fi
-  
+
   exit $exit_code
 }
 
@@ -56,7 +56,7 @@ if ! nc -z localhost 7000 2>/dev/null && ! lsof -i:7000 >/dev/null 2>&1 && ! ss 
   echo -e ""
   echo -e "Once the relay is running, try this command again."
   echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  
+
   # Unset trap to avoid cleanup on this error exit
   trap - EXIT INT TERM
   exit 1
