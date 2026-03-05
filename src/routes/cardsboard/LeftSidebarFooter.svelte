@@ -87,7 +87,7 @@
 			{#if isAuthenticated && currentUser}
 				<!-- User ist angemeldet -->
 				<DropdownMenu.Root>
-					<DropdownMenu.Trigger class="bg-secondary rounded-md w-full">
+					<DropdownMenu.Trigger class="rounded-md w-full">
 						<div class="px-3 py-3 flex items-center gap-2" data-testid="auth-user-avatar">
 							<Avatar.Root class="h-8 w-8 flex-shrink-0">
 								<Avatar.Image
