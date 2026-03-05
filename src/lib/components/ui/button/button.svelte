@@ -7,7 +7,7 @@
 		base: "focus-visible:border-accent focus-visible:ring-accent/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		variants: {
 			variant: {
-				default: "bg-primary focus-visible:border-accent focus-visible:ring-accent/50 text-primary-foreground shadow-xs hover:bg-primary/90",
+				default: "bg-primary focus-visible:border-accent focus-visible:ring-accent/50 text-primary-foreground shadow-xs hover:bg-primary/60",
 				destructive:
 					"bg-destructive shadow-xs hover:bg-destructive/90 focus-visible:border-accent focus-visible:ring-accent/50 dark:bg-destructive/60 text-white",
 				outline:
