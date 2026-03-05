@@ -9,6 +9,7 @@
 	} from '@edufeed-org/oer-finder-plugin';
 	import { onMount } from 'svelte';
 	import { settingsStore } from '$lib/stores/settingsStore.svelte';
+	import { registerAllBuiltInAdapters } from '@edufeed-org/oer-finder-plugin/adapters';
 
 	interface Props {
 		onSelect: (imageUrl: string) => void;
@@ -19,11 +20,13 @@
 	const language = $state(settingsStore.settings.language)
 	const { onSelect }: Props = $props();
 
+    registerAllBuiltInAdapters();
+
 	const availableSources: SourceConfig[] = [
 		{ id: 'arasaac', label: 'ARASAAC' },
 		{ id: 'openverse', label: 'Openverse', checked: true },
 		{ id: 'wikimedia', label: 'Wikimedia', checked: true },
-		{ id: 'nostr-amb-relay', label: 'Nostr AMB', checked: true, baseUrl: 'wss://amb-relay.edufeed.org' },
+		{ id: 'nostr-amb-relay', label: 'Nostr AMB', checked: true, baseUrl: 'wss://amb-relay.edufeed.org,wss://oersi.edufeed.org' },
 		{ id: 'rpi-virtuell', label: 'RPI Virtuell' },
 	];
 
@@ -45,7 +48,7 @@
 		
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
-			const customEvent = e as CustomEvent<OerSearchResultEvent>;
+			const customEvent = e as OerSearchResultEvent;
 			listEl.oers = customEvent.detail.data;
 			listEl.loading = false;
 			loadMoreElement.metadata = customEvent.detail.meta;
@@ -70,7 +73,7 @@
 
 		// Handle card selection - extract image URL from new schema structure
 		listEl?.addEventListener('card-click', (e: Event) => {
-			const customEvent = e as CustomEvent<OerCardClickEvent>;
+			const customEvent = e as OerCardClickEvent;
 			const oer = customEvent.detail.oer;
 			const imageUrl = oer.extensions?.images?.high || oer.extensions?.images?.medium || oer.extensions?.images?.small || oer.amb?.id;
 			if (imageUrl) {
