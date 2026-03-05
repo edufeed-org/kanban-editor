@@ -212,6 +212,14 @@
                 <span class="inline-block h-4 w-4 rounded-full" style="background: #203A8F;"></span>
                 RPI
               </Button>
+              <Button 
+                variant={settings.colorScheme === 'shine' ? 'default' : 'ghost'}
+                onclick={() => settingsStore.setColorScheme('shine')}
+                class="flex-1 gap-2 {settings.colorScheme === 'shine' ? 'ring-2 ring-primary ring-offset-background' : 'text-muted-foreground'}"
+              >
+                <span class="inline-block h-4 w-4 rounded-full" style="background: linear-gradient(to bottom right, rgb(68 110 207), rgb(255 165 0));"></span>
+                Shine
+              </Button>
             </div>
           </div>
           

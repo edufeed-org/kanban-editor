@@ -766,7 +766,7 @@
                 {@const isActive = currentBoardId === board.id}
                 <div
                     animate:safeFlip={{ duration: 300 }}
-                    class="w-full rounded-md border border-border px-1 py-1 text-sm transition-all relative bg-[var(--board-bg)] dark:bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
+                    class="w-full board-list-item rounded-md border border-border px-1 py-1 text-sm transition-all relative bg-[var(--board-bg)] dark:bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
                         {isActive
                             ? 'active-board'
                             : ''}"
@@ -774,7 +774,7 @@
                     <button
                         onclick={() => handleSelectBoard(board.id)}
                         disabled={isLoading}
-                        class="w-full text-left pr-16 p-1.5"
+                        class="w-full text-left pr-10 p-1.5"
                         title={`${board.name}${isActive ? ' (✅ Aktives Board)' : ''}`}
                     >
                         <!-- Board Name mit Unseen Changes Badge -->
@@ -828,7 +828,7 @@
                         {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
                             <button
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
-                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:bg-destructive/10 transition-colors trash"
+                                class="destructive inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:bg-destructive/10 transition-colors trash"
                                 title={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 aria-label={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 type="button"

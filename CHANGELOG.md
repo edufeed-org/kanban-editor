@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- UI & Layout: Neues Farbschema `Shine` hinzugefuegt (RPI-Overlay). In den Einstellungen ist `Shine` jetzt unter `Farbschema` waehlbar; Theme-Klassen setzen `rpi + shine` (inkl. Dark-Variante `:root.rpi.dark.shine`).
 - OER-ImagePicker: Plugin-Import bleibt verpflichtend; TypeScript-Kompatibilitaet fuer Web-Component `bind:this` wurde durch angepasste lokale Typen und Modul-Deklaration stabilisiert.
 - Boards-Liste (Light): Board-Kacheln nutzen jetzt denselben sehr hellen Hintergrund wie die Board-Flaeche (`--board-bg`), Dark Mode bleibt bei `--card`.
 - Test-Runner (Windows): `test:e2e` ruft das Shell-Skript jetzt explizit ueber `bash` auf; zusaetzlich wurden Zeilenenden des Skripts auf LF normalisiert.

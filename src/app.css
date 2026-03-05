@@ -143,6 +143,8 @@
   --color-orange: oklch(76.57% 0.15684 77.795);
   --color-red: oklch(0.704 0.191 22.216);
   --color-purple: oklch(0.541 0.281 293.009);
+
+  --board-bg:oklch(22% .01 250);
 }
 
 /* ============================================
@@ -205,6 +207,46 @@
 
   /* Board Background — primary (blue) → accent (gold) diagonal */
   --board-bg: oklch(97.6% 0.004 264);
+ 
+}
+
+:root.rpi.shine {
+  --board-bg: linear-gradient(
+    to bottom right,
+    rgb(68 110 207) 0%,
+    rgb(68 110 207 / 0.8) 10%,
+    rgb(68 110 207 / 0.3) 70%,
+    rgb(255 165 0 / 0.76) 98%
+  );
+}
+
+:root.rpi.shine .column-title {
+  color: var(--primary-foreground);
+}
+:root.rpi.shine .board-list-item {
+  background: rgb(68 110 207 / 0.1);
+  position: relative;
+}
+:root.rpi.shine .board-list-item:hover{
+  background: rgb(68 110 207 / 0.3);
+}
+.board-list-item .rounded-full{
+  background: var(--input);
+  border: 1px dotted transparent;
+  color: var(--primary);
+}
+.board-list-item .rounded-full:hover {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--primary-foreground);
+}
+.board-list-item .rounded-full.destructive:hover {
+  background: var(--destructive);
+  border: 1px solid var(--destructive);
+  color: var(--destructive-foreground);
+}
+.board-list-item *{
+  cursor: pointer!important;
 }
 
 /* ============================================
@@ -248,6 +290,7 @@
   --chart-3: oklch(72% .11 230);
   --chart-4: oklch(82% .17 85);
   --chart-5: oklch(65% .2 25);
+  
 
   /* Sidebar */
   --sidebar: oklch(18% .02 264);
@@ -265,6 +308,20 @@
   
 
   /* Board Background — primary (blue) → accent (gold) diagonal */
+  --board-bg: oklch(22% .02 264);
+  
+
+  /* Card Colors for Color Picker - Dark Mode */
+  --color-slate: var(--border);
+  --color-blue: oklch(36.012% 0.24863 264.466);
+  --color-green: #0ef347;
+  --color-orange: oklch(76.57% 0.15684 77.795);
+  --color-red: oklch(0.704 0.191 22.216);
+  --color-purple: oklch(0.541 0.281 293.009);
+  
+}
+
+:root.rpi.dark.shine {
   --board-bg: linear-gradient(
     to bottom right,
     rgba(76, 104, 196, 0.46) 0%,
@@ -272,15 +329,6 @@
     rgba(255, 165, 0, 0.14) 85%,
     rgba(255, 165, 0, 0.36) 98%
   );
-
-  /* Card Colors for Color Picker - Dark Mode */
-  --color-slate: var(--card);
-  --color-blue: oklch(36.012% 0.24863 264.466);
-  --color-green: #0ef347;
-  --color-orange: oklch(76.57% 0.15684 77.795);
-  --color-red: oklch(0.704 0.191 22.216);
-  --color-purple: oklch(0.541 0.281 293.009);
-  
 }
 
 /* Component-specific utility styles */
