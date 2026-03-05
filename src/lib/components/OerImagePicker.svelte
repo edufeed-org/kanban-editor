@@ -48,7 +48,7 @@
 		
 		// Handle search results
 		searchEl?.addEventListener('search-results', (e: Event) => {
-			const customEvent = e as CustomEvent<OerSearchResultEvent>;
+			const customEvent = e as OerSearchResultEvent;
 			listEl.oers = customEvent.detail.data;
 			listEl.loading = false;
 			loadMoreElement.metadata = customEvent.detail.meta;
@@ -73,7 +73,7 @@
 
 		// Handle card selection - extract image URL from new schema structure
 		listEl?.addEventListener('card-click', (e: Event) => {
-			const customEvent = e as CustomEvent<OerCardClickEvent>;
+			const customEvent = e as OerCardClickEvent;
 			const oer = customEvent.detail.oer;
 			const imageUrl = oer.extensions?.images?.high || oer.extensions?.images?.medium || oer.extensions?.images?.small || oer.amb?.id;
 			if (imageUrl) {
