@@ -16,8 +16,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1(typescript@5.9.3)(web-streams-polyfill@3.3.3)
       '@edufeed-org/oer-finder-plugin':
-        specifier: ^0.2.2
-        version: 0.2.2
+        specifier: ^0.2.3
+        version: 0.2.3
       '@fontsource-variable/roboto-condensed':
         specifier: ^5.1.1
         version: 5.2.8
@@ -309,8 +309,8 @@ packages:
   '@edufeed-org/oer-finder-api-client@0.0.9':
     resolution: {integrity: sha512-1c30iyOOl/fTCKCXqP77RSnnnX9uVlpB0dsJ4IamTm7CEFyiv1OA4xa3y6+HRD2Za3CQVm37vRRWPb16MNXXpQ==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-api-client/0.0.9/84eca03e064f360e1c694b8ee53babf7768b3620}
 
-  '@edufeed-org/oer-finder-plugin@0.2.2':
-    resolution: {integrity: sha512-yLpFtcgBSgxPcUFUzHhrEmSH7q/Hvb1/4OuQ3FnX+BibHla1UAHMUNbu4L3cdDlKqJ4J/9uNXEyYRLCGRMOakg==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-plugin/0.2.2/cfdbff29c2793a9daf2b06380712942c6108e50e}
+  '@edufeed-org/oer-finder-plugin@0.2.3':
+    resolution: {integrity: sha512-TeAJpqFPGdaqS6JGFItqhZLEwoVscynqy5iCQlliWJqYBaMk0zyyGJgwQLXau1IvgRoU99AFBTS1JwORFCsXvA==, tarball: https://npm.pkg.github.com/download/@edufeed-org/oer-finder-plugin/0.2.3/c6e7c3daa6c06e365f539562d8dfff8086d1b7fa}
 
   '@esbuild/aix-ppc64@0.25.10':
     resolution: {integrity: sha512-0NFWnA+7l41irNuaSVlLfgNT12caWJVLzp5eAVhZ0z1qpxbockccEt3s+149rE64VUI3Ml2zt8Nv5JVc4QXTsw==}
@@ -3591,7 +3591,7 @@ snapshots:
     dependencies:
       openapi-fetch: 0.13.8
 
-  '@edufeed-org/oer-finder-plugin@0.2.2':
+  '@edufeed-org/oer-finder-plugin@0.2.3':
     dependencies:
       '@edufeed-org/oer-adapter-core': 0.0.1
       '@edufeed-org/oer-finder-api-client': 0.0.9
