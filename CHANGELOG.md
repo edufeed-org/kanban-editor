@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- UI & Layout: Farbschema-Default fuer neue Settings und Fallback wurde von `stil` auf `rpi` umgestellt (Option `Stil` bleibt weiterhin manuell waehlbar).
 - AMB Publishing: `a`-Tag im Kind-30142 Event nutzt jetzt das kanonische Address-Format `30301:<pubkey>:<d-tag>` (optional mit Relay-Hint) statt `naddr`, damit Referenzen NIP-konform und robuster aufloesbar sind.
 - AMB Publishing: Optionaler `r`-Tag mit oeffentlicher Board-Web-URL (naddr-Pfad) wird zu Snapshot- und AMB-Events hinzugefuegt; lokale/private Origins (`localhost`, private IP-Ranges) werden dabei automatisch ausgeschlossen.
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.

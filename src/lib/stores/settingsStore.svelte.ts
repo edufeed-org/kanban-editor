@@ -88,7 +88,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   alignColumnsToMaxHeight: true,
   columnWidth: 350,
   theme: 'system', // 'system' = folgt Browser-Präferenz (prefers-color-scheme)
-  colorScheme: 'stil', // 'stil' = FOERBICO Terracotta, 'rpi' = Blau/Gold
+  colorScheme: 'rpi', // 'rpi' = Blau/Gold (Default), 'stil' = FOERBICO Terracotta
 
   // Nostr Relays
   relaysPublic: [
@@ -631,7 +631,7 @@ export class SettingsStore {
     if (typeof document === 'undefined') return;
 
     const effectiveTheme = this.getEffectiveTheme();
-    const colorScheme = this.settings.colorScheme || 'stil';
+    const colorScheme = this.settings.colorScheme || 'rpi';
     const root = document.documentElement;
 
     // Remove all theme-related classes
