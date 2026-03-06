@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- Kanban Board: Nach dem Hinzufuegen einer neuen Spalte scrollt die horizontale Board-Ansicht jetzt automatisch weich nach rechts, damit die neue Spalte sofort sichtbar ist. Der Scroll wird nur fuer lokal angestossene Column-Creates ausgeloest und wartet auf den echten Render der neuen Spalte.
 - TipTap Editor: Mehrzeilige Beschreibungen behalten ihre Absatz- und Zeilenumbruch-Struktur jetzt auch nach Speichern und erneutem Oeffnen. Ursache war eine zu enge Markdown-Erkennung im Editor-Load-Pfad; reiner Mehrzeilen-Text wurde beim Reopen als flacher Plaintext geladen.
 - Card UX: Der Card-Drag ist wieder auf den kleinen Grip-Button im Header begrenzt. Das reduziert die Interaktions-Komplexitaet; normale Header-Klicks laufen wieder direkt in den Dialog, waehrend Drag nur noch explizit ueber den Handle startet.
 - Card UX: Dialog oeffnet jetzt nur bei echtem Klick ohne Drag; nach Karten-Drag wird der nachfolgende Click kurz unterdrueckt, damit `isDialogOpen` nicht versehentlich getriggert wird.
