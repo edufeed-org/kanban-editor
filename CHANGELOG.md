@@ -8,6 +8,20 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- Card UX: Der Card-Drag ist wieder auf den kleinen Grip-Button im Header begrenzt. Das reduziert die Interaktions-Komplexitaet; normale Header-Klicks laufen wieder direkt in den Dialog, waehrend Drag nur noch explizit ueber den Handle startet.
+- Card UX: Dialog oeffnet jetzt nur bei echtem Klick ohne Drag; nach Karten-Drag wird der nachfolgende Click kurz unterdrueckt, damit `isDialogOpen` nicht versehentlich getriggert wird.
+- Kanban DnD UI: Hover-Effekt fuer Card- und Column-Drag-Handle vereinheitlicht - beide zeigen jetzt einen `--accent`-basierten Hintergrund (`hover:bg-accent/40`) und Foreground-Highlight.
+- Kanban DnD UI: Column-Drag-Handle optisch an Card-Handle angeglichen (gleiches Lucide-Icon `GripVertical` sowie identische Groessen-/Style-Klassen), damit beide konsistent wirken.
+- Kanban DnD: Card-Drag-Handle auf den gesamten Card-Header ausgeweitet (statt nur kleinem Icon), damit Karten leichter und konsistenter gegriffen werden koennen.
+- Kanban DnD: Column-Reorder final auf echtes Handle-only umgestellt (`Board.svelte` nutzt `dragHandleZone`; Handle in `Column.svelte` mit `use:dragHandle`). Neben der Card anfassen verschiebt damit keine ganze Spalte mehr.
+- Kanban DnD: Column-Drag-Handle-Hitbox verkleinert - Spalten lassen sich jetzt nur noch ueber einen kleinen dedizierten Handle im Column-Header ziehen, um versehentliches Verschieben ganzer Spalten zu vermeiden.
+- Kanban DnD: Dropzone-Reaktion bei Drag-Handle korrigiert - `centreDraggedOnCursor` fuer Karten-Zone aktiviert, damit die Drop-Annahme an der Mausposition ausgerichtet ist (kein erforderliches "oberhalb"-Positionieren des Handles mehr).
+- Kanban DnD: Karten-Drag auf expliziten Handle umgestellt (`dragHandleZone` + `use:dragHandle`), damit grosse Karten stabil und kontrolliert verschoben werden koennen, ohne unbeabsichtigte Drags aus dem Card-Inhalt.
+- Kanban DnD: Preview-Verkleinerung beim Draggen wieder entfernt, da sie in der Praxis zu instabilem Verhalten (kurzes Flackern/abbrechender Drag) fuehrte. Drag bleibt jetzt stabil ohne Resize der gezogenen Karte.
+- Kanban DnD: Preview-Clamp beruecksichtigt jetzt den tatsaechlichen Grab-Punkt in der Karte; die verkleinerte Drag-Preview bleibt unter der Maus und der Drag bricht bei langen Karten nicht mehr durch Hoehenkappung ab.
+- Kanban DnD: Preview-Flackern bei sehr grossen Karten behoben - die verkleinerte Drag-Preview bleibt jetzt stabil bis `dragend` (urspruengliche Kartenhoehe wird pro Drag gecacht).
+- Kanban DnD: Follow-up fuer grosse Karten - Drag bleibt jetzt am tatsächlichen Grab-Punkt unter dem Cursor (`centreDraggedOnCursor: false`), damit die Karte beim Anfassen nicht nach oben wegrutscht und der Drag nicht abbricht.
+- Kanban DnD: Sehr grosse Karten werden waehrend des Draggens nur als kompakte Preview angezeigt (Clamp ab `> 33vh` auf max. `25vh`), damit Drop-Ziele besser erreichbar bleiben.
 - Kanban DnD: Drag-Verhalten fuer hohe/lange Karten verbessert - Karten werden beim Ziehen am Cursor zentriert, damit die Mausposition fuer das Droppen massgeblich ist (kein erzwungenes Treffen ueber die Kartenmitte mehr).
 - Kanban DnD: Follow-up Fix fuer leere Spalten-Dropzone - der `Karte hinzufuegen`-Button bleibt im Normalzustand an seiner gewohnten Position; zusaetzliche Drop-Flaeche wird nur waehrend aktivem Drag eingeblendet.
 - Kanban DnD: Leere Spalten zeigen waehrend aktivem Karten-Drag jetzt eine sichtbare Dropzone mit Hinweis `Karte hier ablegen`, damit Karten zuverlaessig in leere Spalten gezogen werden koennen.

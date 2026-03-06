@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-    import { dndzone } from 'svelte-dnd-action';
+	import { dragHandleZone, dragHandle } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -17,6 +17,7 @@
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
 	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 
  	const flipDurationMs = 150;
 	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
@@ -196,6 +197,7 @@
 		);
 	}
 
+
 	$effect(() => {
 		const handleCardDragState = (event: Event) => {
 			const customEvent = event as CustomEvent<{ isActive?: boolean }>;
@@ -316,7 +318,7 @@
 	 	broadcastCardDragState(false);
 	 	dragStateResetTimer = null;
 	 }, 120);
-     
+
      // Für jetzt: einfach an den Parent callback übergeben
      // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
      onDrop(newItems);
@@ -538,11 +540,18 @@
 	<div class="column-header">
 		<div class="flex items-center justify-between w-full">
 			<!-- Drag Handle + Title -->
-			<div class="flex items-center gap-2 flex-1" data-dnd-handle>
-				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24" aria-label="Spalte verschieben">
-					<title>Spalte verschieben</title>
-					<path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
-				</svg>
+			<div class="flex items-center gap-2 flex-1">
+				<button
+					type="button"
+					use:dragHandle
+					data-dnd-handle
+					class="card-drag-handle inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors flex-shrink-0"
+					aria-label="Spalte verschieben"
+					title="Spalte ziehen"
+					tabindex={-1}
+				>
+					<GripVerticalIcon class="h-4 w-4" />
+				</button>
 				{#if isEditingTitle && !readOnly}
 					<input
 						bind:this={titleInputRef}
@@ -740,7 +749,7 @@
 			class="cards-dnd-area"
 			class:drag-active-empty={showEmptyDropHint}
 			tabindex="-1"
-			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1, centreDraggedOnCursor: true}}
+			use:dragHandleZone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1, centreDraggedOnCursor: true}}
 			onconsider={handleDndConsiderCards}
 			onfinalize={handleDndFinalizeCards}
 		>

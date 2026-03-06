@@ -189,7 +189,7 @@
   --chart-3: oklch(72% .11 230);
   --chart-4: oklch(82% .17 85);
   --chart-5: oklch(65% .2 25);
-  --color-slate: var(--card);
+  --color-slate: oklch(88.734% 0.02327 285.861 / 0.945);
 
   /* Sidebar */
   --sidebar: oklch(97% .005 264);
@@ -517,4 +517,8 @@
 .add-board-button:hover {
   background: var(--primary);
   color: var(--primary-foreground);
+}
+
+.card-wrapper{
+  margin-bottom: 10px!important;
 }

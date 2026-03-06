@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
     import { onMount } from 'svelte';
-    import { dndzone } from 'svelte-dnd-action';
+	import { dragHandleZone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
  	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
  	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
@@ -485,7 +485,7 @@
 	class="board" 
 	aria-label="Kanban Board mit Spalten"
 	bind:this={boardElement}
-	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: readOnly, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
+	use:dragHandleZone={{items:columns, flipDurationMs, type:'column', dragDisabled: readOnly, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
 	onconsider={handleDndConsiderColumns} 
 	onfinalize={handleDndFinalizeColumns}
 >

@@ -6,8 +6,10 @@
 	import CardDetailsDialog from "./CardDetailsDialog.svelte";
 	import CardSidebar from "./CardSidebar.svelte";
 	import MarkdownRenderer from '$lib/components/ui/markdown-renderer/MarkdownRenderer.svelte';
+	import { dragHandle } from 'svelte-dnd-action';
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import LinkIcon from "@lucide/svelte/icons/link";
+	import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
 
 	let {
 		card,
@@ -24,6 +26,9 @@
 	let showModal = $state(false);
 	let showSidebar = $state(false);
 	let showPopover = $state(false);
+	let isCardDragActive = $state(false);
+	let suppressDialogClickUntil = $state(0);
+	const DIALOG_CLICK_SUPPRESS_MS = 180;
 	
 	// Global popover state management - ensures only one popover is open at a time
 	let currentOpenPopover = $state<string | null>(null);
@@ -183,6 +188,27 @@
 		
 		return () => {
 			window.removeEventListener('openCardDialog', handleOpenDialog);
+		};
+	});
+
+	$effect(() => {
+		const handleCardDragState = (event: Event) => {
+			const customEvent = event as CustomEvent<{ isActive?: boolean }>;
+			const isActive = Boolean(customEvent.detail?.isActive);
+
+			isCardDragActive = isActive;
+			if (isActive) {
+				suppressDialogClickUntil = Date.now() + DIALOG_CLICK_SUPPRESS_MS;
+			} else {
+				// Keep suppression briefly after drag end to swallow the synthetic click.
+				suppressDialogClickUntil = Date.now() + DIALOG_CLICK_SUPPRESS_MS;
+			}
+		};
+
+		window.addEventListener('kanbanCardDragState', handleCardDragState);
+
+		return () => {
+			window.removeEventListener('kanbanCardDragState', handleCardDragState);
 		};
 	});
 
@@ -528,6 +554,10 @@
 		if (isInteractive) {
 			return;
 		}
+
+		if (isCardDragActive || Date.now() < suppressDialogClickUntil) {
+			return;
+		}
 		e.stopPropagation();
 		// Klick auf Card öffnet direkt CardDetailsDialog
 		isDialogOpen = true;
@@ -555,6 +585,17 @@
 				<!-- Card Title mit Comment Badge -->
 				<div class="flex items-center justify-between border-b pb-2">
 					<Card.Title class="text-sm flex-1">{localName}</Card.Title>
+					{#if !readOnly}
+						<div
+							class="card-drag-handle ml-2 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors flex-shrink-0"
+							use:dragHandle
+							data-card-drag-handle
+							aria-label="Karte ziehen"
+							title="Karte ziehen und verschieben"
+						>
+							<GripVerticalIcon class="h-4 w-4" />
+						</div>
+					{/if}
 					
 					
 				</div>
