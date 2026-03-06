@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- TipTap Editor: Mehrzeilige Beschreibungen behalten ihre Absatz- und Zeilenumbruch-Struktur jetzt auch nach Speichern und erneutem Oeffnen. Ursache war eine zu enge Markdown-Erkennung im Editor-Load-Pfad; reiner Mehrzeilen-Text wurde beim Reopen als flacher Plaintext geladen.
 - Card UX: Der Card-Drag ist wieder auf den kleinen Grip-Button im Header begrenzt. Das reduziert die Interaktions-Komplexitaet; normale Header-Klicks laufen wieder direkt in den Dialog, waehrend Drag nur noch explizit ueber den Handle startet.
 - Card UX: Dialog oeffnet jetzt nur bei echtem Klick ohne Drag; nach Karten-Drag wird der nachfolgende Click kurz unterdrueckt, damit `isDialogOpen` nicht versehentlich getriggert wird.
 - Kanban DnD UI: Hover-Effekt fuer Card- und Column-Drag-Handle vereinheitlicht - beide zeigen jetzt einen `--accent`-basierten Hintergrund (`hover:bg-accent/40`) und Foreground-Highlight.

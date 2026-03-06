@@ -2,6 +2,10 @@
 	import MarkdownIt from 'markdown-it';
 	import type Token from 'markdown-it/lib/token.mjs';
 	import type Renderer from 'markdown-it/lib/renderer.mjs';
+	import {
+		isFullyHtml,
+		normalizeBrTags
+	} from '$lib/components/ui/markdown/conversion.js';
 	
 	interface Props {
 		content: string;
@@ -44,30 +48,6 @@
 		return defaultRender(tokens, idx, options, env, self);
 	};
 	
-	// Prüfe ob der Content VOLLSTÄNDIG HTML ist (nicht gemischt)
-	function isFullyHtml(text: string): boolean {
-		if (!text) return false;
-		const trimmed = text.trim();
-		// Nur wenn es mit HTML-Tag beginnt UND endet (vollständiges HTML-Dokument)
-		// UND keine Markdown-Syntax enthält
-		const startsWithHtml = trimmed.startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(trimmed);
-		const hasMarkdownSyntax = /\*\*|__|\[.*\]\(|\#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s/m.test(trimmed);
-		
-		// Wenn Markdown-Syntax erkannt wird, IMMER als Markdown behandeln
-		if (hasMarkdownSyntax) {
-			return false;
-		}
-		
-		return startsWithHtml;
-	}
-	
-	// <br>-Tags zu Newlines normalisieren, damit markdown-it keinen HTML-Block-Modus startet
-	// (Problem: <br> am Zeilenanfang → alles danach wird als rohes HTML behandelt,
-	//  ![](url) und [text](url) werden dann nicht mehr als Markdown geparsed)
-	function normalizeBrTags(text: string): string {
-		return text.replace(/<br\s*\/?>/gi, '\n');
-	}
-
 	// URLs in Markdown-Bild/Link-Syntax vor linkify schützen
 	// Verhindert, dass ![alt](url) oder [text](url) URLs doppelt verlinkt werden
 	function protectMarkdownUrls(text: string): { processed: string; urlMap: Map<string, string> } {

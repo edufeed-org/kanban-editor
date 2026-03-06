@@ -5,8 +5,11 @@
 	import Link from '@tiptap/extension-link';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Image from '@tiptap/extension-image';
-	import MarkdownIt from 'markdown-it';
-	import TurndownService from 'turndown';
+	import {
+		hasMarkdownSyntax,
+		htmlToMarkdown,
+		markdownToHtml
+	} from '$lib/components/ui/markdown/conversion.js';
 	
 	// Icons
 	import BoldIcon from '@lucide/svelte/icons/bold';
@@ -44,23 +47,6 @@
 	let lastExternalValue = $state(value);
 	let isInternalUpdate = false;
 	
-	// Markdown-it Instanz für die Konvertierung von Markdown zu HTML (beim Laden)
-	const md = new MarkdownIt({
-		html: true,
-		linkify: true,
-		typographer: true,
-		breaks: true
-	});
-	
-	// Turndown Instanz für die Konvertierung von HTML zu Markdown (beim Speichern)
-	const turndownService = new TurndownService({
-		headingStyle: 'atx',      // # Heading statt Heading\n===
-		bulletListMarker: '-',    // - statt *
-		codeBlockStyle: 'fenced', // ``` statt Einrückung
-		emDelimiter: '*',         // *italic* statt _italic_
-		strongDelimiter: '**',     // **bold**
-	});
-	
 	// Prüfe ob der Inhalt Markdown ist (nicht bereits HTML)
 	function isMarkdown(content: string): boolean {
 		if (!content) return false;
@@ -68,24 +54,8 @@
 		if (content.trim().startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(content)) {
 			return false;
 		}
-		// Markdown-Indikatoren: #, *, -, ```, [], etc.
-		const markdownPatterns = /^#{1,6}\s|\*\*|__|\*[^*]+\*|_[^_]+_|^\s*[-*+]\s|^\s*\d+\.\s|```|\[.+\]\(.+\)|^>\s/m;
-		return markdownPatterns.test(content);
-	}
-	
-	// Konvertiere Markdown zu HTML (für Editor-Anzeige)
-	function markdownToHtml(content: string): string {
-		if (!content) return '';
-		if (isMarkdown(content)) {
-			return md.render(content);
-		}
-		return content;
-	}
-	
-	// Konvertiere HTML zu Markdown (für Speicherung)
-	function htmlToMarkdown(html: string): string {
-		if (!html || html === '<p></p>') return '';
-		return turndownService.turndown(html);
+
+		return hasMarkdownSyntax(content);
 	}
 	
 	// Paste-Handler für Markdown-Inhalt
@@ -109,7 +79,7 @@
 			event.preventDefault();
 			
 			// Konvertiere Markdown zu HTML und füge ein
-			const html = md.render(plainText);
+			const html = markdownToHtml(plainText);
 			editor.commands.insertContent(html);
 		}
 		// Sonst: Normales Paste-Verhalten für Plain-Text
@@ -180,7 +150,7 @@
 					const plainText = clipboardData.getData('text/plain');
 					if (plainText && isMarkdown(plainText)) {
 						// Markdown zu HTML konvertieren und einfügen
-						const html = md.render(plainText);
+						const html = markdownToHtml(plainText);
 						editor?.commands.insertContent(html);
 						return true; // Event wurde behandelt
 					}

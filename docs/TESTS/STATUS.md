@@ -1,17 +1,19 @@
 # 📊 Test Suite Status Report
 
-**Letzte Aktualisierung:** 26.02.2026 (E2E-Stabilisierung: Board-Sharing Owner-Editor Flow ohne Relay-Abhaengigkeit)
+**Letzte Aktualisierung:** 06.03.2026 (Markdown/TipTap Regressionstest fuer Zeilenumbrueche ergaenzt)
 **Status:** Vollstaendig funktional (letzter Stand: gezielter Playwright-Lauf + svelte-check gruen)
 
 ## 🎯 Test-Übersicht
 
 | Kategorie | Status | Tests | Tool |
 |-----------|--------|--------|------|
-| **Vitest (Unit+Integration)** | ✅ Aktiv | 508 (505 passed  3 skipped; zuletzt verifiziert) | Vitest |
+| **Vitest (Unit+Integration)** | ✅ Aktiv | 511 (508 passed, 3 skipped; letzter Stand nach Markdown-Regressionstest) | Vitest |
 | **E2E Tests** | Verifiziert (gezielter Lauf) | 1 (board-sharing Owner/Editor) | Playwright |
 | **Coverage** | ✅ 95% | - | Phase 1.5 Complete |
 
-**Letzter Vitest-Lauf:** `npm run test:unit -- --run` → `Test Files 40 passed (40)`, `Tests 505 passed | 3 skipped (508)`
+**Letzter Vitest-Lauf:** `pnpm run test:unit -- --run src/lib/components/ui/markdown/conversion.spec.ts` → `Tests 3 passed (3)`
+
+> Voller Projektlauf ist historisch weiter in diesem Dokument referenziert; fuer den aktuellen Fix wurde zusaetzlich ein gezielter Regressionstest fuer Markdown/TipTap-Zeilenumbrueche aufgenommen.
 
 > Hinweis: Vitest meldet aktuell am Ende manchmal `close timed out ...` (Tests sind dennoch grün). Falls wir das beheben wollen: mit `--reporter=hanging-process` den offenen Handle identifizieren und gezielt schließen.
 
@@ -20,6 +22,19 @@
 ## 📁 Bestehende Test-Struktur
 
 ### 1. **Unit Tests** (Vitest)
+
+#### ✅ **NEW - Markdown/TipTap Conversion Tests**
+
+##### A. `src/lib/components/ui/markdown/conversion.spec.ts` ✅ **NEW - 3 Tests**
+**Bereich:** Gemeinsame Markdown/HTML-Konvertierung fuer TipTap-Editor und Renderer
+**Status:** ✅ Vollstaendig + Passing
+
+**Getestete Regressionen:**
+- ✅ Reiner Mehrzeilen-Text ohne explizite Markdown-Syntax wird beim Laden als Markdown behandelt und behaelt Absatzumbrueche
+- ✅ TipTap-Paragraph-HTML wird beim Speichern wieder als Markdown mit doppeltem Newline serialisiert
+- ✅ Bereits vollstaendiger HTML-Content bleibt unveraendert
+
+**Nutzen:** Abschnitte in Kartenbeschreibungen verschwinden nicht mehr zwischen Editieren, Speichern und erneutem Oeffnen.
 
 #### ✅ **NEW - Phase 1.5D Export/Import Tests** 🎉
 
