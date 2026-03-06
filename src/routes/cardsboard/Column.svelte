@@ -176,6 +176,50 @@
 	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
 	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
 	let isDraggingCards = $state(false);
+	let isGlobalCardDragActive = $state(false);
+	let isDropTargetHighlighted = $state(false);
+	let dragStateResetTimer: number | null = $state(null);
+
+	let showEmptyDropHint = $derived(
+		items.length === 0 && (isGlobalCardDragActive || isDropTargetHighlighted)
+	);
+
+	function broadcastCardDragState(isActive: boolean) {
+		if (typeof window === 'undefined') return;
+
+		window.dispatchEvent(
+			new CustomEvent('kanbanCardDragState', {
+				detail: { isActive, sourceColumnId: columnId },
+				bubbles: true,
+				composed: true
+			})
+		);
+	}
+
+	$effect(() => {
+		const handleCardDragState = (event: Event) => {
+			const customEvent = event as CustomEvent<{ isActive?: boolean }>;
+			isGlobalCardDragActive = Boolean(customEvent.detail?.isActive);
+
+			if (!isGlobalCardDragActive) {
+				isDropTargetHighlighted = false;
+			}
+		};
+
+		window.addEventListener('kanbanCardDragState', handleCardDragState);
+
+		return () => {
+			window.removeEventListener('kanbanCardDragState', handleCardDragState);
+		};
+	});
+
+	$effect(() => {
+		return () => {
+			if (dragStateResetTimer !== null) {
+				clearTimeout(dragStateResetTimer);
+			}
+		};
+	});
 
 	// WICHTIG: Konsolidierter Effect für ALLE BoardStore Updates (Name, Farbe, Items)
 	// Synchronisiert automatisch wenn die Spalte im Store geändert wird
@@ -245,6 +289,14 @@
  		const { items: newItems } = e.detail;
   	    // console.warn("got consider", name);
   	    isDraggingCards = true;
+		isDropTargetHighlighted = true;
+
+		if (dragStateResetTimer !== null) {
+			clearTimeout(dragStateResetTimer);
+			dragStateResetTimer = null;
+		}
+
+		broadcastCardDragState(true);
  		items = newItems;
    }
    
@@ -253,6 +305,17 @@
      // Setze isDraggingCards zurück NACH kurzer Verzögerung
      // um zu erlauben, dass die BoardStore Updates verarbeitet werden
      isDraggingCards = false;
+	 isDropTargetHighlighted = false;
+
+	 if (dragStateResetTimer !== null) {
+	 	clearTimeout(dragStateResetTimer);
+	 }
+
+	 // Small delay keeps the hint stable while finalize propagates across columns.
+	 dragStateResetTimer = window.setTimeout(() => {
+	 	broadcastCardDragState(false);
+	 	dragStateResetTimer = null;
+	 }, 120);
      
      // Für jetzt: einfach an den Parent callback übergeben
      // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
@@ -379,6 +442,34 @@
 
 	.cards-dnd-area {
 		flex: 0 0 auto;
+		border-radius: var(--radius-md);
+		transition: background-color 0.15s ease, outline-color 0.15s ease;
+	}
+
+	.cards-dnd-area.drag-active-empty {
+		min-height: 4.5rem;
+		outline: 2px dashed var(--accent);
+		outline-offset: -2px;
+		background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+	}
+
+	.empty-drop-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 4.5rem;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: transparent;
+		border-radius: var(--radius-md);
+		border: 1px dashed transparent;
+		pointer-events: none;
+		transition: color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.cards-dnd-area.drag-active-empty .empty-drop-placeholder {
+		color: var(--accent);
+		border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 	}
 
     .card-wrapper {
@@ -647,11 +738,17 @@
 		<!-- Cards area with dndzone -->
 		<div 
 			class="cards-dnd-area"
+			class:drag-active-empty={showEmptyDropHint}
 			tabindex="-1"
-			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1}}
+			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1, centreDraggedOnCursor: true}}
 			onconsider={handleDndConsiderCards}
 			onfinalize={handleDndFinalizeCards}
 		>
+			{#if showEmptyDropHint}
+				<div class="empty-drop-placeholder" aria-hidden={!showEmptyDropHint}>
+					Karte hier ablegen
+				</div>
+			{/if}
 			{#each items as item (item.id)}
 				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper" tabindex="-1">
 					<Card

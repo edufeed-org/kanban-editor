@@ -8,6 +8,9 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- Kanban DnD: Drag-Verhalten fuer hohe/lange Karten verbessert - Karten werden beim Ziehen am Cursor zentriert, damit die Mausposition fuer das Droppen massgeblich ist (kein erzwungenes Treffen ueber die Kartenmitte mehr).
+- Kanban DnD: Follow-up Fix fuer leere Spalten-Dropzone - der `Karte hinzufuegen`-Button bleibt im Normalzustand an seiner gewohnten Position; zusaetzliche Drop-Flaeche wird nur waehrend aktivem Drag eingeblendet.
+- Kanban DnD: Leere Spalten zeigen waehrend aktivem Karten-Drag jetzt eine sichtbare Dropzone mit Hinweis `Karte hier ablegen`, damit Karten zuverlaessig in leere Spalten gezogen werden koennen.
 - UI & Layout: Neues Farbschema `Shine` hinzugefuegt (RPI-Overlay). In den Einstellungen ist `Shine` jetzt unter `Farbschema` waehlbar; Theme-Klassen setzen `rpi + shine` (inkl. Dark-Variante `:root.rpi.dark.shine`).
 - OER-ImagePicker: Plugin-Import bleibt verpflichtend; TypeScript-Kompatibilitaet fuer Web-Component `bind:this` wurde durch angepasste lokale Typen und Modul-Deklaration stabilisiert.
 - Boards-Liste (Light): Board-Kacheln nutzen jetzt denselben sehr hellen Hintergrund wie die Board-Flaeche (`--board-bg`), Dark Mode bleibt bei `--card`.

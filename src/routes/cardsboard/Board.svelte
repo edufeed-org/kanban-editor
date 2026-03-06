@@ -357,7 +357,7 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 		flex: 1 1 auto;
-		gap: 0.5em;
+		/* gap: 0.5em; */
 		padding: 0.5em;
 		/* scroll-behavior: smooth; */ /* Deaktiviert für schnelleres Auto-Scroll während Drag */
 		scrollbar-width: thick;  /* Firefox */
