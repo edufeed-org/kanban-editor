@@ -905,17 +905,42 @@
             {#if showEditorsTab}
             <Tabs.Content value="editors" class="mt-4">
                 {#if canInviteEditors}
+                    <!-- Publish-Warnung und Beschreibung (identisch zu Observer-Link) -->
+                    <p class="text-sm text-muted-foreground mb-4">
+                        {#if !isPublished}
+                            <span class="text-yellow-600 font-medium">⚠️ Das Board muss zuerst veröffentlicht werden, bevor Schreibrechte zugewiesen werden können.</span>
+                            {#if canPublish}
+                                <Button
+                                    onclick={publishBoard}
+                                    variant="default"
+                                    size="sm"
+                                    class="mt-2 w-full"
+                                    disabled={isPublishingBoard}
+                                >
+                                    {#if isPublishingBoard}
+                                        <LoaderCircleIcon class="mr-2 h-4 w-4 animate-spin" />
+                                        Wird veröffentlicht…
+                                    {:else}
+                                        Jetzt veröffentlichen
+                                    {/if}
+                                </Button>
+                            {/if}
+                        {:else}
+                            Lade andere Nutzer ein, das Board zu bearbeiten. Gib dazu ihren Nostr Public Key ein.
+                        {/if}
+                    </p>
+                    
                     <div class="space-y-4 mb-4">
                         <div class="flex gap-2">
                             <Input 
                                 bind:value={newEditorPubkey}
                                 placeholder="npub1... oder 64-Zeichen Hex"
-                                disabled={isLoading}
+                                disabled={isLoading || !isPublished}
                                 class="flex-1 font-mono text-xs {newEditorPubkey.trim() ? (isPubkeyValid ? 'border-green-500 focus-visible:ring-green-500' : 'border-red-400 focus-visible:ring-red-400') : ''}"
                             />
                             <Button 
                                 onclick={() => handleInviteEditor()}
-                                disabled={isLoading || !isPubkeyValid}
+                                disabled={isLoading || !isPubkeyValid || !isPublished}
                                 data-testid="add-editor-button"
                             >
                                 Hinzufügen
