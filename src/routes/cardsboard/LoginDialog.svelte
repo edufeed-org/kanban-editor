@@ -9,7 +9,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Label } from "$lib/components/ui/label/index.js";
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from "$lib/components/ui/tabs/index.js";
-	import { authStore, initializeOidcUserManager } from "$lib/stores/authStore.svelte.js";
+	import { authStore } from "$lib/stores/authStore.svelte.js";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import KeyRoundIcon from "@lucide/svelte/icons/key-round";
@@ -98,13 +98,6 @@
 			open = false;
 		}
 	}
-
-	async function handleOidcLogin() {
-		const oidcUserManager = await initializeOidcUserManager(window.location.href)
-		oidcUserManager.signinRedirect().catch(err => {
-			console.error("OIDC Signin Redirect Error:", err);
-		});
-	}
 </script>
 
 <Dialog.Root bind:open>
@@ -120,15 +113,12 @@
 		</Dialog.Header>
 
 		<Tabs value="nip07" class="w-full">
-			<TabsList class="grid w-full grid-cols-3">
+			<TabsList class="grid w-full grid-cols-2">
 				<TabsTrigger value="nip07" title="NIP07">
 					Browser-Extension
 				</TabsTrigger>
 				<TabsTrigger value="nsec" title="NSEC">
 					nsec
-				</TabsTrigger>
-				<TabsTrigger value="oidc" title="OIDC">
-					RPI-Login
 				</TabsTrigger>
 				<!-- 
 				<TabsTrigger value="nip46" disabled title="WIP">
@@ -238,35 +228,6 @@
 					{:else}
 						<KeyRoundIcon class="h-4 w-4 mr-2" />
 						Mit nsec anmelden
-					{/if}
-				</Button>
-			</TabsContent>
-
-			<!-- OIDC LOGIN -->
-			<TabsContent value="oidc" class="space-y-4">
-				<div class="space-y-2">
-					<p class="text-sm text-muted-foreground">
-						Verbinde dich mit RPI-Login.
-					</p>
-				</div>
-
-				{#if errorMessage}
-					<div class="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded text-sm">
-						{errorMessage}
-					</div>
-				{/if}
-
-				<Button
-					onclick={handleOidcLogin}
-					disabled={isLoading}
-					variant="outline"
-					class="w-full"
-				>
-					{#if isLoading}
-						Wird geladen...
-					{:else}
-						<LogInIcon class="h-4 w-4 mr-2" />
-						Mit RPI-Login anmelden
 					{/if}
 				</Button>
 			</TabsContent>

@@ -29,11 +29,6 @@
     "systemPrompt": "Du bist ein hilfreicher KI-Assistant für Kanban Board Management. Helfe dem Benutzer beim Organisieren und Strukturieren von Aufgaben."
   },
 
-  "oidc": {
-    "authority": "http://localhost:8080/realms/master",
-    "clientId": "kanban-board"
-  },
-
   "mcp": {
     "urls": []
   },
