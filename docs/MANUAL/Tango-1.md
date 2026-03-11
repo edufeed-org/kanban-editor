@@ -22,8 +22,11 @@ __Created By:__ Joachim Happel
 ![Step 2 screenshot](https://images.tango.us/workflows/050f3e4b-08f7-446a-be49-2cdde3bbc092/steps/b15800d3-044c-457f-b600-0d81f55ba29d/cc42d9bd-88ab-4b02-adf1-68247e8866ed.png?crop=focalpoint&fit=crop&fp-x=0.1084&fp-y=0.9457&fp-z=1.9548&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=6&mark-y=687&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTQlMkNGRjc0NDImdz00OTYmaD02MSZmaXQ9Y3JvcCZjb3JuZXItcmFkaXVzPTEw)
 
 
-### 3. Click on RPI-Login
-![Step 3 screenshot](https://images.tango.us/workflows/050f3e4b-08f7-446a-be49-2cdde3bbc092/steps/fe35f074-9ebf-4cbc-9e6e-c23b96321f4d/77a9f66e-45f4-4e6a-bd1c-e548bff9fa51.png?crop=focalpoint&fit=crop&fp-x=0.5850&fp-y=0.4045&fp-z=2.5628&w=1200&border=2%2CF4F2F7&border-radius=8%2C8%2C8%2C8&border-radius-inner=8%2C8%2C8%2C8&blend-align=bottom&blend-mode=normal&blend-x=0&blend-w=1200&blend64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL21hZGUtd2l0aC10YW5nby13YXRlcm1hcmstdjIucG5n&mark-x=461&mark-y=358&m64=aHR0cHM6Ly9pbWFnZXMudGFuZ28udXMvc3RhdGljL2JsYW5rLnBuZz9tYXNrPWNvcm5lcnMmYm9yZGVyPTQlMkNGRjc0NDImdz0yNzcmaD04OCZmaXQ9Y3JvcCZjb3JuZXItcmFkaXVzPTEw)
+### 3. Choose login method (Browser-Extension or nsec)
+
+The login dialog offers two authentication methods:
+- **Browser-Extension (NIP-07)**: Use a Nostr browser extension like Alby or nos2x
+- **nsec**: Enter your private key directly (not recommended for production)
 
 
 ### 4. Click on Mit Nostr-Extension anmelden

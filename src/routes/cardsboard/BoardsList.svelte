@@ -17,37 +17,20 @@
     import MenuItem from './MenuItem.svelte';
     import SubmenuItem from './SubmenuItem.svelte';
 
-    import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
-    import TrashIcon from '@lucide/svelte/icons/trash';
-    import LoaderIcon from '@lucide/svelte/icons/loader';
-    import CircleIcon from '@lucide/svelte/icons/circle';
-    import SearchIcon from '@lucide/svelte/icons/search';
-    import MenuIcon from '@lucide/svelte/icons/menu';
-    import Share2Icon from '@lucide/svelte/icons/share-2';
-    import UserIcon from '@lucide/svelte/icons/user';
-    import UsersIcon from '@lucide/svelte/icons/users';
     import { ProfileEditor } from '$lib/components/auth/index.js';
     import ShareDialog from '$lib/components/board/ShareDialog.svelte';
     import ShareToCommunitiesDialog from '$lib/components/board/ShareToCommunitiesDialog.svelte';
     import VersionHistory from '$lib/components/board/VersionHistory.svelte';
-    import FileTextIcon from '@lucide/svelte/icons/file-text';
-    import DownloadIcon from '@lucide/svelte/icons/download';
-    import UploadIcon from '@lucide/svelte/icons/upload';
+    import { DownloadIcon, FileTextIcon, UploadIcon, PackageOpenIcon, 
+        UserPlusIcon, LinkIcon, PencilIcon, EyeIcon, BookIcon, InfoIcon,
+        GlobeIcon, SendIcon, SquarePlusIcon, TrashIcon,
+        LoaderIcon, CircleIcon, SearchIcon, Share2Icon, UsersIcon, HouseIcon, 
+        CircleQuestionMarkIcon} from '@lucide/svelte/icons';
     import LiaScriptExportDialog from '$lib/components/LiaScriptExportDialog.svelte';
     import PublishToEdufeedDialog from './PublishToEdufeedDialog.svelte';
-    import SendIcon from '@lucide/svelte/icons/send';
     import FAQDialog from './FAQDialog.svelte';
     import PublicBoardsDialog from './PublicBoardsDialog.svelte';
     import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
-    import PackageOpenIcon from '@lucide/svelte/icons/package-open';
-    import UserPlusIcon from '@lucide/svelte/icons/user-plus';
-    import LinkIcon from '@lucide/svelte/icons/link';
-    import PencilIcon from '@lucide/svelte/icons/pencil';
-    import EyeIcon from '@lucide/svelte/icons/eye';
-    import BookIcon from '@lucide/svelte/icons/book';
-    import InfoIcon from '@lucide/svelte/icons/info';
-    import HelpCircleIcon from '@lucide/svelte/icons/help-circle';
-    import GlobeIcon from '@lucide/svelte/icons/globe';
     // Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
     type FlipParams = {
         delay?: number;
@@ -422,10 +405,10 @@
     <!-- Expandable Menu (Dropdown-Style) -->
     {#if hamburgerMenuOpen}
         <div transition:slide={{ duration: 200 }} class="border-b rounded -mx-0 -mt-2 mb-1 max-h-[40vh] overflow-y-auto bg-[var(--card)]">
-            <!-- 1. Eigenschaften (Board Settings) -->
+            <!-- 1. Einstellungen (Board Settings) -->
             <MenuItem 
                 icon={PackageOpenIcon} 
-                label="Eigenschaften" 
+                label="Einstellungen"
                 onclick={() => { 
                     settingsDialogOpen = true;
                     hamburgerMenuOpen = false;
@@ -678,6 +661,15 @@
                     <div class="space-y-0">
                         <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
                             <SubmenuItem
+                                icon={HouseIcon}
+                                label="Willkommen"
+                                onclick={() => {
+                                    goto('/willkommen', {});
+                                }}
+                            />
+                        </div>
+                        <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
+                            <SubmenuItem
                                 icon={GlobeIcon}
                                 label="Öffentliche Boards"
                                 onclick={() => {
@@ -724,7 +716,7 @@
                         <div class="border-t"></div>
                         <div class="px-1 py-1 editor-menu-item rounded-sm cursor-pointer transition-colors">
                             <SubmenuItem
-                                icon={HelpCircleIcon}
+                                icon={CircleQuestionMarkIcon}
                                 label="FAQ"
                                 onclick={() => {
                                     faqDialogOpen = true;
@@ -774,7 +766,7 @@
                 {@const isActive = currentBoardId === board.id}
                 <div
                     animate:safeFlip={{ duration: 300 }}
-                    class="w-full rounded-md border border-border px-1 py-1 text-sm transition-all group relative bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
+                    class="w-full board-list-item rounded-md border border-border px-1 py-1 text-sm transition-all relative bg-[var(--board-bg)] dark:bg-[var(--card)] hover:bg-[var(--card-hover)] shadow-sm
                         {isActive
                             ? 'active-board'
                             : ''}"
@@ -792,24 +784,6 @@
                                 <!-- <SquareArrowRight class="active-board-indicator"/> -->
                             {/if}
                             {board.name}
-                            
-                            <!-- Shared Board Indicator -->
-                            {#if board.isShared}
-                                <span class="inline-flex items-center px-1 py-1 border bg-muted text-muted-foreground rounded flex-shrink-0 transition-colors group-hover:bg-primary/15 group-hover:text-primary">
-                                    {#if board.userRole === 'editor'}
-                                        <PencilIcon class="h-3 w-3" />
-                                    {:else}
-                                        <EyeIcon class="h-3 w-3" />
-                                    {/if}
-                                </span>
-                            {/if}
-                            
-                            {#if board.hasUnseenChanges && !isActive}
-                                <CircleIcon 
-                                    class="h-2 w-2 fill-accent text-accent animate-pulse flex-shrink-0" 
-                                    
-                                />
-                            {/if}
                         </div>
                         
                         <!-- Description (optional) -->
@@ -824,23 +798,45 @@
                             {formatDate(board.createdAt)}
                         </div>
                     </button>
-                    
-                    <!-- Delete/Leave Button -->
-                    {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
-                        <div
-                            class="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+
+                    <!-- Right icon rail: always visible for accessibility -->
+                    <div class="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5">
+                        {#if board.isShared}
+                            <span
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground"
+                                title={board.userRole === 'editor' ? 'Geteiltes Board (Editor)' : 'Geteiltes Board (Viewer)'}
+                                aria-label={board.userRole === 'editor' ? 'Geteiltes Board, Editor' : 'Geteiltes Board, Viewer'}
+                            >
+                                {#if board.userRole === 'editor'}
+                                    <PencilIcon class="h-3 w-3" />
+                                {:else}
+                                    <EyeIcon class="h-3 w-3" />
+                                {/if}
+                            </span>
+                        {/if}
+
+                        {#if board.hasUnseenChanges && !isActive}
+                            <span
+                                class="inline-flex h-6 w-6 items-center justify-center rounded-full border bg-accent/10 text-accent"
+                                title="Ungelesene Aenderungen"
+                                aria-label="Ungelesene Aenderungen"
+                            >
+                                <CircleIcon class="h-2.5 w-2.5 fill-accent text-accent animate-pulse" />
+                            </span>
+                        {/if}
+
+                        {#if !board.isShared || board.userRole === 'owner' || board.userRole === 'editor'}
                             <button
                                 onclick={(e) => handleDeleteBoard(board.id, e)}
-                                class="p-1 rounded transition-colors trash"
-                                    
+                                class="destructive inline-flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:bg-destructive/10 transition-colors trash"
                                 title={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
+                                aria-label={board.isShared && board.userRole !== 'owner' ? 'Board verlassen' : 'Board löschen'}
                                 type="button"
                             >
-                                <TrashIcon class="h-4 w-4" />
+                                <TrashIcon class="h-3.5 w-3.5" />
                             </button>
-                        </div>
-                    {/if}
+                        {/if}
+                    </div>
                 </div>
             {/each}
         {/if}
@@ -849,8 +845,8 @@
     <Button
         onclick={authStore.isAuthenticated ? handleCreateBoard : null}
         disabled={authStore.isAuthenticated ? false : true}
-        class="w-full gap-2 h-auto py-2 whitespace-normal add-board-button"
-        variant="ghost"
+        class="w-full gap-2 h-auto py-2 whitespace-normal"
+        variant="default"
         data-testid="create-board-button"
     >
         {#if isCreating}

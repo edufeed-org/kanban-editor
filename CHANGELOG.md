@@ -8,6 +8,37 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- Kanban Board: Nach dem Hinzufuegen einer neuen Spalte scrollt die horizontale Board-Ansicht jetzt automatisch weich nach rechts, damit die neue Spalte sofort sichtbar ist. Der Scroll wird nur fuer lokal angestossene Column-Creates ausgeloest und wartet auf den echten Render der neuen Spalte.
+- TipTap Editor: Mehrzeilige Beschreibungen behalten ihre Absatz- und Zeilenumbruch-Struktur jetzt auch nach Speichern und erneutem Oeffnen. Ursache war eine zu enge Markdown-Erkennung im Editor-Load-Pfad; reiner Mehrzeilen-Text wurde beim Reopen als flacher Plaintext geladen.
+- Card UX: Der Card-Drag ist wieder auf den kleinen Grip-Button im Header begrenzt. Das reduziert die Interaktions-Komplexitaet; normale Header-Klicks laufen wieder direkt in den Dialog, waehrend Drag nur noch explizit ueber den Handle startet.
+- Card UX: Dialog oeffnet jetzt nur bei echtem Klick ohne Drag; nach Karten-Drag wird der nachfolgende Click kurz unterdrueckt, damit `isDialogOpen` nicht versehentlich getriggert wird.
+- Kanban DnD UI: Hover-Effekt fuer Card- und Column-Drag-Handle vereinheitlicht - beide zeigen jetzt einen `--accent`-basierten Hintergrund (`hover:bg-accent/40`) und Foreground-Highlight.
+- Kanban DnD UI: Column-Drag-Handle optisch an Card-Handle angeglichen (gleiches Lucide-Icon `GripVertical` sowie identische Groessen-/Style-Klassen), damit beide konsistent wirken.
+- Kanban DnD: Card-Drag-Handle auf den gesamten Card-Header ausgeweitet (statt nur kleinem Icon), damit Karten leichter und konsistenter gegriffen werden koennen.
+- Kanban DnD: Column-Reorder final auf echtes Handle-only umgestellt (`Board.svelte` nutzt `dragHandleZone`; Handle in `Column.svelte` mit `use:dragHandle`). Neben der Card anfassen verschiebt damit keine ganze Spalte mehr.
+- Kanban DnD: Column-Drag-Handle-Hitbox verkleinert - Spalten lassen sich jetzt nur noch ueber einen kleinen dedizierten Handle im Column-Header ziehen, um versehentliches Verschieben ganzer Spalten zu vermeiden.
+- Kanban DnD: Dropzone-Reaktion bei Drag-Handle korrigiert - `centreDraggedOnCursor` fuer Karten-Zone aktiviert, damit die Drop-Annahme an der Mausposition ausgerichtet ist (kein erforderliches "oberhalb"-Positionieren des Handles mehr).
+- Kanban DnD: Karten-Drag auf expliziten Handle umgestellt (`dragHandleZone` + `use:dragHandle`), damit grosse Karten stabil und kontrolliert verschoben werden koennen, ohne unbeabsichtigte Drags aus dem Card-Inhalt.
+- Kanban DnD: Preview-Verkleinerung beim Draggen wieder entfernt, da sie in der Praxis zu instabilem Verhalten (kurzes Flackern/abbrechender Drag) fuehrte. Drag bleibt jetzt stabil ohne Resize der gezogenen Karte.
+- Kanban DnD: Preview-Clamp beruecksichtigt jetzt den tatsaechlichen Grab-Punkt in der Karte; die verkleinerte Drag-Preview bleibt unter der Maus und der Drag bricht bei langen Karten nicht mehr durch Hoehenkappung ab.
+- Kanban DnD: Preview-Flackern bei sehr grossen Karten behoben - die verkleinerte Drag-Preview bleibt jetzt stabil bis `dragend` (urspruengliche Kartenhoehe wird pro Drag gecacht).
+- Kanban DnD: Follow-up fuer grosse Karten - Drag bleibt jetzt am tatsächlichen Grab-Punkt unter dem Cursor (`centreDraggedOnCursor: false`), damit die Karte beim Anfassen nicht nach oben wegrutscht und der Drag nicht abbricht.
+- Kanban DnD: Sehr grosse Karten werden waehrend des Draggens nur als kompakte Preview angezeigt (Clamp ab `> 33vh` auf max. `25vh`), damit Drop-Ziele besser erreichbar bleiben.
+- Kanban DnD: Drag-Verhalten fuer hohe/lange Karten verbessert - Karten werden beim Ziehen am Cursor zentriert, damit die Mausposition fuer das Droppen massgeblich ist (kein erzwungenes Treffen ueber die Kartenmitte mehr).
+- Kanban DnD: Follow-up Fix fuer leere Spalten-Dropzone - der `Karte hinzufuegen`-Button bleibt im Normalzustand an seiner gewohnten Position; zusaetzliche Drop-Flaeche wird nur waehrend aktivem Drag eingeblendet.
+- Kanban DnD: Leere Spalten zeigen waehrend aktivem Karten-Drag jetzt eine sichtbare Dropzone mit Hinweis `Karte hier ablegen`, damit Karten zuverlaessig in leere Spalten gezogen werden koennen.
+- UI & Layout: Neues Farbschema `Shine` hinzugefuegt (RPI-Overlay). In den Einstellungen ist `Shine` jetzt unter `Farbschema` waehlbar; Theme-Klassen setzen `rpi + shine` (inkl. Dark-Variante `:root.rpi.dark.shine`).
+- OER-ImagePicker: Plugin-Import bleibt verpflichtend; TypeScript-Kompatibilitaet fuer Web-Component `bind:this` wurde durch angepasste lokale Typen und Modul-Deklaration stabilisiert.
+- Boards-Liste (Light): Board-Kacheln nutzen jetzt denselben sehr hellen Hintergrund wie die Board-Flaeche (`--board-bg`), Dark Mode bleibt bei `--card`.
+- Test-Runner (Windows): `test:e2e` ruft das Shell-Skript jetzt explizit ueber `bash` auf; zusaetzlich wurden Zeilenenden des Skripts auf LF normalisiert.
+- DX/Editor: VS-Code CSS-`unknownAtRules` Warnungen fuer Tailwind-v4 Direktiven (`@config`, `@custom-variant`) im Workspace unterdrueckt.
+- Boards-Liste (A11y): Status-/Aktions-Icons sind jetzt immer sichtbar und als kleine, rechts angepinnte Kreis-Badges umgesetzt; der Inhaltsbereich der Board-Kachel wurde rechts reduziert.
+- UI Light Mode: Cards nutzen jetzt einen weissen Hintergrund, der Board-Hintergrund ist auf ein sehr helles Grau angepasst.
+- UI Karten: Karten-Schatten wurde verstaerkt und auf feste RGBA-Werte umgestellt; Schattenfall ist jetzt konsistent nach rechts/unten (Light und Dark).
+- Navigation: Klick auf das Sidebar-Logo `Kanban-Editor` leitet jetzt auf die Basis-URL der App (`base`) weiter.
+ - UI Tiefenwirkung: Rechte Sidebar (Desktop) erhielt einen rechten Kanten-Schatten, Topbar einen unteren Schatten fuer klarere Layer-Trennung im Board-Layout.
+- AMB Publishing: `a`-Tag im Kind-30142 Event nutzt jetzt das kanonische Address-Format `30301:<pubkey>:<d-tag>` (optional mit Relay-Hint) statt `naddr`, damit Referenzen NIP-konform und robuster aufloesbar sind.
+- AMB Publishing: Optionaler `r`-Tag mit oeffentlicher Board-Web-URL (naddr-Pfad) wird zu Snapshot- und AMB-Events hinzugefuegt; lokale/private Origins (`localhost`, private IP-Ranges) werden dabei automatisch ausgeschlossen.
 - Sidebar-Branding: App-Name `Kanban-Editor` mit periodischem Accent-Shine (links→rechts) und statischem Gradient-Finish (light: foreground→accent, dark: foreground→accent) in `cardsboard` Layout.
 - AI Panel: Bei LLM-Kontaktfehlern wird in der Chat-Nachricht ein CTA `Einstellungen pruefen` angezeigt, der direkt den Dialog `LLM Einstellungen` (Tab `llm`) oeffnet.
 - AI Panel: CTA `Einstellungen pruefen` greift jetzt auch bei weiteren LLM-Fehlertypen (`LLM API Error`, Netzwerk-/Fetch-Fehler, `LLM nicht konfiguriert`) und wird zusaetzlich im Summary-Fehlerblock angezeigt.

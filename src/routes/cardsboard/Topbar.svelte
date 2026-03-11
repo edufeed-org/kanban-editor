@@ -231,7 +231,7 @@
     }
 </script>
 
-<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto bg-background">
+<header class="sticky top-0 z-50 w-full max-w-full border-b-2 shrink-0 overflow-x-auto bg-background shadow-[0_5px_5px_-5px_rgba(0,0,0,0.35)]">
     <div class="flex h-14 items-center justify-between gap-0.5 sm:gap-2 px-1.5 sm:px-4 min-w-max">
         <!-- Left Section: Sidebar Trigger + Logo -->
         <div class="flex items-center gap-0.5 sm:gap-2">

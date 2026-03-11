@@ -10,4 +10,10 @@ declare global {
 	}
 }
 
+// The private package currently ships without resolvable type declarations
+// in this workspace setup, so we provide a minimal local module shim.
+declare module '@edufeed-org/oer-finder-plugin' {
+	export function registerAllBuiltInAdapters(): void;
+}
+
 export {};

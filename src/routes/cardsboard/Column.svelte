@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
-    import { dndzone } from 'svelte-dnd-action';
+	import { dragHandleZone, dragHandle } from 'svelte-dnd-action';
  	import Card from "./Card.svelte";
 	import * as Popover from "$lib/components/ui/popover/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -17,6 +17,7 @@
 	import SquarePlusIcon from '@lucide/svelte/icons/square-plus';
 	import ArrowLeftRightIcon from '@lucide/svelte/icons/arrow-left-right';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 
  	const flipDurationMs = 150;
 	// Sicherer Flip-Wrapper: Vermeidet Fehler bei ungültigen Größen (NaN-Werte)
@@ -176,6 +177,51 @@
 	// WICHTIG: Überwache DnD Status um $effect während Drag zu pausieren
 	// Verhindert Race Conditions zwischen svelte-dnd-action und BoardStore Updates
 	let isDraggingCards = $state(false);
+	let isGlobalCardDragActive = $state(false);
+	let isDropTargetHighlighted = $state(false);
+	let dragStateResetTimer: number | null = $state(null);
+
+	let showEmptyDropHint = $derived(
+		items.length === 0 && (isGlobalCardDragActive || isDropTargetHighlighted)
+	);
+
+	function broadcastCardDragState(isActive: boolean) {
+		if (typeof window === 'undefined') return;
+
+		window.dispatchEvent(
+			new CustomEvent('kanbanCardDragState', {
+				detail: { isActive, sourceColumnId: columnId },
+				bubbles: true,
+				composed: true
+			})
+		);
+	}
+
+
+	$effect(() => {
+		const handleCardDragState = (event: Event) => {
+			const customEvent = event as CustomEvent<{ isActive?: boolean }>;
+			isGlobalCardDragActive = Boolean(customEvent.detail?.isActive);
+
+			if (!isGlobalCardDragActive) {
+				isDropTargetHighlighted = false;
+			}
+		};
+
+		window.addEventListener('kanbanCardDragState', handleCardDragState);
+
+		return () => {
+			window.removeEventListener('kanbanCardDragState', handleCardDragState);
+		};
+	});
+
+	$effect(() => {
+		return () => {
+			if (dragStateResetTimer !== null) {
+				clearTimeout(dragStateResetTimer);
+			}
+		};
+	});
 
 	// WICHTIG: Konsolidierter Effect für ALLE BoardStore Updates (Name, Farbe, Items)
 	// Synchronisiert automatisch wenn die Spalte im Store geändert wird
@@ -245,6 +291,14 @@
  		const { items: newItems } = e.detail;
   	    // console.warn("got consider", name);
   	    isDraggingCards = true;
+		isDropTargetHighlighted = true;
+
+		if (dragStateResetTimer !== null) {
+			clearTimeout(dragStateResetTimer);
+			dragStateResetTimer = null;
+		}
+
+		broadcastCardDragState(true);
  		items = newItems;
    }
    
@@ -253,7 +307,18 @@
      // Setze isDraggingCards zurück NACH kurzer Verzögerung
      // um zu erlauben, dass die BoardStore Updates verarbeitet werden
      isDraggingCards = false;
-     
+	 isDropTargetHighlighted = false;
+
+	 if (dragStateResetTimer !== null) {
+	 	clearTimeout(dragStateResetTimer);
+	 }
+
+	 // Small delay keeps the hint stable while finalize propagates across columns.
+	 dragStateResetTimer = window.setTimeout(() => {
+	 	broadcastCardDragState(false);
+	 	dragStateResetTimer = null;
+	 }, 120);
+
      // Für jetzt: einfach an den Parent callback übergeben
      // Die Karten-Bewegung zwischen Spalten wird von Board.svelte gehandhabt
      onDrop(newItems);
@@ -379,32 +444,37 @@
 
 	.cards-dnd-area {
 		flex: 0 0 auto;
+		border-radius: var(--radius-md);
+		transition: background-color 0.15s ease, outline-color 0.15s ease;
 	}
 
-	/* Add-Card-Button: Inside scrollable area but outside dndzone */
-	.add-card-button {
-		border-radius: var(--radius-md);
-		/* border: 2px dotted var(--accent); */
-		background: var(--muted);
-		color: var(--foreground);
-		transition: all 0.2s ease;
-		font-size: 0.9rem;
-		cursor: pointer;
-		width: 100%;
-		margin-top: 0.5rem;
-		flex-shrink: 0;
+	.cards-dnd-area.drag-active-empty {
+		min-height: 4.5rem;
+		outline: 2px dashed var(--accent);
+		outline-offset: -2px;
+		background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+	}
+
+	.empty-drop-placeholder {
+		display: flex;
 		align-items: center;
 		justify-content: center;
+		min-height: 4.5rem;
+		font-size: 0.8rem;
+		font-weight: 500;
+		color: transparent;
+		border-radius: var(--radius-md);
+		border: 1px dashed transparent;
+		pointer-events: none;
+		transition: color 0.15s ease, border-color 0.15s ease;
 	}
 
-	.add-card-button:hover {
-		background: var(--accent);
-		color: var(--primary-foreground);
+	.cards-dnd-area.drag-active-empty .empty-drop-placeholder {
+		color: var(--accent);
+		border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 	}
 
-	/* Hover style handled via pointer events on the element (no separate .hover selector to satisfy Svelte) */
-
-	.card-wrapper {
+    .card-wrapper {
 		margin-bottom: 0.75rem;
 	}
 
@@ -470,11 +540,18 @@
 	<div class="column-header">
 		<div class="flex items-center justify-between w-full">
 			<!-- Drag Handle + Title -->
-			<div class="flex items-center gap-2 flex-1" data-dnd-handle>
-				<svg class="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 24 24" aria-label="Spalte verschieben">
-					<title>Spalte verschieben</title>
-					<path d="M9 3h2v2H9V3zm0 4h2v2H9V7zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm0 4h2v2H9v-2zm4-16h2v2h-2V3zm0 4h2v2h-2V7zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/>
-				</svg>
+			<div class="flex items-center gap-2 flex-1">
+				<button
+					type="button"
+					use:dragHandle
+					data-dnd-handle
+					class="card-drag-handle inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors flex-shrink-0"
+					aria-label="Spalte verschieben"
+					title="Spalte ziehen"
+					tabindex={-1}
+				>
+					<GripVerticalIcon class="h-4 w-4" />
+				</button>
 				{#if isEditingTitle && !readOnly}
 					<input
 						bind:this={titleInputRef}
@@ -670,11 +747,17 @@
 		<!-- Cards area with dndzone -->
 		<div 
 			class="cards-dnd-area"
+			class:drag-active-empty={showEmptyDropHint}
 			tabindex="-1"
-			use:dndzone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1}}
+			use:dragHandleZone={{items, flipDurationMs, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, dragDisabled: readOnly, delayTouchStart: 300, zoneTabIndex: -1, zoneItemTabIndex: -1, centreDraggedOnCursor: true}}
 			onconsider={handleDndConsiderCards}
 			onfinalize={handleDndFinalizeCards}
 		>
+			{#if showEmptyDropHint}
+				<div class="empty-drop-placeholder" aria-hidden={!showEmptyDropHint}>
+					Karte hier ablegen
+				</div>
+			{/if}
 			{#each items as item (item.id)}
 				<div animate:safeFlip={{ duration: flipDurationMs }} class="card-wrapper" tabindex="-1">
 					<Card
@@ -689,9 +772,9 @@
 		
 		<!-- Add Card Button: OUTSIDE dndzone, INSIDE scrollable container -->
 		{#if !readOnly}
-		<button 
-			class="add-card-button flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
-			type="button"
+		<Button 
+			class="flex items-center gap-2.5 px-4 py-5 rounded-md shadow-lg"
+			data-testid="add-card-button"
 			onclick={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -739,7 +822,7 @@
 		>
 			<SquarePlusIcon class="h-4.5 w-4.5" />
 			<span>Karte hinzufügen</span>
-		</button>
+		</Button>
 		{/if}
 	</div>
 </div>

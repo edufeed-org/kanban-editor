@@ -5,6 +5,7 @@
  * Child-Pages liefern nur Overlays/Dialogs via {@render children()}
  */
 import { onMount, onDestroy } from 'svelte';
+import { base } from '$app/paths';
 import Board from "./Board.svelte";
 import BoardsList from "./BoardsList.svelte";
 import LeftSidebarFooter from "./LeftSidebarFooter.svelte";
@@ -251,6 +252,9 @@ function toggleRightSidebar() {
 		background-clip: text;
 		color: transparent;
 		animation: brand-shine 60s ease-in-out infinite;
+		/* padding: 0px 15px; 
+		border: 1px solid var(--primary);
+		border-radius: var(--radius-md); */
 	}
 
 	@keyframes brand-shine {
@@ -303,8 +307,10 @@ function toggleRightSidebar() {
 					>
 						<MenuIcon class="h-4 w-4" />
 					</Button>
-					<div class="flex items-center gap-2">
-						<h2 class="font-semibold brand-title">Kanban-Editor</h2>
+					<div class="flex items-center gap-2 logo">
+						<a href={`${base}/`} class="inline-flex items-center" aria-label="Zur Startseite">
+							<h2 class="font-semibold brand-title">Kanban-Editor</h2>
+						</a>
 					</div>
 				</div>
 				<!-- Content Bereich - flex-1 für den restlichen Platz -->
@@ -348,7 +354,9 @@ function toggleRightSidebar() {
 							<MenuIcon class="h-4 w-4" />
 						</Button>
 						<div class="flex items-center gap-2">
-							<h2 class="font-semibold brand-title">Kanban-Editor</h2>
+							<a href={`${base}/`} class="inline-flex items-center" aria-label="Zur Startseite">
+								<h2 class="font-semibold brand-title">Kanban-Editor</h2>
+							</a>
 						</div>
 					</div>
 					<!-- Content Bereich -->
@@ -391,7 +399,7 @@ function toggleRightSidebar() {
 						defaultSize={25} 
 						minSize={15} 
 						maxSize={50}
-						class="bg-background border-l-2"
+						class="bg-background border-l-2 shadow-[inset_-14px_0_24px_-20px_rgba(0,0,0,0.7)]"
 					>
 						<AIPanel boardId={currentBoardId} />
 					</Resizable.Pane>

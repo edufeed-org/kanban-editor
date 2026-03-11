@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
     import { onMount } from 'svelte';
-    import { dndzone } from 'svelte-dnd-action';
+	import { dragHandleZone } from 'svelte-dnd-action';
  	import Column from "./Column.svelte";
  	import { settingsStore } from '$lib/stores/settingsStore.svelte.js';
  	import { boardStore } from '$lib/stores/kanbanStore.svelte.js';
@@ -55,6 +55,36 @@
 	// Sticky button - nur zeigen wenn scrollable button nicht sichtbar ist
 	let showStickyButton = $state(false);
 	let scrollableButtonElement = $state<HTMLElement | undefined>(undefined);
+	let pendingScrollToNewColumn = false;
+	let previousColumnCount = 0;
+
+	function scrollToBoardEnd() {
+		if (!boardElement) return;
+
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				boardElement?.scrollTo({
+					left: boardElement.scrollWidth,
+					behavior: 'smooth'
+				});
+			});
+		});
+	}
+
+	function createColumnAndReveal() {
+		console.log('➕ Adding new column...');
+		pendingScrollToNewColumn = true;
+
+		try {
+			boardStore.createColumn('Neue Spalte');
+		} catch (error) {
+			pendingScrollToNewColumn = false;
+			console.error('❌ Fehler beim Erstellen der Spalte:', error);
+			showEditorPermissionToast(
+				'Du brauchst Editorrechte, um Spalten zu erstellen.'
+			);
+		}
+	}
 
 	function isEditableElement(el: Element | null): boolean {
 		if (!el) return false;
@@ -167,6 +197,8 @@
 	readOnly?: boolean;
    } = $props();
 
+	previousColumnCount = columns_inner.length;
+
    // Lokaler State für dndzone: Wird von dndzone mutiert
    let columns = $state([...columns_inner]);
    let isDragging = $state(false);
@@ -208,6 +240,18 @@
        }
      }
    });
+
+	$effect(() => {
+		const currentColumnCount = columns_inner.length;
+		const shouldScroll = pendingScrollToNewColumn && currentColumnCount > previousColumnCount;
+
+		previousColumnCount = currentColumnCount;
+
+		if (!shouldScroll) return;
+
+		pendingScrollToNewColumn = false;
+		scrollToBoardEnd();
+	});
 
 	function handleDndConsiderColumns(e: any) {
      isDragging = true;
@@ -357,7 +401,7 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 		flex: 1 1 auto;
-		gap: 0.5em;
+		/* gap: 0.5em; */
 		padding: 0.5em;
 		/* scroll-behavior: smooth; */ /* Deaktiviert für schnelleres Auto-Scroll während Drag */
 		scrollbar-width: thick;  /* Firefox */
@@ -427,7 +471,7 @@
 	}
 
 	.add-column-button button:hover {
-		background: var(--accent);
+		background: var(--primary);
 		color: var(--primary-foreground);
 		transform: scale(1.05);
 		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
@@ -466,7 +510,7 @@
 	}
 
 	.sticky-add-column button:hover {
-		background: var(--accent);
+		background: var(--primary);
 		transform: scale(1.1);
 		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 		color: var(--primary-foreground);
@@ -485,7 +529,7 @@
 	class="board" 
 	aria-label="Kanban Board mit Spalten"
 	bind:this={boardElement}
-	use:dndzone={{items:columns, flipDurationMs, type:'column', dragDisabled: readOnly, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
+	use:dragHandleZone={{items:columns, flipDurationMs, type:'column', dragDisabled: readOnly, dropTargetStyle: {outline: '1px solid var(--accent)', 'outline-offset': '-2px'}, delayTouchStart: 300}} 
 	onconsider={handleDndConsiderColumns} 
 	onfinalize={handleDndFinalizeColumns}
 >
@@ -515,17 +559,7 @@
 		<button
 			title="Neue Spalte hinzufügen"
 			aria-label="Neue Spalte hinzufügen"
-			onclick={() => {
-				console.log('➕ Adding new column...');
-				try {
-					boardStore.createColumn('Neue Spalte');
-				} catch (error) {
-					console.error('❌ Fehler beim Erstellen der Spalte:', error);
-					showEditorPermissionToast(
-						'Du brauchst Editorrechte, um Spalten zu erstellen.'
-					);
-				}
-			}}
+			onclick={createColumnAndReveal}
 		>
 			<SquarePlusIcon class="h-4.5 w-4.5" /> <span class="ml-2">Spalte hinzufügen</span>
 		</button>
@@ -538,25 +572,7 @@
 			<button
 				title="Neue Spalte hinzufügen"
 				aria-label="Neue Spalte hinzufügen"
-				onclick={() => {
-					console.log('➕ Adding new column (sticky)...');
-					try {
-						boardStore.createColumn('Neue Spalte');
-						// Scroll to the end to show the new column
-						if (boardElement) {
-							setTimeout(() => {
-								if (boardElement) {
-									boardElement.scrollLeft = boardElement.scrollWidth;
-								}
-							}, 100);
-						}
-					} catch (error) {
-						console.error('❌ Fehler beim Erstellen der Spalte:', error);
-						showEditorPermissionToast(
-							'Du brauchst Editorrechte, um Spalten zu erstellen.'
-						);
-					}
-				}}
+				onclick={createColumnAndReveal}
 			>
 				<SquarePlusIcon class="h-6 w-6" />
 			</button>

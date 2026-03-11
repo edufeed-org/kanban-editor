@@ -98,6 +98,28 @@ export function stripTeaserSeparator(content: string): string {
 }
 
 /**
+ * Fügt drei Hashtags zu jeder Zeile hinzu, die mit Hashtags beginnt.
+ * Dies stellt sicher, dass Überschriften in Card-Beschreibungen untergeordnet zum Card-Heading (H3) sind.
+ * 
+ * Beispiel:
+ * - "# Title" wird zu "#### Title" (H1 → H4)
+ * - "## Subtitle" wird zu "##### Subtitle" (H2 → H5)
+ * - "### Section" wird zu "###### Section" (H3 → H6)
+ */
+export function adjustHashtagsInContent(content: string): string {
+	return content.split('\n').map(line => {
+		// Prüfe ob die Zeile mit Hashtags beginnt (optional mit führenden Leerzeichen)
+		const match = line.match(/^(\s*)(#{1,})\s+(.*)$/);
+		if (match) {
+			const [, whitespace, hashes, rest] = match;
+			// Füge drei Hashtags hinzu
+			return `${whitespace}###${hashes} ${rest}`;
+		}
+		return line;
+	}).join('\n');
+}
+
+/**
  * Konvertiert eine Card zu LiaScript Markdown (H3)
  */
 export function cardToLiaScript(card: Card): string {
@@ -106,9 +128,11 @@ export function cardToLiaScript(card: Card): string {
 	// H3: Karten-Überschrift
 	markdown += `### ${card.heading}\n\n`;
 
-	// Karten-Inhalt (falls vorhanden) — +++ Teaser-Trennzeichen entfernen
+	// Karten-Inhalt (falls vorhanden) — +++ Teaser-Trennzeichen entfernen und Hashtags anpassen
 	if (card.content) {
-		markdown += `${stripTeaserSeparator(card.content)}\n\n`;
+		const contentWithoutTeaser = stripTeaserSeparator(card.content);
+		const adjustedContent = adjustHashtagsInContent(contentWithoutTeaser);
+		markdown += `${adjustedContent}\n\n`;
 	}
 
 	// Labels (falls vorhanden)

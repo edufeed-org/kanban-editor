@@ -37,7 +37,7 @@
   // import "$lib/utils/consoleTip.ts"; // Console-Tipps beim Start anzeigen
   // import "$lib/utils/reactiveTestLoader.ts"; // Reaktivitäts-Test-Funktionen
   // import "$lib/utils/nostrPublishingTest.ts"; // 🧪 Nostr Publishing Test Suite
-  import { initializeAuth, initializeOidcUserManager } from '$lib/stores/authStore.svelte';
+  import { initializeAuth } from '$lib/stores/authStore.svelte';
   import { boardStore } from '$lib/stores/kanbanStore.svelte';
   import { settingsStore } from '$lib/stores/settingsStore.svelte';
 
@@ -104,28 +104,6 @@
       console.log('✅ AuthStore session restored');
     } catch (error) {
       console.warn('⚠️ AuthStore session restore failed:', error);
-    }
-
-    const oidcUserManager = await initializeOidcUserManager(window.location.href)
-    // Only process OIDC callback if URL contains 'code' and 'state' parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasOidcParams = urlParams.has('code') && urlParams.has('state');
-    if (hasOidcParams) {
-      oidcUserManager.signinCallback().then(user => {
-        if (user) {
-            authStore.loginWithOidc(user);
-        }
-      }).catch(err => {
-        if (err?.message !== 'No state in response') {
-          console.error('OIDC callback failed:', err);
-        }
-      }).finally(() => {
-        // Clean up OIDC-related query parameters from URL
-        const cleanUrl = new URL(window.location.href);
-        const paramsToRemove = ['code', 'state', 'session_state', 'iss'];
-        paramsToRemove.forEach(param => cleanUrl.searchParams.delete(param));
-        window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
-      });
     }
 	});
 

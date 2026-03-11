@@ -9,12 +9,56 @@ import {
 	cardToLiaScript,
 	commentsToLiaScript,
 	generateLiaScriptFilename,
-	stripTeaserSeparator
+	stripTeaserSeparator,
+	adjustHashtagsInContent
 } from './liascriptExport';
 import { Board, Column, Card } from '$lib/classes/BoardModel';
 import type { Comment } from '$lib/classes/BoardModel';
 
 describe('liascriptExport', () => {
+	describe('adjustHashtagsInContent', () => {
+		it('sollte Text ohne Hashtags unverändert zurückgeben', () => {
+			const input = 'Normaler Text ohne Hashtags';
+			expect(adjustHashtagsInContent(input)).toBe(input);
+		});
+
+		it('sollte einzelne # zu #### konvertieren', () => {
+			const input = '# Überschrift';
+			const expected = '#### Überschrift';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+
+		it('sollte ## zu ##### konvertieren', () => {
+			const input = '## Unterüberschrift';
+			const expected = '##### Unterüberschrift';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+
+		it('sollte ### zu ###### konvertieren', () => {
+			const input = '### Abschnitt';
+			const expected = '###### Abschnitt';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+
+		it('sollte mehrere Zeilen mit Hashtags korrekt konvertieren', () => {
+			const input = '# Titel\n\nEtwas Text\n\n## Untertitel\n\nMehr Text';
+			const expected = '#### Titel\n\nEtwas Text\n\n##### Untertitel\n\nMehr Text';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+
+		it('sollte führende Leerzeichen beibehalten', () => {
+			const input = '  # Eingerückte Überschrift';
+			const expected = '  #### Eingerückte Überschrift';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+
+		it('sollte nur Zeilen mit Hashtags am Anfang ändern', () => {
+			const input = 'Text mit # in der Mitte\n# Am Anfang\nWeiterer Text';
+			const expected = 'Text mit # in der Mitte\n#### Am Anfang\nWeiterer Text';
+			expect(adjustHashtagsInContent(input)).toBe(expected);
+		});
+	});
+
 	describe('stripTeaserSeparator', () => {
 		it('sollte Text ohne +++ unverändert zurückgeben', () => {
 			expect(stripTeaserSeparator('Vollständiger Text')).toBe('Vollständiger Text');
@@ -191,6 +235,22 @@ describe('liascriptExport', () => {
 			expect(result).toContain('### Nur Titel');
 			expect(result).not.toContain('undefined');
 			expect(result.trim().split('\n').length).toBe(1); // Nur die H3-Zeile
+		});
+
+		it('sollte Hashtags in der Card-Beschreibung korrekt anpassen', () => {
+			const card = new Card({
+				heading: 'Karte mit Überschriften',
+				content: '# Hauptpunkt\n\nText\n\n## Unterpunkt\n\nMehr Text\n\n### Detail'
+			});
+
+			const result = cardToLiaScript(card);
+
+			// Card heading sollte H3 bleiben
+			expect(result).toContain('### Karte mit Überschriften');
+			// Hashtags im Content sollten drei Level hinzugefügt bekommen
+			expect(result).toContain('#### Hauptpunkt'); // # → ####
+			expect(result).toContain('##### Unterpunkt'); // ## → #####
+			expect(result).toContain('###### Detail'); // ### → ######
 		});
 	});
 

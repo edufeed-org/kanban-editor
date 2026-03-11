@@ -13,7 +13,7 @@ import { llmRequest } from '$lib/agent/llmRequest';
 import NDK, { NDKEvent } from '@nostr-dev-kit/ndk';
 import { nip19 } from 'nostr-tools';
 import { makeDataUrl, sha256Hex } from '$lib/utils/ambEncoding';
-import { cardToNostrEvent } from '$lib/utils/nostrEvents';
+import { cardToNostrEvent, createBoardNaddrUrl } from '$lib/utils/nostrEvents';
 import { 
     loadVocabulary, 
     loadAllVocabularies, 
@@ -34,6 +34,47 @@ function getEdufeedRelays(): string[] {
     }
     // Fallback to hardcoded default if not configured
     return ['wss://amb-relay.edufeed.org'];
+}
+
+/**
+ * True when URL is a publicly shareable HTTP(S) URL (no localhost/private hostnames).
+ */
+function isPublicHttpUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+
+        const host = parsed.hostname.toLowerCase();
+        if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local')) {
+            return false;
+        }
+
+        // Private IPv4 ranges should not be published as public board links.
+        if (/^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) {
+            return false;
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Builds an optional public board URL for r-tags.
+ * Uses naddr board path for stable sharing and rejects local/private origins.
+ */
+function buildPublicBoardUrl(boardId: string, pubkey: string): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+
+    try {
+        const relayHints = settingsStore.settings.relaysPublic || [];
+        const naddrPath = createBoardNaddrUrl(boardId, pubkey, relayHints);
+        const fullUrl = new URL(naddrPath, window.location.origin).toString();
+        return isPublicHttpUrl(fullUrl) ? fullUrl : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 /**
@@ -754,6 +795,9 @@ export async function publishBoardToEdufeed(
                 error: 'NDK not initialized'
             };
         }
+
+        // Optional web URL for additional r-tags (only if publicly shareable).
+        const boardWebUrl = buildPublicBoardUrl(board.id, options.pubkey);
         
         // Publish snapshot (30303) with full board JSON, attach snapshot id + checksum to AMB tags
         try {
@@ -769,6 +813,12 @@ export async function publishBoardToEdufeed(
                 ['v', 'Edufeed Publish'],  // Label for VersionHistory
                 ['r', 'publish']  // Reason: published to Edufeed
             ];
+
+            // Add optional board web URL as additional r-tag.
+            // Keep r=publish first because existing snapshot parsing reads first r-tag as reason.
+            if (boardWebUrl) {
+                snapshotEvent.tags.push(['r', boardWebUrl]);
+            }
             await snapshotEvent.sign();
             
             // Dry-run mode: log snapshot event but don't publish
@@ -840,14 +890,20 @@ export async function publishBoardToEdufeed(
             console.warn('[AMBPublisher] ⚠️ Could not publish cards:', err);
         }
 
-        // Attach board address tag ('a') as naddr if possible, otherwise as address string
-        try {
-            const naddr = nip19.naddrEncode({ kind: 30301, pubkey: options.pubkey, identifier: board.id, relays: [] });
-            nostrEvent.tags = nostrEvent.tags || [];
-            nostrEvent.tags.push(['a', naddr]);
-        } catch (err) {
-            nostrEvent.tags = nostrEvent.tags || [];
-            nostrEvent.tags.push(['a', `30301:${options.pubkey}:${board.id}`]);
+        // Attach board address tag ('a') in canonical format: kind:pubkey:d-tag
+        // Optional third value: relay hint where the referenced board event can be fetched.
+        const boardAddress = `30301:${options.pubkey}:${board.id}`;
+        const boardRelayHint = settingsStore.settings.relaysPublic[0];
+        nostrEvent.tags = nostrEvent.tags || [];
+        if (boardRelayHint) {
+            nostrEvent.tags.push(['a', boardAddress, boardRelayHint]);
+        } else {
+            nostrEvent.tags.push(['a', boardAddress]);
+        }
+
+        // Optional board web URL reference for clients that resolve external links.
+        if (boardWebUrl) {
+            nostrEvent.tags.push(['r', boardWebUrl]);
         }
 
         // Mark resource as published for downstream consumers
