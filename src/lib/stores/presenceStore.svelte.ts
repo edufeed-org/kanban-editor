@@ -60,10 +60,10 @@ export class PresenceStore {
   public userList = $derived(Array.from(this.onlineUsers.values()));
   
   // Config
-  private readonly HEARTBEAT_INTERVAL = 30000; // 30s (production)
-  private readonly INACTIVITY_TIMEOUT = 120000;
+  private readonly HEARTBEAT_INTERVAL = 30000;
+  private readonly INACTIVITY_TIMEOUT = 60000;
   private readonly CLEANUP_INTERVAL = 30000;
-  private readonly DISPLAYNAME_REFRESH_INTERVAL = 10000; // Check for updated names every 10s
+  private readonly DISPLAYNAME_REFRESH_INTERVAL = 30000;
 
   /**
    * Initialize presence tracking for NDK instance
