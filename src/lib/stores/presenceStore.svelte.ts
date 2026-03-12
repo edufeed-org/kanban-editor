@@ -115,9 +115,10 @@ export class PresenceStore {
       return;
     }
     
-    // Only stop previous tracking if switching to a DIFFERENT board
-    if (this.isTracking && (this.currentBoardId !== boardId || this.currentBoardAuthor !== boardAuthor)) {
-      this.stopTracking(true); // Clear users when switching boards
+    // Detect board switch: if currentBoardId is set and different, clear users
+    if (this.currentBoardId !== null && (this.currentBoardId !== boardId || this.currentBoardAuthor !== boardAuthor)) {
+      console.log('🔄 [PRESENCE] Switching boards - clearing old users');
+      this.onlineUsers = new Map();
     }
     
     // Set tracking flag
@@ -178,13 +179,14 @@ export class PresenceStore {
       this.subscription = null;
     }
     
-    // Only clear users if explicitly requested (when switching boards or unmounting)
+    // Only clear users and board tracking info if explicitly requested
     if (clearUsers) {
       this.onlineUsers = new Map();
+      this.currentBoardId = null;
+      this.currentBoardAuthor = null;
     }
     
-    this.currentBoardId = null;
-    this.currentBoardAuthor = null;
+    // Always mark as not tracking
     this.isTracking = false;
     
     console.log('✅ [PRESENCE] Tracking stopped');
@@ -234,6 +236,42 @@ export class PresenceStore {
         filter: JSON.stringify(filter)
       });
     });
+    
+    // Immediately fetch recent presence events to show currently online users
+    this.fetchCurrentOnlineUsers(boardRef);
+  }
+  
+  /**
+   * Fetch recent presence events to immediately show currently online users
+   */
+  private async fetchCurrentOnlineUsers(boardRef: string): Promise<void> {
+    if (!this.ndk) return;
+    
+    try {
+      // Fetch presence events from the last 3 minutes
+      // (2x heartbeat interval to ensure we catch active users)
+      const threeMinutesAgo = Math.floor((Date.now() - 180000) / 1000);
+      
+      const filter = {
+        kinds: [20000],
+        '#d': ['presence'],
+        '#a': [boardRef],
+        since: threeMinutesAgo
+      };
+      
+      console.log('🔍 [PRESENCE] Fetching current online users...', { boardRef, since: threeMinutesAgo });
+      
+      const events = await this.ndk.fetchEvents(filter);
+      
+      console.log(`📥 [PRESENCE] Fetched ${events.size} presence event(s)`);
+      
+      // Process each event to populate initial online users
+      for (const event of events) {
+        this.handlePresenceEvent(event);
+      }
+    } catch (error) {
+      console.error('❌ [PRESENCE] Error fetching current online users:', error);
+    }
   }
 
   /**
