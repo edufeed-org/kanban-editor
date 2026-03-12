@@ -87,9 +87,9 @@ export class PresenceStore {
    * Start tracking presence for a specific board
    */
   public async startTracking(boardId: string, boardAuthor: string): Promise<void> {
-    // Guard: prevent concurrent tracking sessions
-    if (this.isTracking) {
-      console.warn('⚠️ [PRESENCE] Already tracking, ignoring duplicate startTracking call');
+    // Guard: If already tracking the SAME board, do nothing
+    if (this.isTracking && this.currentBoardId === boardId && this.currentBoardAuthor === boardAuthor) {
+      console.log('⚠️ [PRESENCE] Already tracking this board, ignoring duplicate startTracking call');
       return;
     }
     
@@ -115,8 +115,10 @@ export class PresenceStore {
       return;
     }
     
-    // Stop previous tracking if any
-    this.stopTracking();
+    // Only stop previous tracking if switching to a DIFFERENT board
+    if (this.isTracking && (this.currentBoardId !== boardId || this.currentBoardAuthor !== boardAuthor)) {
+      this.stopTracking(true); // Clear users when switching boards
+    }
     
     // Set tracking flag
     this.isTracking = true;
@@ -138,13 +140,15 @@ export class PresenceStore {
 
   /**
    * Stop tracking presence
+   * @param clearUsers - Whether to clear the online users list (default: false)
+   *                     Set to true only when switching boards or unmounting
    */
-  public stopTracking(): void {
+  public stopTracking(clearUsers: boolean = false): void {
     if (!this.isTracking) {
       return; // Already stopped
     }
     
-    console.log('🛑 [PRESENCE] Stopping tracking...');
+    console.log('🛑 [PRESENCE] Stopping tracking...', { clearUsers });
     
     // Clear intervals and timeouts
     if (this.heartbeatInterval) {
@@ -174,8 +178,11 @@ export class PresenceStore {
       this.subscription = null;
     }
     
-    // Clear state (Svelte 5: Must reassign for reactivity)
-    this.onlineUsers = new Map();
+    // Only clear users if explicitly requested (when switching boards or unmounting)
+    if (clearUsers) {
+      this.onlineUsers = new Map();
+    }
+    
     this.currentBoardId = null;
     this.currentBoardAuthor = null;
     this.isTracking = false;
@@ -188,6 +195,12 @@ export class PresenceStore {
    */
   private subscribeToPresence(): void {
     if (!this.ndk || !this.currentBoardId || !this.currentBoardAuthor) return;
+    
+    // Stop existing subscription if any to prevent duplicates
+    if (this.subscription) {
+      this.subscription.stop();
+      this.subscription = null;
+    }
     
     const boardRef = `30301:${this.currentBoardAuthor}:${this.currentBoardId}`;
     
@@ -361,6 +374,11 @@ export class PresenceStore {
    * Start cleanup timer to remove inactive users
    */
   private startCleanup(): void {
+    // Guard: prevent multiple intervals
+    if (this.cleanupInterval) {
+      return;
+    }
+    
     this.cleanupInterval = setInterval(() => {
       this.cleanupInactiveUsers();
     }, this.CLEANUP_INTERVAL);
@@ -398,6 +416,11 @@ export class PresenceStore {
    * Periodically checks authStore cache for updated display names
    */
   private startDisplayNameRefresh(): void {
+    // Guard: prevent multiple intervals
+    if (this.displayNameRefreshInterval) {
+      return;
+    }
+    
     this.displayNameRefreshInterval = setInterval(() => {
       this.refreshDisplayNames();
     }, this.DISPLAYNAME_REFRESH_INTERVAL);

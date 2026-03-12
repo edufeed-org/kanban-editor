@@ -59,6 +59,9 @@ onDestroy(() => {
 	if (typeof window !== 'undefined') {
 		window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
 	}
+	
+	// Clean up presence tracking on unmount (clear users)
+	presenceStore.stopTracking(true);
 });
 
 // Hook 1: Suppress passive event listener warnings for dnd-action
@@ -151,7 +154,8 @@ $effect(() => {
 	const boardData = boardStore.data;
 	
 	if (!boardId || !boardData) {
-		presenceStore.stopTracking();
+		// No board loaded - clear users
+		presenceStore.stopTracking(true);
 		return;
 	}
 	
@@ -187,9 +191,11 @@ $effect(() => {
 		}
 	})();
 	
-	// Cleanup when board changes or component unmounts
+	// Cleanup when effect re-runs
+	// Note: Use stopTracking(false) to preserve users during board data changes
+	// Users are only cleared when switching to a different board (handled in startTracking)
 	return () => {
-		presenceStore.stopTracking();
+		presenceStore.stopTracking(false);
 	};
 });
 
