@@ -16,6 +16,8 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { authStore } from "$lib/stores/authStore.svelte.js";
+import { settingsStore } from "$lib/stores/settingsStore.svelte.js";
 import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
 import { presenceStore } from '$lib/stores/presenceStore.svelte.js';
 import { showEditorPermissionToast } from '$lib/utils/permissionToast';
@@ -153,22 +155,37 @@ $effect(() => {
 		return;
 	}
 	
-	// Initialize presence store with NDK if not already done
-	const ndk = boardStore.nostrIntegration?.getNDK();
-	if (ndk && boardStore.ndkReady) {
-		// Initialize on first use
-		if (!presenceStore['ndk']) {
-			presenceStore.initialize(ndk).catch(err => {
-				console.warn('⚠️ Failed to initialize presence store:', err);
+	// Async initialization and tracking
+	(async () => {
+		const ndk = boardStore.nostrIntegration?.getNDK();
+		if (ndk && boardStore.ndkReady) {
+			// Initialize on first use
+			if (!presenceStore['ndk']) {
+				// Only use relaysPublic and relaysPrivate for presence, NOT relaysEdufeed
+				const presenceRelays = [
+					...settingsStore.settings.relaysPublic,
+					...settingsStore.settings.relaysPrivate
+				].filter((url, index, arr) => arr.indexOf(url) === index); // Deduplicate
+				
+				await presenceStore.initialize(ndk, presenceRelays);
+			}
+			
+			// Start tracking for current board
+			const boardAuthor = boardData.author || '';
+			console.log('🔍 [DEBUG] Board presence setup:', { 
+				boardId, 
+				boardAuthor, 
+				hasAuthor: !!boardAuthor,
+				currentUser: authStore.getPubkey()?.substring(0, 8)
 			});
+			
+			if (boardAuthor) {
+				await presenceStore.startTracking(boardId, boardAuthor);
+			} else {
+				console.warn('⚠️ [PRESENCE] Board has no author - cannot track presence');
+			}
 		}
-		
-		// Start tracking for current board
-		const boardAuthor = boardData.author || '';
-		if (boardAuthor) {
-			presenceStore.startTracking(boardId, boardAuthor);
-		}
-	}
+	})();
 	
 	// Cleanup when board changes or component unmounts
 	return () => {

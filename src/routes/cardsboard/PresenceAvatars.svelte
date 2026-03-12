@@ -53,6 +53,18 @@
 	let visibleUsers = $derived(onlineUsers.slice(0, maxVisible));
 	let overflowCount = $derived(Math.max(0, onlineUsers.length - maxVisible));
 	
+	// Debug: Log when online users change
+	$effect(() => {
+		console.log('👥 [PRESENCE UI] Online users:', {
+			total: presenceStore.userList.length,
+			filtered: onlineUsers.length,
+			users: onlineUsers.map(u => ({
+				pubkey: u.pubkey.substring(0, 8),
+				displayName: u.displayName
+			}))
+		});
+	});
+	
 	// Helper: Get avatar color based on pubkey
 	function getAvatarColor(pubkey: string): string {
 		const colors = [

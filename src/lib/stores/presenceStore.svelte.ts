@@ -21,7 +21,7 @@
  */
 
 import type NDK from '@nostr-dev-kit/ndk';
-import { NDKEvent, type NDKSubscription } from '@nostr-dev-kit/ndk';
+import { NDKEvent, NDKRelayStatus, type NDKSubscription } from '@nostr-dev-kit/ndk';
 import { authStore } from './authStore.svelte';
 
 // ============================================================================
@@ -44,8 +44,13 @@ export class PresenceStore {
   private currentBoardAuthor: string | null = null;
   private subscription: NDKSubscription | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatTimeout: NodeJS.Timeout | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
   private displayNameRefreshInterval: NodeJS.Timeout | null = null;
+  private isTracking: boolean = false;
+  
+  // Allowed relay URLs for presence publishing (excludes relaysEdufeed)
+  private allowedPresenceRelays: string[] = [];
   
   // Reactive state
   public onlineUsers = $state<Map<string, OnlineUser>>(new Map());
@@ -55,68 +60,101 @@ export class PresenceStore {
   public userList = $derived(Array.from(this.onlineUsers.values()));
   
   // Config
-  private readonly HEARTBEAT_INTERVAL = 60000;
+  private readonly HEARTBEAT_INTERVAL = 30000; // 30s (production)
   private readonly INACTIVITY_TIMEOUT = 120000;
   private readonly CLEANUP_INTERVAL = 30000;
   private readonly DISPLAYNAME_REFRESH_INTERVAL = 10000; // Check for updated names every 10s
 
   /**
    * Initialize presence tracking for NDK instance
+   * @param ndk - The NDK instance
+   * @param presenceRelayUrls - URLs of relays to use for presence (relaysPublic + relaysPrivate)
    */
-  public async initialize(ndk: NDK): Promise<void> {
+  public async initialize(ndk: NDK, presenceRelayUrls: string[] = []): Promise<void> {
     if (this.ndk) {
       console.log('⚠️ PresenceStore already initialized');
       return;
     }
     
     this.ndk = ndk;
-    console.log('✅ PresenceStore initialized');
+    this.allowedPresenceRelays = presenceRelayUrls;
+    
+    console.log('✅ PresenceStore initialized with', this.ndk.pool?.relays?.size || 0, 'relay(s) in pool');
   }
+  
 
   /**
    * Start tracking presence for a specific board
    */
-  public startTracking(boardId: string, boardAuthor: string): void {
+  public async startTracking(boardId: string, boardAuthor: string): Promise<void> {
+    // Guard: prevent concurrent tracking sessions
+    if (this.isTracking) {
+      console.warn('⚠️ [PRESENCE] Already tracking, ignoring duplicate startTracking call');
+      return;
+    }
+    
+    console.log('🔵 [PRESENCE] startTracking called:', { boardId, boardAuthor, authenticated: authStore.isAuthenticated, currentUser: authStore.getPubkey()?.substring(0, 8) });
+    
     if (!this.ndk) {
       console.warn('⚠️ [PRESENCE] Cannot start tracking - NDK not initialized');
       return;
     }
     
     if (!authStore.isAuthenticated) {
+      console.warn('⚠️ [PRESENCE] Cannot start tracking - User not authenticated');
+      return;
+    }
+    
+    // Check for connected relays (status >= 3 indicates connected/ready)
+    const connectedRelays = Array.from(this.ndk.pool?.relays?.values() || []).filter(
+      relay => relay.status >= 3
+    );
+    
+    if (connectedRelays.length === 0) {
+      console.error('❌ [PRESENCE] Cannot start tracking - No connected relays!');
       return;
     }
     
     // Stop previous tracking if any
     this.stopTracking();
     
+    // Set tracking flag
+    this.isTracking = true;
+    
     this.currentBoardId = boardId;
     this.currentBoardAuthor = boardAuthor;
     
-    // Subscribe to presence events for this board
     this.subscribeToPresence();
     
-    // Start publishing heartbeats
+    // Start heartbeat immediately (no delay needed)
     this.startHeartbeat();
     
-    // Start cleanup timer
     this.startCleanup();
     
-    // Start display name refresh
     this.startDisplayNameRefresh();
+    
+    console.log('✅ [PRESENCE] Tracking started successfully for board:', boardId);
   }
 
   /**
    * Stop tracking presence
    */
   public stopTracking(): void {
-    if (!this.currentBoardId) {
+    if (!this.isTracking) {
       return; // Already stopped
     }
     
-    // Clear intervals
+    console.log('🛑 [PRESENCE] Stopping tracking...');
+    
+    // Clear intervals and timeouts
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
+    }
+    
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
     }
     
     if (this.cleanupInterval) {
@@ -140,6 +178,9 @@ export class PresenceStore {
     this.onlineUsers = new Map();
     this.currentBoardId = null;
     this.currentBoardAuthor = null;
+    this.isTracking = false;
+    
+    console.log('✅ [PRESENCE] Tracking stopped');
   }
 
   /**
@@ -162,11 +203,23 @@ export class PresenceStore {
     );
     
     this.subscription.on('event', (event: NDKEvent) => {
+      console.log('📥 [PRESENCE] Event received:', {
+        pubkey: event.pubkey.substring(0, 8),
+        fullPubkey: event.pubkey,
+        kind: event.kind,
+        tags: event.tags,
+        created_at: event.created_at,
+        relay: event.relay?.url || 'unknown'
+      });
 			this.handlePresenceEvent(event);
     });
     
     this.subscription.on('eose', () => {
-      // Initial sync complete
+      console.log('🔵 [PRESENCE] Initial subscription sync complete (EOSE)');
+      console.log('🔵 [PRESENCE] Subscription state:', {
+        subscriptionId: this.subscription?.subId,
+        filter: JSON.stringify(filter)
+      });
     });
   }
 
@@ -180,9 +233,13 @@ export class PresenceStore {
     // SECURITY: Never add current user to online users list
     // This prevents showing own avatar even if we receive our own heartbeat
     const currentUserPubkey = authStore.getPubkey();
+    
     if (currentUserPubkey && pubkey === currentUserPubkey) {
+      console.log('🟡 [PRESENCE] Ignoring own presence event');
       return; // Silently ignore own presence events
     }
+    
+    console.log('✅ [PRESENCE] Adding user to map:', pubkey.substring(0, 8), 'Total users:', this.onlineUsers.size + 1);
     
     // Update or add user (Svelte 5: Must reassign Map for reactivity)
     const newMap = new Map(this.onlineUsers);
@@ -252,10 +309,18 @@ export class PresenceStore {
    * Start publishing heartbeat events
    */
   private startHeartbeat(): void {
-    // Publish immediately
+    // Guard: prevent multiple intervals
+    if (this.heartbeatInterval) {
+      console.warn('⚠️ [PRESENCE] Heartbeat already running, skipping startHeartbeat()');
+      return;
+    }
+    
+    console.log('🔵 [PRESENCE] startHeartbeat() called - publishing immediately...');
+    
     this.publishHeartbeat();
     
-    // Then publish every 30 seconds
+    console.log(`⏰ [PRESENCE] Heartbeat scheduled every ${this.HEARTBEAT_INTERVAL/1000}s`);
+    
     this.heartbeatInterval = setInterval(() => {
       this.publishHeartbeat();
     }, this.HEARTBEAT_INTERVAL);
@@ -265,8 +330,9 @@ export class PresenceStore {
    * Publish a single heartbeat event
    */
   private async publishHeartbeat(): Promise<void> {
-    if (!this.ndk || !this.currentBoardId || !this.currentBoardAuthor) {
-      return;
+    if (!this.ndk) {
+      console.warn('[PRESENCE] cannot publish heartbeat, ndk missing')
+      return
     }
     
     try {
@@ -280,14 +346,12 @@ export class PresenceStore {
         ['a', boardRef]
       ];
       
-      // Sign & publish
       const relays = await event.publish();
       
-      // Only log if no relays accepted
+      // Only log failures or first success
       if (relays.size === 0) {
         console.warn('⚠️ [PRESENCE] Heartbeat published to 0 relays');
       }
-      
     } catch (error) {
       console.error('❌ [PRESENCE] Error publishing heartbeat:', error);
     }
