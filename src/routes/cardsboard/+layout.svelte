@@ -16,7 +16,10 @@ import * as Resizable from "$lib/components/ui/resizable/index.js";
 import * as Sheet from "$lib/components/ui/sheet/index.js";
 import { Button } from "$lib/components/ui/button/index.js";
 import { boardStore } from "$lib/stores/kanbanStore.svelte.js";
+import { authStore } from "$lib/stores/authStore.svelte.js";
+import { settingsStore } from "$lib/stores/settingsStore.svelte.js";
 import { aiContextStore, type ContextCard } from '$lib/stores/aiContextStore.svelte.js';
+import { presenceStore } from '$lib/stores/presenceStore.svelte.js';
 import { showEditorPermissionToast } from '$lib/utils/permissionToast';
 import { toast } from "svelte-sonner";
 import MenuIcon from '@lucide/svelte/icons/menu';
@@ -56,6 +59,9 @@ onDestroy(() => {
 	if (typeof window !== 'undefined') {
 		window.removeEventListener('addCardToAIContext', handleGlobalAddCardToContext as EventListener);
 	}
+	
+	// Clean up presence tracking on unmount (clear users)
+	presenceStore.stopTracking(true);
 });
 
 // Hook 1: Suppress passive event listener warnings for dnd-action
@@ -137,6 +143,59 @@ $effect(() => {
 	return () => {
 		unsubscribeAllComments?.();
 		unsubscribeAllComments = null;
+	};
+});
+
+// ============================================================================
+// PRESENCE TRACKING: Start/Stop when board changes
+// ============================================================================
+$effect(() => {
+	const boardId = currentBoardId;
+	const boardData = boardStore.data;
+	
+	if (!boardId || !boardData) {
+		// No board loaded - clear users
+		presenceStore.stopTracking(true);
+		return;
+	}
+	
+	// Async initialization and tracking
+	(async () => {
+		const ndk = boardStore.nostrIntegration?.getNDK();
+		if (ndk && boardStore.ndkReady) {
+			// Initialize on first use
+			if (!presenceStore['ndk']) {
+				// Only use relaysPublic and relaysPrivate for presence, NOT relaysEdufeed
+				const presenceRelays = [
+					...settingsStore.settings.relaysPublic,
+					...settingsStore.settings.relaysPrivate
+				].filter((url, index, arr) => arr.indexOf(url) === index); // Deduplicate
+				
+				await presenceStore.initialize(ndk, presenceRelays);
+			}
+			
+			// Start tracking for current board
+			const boardAuthor = boardData.author || '';
+			console.log('🔍 [DEBUG] Board presence setup:', { 
+				boardId, 
+				boardAuthor, 
+				hasAuthor: !!boardAuthor,
+				currentUser: authStore.getPubkey()?.substring(0, 8)
+			});
+			
+			if (boardAuthor) {
+				await presenceStore.startTracking(boardId, boardAuthor);
+			} else {
+				console.warn('⚠️ [PRESENCE] Board has no author - cannot track presence');
+			}
+		}
+	})();
+	
+	// Cleanup when effect re-runs
+	// Note: Use stopTracking(false) to preserve users during board data changes
+	// Users are only cleared when switching to a different board (handled in startTracking)
+	return () => {
+		presenceStore.stopTracking(false);
 	};
 });
 
