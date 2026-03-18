@@ -213,6 +213,7 @@ Dieses Verzeichnis hilft dir, die richtige Dokumentation schnell zu finden. WÃ�
 | **NDK Setup** | [`ARCHITECTURE/NDK.md`](./ARCHITECTURE/NDK.md) | 20 min |
 | **Offline-First** | [`ARCHITECTURE/STORES/SYNCMANAGER.md`](./ARCHITECTURE/STORES/SYNCMANAGER.md) | 30 min |
 | **Lokale Secrets (Windows/PowerShell)** | [`GUIDES/LOCAL-ENV-SETUP.md`](./GUIDES/LOCAL-ENV-SETUP.md) | 10 min |
+| **Ollama lokal in Browser-App** | [`MANUAL/13-OLLAMA.md`](./MANUAL/13-OLLAMA.md) | 5 min |
 
 ### ðŸ“š Learning Resources
 

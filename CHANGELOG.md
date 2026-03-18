@@ -8,6 +8,7 @@ Diese Datei ist die kompakte Stakeholder-Ansicht.
 
 ## Unreleased
 
+- LLM Einstellungen: Im Settings Panel gibt es jetzt einen direkten Link auf eine neue Ollama-Anleitung fuer Windows, macOS und Linux. Das User Manual enthaelt dafuer das neue Kapitel `13 - Ollama lokal nutzen`.
 - AI Panel / LLM Settings: Lokales Ollama auf einer oeffentlichen App-URL wird jetzt explizit als unterstuetztes Browser-Setup behandelt. Bei CORS-Blockaden erklaert die Fehlermeldung den fehlenden Origin-Grant, und im LLM-Tab erscheint ein konkreter Hinweis zu `OLLAMA_ORIGINS`.
 - Kanban Board: Nach dem Hinzufuegen einer neuen Spalte scrollt die horizontale Board-Ansicht jetzt automatisch weich nach rechts, damit die neue Spalte sofort sichtbar ist. Der Scroll wird nur fuer lokal angestossene Column-Creates ausgeloest und wartet auf den echten Render der neuen Spalte.
 - TipTap Editor: Mehrzeilige Beschreibungen behalten ihre Absatz- und Zeilenumbruch-Struktur jetzt auch nach Speichern und erneutem Oeffnen. Ursache war eine zu enge Markdown-Erkennung im Editor-Load-Pfad; reiner Mehrzeilen-Text wurde beim Reopen als flacher Plaintext geladen.

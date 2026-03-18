@@ -200,6 +200,22 @@ Relays sind Server, über die Ihre Daten synchronisiert werden. Denken Sie an si
 | **Lokal** | Ollama, LM Studio | Kostenlos, braucht Hardware |
 | **Edufeed** | Gehostet | Für Schulen (API-Key über Schule) |
 
+### Lokales Ollama in der Browser-App
+
+Wenn Sie Ollama auf Ihrem eigenen Rechner nutzen wollen, tragen Sie meist diese Werte ein:
+
+```text
+Model Name: qwen3.5
+Base URL: http://localhost:11434
+API Key: leer
+```
+
+Wichtig: Wenn die App auf einer oeffentlichen Domain wie `https://kanban.edufeed.org` laeuft, muss Ollama diesen Origin erlauben.
+
+Die einfache Schritt-fuer-Schritt-Anleitung fuer Windows, macOS und Linux finden Sie hier:
+
+**[13 - Ollama lokal nutzen](./13-OLLAMA.md)**
+
 ### Eigene System-Prompts
 
 Passen Sie an, wie der KI-Assistent antwortet:
@@ -502,6 +518,7 @@ Schnelleinstellungen für Unterricht:
 
 | Thema | Link |
 |-------|------|
+| Lokales Ollama einrichten | [13 - Ollama lokal nutzen](./13-OLLAMA.md) |
 | Alle Kapitel | [README](./README.md) |
 | Technische Dokumentation | [docs/ARCHITECTURE/](../ARCHITECTURE/) |
 | Feature-Details | [docs/FEATURE/](../FEATURE/) |
@@ -509,9 +526,17 @@ Schnelleinstellungen für Unterricht:
 
 ---
 
+## ➡️ Naechstes Kapitel
+
+Wenn Sie Ihre KI lokal auf dem eigenen Geraet betreiben wollen, lesen Sie jetzt weiter:
+
+**[13 - Ollama lokal nutzen](./13-OLLAMA.md)**
+
+---
+
 ## 🎉 Herzlichen Glückwunsch!
 
-Sie haben das User Manual durchgearbeitet! Sie kennen jetzt:
+Sie haben fast das gesamte User Manual durchgearbeitet! Sie kennen jetzt:
 
 - ✅ Die Grundlagen des Kanban-Boards
 - ✅ Wie Sie Boards, Spalten und Karten verwalten

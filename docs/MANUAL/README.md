@@ -56,6 +56,7 @@ Das EduFeed Kanban-Board ist ein intelligentes Planungswerkzeug speziell für Le
 |---------|--------------|------|
 | **[11 - Export & Import](./11-EXPORT-IMPORT.md)** | Boards sichern und wiederherstellen | 10 Min |
 | **[12 - Einstellungen](./12-EINSTELLUNGEN.md)** | Theme, Relays, KI-Konfiguration | 10 Min |
+| **[13 - Ollama lokal nutzen](./13-OLLAMA.md)** | Lokale KI auf Windows, macOS und Linux einrichten | 5 Min |
 
 ---
 
@@ -89,7 +90,7 @@ Klicken Sie auf **„+ Karte hinzufügen"** in einer Spalte und geben Sie einen 
 **Ja!** Das Projekt ist Open Source und wird durch Fördermittel finanziert.
 
 ### Brauche ich einen OpenAI-Account für die KI?
-Für die KI-Funktionen wird ein OpenAI API-Key benötigt. Diesen können Sie in den Einstellungen hinterlegen. Ohne API-Key funktionieren alle anderen Funktionen problemlos.
+Nein. Sie koennen einen Remote-Anbieter verwenden oder ein lokales Modell ueber Ollama anbinden. Fuer lokales Ollama bleibt der API-Key leer. Siehe dazu auch [13 - Ollama lokal nutzen](./13-OLLAMA.md).
 
 ---
 

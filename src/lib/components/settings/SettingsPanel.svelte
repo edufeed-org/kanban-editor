@@ -384,8 +384,12 @@
             </p>
             {#if showHostedOllamaHint}
               <div class="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/70 dark:bg-amber-950/30 dark:text-amber-100">
-                Diese App laeuft auf einer oeffentlichen Domain, das eingetragene Ollama aber lokal auf deinem Rechner. Das ist unterstuetzt, aber Ollama muss den aktuellen Origin erlauben. Starte Ollama mit <strong>OLLAMA_ORIGINS={typeof window !== 'undefined' ? window.location.origin : ''}</strong> neu.
+                Diese App läuft auf einer öffentlichen Domain, das eingetragene Ollama aber lokal auf deinem Rechner. Das ist unterstützt, aber Ollama muss den aktuellen Origin erlauben. Starte Ollama mit <strong>OLLAMA_ORIGINS={typeof window !== 'undefined' ? window.location.origin : ''}</strong> neu.
+                <p class="text-sm text-muted-foreground">
+                  Hilfe fuer lokales Ollama: <a class="underline underline-offset-4 hover:text-foreground" href="https://github.com/edufeed-org/kanban-editor/blob/cardsboard/docs/MANUAL/13-OLLAMA.md" target="_blank" rel="noreferrer">docs/MANUAL/13-OLLAMA.md</a>
+                </p>
               </div>
+            
             {/if}
           </div>
           
