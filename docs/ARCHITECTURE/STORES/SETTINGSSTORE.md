@@ -223,6 +223,12 @@ public setLlmApiKey(key: string): void {
 - ✅ OpenAI/Remote: API-Key via `.env` bereitstellen (nicht speichern)
 - ❌ OpenAI API-Key in localStorage = **Sicherheitsleck!**
 
+**Browser-Only Produktmodus mit lokalem Ollama:**
+- ✅ Eine oeffentlich gehostete App darf auf das lokale Ollama des Nutzers zeigen (`http://localhost:11434`), wenn der Browser-Origin in Ollama freigegeben ist.
+- ✅ Dafuer Ollama mit `OLLAMA_ORIGINS=https://<app-origin>` neu starten.
+- ✅ Die UI sollte diesen Fall als unterstuetztes Setup erklaeren, nicht als generischen Defekt.
+- ❌ `apiKey` fuer Ollama ist nicht noetig und sollte leer bleiben.
+
 ---
 
 ### 4. MCP Server Configuration

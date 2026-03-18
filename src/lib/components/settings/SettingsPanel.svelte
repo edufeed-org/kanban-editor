@@ -48,6 +48,19 @@
   let localLlmBaseUrl = $state(settingsStore.settings.llmBaseUrl);
   let localLlmApiKey = $state(settingsStore.settings.llmApiKey);
   let localSystemPrompt = $state(settingsStore.settings.llmSystemPrompt);
+
+  function isHostedOrigin(): boolean {
+    if (typeof window === 'undefined') return false;
+    const { hostname } = window.location;
+    return hostname !== 'localhost' && hostname !== '127.0.0.1';
+  }
+
+  function isLocalOllamaUrl(url: string): boolean {
+    const normalized = url.trim().toLowerCase();
+    return normalized.includes('localhost') || normalized.includes('127.0.0.1');
+  }
+
+  let showHostedOllamaHint = $derived.by(() => isHostedOrigin() && isLocalOllamaUrl(localLlmBaseUrl));
   
 
   
@@ -369,6 +382,11 @@
             <p class="text-sm text-muted-foreground">
               OpenAI-kompatible API Endpoint (z.B. lokales Ollama oder Remote Provider)
             </p>
+            {#if showHostedOllamaHint}
+              <div class="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/70 dark:bg-amber-950/30 dark:text-amber-100">
+                Diese App laeuft auf einer oeffentlichen Domain, das eingetragene Ollama aber lokal auf deinem Rechner. Das ist unterstuetzt, aber Ollama muss den aktuellen Origin erlauben. Starte Ollama mit <strong>OLLAMA_ORIGINS={typeof window !== 'undefined' ? window.location.origin : ''}</strong> neu.
+              </div>
+            {/if}
           </div>
           
           <!-- API Key -->
@@ -382,7 +400,7 @@
               onblur={handleLlmApiKeyChange}
             />
             <p class="text-sm text-orange-600">
-              ⚠️ SECURITY: Nur für lokales Ollama speichern! Remote APIs: .env.local nutzen!
+              ⚠️ SECURITY: Fuer lokales Ollama leer lassen oder nur lokal nutzen. Remote APIs: .env.local verwenden.
             </p>
           </div>
           

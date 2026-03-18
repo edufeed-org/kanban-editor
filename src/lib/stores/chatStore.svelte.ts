@@ -11,6 +11,50 @@ import {
 } from '../classes/ChatModel.js';
 import { settingsStore } from './settingsStore.svelte.js';
 
+function isLocalOllamaBaseUrl(baseUrl: string): boolean {
+	const normalized = baseUrl.toLowerCase();
+	return normalized.includes('localhost') || normalized.includes('127.0.0.1');
+}
+
+function isHostedAppOrigin(): boolean {
+	if (typeof window === 'undefined') return false;
+	const { hostname } = window.location;
+	return hostname !== 'localhost' && hostname !== '127.0.0.1';
+}
+
+function buildLocalOllamaCorsHint(baseUrl: string): string | null {
+	if (!isLocalOllamaBaseUrl(baseUrl) || !isHostedAppOrigin() || typeof window === 'undefined') {
+		return null;
+	}
+
+	return [
+		'Lokales Ollama auf diesem Geraet ist als Browser-Setup unterstuetzt, wurde aber vom Browser per CORS blockiert.',
+		`Die App laeuft unter ${window.location.origin}, Ollama unter ${baseUrl}.`,
+		`Starte Ollama mit OLLAMA_ORIGINS=${window.location.origin} neu.`
+	].join(' ');
+}
+
+function formatLlmContactError(error: unknown, baseUrl: string): string {
+	const detail = error instanceof Error ? error.message : 'Unbekannter Fehler';
+	const corsHint = buildLocalOllamaCorsHint(baseUrl);
+
+	if (corsHint) {
+		return `❌ ${corsHint} Urspruenglicher Fehler: ${detail}`;
+	}
+
+	return `❌ Fehler beim Kontaktieren des LLM: ${detail}`;
+}
+
+function formatLlmApiError(status: number, errorText: string, baseUrl: string): string {
+	const corsHint = status === 403 ? buildLocalOllamaCorsHint(baseUrl) : null;
+
+	if (corsHint) {
+		return `❌ ${corsHint} HTTP ${status}: ${errorText}`;
+	}
+
+	return `❌ LLM API Error: ${status} - ${errorText}`;
+}
+
 /**
  * ChatStore - Verwaltet KI-Chat-Sessions für jedes Board
  * 
@@ -390,7 +434,7 @@ export class ChatStore {
 				console.error('❌ LLM API Error:', response.status, errorText);
 				return {
 					content: '',
-					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+					error: formatLlmApiError(response.status, errorText, settings.llmBaseUrl)
 				};
 			}
 
@@ -413,7 +457,7 @@ export class ChatStore {
 			console.error('❌ LLM Error:', error);
 			return {
 				content: '',
-				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+				error: formatLlmContactError(error, settings.llmBaseUrl)
 			};
 		}
 	}
@@ -491,7 +535,7 @@ export class ChatStore {
 				console.error('❌ LLM API Error:', response.status, errorText);
 				return {
 					content: '',
-					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+					error: formatLlmApiError(response.status, errorText, settings.llmBaseUrl)
 				};
 			}
 
@@ -505,7 +549,7 @@ export class ChatStore {
 			console.error('❌ LLM Error:', error);
 			return {
 				content: '',
-				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+				error: formatLlmContactError(error, settings.llmBaseUrl)
 			};
 		}
 	}
@@ -875,7 +919,7 @@ export class ChatStore {
 					console.error('❌ Retry fehlgeschlagen:', response.status, retryError.slice(0, 100));
 					return {
 						content: null,
-						error: `❌ LLM API Error: ${response.status} - ${retryError}`
+						error: formatLlmApiError(response.status, retryError, settings.llmBaseUrl)
 					};
 				}
 			}
@@ -885,7 +929,7 @@ export class ChatStore {
 				console.error('❌ LLM Tool API Error:', response.status, errorText);
 				return {
 					content: null,
-					error: `❌ LLM API Error: ${response.status} - ${errorText}`
+					error: formatLlmApiError(response.status, errorText, settings.llmBaseUrl)
 				};
 			}
 
@@ -936,7 +980,7 @@ export class ChatStore {
 			console.error('❌ LLM Tool Error:', error);
 			return {
 				content: null,
-				error: `❌ Fehler beim Kontaktieren des LLM: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`
+				error: formatLlmContactError(error, settings.llmBaseUrl)
 			};
 		}
 	}

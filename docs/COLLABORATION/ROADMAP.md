@@ -184,6 +184,7 @@
   - AIPanel zeigt bei `Fehler beim Kontaktieren des LLM` einen direkten CTA `Einstellungen pruefen`
   - CTA oeffnet den Dialog `LLM Einstellungen` auf Tab `llm`
   - Erkennung erweitert: funktioniert auch bei `LLM API Error`, Netzwerk-/Fetch-Fehlern und `LLM nicht konfiguriert` (inkl. Summary-Fehlerblock)
+  - Browser-only Nutzung mit lokalem Ollama auf oeffentlicher App-URL wird jetzt explizit erklaert; der Fehlertext nennt den notwendigen `OLLAMA_ORIGINS`-Schritt
 
 - ✅ **AIPanel** (`AIPanel.svelte`, 1421 Zeilen!)
   - Two-Phase AI Response System
