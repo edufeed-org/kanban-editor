@@ -239,7 +239,7 @@
 						isLoading = false;
 					}
 				}}
-				disabled={isLoading}
+				disabled={isLoading || !nsecInput.trim()}
 				variant="outline"
 				class="w-full"
 			>
@@ -288,7 +288,7 @@
 				disabled={isLoading || !nip46ConnectionString.trim()}
 			variant="outline"
 			class="w-full"
-		>
+			>
 			{#if isLoading}
 				Verbinde mit Remote Signer...
 			{:else}
