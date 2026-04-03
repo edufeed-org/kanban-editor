@@ -119,10 +119,7 @@ export class SyncManager {
   }
 
   public updateSigner(signer: NDKSigner | undefined): void {
-    const wasSigner = this.signer ? 'yes' : 'no';
-    const isSigner = signer ? 'yes' : 'no';
     this.signer = signer;
-    // console.log(`[SyncManager] Signer updated: ${wasSigner}  ${isSigner}`);
     if (signer && this.isOnline && this.eventQueue.length > 0) {
       console.log(`[SyncManager] New signer available! Syncing ${this.eventQueue.length} queued event(s)...`);
       this.syncQueue();
