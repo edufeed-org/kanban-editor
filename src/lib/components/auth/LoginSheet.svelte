@@ -210,32 +210,47 @@
         <Tabs.Content value="nip46" class="mt-4">
           <div class="space-y-4">
             <div class="text-center">
-              <Badge variant="outline" class="mb-2">Coming Soon</Badge>
               <p class="text-sm text-muted-foreground">
-                Connect to remote wallets via NIP-46
+                Verbinde dich mit einem Remote Signer via NIP-46 (Nostr Connect). Unterstützt nsec.app, Amber und andere Bunker.
               </p>
             </div>
             
             <Field.Field>
-              <Field.Label for="nip46-input">Connection String</Field.Label>
+              <Field.Label for="nip46-input">Bunker-Verbindungszeichenfolge</Field.Label>
               <Field.Content>
-                <Input
-                  id="nip46-input"
-                  placeholder="bunker://..."
-                  bind:value={nip46Input}
-                  disabled={true}
-                  class="font-mono text-sm"
-                />
+                <div class="flex gap-2">
+                  <Input
+                    id="nip46-input"
+                    placeholder="Füge die Bunker-URL von deinem Wallet ein..."
+                    bind:value={nip46Input}
+                    disabled={isLoading}
+                    class="font-mono text-xs flex-1"
+                  />
+                </div>
+                <div class="text-xs space-y-2 mt-2">
+                  <p class="text-muted-foreground font-semibold">So funktioniert's:</p>
+                  <ol class="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>Öffne dein Nostr-Wallet</li>
+                    <li>Erstelle eine neue "Bunker"-Verbindung</li>
+                    <li>Kopiere die Bunker-URL (beginnt mit <code class="bg-muted px-1 rounded">bunker://</code>)</li>
+                    <li>Füge sie hier ein und klicke auf "Mit NIP-46 verbinden"</li>
+                  </ol>
+                </div>
               </Field.Content>
             </Field.Field>
             
             <Button 
-              disabled 
+              disabled={isLoading || !nip46Input.trim()} 
               class="w-full" 
               variant="outline"
               onclick={handleNip46Login}
             >
-              Connect Wallet (Not Available)
+              {#if isLoading}
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Verbinde mit Remote Signer...
+              {:else}
+                Mit NIP-46 verbinden
+              {/if}
             </Button>
           </div>
         </Tabs.Content>

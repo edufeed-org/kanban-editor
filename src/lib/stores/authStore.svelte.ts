@@ -1,7 +1,7 @@
 import { persisted } from "svelte-persisted-store";
 import { NDKNip07Signer, NDKPrivateKeySigner } from "@nostr-dev-kit/ndk";
 import type NDK from "@nostr-dev-kit/ndk";
-import type { NDKUser } from "@nostr-dev-kit/ndk";
+import { NDKNip46Signer, type NDKUser } from "@nostr-dev-kit/ndk";
 import { get } from 'svelte/store'
 
 import { settingsStore } from "./settingsStore.svelte.js";
@@ -207,8 +207,65 @@ export class AuthStore {
    * NIP-46 Remote Signing - FUTURE
    */
   public async loginWithNip46(connectionString: string): Promise<NDKUser> {
-    // TODO: Implement NIP-46
-    throw new Error("NIP-46 not yet implemented");
+    try {
+      this.isLoading = true;
+      this.errorMessage = null;
+
+      if (!connectionString || connectionString.trim() === '') {
+        const message = 'Bitte gib eine gültige Bunker-Verbindungszeichenfolge ein.';
+        toast.error(message);
+        return Promise.reject(message);
+      }
+      const signer = NDKNip46Signer.bunker(this.ndk, connectionString);
+
+      signer.on("authUrl", (url) => { window.open(url, "auth", "width=600,height=600") })
+
+      this.ndk.signer = signer;
+
+      await this.ndk.connect(10000)
+
+      const user = await signer.blockUntilReady()
+
+      await user.fetchProfile();
+
+      this.currentUser = user;
+      await this.saveSession(user, "nip46");
+
+      try {
+        getSyncManager().updateSigner(signer);
+        console.log('✅ SyncManager signer updated after NIP-46 login');
+        
+        // 🔄 Reconnect AUTH_REQUIRED relays now that signer is available
+        const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+        await reconnectAuthRelays();
+      } catch (error) {
+        console.warn('⚠️ SyncManager signer update warning:', error);
+      }
+
+      try {
+        const { boardStore } = await import('./kanbanStore.svelte.js');
+        boardStore.updateBoardAuthor?.();
+        
+        // 🆕 DEMO-BOARD MIGRATION: Vollständige Board-Migration nach Login
+        await boardStore.onAuthChanged?.();
+        
+        await boardStore.loadBoardsFromNostrForCurrentUser?.();
+        boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+        console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-46 login');
+      } catch (error) {
+        console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after NIP-46 login:', error);
+      }
+
+      return user
+     } catch (error) {
+      const { message = 'NIP-46 Login fehlgeschlagen' } = error as Error;
+      this.errorMessage = message;
+      toast.error(message)
+      return Promise.reject(error);
+    } finally {
+      this.isLoading = false;
+    }
+
   }
 
   /**

@@ -27,5 +27,6 @@ level = "info"
 # 30023: Long Text
 # 30142: Nostr Learning Resource
 # 20000: Ephemeral Events, um online-Users zu zeigen 
-event_kind_allowlist = [0, 1, 5, 8571, 30000, 30301, 30302, 30303, 30023, 20001, 30142, 20000]
+# 24133: Für nip-46
+event_kind_allowlist = [0, 1, 5, 8571, 30000, 30301, 30302, 30303, 30023, 20001, 30142, 20000, 24133]
 
