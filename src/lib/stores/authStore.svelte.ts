@@ -297,6 +297,11 @@ export class AuthStore {
       console.log('[AuthStore] Creating NIP-46 signer...');
       const remoteSigner = new NDKNip46Signer(this.ndk, undefined, localSigner);
       
+      // ✅ CRITICAL: Set signer on NDK BEFORE createAccount
+      // This allows NDK to start listening for NIP-46 connection requests
+      this.ndk.signer = remoteSigner;
+      console.log('[AuthStore] NIP-46 signer set on NDK');
+      
       // Try createAccount with a 5-second timeout
       const createAccountWithTimeout = () => {
         return Promise.race([
@@ -338,10 +343,8 @@ export class AuthStore {
           console.log('[AuthStore] Waiting for mobile approval...');
           this.isLoading = true;
           
-          // Set the signer and wait for it to be ready
-          this.ndk.signer = remoteSigner;
-          
-          // Wait for remote app to approve (this will block until approved)
+          // ✅ Signer already set on NDK before QR generation
+          // Just wait for remote app to approve (blockUntilReady will listen for connection)
           const user = await remoteSigner.blockUntilReady();
           
           console.log('[AuthStore] Mobile approval received!');
