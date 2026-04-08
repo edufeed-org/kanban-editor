@@ -265,7 +265,132 @@ export class AuthStore {
     } finally {
       this.isLoading = false;
     }
+  }
 
+  /**
+   * Generate NIP-46 QR Code for Mobile App Login
+   * Creates a nostrconnect URL that can be scanned by mobile apps (Amber, etc.)
+   * Returns the URL and waits for approval
+   */
+  public async generateNip46QRCode(): Promise<{
+    url: string;
+    waitForApproval: () => Promise<NDKUser>;
+  }> {
+    try {
+      this.isLoading = true;
+      this.errorMessage = null;
+
+      console.log('[AuthStore] Starting NIP-46 QR generation...');
+      
+      // Get user's configured relays from NDK pool
+      const userRelays = Array.from(this.ndk.pool?.relays.values() || [])
+        .map(relay => relay.url)
+        .filter(url => url && url.startsWith('wss://'));
+      
+      console.log('[AuthStore] Using relays for NIP-46:', userRelays);
+      
+      // Create local signer (ephemeral keypair for this session)
+      console.log('[AuthStore] Creating local signer...');
+      const localSigner = NDKPrivateKeySigner.generate();
+      
+      // Create NIP-46 signer that will wait for remote connection
+      console.log('[AuthStore] Creating NIP-46 signer...');
+      const remoteSigner = new NDKNip46Signer(this.ndk, undefined, localSigner);
+      
+      // Try createAccount with a 5-second timeout
+      const createAccountWithTimeout = () => {
+        return Promise.race([
+          remoteSigner.createAccount(),
+          new Promise<string>((_, reject) => 
+            setTimeout(() => reject(new Error('createAccount timeout - constructing URL manually')), 5000)
+          )
+        ]);
+      };
+      
+      let nostrconnectUrl: string;
+      try {
+        nostrconnectUrl = await createAccountWithTimeout();
+        console.log('[AuthStore] createAccount() succeeded');
+      } catch (timeoutError) {
+        // Fallback: Construct the URL manually using user's configured relays
+        console.warn('[AuthStore] createAccount() timed out, using manual URL construction');
+        const localPubkey = await localSigner.user();
+        const pubkeyHex = localPubkey.pubkey;
+        
+        // Build relay parameters - include all user relays for better connectivity
+        const relayParams = userRelays.map(url => `relay=${encodeURIComponent(url)}`).join('&');
+        const metadata = encodeURIComponent(JSON.stringify({name: 'Kanban Board', url: window.location.origin}));
+        
+        nostrconnectUrl = `nostrconnect://${pubkeyHex}?${relayParams}&metadata=${metadata}`;
+        console.log('[AuthStore] Manual URL construction complete with', userRelays.length, 'relays');
+      }
+      
+      console.log('🔗 Generated nostrconnect URL:', nostrconnectUrl.substring(0, 80) + '...');
+      
+      // ✅ IMPORTANT: Set loading to false after URL generation
+      // The waitForApproval will handle its own loading state
+      this.isLoading = false;
+
+      // Return URL and a promise that resolves when connection is approved
+      return {
+        url: nostrconnectUrl,
+        waitForApproval: async () => {
+          console.log('[AuthStore] Waiting for mobile approval...');
+          this.isLoading = true;
+          
+          // Set the signer and wait for it to be ready
+          this.ndk.signer = remoteSigner;
+          
+          // Wait for remote app to approve (this will block until approved)
+          const user = await remoteSigner.blockUntilReady();
+          
+          console.log('[AuthStore] Mobile approval received!');
+          
+          // Fetch user profile
+          await user.fetchProfile();
+          
+          this.currentUser = user;
+          await this.saveSession(user, "nip46");
+          
+          // Update SyncManager
+          try {
+            getSyncManager().updateSigner(remoteSigner);
+            console.log('✅ SyncManager signer updated after NIP-46 QR login');
+            
+            const { reconnectAuthRelays } = await import('./syncManager.svelte.js');
+            await reconnectAuthRelays();
+          } catch (error) {
+            console.warn('⚠️ SyncManager signer update warning:', error);
+          }
+          
+          // Load boards from Nostr
+          try {
+            const { boardStore } = await import('./kanbanStore.svelte.js');
+            boardStore.updateBoardAuthor?.();
+            await boardStore.onAuthChanged?.();
+            await boardStore.loadBoardsFromNostrForCurrentUser?.();
+            boardStore.subscribeToBoardUpdatesForCurrentUser?.();
+            console.log('[AuthStore] ✅ Boards synced from Nostr after NIP-46 QR login');
+          } catch (error) {
+            console.warn('[AuthStore] ⚠️ Failed to sync boards from Nostr after NIP-46 QR login:', error);
+          }
+          
+          this.isLoading = false;
+          return user;
+        }
+      };
+    } catch (error) {
+      this.isLoading = false;
+      const { message = 'NIP-46 QR generation failed' } = error as Error;
+      this.errorMessage = message;
+      console.error('[AuthStore] QR generation error:', error);
+      console.error('[AuthStore] Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      toast.error(message);
+      return Promise.reject(error);
+    }
   }
 
   /**
@@ -1015,6 +1140,9 @@ class AuthStoreProxy {
   }
   loginWithNip46(relayUrl: string) {
     return AuthStoreWrapper.getInstance().loginWithNip46(relayUrl);
+  }
+  generateNip46QRCode() {
+    return AuthStoreWrapper.getInstance().generateNip46QRCode();
   }
   logout() {
     return AuthStoreWrapper.getInstance().logout();
